@@ -18,24 +18,16 @@ import { microserviceFetch, microserviceUrl } from "@/lib/usage/internal";
 export const runtime = "nodejs";
 
 /**
- * Editing is CPU-bound page surgery; give it more room than a quick convert.
- *
- * This must stay **above** the microservice's own gunicorn `--timeout 300`
- * (see `pdf-microservice/Dockerfile`). At the previous 120s the proxy gave up
- * 180s before the backend did, so a slow-but-successful edit surfaced to the
- * user as a transport failure while the server was still working on it - and
- * the retry then paid for the same work twice.
+ * Hobby plan functions are capped at 300 seconds. Keep this at that limit so
+ * the route deploys on Hobby while allowing long-running edits.
  */
-export const maxDuration = 330;
+export const maxDuration = 300;
 
 /**
- * Our own give-up point, deliberately inside the 300s..330s window above:
- * later than gunicorn so we never abandon work the backend is still doing,
- * earlier than `maxDuration` so we can answer with a mapped 504 instead of
- * letting the platform kill the function and hand the client an opaque
- * failure it cannot classify.
+ * Stop before the platform's 300s hard limit so we have time to return a
+ * mapped 504 instead of letting the platform terminate the function.
  */
-const UPSTREAM_TIMEOUT_MS = 315_000;
+const UPSTREAM_TIMEOUT_MS = 285_000;
 
 /** The capabilities probe is a liveness check - it must never hang the UI. */
 const CAPABILITIES_TIMEOUT_MS = 5_000;
