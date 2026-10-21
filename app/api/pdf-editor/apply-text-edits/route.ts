@@ -17,15 +17,12 @@ import { microserviceFetch, microserviceUrl } from "@/lib/usage/internal";
 
 export const runtime = "nodejs";
 
-/**
- * Hobby plan functions are capped at 300 seconds. Keep this at that limit so
- * the route deploys on Hobby while allowing long-running edits.
- */
+/** Vercel Hobby caps Serverless Functions at 300 seconds. */
 export const maxDuration = 300;
 
 /**
- * Stop before the platform's 300s hard limit so we have time to return a
- * mapped 504 instead of letting the platform terminate the function.
+ * Stop 15 seconds before the platform limit so this route can return a mapped
+ * 504 response instead of being terminated before it can answer the client.
  */
 const UPSTREAM_TIMEOUT_MS = 285_000;
 
