@@ -1,0 +1,11 @@
+-- Profile avatar (D6).
+--
+-- Additive and nullable, so it applies without downtime and older application
+-- code (which never selects this column) keeps working unchanged.
+--
+--   users.avatar_url   public URL of the owner's profile photo in the Supabase
+--                      Storage `avatars` bucket. The object path is scoped to
+--                      the user's id (`<user_id>/avatar.<ext>`); the column is
+--                      null until the owner uploads one, and the UI falls back
+--                      to the initial of their display name.
+ALTER TABLE "users" ADD COLUMN "avatar_url" TEXT;

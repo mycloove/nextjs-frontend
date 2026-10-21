@@ -1,0 +1,97 @@
+/* This page is a control readout: current state first, quota semantics kept
+   close by in one quiet line. All colour comes from the Admin bench tokens. */
+.overviewPage .overviewHeader {
+  align-items: center;
+  flex-direction: row;
+  gap: 24px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+}
+
+.intro {
+  min-width: 0;
+}
+
+.title {
+  margin-bottom: 6px;
+}
+
+.lead {
+  margin: 0;
+  max-width: 58ch;
+}
+
+.method {
+  color: var(--bench-faint);
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 6px 0 0;
+}
+
+.overviewPage .metrics {
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-panel);
+  gap: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 22px;
+  overflow: hidden;
+}
+
+.metrics .metric {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--bench-border);
+  border-radius: 0;
+  min-width: 0;
+  padding: 16px 18px;
+}
+
+.metrics .metric:not(:nth-child(3n)) {
+  border-right: 1px solid var(--bench-border);
+}
+
+.metrics .metric:nth-last-child(-n + 3) {
+  border-bottom: 0;
+}
+
+.metrics .metricLabel {
+  margin-bottom: 8px;
+}
+
+.metrics .metricValue {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+@media (max-width: 620px) {
+  .overviewPage .overviewHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .overviewPage .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metrics .metric:not(:nth-child(3n)) {
+    border-right: 1px solid var(--bench-border);
+  }
+
+  .metrics .metric:nth-child(even) {
+    border-right: 0;
+  }
+
+  .metrics .metric:nth-last-child(-n + 3) {
+    border-bottom: 1px solid var(--bench-border);
+  }
+
+  .metrics .metric:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .metrics .metric {
+    padding: 14px 12px;
+  }
+}

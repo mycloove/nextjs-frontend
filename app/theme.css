@@ -1,0 +1,1070 @@
+/*
+ * ─────────────────────────────────────────────
+ *  mycloove — Theme System
+ *  Two modes: [data-theme="dark"] (default)
+ *             [data-theme="light"]
+ * ─────────────────────────────────────────────
+ */
+
+/* ── Google Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap');
+
+/* ══════════════════════════════════════════════
+   DARK THEME  (default)
+══════════════════════════════════════════════ */
+@import "tailwindcss";
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* — Backgrounds — */
+  --bg-page:          #0d0c11;
+  --bg-sidebar:       #131219;
+  --bg-topbar:        rgba(13, 12, 17, 0.90);
+  --bg-card:          #17161e;
+  --bg-card-hover:    #1c1b25;
+  --bg-item:          rgba(255, 255, 255, 0.042);
+  --bg-item-hover:    rgba(255, 255, 255, 0.07);
+  --bg-item-active:   rgba(255, 107, 107, 0.11);
+  --bg-badge:         rgba(255, 255, 255, 0.042);
+  --bg-icon:          rgba(255, 255, 255, 0.063);
+  --bg-icon-active:   linear-gradient(135deg, #ff6b6b, #ff8e53);
+  --bg-hamburger:     rgba(255, 255, 255, 0.055);
+  --bg-overlay:       rgba(0, 0, 0, 0.60);
+
+  /* — Borders — */
+  --border-base:      rgba(255, 255, 255, 0.055);
+  --border-card:      rgba(255, 255, 255, 0.07);
+  --border-item:      transparent;
+  --border-item-active: rgba(255, 107, 107, 0.22);
+  --border-badge:     rgba(255, 255, 255, 0.07);
+  --border-hamburger: rgba(255, 255, 255, 0.08);
+  --border-tag:       rgba(255, 107, 107, 0.22);
+
+  /* — Text — */
+  --text-primary:     #e4e2ee;
+  --text-secondary:   rgba(255, 255, 255, 0.78);
+  --text-muted:       rgba(255, 255, 255, 0.42);
+  --text-faint:       rgba(255, 255, 255, 0.22);
+  --text-ghost:       rgba(255, 255, 255, 0.17);
+  --text-label:       rgba(255, 255, 255, 0.27);
+  --text-nav:         rgba(255, 255, 255, 0.48);
+  --text-nav-hover:   rgba(255, 255, 255, 0.85);
+  --text-active:      #ffffff;
+  --text-breadcrumb:  rgba(255, 255, 255, 0.28);
+  --text-bc-sep:      rgba(255, 255, 255, 0.14);
+
+  /* — Brand colors (unchanged across themes) — */
+  --brand-yellow:     #FFD93D;
+  --brand-red:        #FF6B6B;
+  --brand-wordmark:   #f8f7f3;
+  --brand-mark-glow:  rgba(253, 121, 23, 0.22); /* octopus mark glow — orange brand mark */
+  --brand-wordmark-shadow: 0 1px 14px rgba(255, 255, 255, 0.10);
+
+  /* — Accent — */
+  --accent-start:     #ff6b6b;
+  --accent-end:       #ff8e53;
+  --accent-tag-bg:    rgba(255, 107, 107, 0.11);
+  --accent-tag-text:  #ff9080;
+
+  /* — Accent bar gradient — */
+  --card-accent-bar:  linear-gradient(90deg, #ff6b6b 0%, #ff8e53 40%, transparent 100%);
+  --nav-indicator:    linear-gradient(180deg, #ff6b6b, #ff8e53);
+
+  /* — Shadows — */
+  --shadow-card:      0 8px 48px rgba(0, 0, 0, 0.38);
+  --shadow-sidebar:   24px 0 80px rgba(0, 0, 0, 0.65);
+
+  /* — Icon filter — */
+  --icon-filter-default: brightness(0) invert(0.62);
+  --icon-filter-active:  brightness(0) invert(1);
+
+  /* — Divider — */
+  --divider:          rgba(255, 255, 255, 0.09);
+
+  /* — Toggle button — */
+  --toggle-bg:        rgba(255, 255, 255, 0.07);
+  --toggle-bg-hover:  rgba(255, 255, 255, 0.12);
+  --toggle-border:    rgba(255, 255, 255, 0.10);
+  --toggle-icon:      rgba(255, 255, 255, 0.75);
+
+  /* — Scrollbar — */
+  --scrollbar-thumb:  rgba(255, 255, 255, 0.12);
+  --scrollbar-track:  transparent;
+}
+
+
+/* ══════════════════════════════════════════════
+   LIGHT THEME
+══════════════════════════════════════════════ */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* — Backgrounds — */
+  --bg-page:          #f5f4f8;
+  --bg-sidebar:       #ffffff;
+  --bg-topbar:        rgba(245, 244, 248, 0.92);
+  --bg-card:          #ffffff;
+  --bg-card-hover:    #fafaf9;
+  --bg-item:          rgba(0, 0, 0, 0.028);
+  --bg-item-hover:    rgba(0, 0, 0, 0.05);
+  --bg-item-active:   rgba(255, 107, 107, 0.08);
+  --bg-badge:         rgba(0, 0, 0, 0.038);
+  --bg-icon:          rgba(0, 0, 0, 0.055);
+  --bg-icon-active:   linear-gradient(135deg, #ff6b6b, #ff8e53);
+  --bg-hamburger:     rgba(0, 0, 0, 0.06);
+  --bg-overlay:       rgba(0, 0, 0, 0.45);
+
+  /* — Borders — */
+  --border-base:      rgba(0, 0, 0, 0.08);
+  --border-card:      rgba(0, 0, 0, 0.08);
+  --border-item:      transparent;
+  --border-item-active: rgba(255, 107, 107, 0.30);
+  --border-badge:     rgba(0, 0, 0, 0.08);
+  --border-hamburger: rgba(0, 0, 0, 0.10);
+  --border-tag:       rgba(255, 107, 107, 0.30);
+
+  /* — Text — */
+  --text-primary:     #1a1825;
+  --text-secondary:   #2e2c3a;
+  --text-muted:       rgba(0, 0, 0, 0.52);
+  --text-faint:       rgba(0, 0, 0, 0.30);
+  --text-ghost:       rgba(0, 0, 0, 0.22);
+  --text-label:       rgba(0, 0, 0, 0.38);
+  --text-nav:         rgba(0, 0, 0, 0.52);
+  --text-nav-hover:   rgba(0, 0, 0, 0.88);
+  --text-active:      #1a1825;
+  --text-breadcrumb:  rgba(0, 0, 0, 0.36);
+  --text-bc-sep:      rgba(0, 0, 0, 0.18);
+
+  /* — Brand (same) — */
+  --brand-yellow:     #e6b800;
+  --brand-red:        #e85555;
+  --brand-wordmark:   #172033;
+  --brand-mark-glow:  rgba(234, 88, 12, 0.18); /* octopus mark glow — orange brand mark */
+  --brand-wordmark-shadow: none;
+
+  /* — Accent — */
+  --accent-start:     #ff6b6b;
+  --accent-end:       #ff8e53;
+  --accent-tag-bg:    rgba(255, 107, 107, 0.10);
+  --accent-tag-text:  #d94f30;
+
+  /* — Accent bar / indicator (same) — */
+  --card-accent-bar:  linear-gradient(90deg, #ff6b6b 0%, #ff8e53 40%, transparent 100%);
+  --nav-indicator:    linear-gradient(180deg, #ff6b6b, #ff8e53);
+
+  /* — Shadows — */
+  --shadow-card:      0 4px 32px rgba(0, 0, 0, 0.10);
+  --shadow-sidebar:   24px 0 60px rgba(0, 0, 0, 0.12);
+
+  /* — Icon filter — */
+  --icon-filter-default: brightness(0) invert(0.38);
+  --icon-filter-active:  brightness(0) invert(1);
+
+  /* — Divider — */
+  --divider:          rgba(0, 0, 0, 0.09);
+
+  /* — Toggle button — */
+  --toggle-bg:        rgba(0, 0, 0, 0.055);
+  --toggle-bg-hover:  rgba(0, 0, 0, 0.09);
+  --toggle-border:    rgba(0, 0, 0, 0.10);
+  --toggle-icon:      rgba(0, 0, 0, 0.65);
+
+  /* — Scrollbar — */
+  --scrollbar-thumb:  rgba(0, 0, 0, 0.14);
+  --scrollbar-track:  transparent;
+}
+
+
+/* ══════════════════════════════════════════════
+   BASE RESETS & LAYOUT (theme-aware)
+══════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition:
+    background 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    color      0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+*::-webkit-scrollbar { width: 5px; height: 5px; }
+*::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 10px;
+}
+
+
+/* ══════════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════════ */
+.sp-sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  height: 100vh;
+  width: 256px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-base);
+  display: flex;
+  flex-direction: column;
+  z-index: 60;
+  transition:
+    transform      0.32s cubic-bezier(0.4, 0, 0.2, 1),
+    background     0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color   0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (max-width: 768px) {
+  .sp-sidebar { transform: translateX(-100%); }
+  .sp-sidebar.open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-sidebar);
+  }
+}
+
+/* Brand */
+.sp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid var(--border-base);
+  flex-shrink: 0;
+  transition: border-color 0.35s;
+}
+.sp-brand-logo-wrap {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-item);
+  transition: background 0.35s;
+}
+.sp-brand-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  line-height: 1.1;
+}
+.sp-brand-name .y { color: var(--brand-yellow); transition: color 0.35s; }
+.sp-brand-name .r { color: var(--brand-red);    transition: color 0.35s; }
+.sp-brand-sub {
+  font-size: 7.5px;
+  color: var(--text-label);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-top: 2px;
+  transition: color 0.35s;
+}
+
+/* Nav scroll area */
+.sp-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 10px 6px;
+  scrollbar-width: none;
+}
+.sp-nav::-webkit-scrollbar { display: none; }
+
+.sp-group-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 13px 10px 5px;
+  transition: color 0.35s;
+}
+
+.sp-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-item);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background    0.15s ease,
+    border-color  0.15s ease,
+    color         0.15s ease;
+  margin-bottom: 2px;
+  position: relative;
+  text-align: left;
+  color: var(--text-primary);
+}
+.sp-nav-btn:hover {
+  background: var(--bg-item-hover);
+}
+.sp-nav-btn.active {
+  background: var(--bg-item-active);
+  border-color: var(--border-item-active);
+}
+
+.sp-nav-indicator {
+  position: absolute;
+  left: -10px; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 20px;
+  background: var(--nav-indicator);
+  border-radius: 0 3px 3px 0;
+}
+
+.sp-nav-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--bg-icon);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 15px;
+  transition: background 0.15s;
+}
+.sp-nav-btn.active .sp-nav-icon {
+  background: var(--bg-icon-active);
+}
+
+.sp-nav-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.15;
+  transition: color 0.15s;
+}
+.sp-nav-btn.active .sp-nav-label { color: var(--text-active); }
+
+.sp-nav-desc {
+  font-size: 10.5px;
+  color: var(--text-label);
+  line-height: 1;
+  margin-top: 2px;
+  transition: color 0.35s;
+}
+
+.sp-sparkle {
+  position: absolute;
+  top: 5px; right: 8px;
+  font-size: 10px;
+  animation: sp-pulse 2.2s ease-in-out infinite;
+}
+@keyframes sp-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* Page links */
+.sp-page-links {
+  padding: 8px 10px 4px;
+  border-top: 1px solid var(--border-base);
+  transition: border-color 0.35s;
+}
+.sp-page-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.14s, background 0.14s;
+}
+.sp-page-link:hover {
+  color: var(--text-nav-hover);
+  background: var(--bg-item-hover);
+}
+.sp-page-link svg {
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
+/* Sidebar footer */
+.sp-sidebar-footer {
+  padding: 10px 10px 14px;
+  border-top: 1px solid var(--border-base);
+  flex-shrink: 0;
+  transition: border-color 0.35s;
+}
+.sp-badges {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 7px;
+}
+.sp-badge {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: var(--bg-badge);
+  border: 1px solid var(--border-badge);
+  color: var(--text-muted);
+  transition: background 0.35s, color 0.35s, border-color 0.35s;
+}
+.sp-copy {
+  font-size: 10px;
+  color: var(--text-ghost);
+  text-align: center;
+  transition: color 0.35s;
+}
+
+
+/* ══════════════════════════════════════════════
+   OVERLAY
+══════════════════════════════════════════════ */
+.sp-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  z-index: 55;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  transition: background 0.35s;
+}
+@media (max-width: 768px) {
+  .sp-overlay.visible { display: block; }
+}
+
+
+/* ══════════════════════════════════════════════
+   MAIN WRAPPER
+══════════════════════════════════════════════ */
+.sp-main {
+  margin-left: 256px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-page);
+  transition: background 0.35s;
+}
+@media (max-width: 768px) { .sp-main { margin-left: 0; } }
+
+
+/* ══════════════════════════════════════════════
+   TOPBAR
+══════════════════════════════════════════════ */
+.sp-topbar {
+  position: sticky;
+  top: 0;
+  height: 58px;
+  background: var(--bg-topbar);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-base);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 40;
+  gap: 12px;
+  transition:
+    background   0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (max-width: 640px) { .sp-topbar { padding: 0 14px; } }
+
+.sp-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Hamburger */
+.sp-hamburger {
+  display: none;
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  background: var(--bg-hamburger);
+  border: 1px solid var(--border-hamburger);
+  align-items: center; justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.2s;
+}
+@media (max-width: 768px) { .sp-hamburger { display: flex; } }
+.sp-hamburger span {
+  display: block;
+  width: 15px; height: 1.5px;
+  background: var(--toggle-icon);
+  border-radius: 2px;
+  transition: background 0.35s;
+}
+
+/* Mobile logo */
+.sp-mob-logo {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+@media (max-width: 768px) { .sp-mob-logo { display: flex; } }
+.sp-mob-logo-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+.sp-mob-logo-name .y { color: var(--brand-yellow); transition: color 0.35s; }
+.sp-mob-logo-name .r { color: var(--brand-red);    transition: color 0.35s; }
+
+/* Breadcrumb */
+.sp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+@media (max-width: 768px) { .sp-breadcrumb { display: none; } }
+.sp-bc-root {
+  font-size: 12px;
+  color: var(--text-breadcrumb);
+  transition: color 0.35s;
+}
+.sp-bc-sep {
+  font-size: 13px;
+  color: var(--text-bc-sep);
+  transition: color 0.35s;
+}
+.sp-bc-cur {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.35s;
+}
+
+/* Topbar right */
+.sp-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+/* Nav links */
+.sp-top-links {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+@media (max-width: 900px) { .sp-top-links { display: none; } }
+.sp-top-link {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-nav);
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  transition: color 0.14s, background 0.14s, border-color 0.14s;
+  white-space: nowrap;
+}
+.sp-top-link:hover {
+  color: var(--text-nav-hover);
+  background: var(--bg-item-hover);
+  border-color: var(--border-base);
+}
+
+.sp-vdivider {
+  width: 1px; height: 18px;
+  background: var(--divider);
+  margin: 0 4px;
+  flex-shrink: 0;
+  transition: background 0.35s;
+}
+@media (max-width: 900px) { .sp-vdivider { display: none; } }
+
+.sp-ctx-tag {
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: var(--accent-tag-bg);
+  border: 1px solid var(--border-tag);
+  color: var(--accent-tag-text);
+  white-space: nowrap;
+  transition: background 0.35s, color 0.35s, border-color 0.35s;
+}
+@media (max-width: 640px) { .sp-ctx-tag { display: none; } }
+
+
+/* ══════════════════════════════════════════════
+   THEME TOGGLE BUTTON
+══════════════════════════════════════════════ */
+.sp-theme-toggle {
+  position: relative;
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  background: var(--toggle-bg);
+  border: 1px solid var(--toggle-border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  overflow: hidden;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+.sp-theme-toggle:hover {
+  background: var(--toggle-bg-hover);
+  transform: scale(1.06);
+}
+.sp-theme-toggle:active { transform: scale(0.94); }
+
+/* Icon wrapper — animates on toggle */
+.sp-theme-toggle .icon-wrap {
+  position: relative;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+}
+.sp-theme-toggle .icon-sun,
+.sp-theme-toggle .icon-moon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity   0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sp-theme-toggle .icon-sun  svg,
+.sp-theme-toggle .icon-moon svg {
+  color: var(--toggle-icon);
+  transition: color 0.35s;
+}
+
+/* Dark mode → show moon, hide sun */
+[data-theme="dark"] .sp-theme-toggle .icon-sun {
+  opacity: 0;
+  transform: rotate(90deg) scale(0.5);
+}
+[data-theme="dark"] .sp-theme-toggle .icon-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+
+/* Light mode → show sun, hide moon */
+[data-theme="light"] .sp-theme-toggle .icon-sun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+[data-theme="light"] .sp-theme-toggle .icon-moon {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0.5);
+}
+
+/* Default (no attribute yet) — treat as dark */
+.sp-theme-toggle .icon-sun  { opacity: 0; transform: rotate(90deg) scale(0.5); }
+.sp-theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+
+/* ══════════════════════════════════════════════
+   CONTENT AREA
+══════════════════════════════════════════════ */
+.sp-content {
+  flex: 1;
+  padding: 28px 28px 0;
+  max-width: 920px;
+  width: 100%;
+  margin: 0 auto;
+}
+@media (max-width: 640px) { .sp-content { padding: 18px 14px 0; } }
+
+.sp-content-hdr { margin-bottom: 18px; }
+.sp-content-hdr h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(20px, 2.5vw, 28px);
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+  transition: color 0.35s;
+}
+.sp-content-hdr p {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  transition: color 0.35s;
+}
+
+/* Card */
+.sp-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition:
+    background    0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color  0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow    0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sp-card::before {
+  content: '';
+  display: block;
+  height: 2px;
+  background: var(--card-accent-bar);
+}
+.sp-card-body { padding: 28px 32px; }
+@media (max-width: 640px) { .sp-card-body { padding: 18px; } }
+
+
+/* ══════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════ */
+.sp-footer {
+  padding: 20px 28px 24px;
+  text-align: center;
+  border-top: 1px solid var(--border-base);
+  margin-top: 28px;
+  transition: border-color 0.35s;
+}
+.sp-footer p {
+  font-size: 11px;
+  color: var(--text-ghost);
+  line-height: 1.75;
+  transition: color 0.35s;
+}
+
+
+/* new edited here //////////////////////////////////////////////////////////////////////*/
+/* ── Floating collapse button (on sidebar's right edge, vertically centered) ── */
+/* ─────────────────────────────────────────────
+   BASE LAYOUT (keep your existing variabless)
+   ───────────────────────────────────────────── */
+
+/* Sidebar base */
+/* ─────────────────────────────────────────────
+   SIDEBAR – DESKTOP FIRST
+   ───────────────────────────────────────────── */
+.sp-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 256px;
+  height: 100vh;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-base);
+  display: flex;
+  flex-direction: column;
+  z-index: 60;
+  transition: width 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+  overflow: visible;
+}
+
+/* Collapsed state (desktop only) */
+.sp-sidebar.collapsed {
+  width: 72px;
+}
+
+.sp-sidebar.collapsed .sp-brand-text,
+.sp-sidebar.collapsed .sp-nav-text,
+.sp-sidebar.collapsed .sp-page-links,
+.sp-sidebar.collapsed .sp-badges,
+.sp-sidebar.collapsed .sp-copy,
+.sp-sidebar.collapsed .sp-collapse-edge-btn span {
+  display: none;
+}
+.sp-sidebar.collapsed .sp-brand {
+  justify-content: center;
+  padding: 20px 0 16px;
+}
+.sp-sidebar.collapsed .sp-nav-btn {
+  justify-content: center;
+  padding: 8px 0;
+  gap: 0;
+}
+.sp-sidebar.collapsed .sp-nav-icon {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+}
+.sp-sidebar.collapsed .sp-group-label {
+  text-align: center;
+  font-size: 8px;
+  padding: 10px 0 4px;
+}
+.sp-sidebar.collapsed .sp-nav-indicator {
+  left: 0;
+  width: 2px;
+  height: 24px;
+}
+
+/* Main content – desktop */
+.sp-main {
+  margin-left: 256px;
+  min-height: 100vh;
+  background: var(--bg-page);
+  transition: margin-left 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+}
+
+/* Overlay – hidden on desktop */
+.sp-overlay {
+  display: none;
+}
+
+/* ── Floating collapse button (desktop only) ── */
+@media (min-width: 768px) {
+  .sp-collapse-wrapper {
+    position: absolute;
+    top: 50%;
+    right: -12px;
+    transform: translateY(-50%);
+    z-index: 100;
+    pointer-events: none;
+  }
+  .sp-collapse-edge-btn {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 26px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-muted);
+  }
+  .sp-collapse-edge-btn:hover {
+    transform: scale(1.08);
+    background: var(--accent-tag-bg);
+    border-color: var(--accent-start);
+    color: var(--accent-start);
+  }
+  .sp-collapse-arrow {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.28s ease;
+  }
+  .sp-collapse-arrow.rotated {
+    transform: rotate(180deg);
+  }
+  .sp-sidebar.collapsed .sp-collapse-wrapper {
+    right: -12px;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   MOBILE (≤ 768px) – NO EMPTY SPACE!
+   ══════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Sidebar: hidden by default, slides in from left */
+  .sp-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 85%;
+    max-width: 280px;
+    z-index: 70;
+    border-right: none;
+    box-shadow: none;
+  }
+  .sp-sidebar.open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-sidebar);
+  }
+  /* Main content: full width, no left margin */
+  .sp-main {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+  /* Overlay: covers whole screen */
+  .sp-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--bg-overlay);
+    z-index: 65;
+    backdrop-filter: blur(3px);
+  }
+  .sp-overlay.visible {
+    display: block;
+  }
+  /* Hide collapse button on mobile */
+  .sp-collapse-wrapper {
+    display: none;
+  }
+  /* Ensure body doesn't scroll when sidebar is open */
+  body.no-scroll {
+    overflow: hidden;
+  }
+}
+
+
+/*added page navigasion in the sidebar with collapse icon /////////////*/
+/* Section header for pages */
+/* ── Page links section with vertical collapse toggle ── */
+.sp-page-links {
+  margin-top: 8px;
+  border-top: 1px solid var(--border-base);
+  padding-top: 8px;
+}
+
+.sp-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  margin-bottom: 4px;
+}
+
+.sp-page-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-label);
+}
+
+.sp-page-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.2s, transform 0.15s;
+}
+
+.sp-page-toggle:hover {
+  background: var(--bg-item-hover);
+  color: var(--text-secondary);
+}
+
+.sp-page-chevron {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sp-page-chevron.expanded {
+  transform: rotate(0deg);
+}
+
+.sp-page-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.sp-page-list {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  max-height: 0;
+  opacity: 0;
+}
+
+.sp-page-list.expanded {
+  max-height: 300px;   /* enough for all links */
+  opacity: 1;
+}
+
+.sp-page-list.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+/* সাইডবার কোলাপসড অবস্থায় পেজ সেকশন লুকানো (আগেই ছিল) */
+.sp-sidebar.collapsed .sp-page-links {
+  display: none;
+}
+
+/* Force layout fix – ensure sidebar fixed and main content has margin */
+.sp-sidebar {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 256px;
+  z-index: 60;
+}
+.sp-main {
+  margin-left: 256px !important;
+  width: auto;
+}
+/* When sidebar collapsed */
+.sp-sidebar.collapsed {
+  width: 72px !important;
+}
+.sp-sidebar.collapsed + .sp-main,
+.sp-sidebar.collapsed ~ .sp-main {
+  margin-left: 72px !important;
+}
+/* Mobile override */
+@media (max-width: 768px) {
+  .sp-main {
+    margin-left: 0 !important;
+  }
+  .sp-sidebar {
+    transform: translateX(-100%);
+  }
+  .sp-sidebar.open {
+    transform: translateX(0);
+  }
+}
+/* মোবাইল ওভারলে ফিক্স – সাইডবার ক্লিকযোগ্য করতে */
+@media (max-width: 768px) {
+  .sp-overlay {
+    pointer-events: none !important;   /* ওভারলে ক্লিক ব্লক করে না */
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(2px);
+  }
+  .sp-sidebar {
+    pointer-events: auto !important;
+    z-index: 80 !important;
+  }
+  /* ওভারলে ক্লোজিং (যদি চান) – তাহলে ওভারলের জায়গায় একটি আলাদা এলিমেন্ট ব্যবহার করুন */
+}
+/* sp-overlay rlated all updated code here 10-05/2026 old code pore delete korbo */
+/* ── ওভারলে (শুধু মোবাইলে ভিজুয়াল, কখনো ক্লিক ব্লক করে না) ── */
+/* ── ওভারলে (মোবাইল ও ডেস্কটপ) ── */
+/* মোবাইলে ওভারলে ক্লিকযোগ্য ও সাইডবার বন্ধের জন্য */
+@media (max-width: 768px) {
+  .sp-overlay {
+    cursor: pointer;
+  }
+  /* সাইডবার খোলা থাকলে ওভারলে ক্লিক নিশ্চিত করুন */
+  .sp-overlay.visible {
+    display: block;
+    pointer-events: auto !important;
+    z-index: 55;
+  }
+  .sp-sidebar.open {
+    z-index: 60;
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "generatedBy": "tests/pdf-editor/generate-golden-corpus.ts",
+  "fixtures": {
+    "phase-1e-complex.pdf": [
+      "signed-marker",
+      "form",
+      "link",
+      "outline",
+      "annotation",
+      "attachment",
+      "tagged",
+      "rotated",
+      "metadata"
+    ],
+    "phase-1e-plain.pdf": [
+      "searchable-text",
+      "browser-workflow"
+    ]
+  }
+}

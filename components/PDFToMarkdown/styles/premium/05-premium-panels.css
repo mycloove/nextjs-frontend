@@ -1,0 +1,686 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   PREMIUM EDITOR PANEL — AI Tools, Footer, Document Insights
+   Scoped to .mr-markdown-workspace to avoid conflicts.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Premium Beta Badge ─────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-beta-badge-premium {
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, var(--accent) 8%, transparent));
+  border: 1px solid var(--accent-line);
+  color: var(--accent);
+  font: 700 8px var(--pm-font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  position: relative;
+  animation: pm-beta-pulse 2.4s ease-in-out infinite;
+}
+@keyframes pm-beta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-soft); }
+  50% { box-shadow: 0 0 0 4px transparent; }
+}
+
+/* ── Premium AI Actions Container ───────────────────────────────────── */
+.mr-markdown-workspace .pm-ai-actions-premium {
+  padding: 0 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── AI Action Group ────────────────────────────────────────────────── */
+.mr-markdown-workspace .pm-ai-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mr-markdown-workspace .pm-ai-group + .pm-ai-group {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.mr-markdown-workspace .pm-ai-group-header {
+  padding: 4px 9px 3px;
+  font: 700 8.5px var(--pm-font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ── Premium AI Action Button ───────────────────────────────────────── */
+.mr-markdown-workspace .pm-ai-btn-premium {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  min-height: 44px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+.mr-markdown-workspace .pm-ai-btn-premium:hover:not(:disabled) {
+  background: var(--surface-muted);
+  color: var(--text);
+  border-color: var(--line);
+  transform: translateX(2px);
+}
+.mr-markdown-workspace .pm-ai-btn-premium:active:not(:disabled) {
+  transform: translateX(0) scale(0.99);
+}
+.mr-markdown-workspace .pm-ai-btn-premium:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* AI button icon */
+.mr-markdown-workspace .pm-ai-btn-premium .pm-ai-btn-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent-line);
+  transition: background 0.16s ease, color 0.16s ease;
+}
+.mr-markdown-workspace .pm-ai-btn-premium:hover:not(:disabled) .pm-ai-btn-icon {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+/* AI button content (label + desc) */
+.mr-markdown-workspace .pm-ai-btn-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.mr-markdown-workspace .pm-ai-btn-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: inherit;
+  line-height: 1.2;
+}
+.mr-markdown-workspace .pm-ai-btn-desc {
+  font-size: 9.5px;
+  font-weight: 400;
+  color: var(--text-faint);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* AI button kbd badge */
+.mr-markdown-workspace .pm-ai-btn-kbd-badge {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--text-muted);
+  font: 600 8.5px var(--pm-font-mono);
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 0 var(--line-strong);
+}
+
+/* AI button loading state */
+.mr-markdown-workspace .pm-ai-btn-loading {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: 600 9px var(--pm-font-mono);
+  white-space: nowrap;
+  animation: pm-pulse 1.4s ease-in-out infinite;
+}
+
+/* ── Premium Footer Status Bar ─────────────────────────────────────── */
+.mr-markdown-workspace .pm-ws-footer-premium {
+  height: 32px;
+  padding: 0 14px;
+  background: var(--surface-muted);
+  border-top: 1px solid var(--line);
+  color: var(--text-muted);
+  font-size: 9.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-family: var(--pm-font-mono);
+  font-size: 9.5px;
+}
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-item svg {
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--line-strong);
+  flex-shrink: 0;
+}
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-status {
+  font-weight: 600;
+  color: var(--text-soft);
+}
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-conf {
+  color: var(--green);
+  font-weight: 600;
+}
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-conf svg {
+  color: var(--green);
+}
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-right {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Premium Document Insights ─────────────────────────────────────── */
+.mr-markdown-workspace .pm-ws-stats-premium {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  padding: 0 12px 16px;
+}
+.mr-markdown-workspace .pm-stat-cell-premium {
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+.mr-markdown-workspace .pm-stat-cell-premium:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+.mr-markdown-workspace .pm-stat-cell-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--accent);
+}
+.mr-markdown-workspace .pm-stat-cell-data {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.mr-markdown-workspace .pm-stat-cell-premium .pm-stat-cell-label {
+  color: var(--text-faint);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.mr-markdown-workspace .pm-stat-cell-premium .pm-stat-cell-value {
+  color: var(--text);
+  font: 600 14px var(--pm-font-mono);
+  line-height: 1.2;
+}
+.mr-markdown-workspace .pm-stat-cell-quality {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-soft);
+  line-height: 1.2;
+}
+
+/* Confidence cell special styling */
+.mr-markdown-workspace .pm-stat-cell-conf {
+  grid-column: 1 / -1;
+}
+.mr-markdown-workspace .pm-conf-ring-premium {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PREMIUM PREVIEW SECTION — View Switcher & Export Bar
+   Scoped to .mr-markdown-workspace to avoid conflicts.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Premium Preview Pane Head ───────────────────────────────────────── */
+.mr-markdown-workspace .pm-ws-pane-head-premium {
+  height: 42px;
+  padding: 0 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Premium View Switcher (Rendered / Raw / Outline) ───────────────── */
+.mr-markdown-workspace .pm-view-switcher-premium {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-muted);
+  margin-left: auto;
+}
+.mr-markdown-workspace .pm-view-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 25px;
+  gap: 4px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: 600 9.5px var(--pm-font-mono);
+  letter-spacing: 0;
+  white-space: nowrap;
+  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+}
+.mr-markdown-workspace .pm-view-switcher-btn:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+.mr-markdown-workspace .pm-view-switcher-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.mr-markdown-workspace .pm-view-switcher-btn-active {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.mr-markdown-workspace .pm-view-switcher-btn svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.mr-markdown-workspace .pm-view-switcher-btn-active svg {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* ── Premium Export Bar ────────────────────────────────────────────── */
+.mr-markdown-workspace .pm-export-bar-premium {
+  min-height: 54px;
+  padding: 0 15px;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+/* Export format buttons container */
+.mr-markdown-workspace .pm-export-formats {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+/* Individual export format button */
+.mr-markdown-workspace .pm-export-format-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: 600 10px var(--pm-font-mono);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: background 0.14s ease, color 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+}
+.mr-markdown-workspace .pm-export-format-btn:hover {
+  color: var(--text);
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+.mr-markdown-workspace .pm-export-format-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+.mr-markdown-workspace .pm-export-format-btn-active {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.mr-markdown-workspace .pm-export-format-btn svg {
+  flex-shrink: 0;
+  opacity: 0.65;
+}
+.mr-markdown-workspace .pm-export-format-btn:hover svg {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* Export copy button */
+.mr-markdown-workspace .pm-export-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  font: 600 11px var(--pm-font-sans);
+  white-space: nowrap;
+  margin-left: auto;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+}
+.mr-markdown-workspace .pm-export-copy-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent-line);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.mr-markdown-workspace .pm-export-copy-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+.mr-markdown-workspace .pm-export-copy-btn svg {
+  flex-shrink: 0;
+}
+
+/* ── Responsive: Preview section ────────────────────────────────────── */
+@media (max-width: 820px) {
+  .mr-markdown-workspace .pm-view-switcher-btn span { display: none; }
+  .mr-markdown-workspace .pm-view-switcher-btn { padding: 5px 8px; }
+  .mr-markdown-workspace .pm-export-format-btn span { display: none; }
+  .mr-markdown-workspace .pm-export-format-btn { padding: 5px 8px; }
+}
+@media (max-width: 560px) {
+  .mr-markdown-workspace .pm-export-bar-premium { padding: 0 10px; gap: 6px; }
+  .mr-markdown-workspace .pm-export-copy-btn span { display: none; }
+  .mr-markdown-workspace .pm-export-copy-btn { padding: 6px 10px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PREMIUM SIDEBAR TOGGLE & PREVIEW TOGGLE
+   Scoped to .mr-markdown-workspace to avoid conflicts.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Sidebar Toggle Chevron Rotation ────────────────────────────────── */
+/* When sidebar is expanded (not collapsed), rotate chevron to point left */
+.mr-markdown-workspace .mr-sidebar-toggle:not(.mr-sidebar-toggle-collapsed) svg {
+  transform: rotate(180deg);
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mr-markdown-workspace .mr-sidebar-toggle svg {
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Preview Toggle Active State ────────────────────────────────────── */
+.mr-markdown-workspace .mr-icon-only-active {
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.mr-markdown-workspace .mr-icon-only-active:hover {
+  background: var(--accent-line) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PREMIUM EDITOR TOOLBAR & STATS
+   Scoped to .mr-markdown-workspace to avoid conflicts.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Premium Editor Toolbar ─────────────────────────────────────────── */
+.mr-markdown-workspace .pm-editor-toolbar-premium {
+  min-height: 40px;
+  padding: 4px 10px;
+  background: linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--surface) 93%,var(--surface-muted)));
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+  display: block;
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium::-webkit-scrollbar-track {
+  background: transparent;
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 99px;
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+}
+
+/* Premium tool groups with better spacing */
+.mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 7px 0 0;
+  margin-right: 3px;
+  border-right: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool-group:last-child {
+  border-right: none;
+  margin-right: 0;
+  padding-right: 0;
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool-group-label {
+  position:static;
+  flex:0 0 auto;
+  margin:0 3px 0 1px;
+  color:var(--text-faint);
+  font-size:7px;
+  font-weight:750;
+  line-height:1;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  pointer-events:none;
+  user-select:none;
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool-group-search {
+  padding-left:1px;
+}
+
+/* Premium tool buttons */
+.mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool {
+  width: 27px;
+  height: 27px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.14s ease, color 0.14s ease, border-color .14s ease, box-shadow .14s ease, transform 0.14s ease;
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool:hover {
+  border-color:var(--line);
+  background: var(--surface);
+  color: var(--text);
+  transform: none;
+  box-shadow:0 1px 3px rgba(15,23,42,.06);
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool:active {
+  transform: translateY(0) scale(0.94);
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool:focus-visible {
+  outline:2px solid var(--accent);
+  outline-offset:1px;
+}
+.mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool-active,
+.mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool[aria-pressed="true"] {
+  border-color:var(--accent-line);
+  color:var(--accent);
+  background:var(--accent-soft);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 8%,transparent);
+}
+
+/* ── Editor Stats Badge ─────────────────────────────────────────────── */
+.mr-markdown-workspace .pm-editor-stats {
+  margin-left: auto;
+  align-self:center;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 25px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  color: var(--text-muted);
+  font: 600 9px var(--pm-font-mono);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mr-markdown-workspace .pm-editor-stats svg {
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+.mr-markdown-workspace .pm-editor-stats span {
+  color: var(--text-soft);
+}
+
+/* ── Responsive: Editor toolbar ─────────────────────────────────────── */
+@media (max-width: 820px) {
+  .mr-markdown-workspace .pm-editor-toolbar-premium { padding: 4px 8px; }
+  .mr-markdown-workspace .pm-editor-stats { padding: 0 7px; font-size: 9px; }
+}
+@media (max-width: 1180px) {
+  .mr-markdown-workspace .pm-editor-toolbar-premium { min-height:40px; align-items:center; }
+  .mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool-group { align-items:center; padding-top:0; }
+  .mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool-group-label { display:none; }
+}
+@media (max-width: 560px) {
+  .mr-markdown-workspace .pm-editor-toolbar-premium { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COLLAPSIBLE EDITOR TOOLBAR
+   A chevron sits centred on the editor header's lower border and folds the
+   formatting row away, so the editor can claim the full height on demand.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Anchors the chevron to the header edge (editor pane only). */
+.mr-markdown-workspace .pm-ws-editor .pm-ws-pane-head { position: relative; }
+
+/* The toolbar carries its own min-height (40px base, 38px in focus-split).
+   A `0fr` row is shorthand for `minmax(auto, 0fr)`, and that implicit `auto`
+   minimum absorbs the item's min-height — and its padding/border, which can
+   never shrink — so the row could never fully close. Fold the min-height into
+   padding-block (keeping the bar's exact 40px look), then let the padding and
+   border collapse away with it. */
+.mr-markdown-workspace .mr-editor-tools .pm-editor-toolbar-premium,
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .mr-editor-tools .pm-editor-toolbar-premium {
+  min-height: 0;
+  padding-block: 6px;
+  transition: padding-block-start .3s cubic-bezier(.16,1,.3,1), padding-block-end .3s cubic-bezier(.16,1,.3,1), border-bottom-width .3s cubic-bezier(.16,1,.3,1);
+}
+.mr-markdown-workspace .mr-editor-tools.is-collapsed .pm-editor-toolbar-premium,
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .mr-editor-tools.is-collapsed .pm-editor-toolbar-premium {
+  padding-block: 0;
+  border-bottom-width: 0;
+}
+
+/* Wraps the toolbar so its height animates exactly to the content height. */
+.mr-markdown-workspace .mr-editor-tools {
+  display: grid;
+  grid-template-rows: 1fr;
+  flex: 0 0 auto;
+  overflow: hidden;
+  transition: grid-template-rows .3s cubic-bezier(.16,1,.3,1);
+}
+.mr-markdown-workspace .mr-editor-tools.is-collapsed { grid-template-rows: 0fr; }
+
+.mr-markdown-workspace .mr-editor-tools-toggle {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 50%);
+  z-index: 6;
+  width: 46px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15,23,42,.08), 0 0 0 3px color-mix(in srgb, var(--surface) 78%, transparent);
+  transition: color .16s ease, border-color .16s ease, background .16s ease, width .18s ease;
+}
+.mr-markdown-workspace .mr-editor-tools-toggle:hover {
+  width: 54px;
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line-strong));
+  background: var(--surface-muted);
+}
+.mr-markdown-workspace .mr-editor-tools-toggle:active { transform: translate(-50%, 50%) scale(.96); }
+.mr-markdown-workspace .mr-editor-tools-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Points up while the tools are open ("click to fold away"), and flips down
+   once they are hidden ("click to reveal"). */
+.mr-markdown-workspace .mr-editor-tools-toggle svg { transform: rotate(180deg); transition: transform .3s cubic-bezier(.16,1,.3,1); }
+.mr-markdown-workspace .mr-editor-tools-toggle.is-collapsed svg { transform: none; }
+
+@media (max-width: 560px) {
+  /* The toolbar is hidden at this width, so the toggle has nothing to drive. */
+  .mr-markdown-workspace .mr-editor-tools-toggle { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mr-markdown-workspace .mr-editor-tools,
+  .mr-markdown-workspace .mr-editor-tools-toggle,
+  .mr-markdown-workspace .mr-editor-tools-toggle svg { transition: none; }
+}
+

@@ -1,0 +1,457 @@
+/* ================================================================
+   Holographic Exploded Quantum Cube — scoped showcase styles.
+
+   Ported 1:1 from the source design. Every geometry value
+   (280px faces, 16px gap, translateZ(148px), 1500px perspective,
+   24px/20px icon elevation) and every keyframe is preserved.
+
+   Isolation notes:
+   - CSS Module only. Nothing here is global.
+   - Class selectors (0,1,0) always outrank Tailwind preflight (0,0,1).
+   - The single :global() use is an ANCESTOR theme read, not a global rule.
+   ================================================================ */
+
+/* ── Stage ─────────────────────────────────────────────────────── */
+.showcase {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  /* Tall enough that the exploded cube (280px + 2×170px depth) never clips. */
+  min-height: 600px;
+  /* Transparent stage — the cube floats over the home page, no backdrop. */
+  background: transparent;
+  font-family: 'Plus Jakarta Sans', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow: visible;
+  isolation: isolate;
+}
+
+
+
+/* ── Ambient environment lighting ──────────────────────────────── */
+.glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle at center, rgba(109, 40, 217, 0.15) 0%, rgba(37, 99, 235, 0.05) 40%, transparent 70%);
+  filter: blur(60px);
+  -webkit-filter: blur(60px);
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: breathe 10s ease-in-out infinite alternate;
+}
+
+@keyframes breathe {
+  0%   { transform: scale(0.9); opacity: 0.8; }
+  100% { transform: scale(1.1); opacity: 1; }
+}
+
+/* ── Responsive scaling wrapper ────────────────────────────────────
+   The scale lives here, never on .scene — .scene's levitate keyframes
+   own its transform and would otherwise clobber the scale. */
+.stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  /* No paint containment: the exploded faces extend far beyond the 280px
+     scene box and paint-clipping would slice them off. Layout containment
+     alone keeps the perf win without clipping the 3D geometry. */
+  contain: layout style;
+  overflow: visible;
+}
+
+
+/* ── 3D scene perspective ──────────────────────────────────────── */
+.scene {
+  width: 280px;
+  height: 280px;
+  perspective: 1500px;
+  will-change: transform;
+  animation: levitate 6s ease-in-out infinite alternate;
+}
+
+@keyframes levitate {
+  0%   { transform: translateY(-10px); }
+  100% { transform: translateY(10px); }
+}
+
+/* ── Main rotating cube ────────────────────────────────────────── */
+.cube {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform;
+  animation: quantumSpin 24s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+@keyframes quantumSpin {
+  0%   { transform: rotateX(-15deg) rotateY(0deg) rotateZ(5deg); }
+  50%  { transform: rotateX(25deg) rotateY(180deg) rotateZ(-5deg); }
+  100% { transform: rotateX(-15deg) rotateY(360deg) rotateZ(5deg); }
+}
+
+/* ── AI glowing core ───────────────────────────────────────────── */
+/*
+  Core orb retinted to the brand-orangev2 family (sampled: highlight #FB9944,
+  core #FE7405, deep folds #FB6504) to house the static orange octopus mark the
+  same way the blue orb housed the blue one — one hue, tone-on-tone, the
+  white sheen at 30% 25% doing the separation. The mark itself is a baked-eyes
+  static PNG: no overlay component, so it can never eye-blink.
+*/
+.core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 80px;
+  height: 80px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  transform: translate(-50%, -50%) translateZ(0);
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 237, 204, 0.92) 0 3%, rgba(254, 148, 58, 0.48) 12%, transparent 31%),
+    radial-gradient(circle at 67% 75%, rgba(180, 55, 5, 0.72), transparent 52%),
+    linear-gradient(145deg, #ffb454 0%, #fe7405 46%, #b4530a 100%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 30px 10px rgba(254, 116, 5, 0.55),
+    0 0 88px 26px rgba(254, 116, 5, 0.32),
+    inset 0 2px 4px rgba(255, 255, 255, 0.65),
+    inset 0 -10px 15px rgba(120, 40, 0, 0.46);
+  animation: pulseCore 2s ease-in-out infinite alternate;
+}
+.coreLogo {
+  position: relative;
+  z-index: 1;
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 5px rgba(140, 45, 0, 0.45));
+}
+
+@keyframes pulseCore {
+  0%   { transform: translate(-50%, -50%) scale(0.9); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+}
+
+/* ── Exploded faces ────────────────────────────────────────────── */
+.face {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 16px; /* Exploded view gap */
+  transform-style: preserve-3d;
+}
+
+/* Near-joined faces: an 8px reveal keeps the cube glossy, not exploded. */
+.faceFront  { transform: rotateY(0deg) translateZ(148px); }
+.faceRight  { transform: rotateY(90deg) translateZ(148px); }
+.faceBack   { transform: rotateY(180deg) translateZ(148px); }
+.faceLeft   { transform: rotateY(-90deg) translateZ(148px); }
+.faceTop    { transform: rotateX(90deg) translateZ(148px); }
+.faceBottom { transform: rotateX(-90deg) translateZ(148px); }
+
+/* ── Glass sub-blocks (cubies) ─────────────────────────────────── */
+.cubie {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.3),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+  transform-style: preserve-3d;
+  transition: all 0.4s ease;
+}
+
+/* Inner reflection shimmer */
+.cubie::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 18%, rgba(255, 255, 255, 0.34) 43%, rgba(255, 255, 255, 0.08) 52%, transparent 72%);
+  pointer-events: none;
+}
+
+.cube:hover .cubie {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Center hole modifier (reveals the core) */
+.cubieHole {
+  opacity: 0.2;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Perf: back/bottom faces carry only empty glass and never present an icon.
+   Dropping their backdrop blur removes 18 of 54 blur layers at no visual cost. */
+.faceBack .cubie,
+.faceBottom .cubie {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ── True 3D layered icons ─────────────────────────────────────── */
+.icon3d {
+  --cube-icon-front-top: #d6634a;
+  --cube-icon-front-bottom: #ac422a;
+  --cube-icon-back-ink: #efaa9a;
+  --cube-icon-light-back-ink: #a1402a;
+  --cube-icon-back-bg: rgba(30, 36, 41, 0.76);
+  --cube-icon-shadow: rgba(172, 66, 42, 0.42);
+  position: relative;
+  display: block;
+  width: 38px;
+  height: 38px;
+  transform-style: preserve-3d;
+  /* Keep the badge attached to its glass cubie while avoiding z-fighting. */
+  transform: translateZ(1px);
+}
+
+.icon3dBack {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--cube-icon-back-ink);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 42%),
+    var(--cube-icon-back-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: none;
+  box-shadow:
+    0 4px 9px -4px var(--cube-icon-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.icon3dBack svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
+}
+
+/* Foreground layer — floats 20px above the back layer */
+.icon3dFront {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 29px;
+  height: 29px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  background: linear-gradient(135deg, var(--cube-icon-front-top), var(--cube-icon-front-bottom));
+  transform: none;
+  box-shadow:
+    0 6px 12px -6px var(--cube-icon-shadow),
+    0 1px 3px -2px rgba(0, 0, 0, 0.54),
+    inset 0 1px 1px rgba(255, 255, 255, 0.42),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.icon3dFront::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  pointer-events: none;
+}
+
+/* ── Theme colors ────────────────────────────────────────────────
+   Four capability signals, values shared with LayeredIcon.module.css so the
+   cube matches the tool cards below it. The front stops are the light-theme
+   tone (they read correctly on both pearl and dark glass); the rear glyph ink
+   switches per canvas so it stays legible instead of washing out. */
+.toneConvert {
+  --cube-icon-front-top: #d6634a;
+  --cube-icon-front-bottom: #ac422a;
+  --cube-icon-back-ink: #efaa9a;
+  --cube-icon-light-back-ink: #a1402a;
+  --cube-icon-shadow: rgba(172, 66, 42, 0.42);
+}
+
+.toneMerge {
+  --cube-icon-front-top: #10b981;
+  --cube-icon-front-bottom: #047857;
+  --cube-icon-back-ink: #6ee7b7;
+  --cube-icon-light-back-ink: #064e3b;
+  --cube-icon-shadow: rgba(4, 120, 87, 0.42);
+}
+
+.toneRotate {
+  --cube-icon-front-top: #10b981;
+  --cube-icon-front-bottom: #047857;
+  --cube-icon-back-ink: #6ee7b7;
+  --cube-icon-light-back-ink: #064e3b;
+  --cube-icon-shadow: rgba(4, 120, 87, 0.42);
+}
+
+.toneCompress {
+  --cube-icon-front-top: #10b981;
+  --cube-icon-front-bottom: #047857;
+  --cube-icon-back-ink: #6ee7b7;
+  --cube-icon-light-back-ink: #064e3b;
+  --cube-icon-shadow: rgba(4, 120, 87, 0.42);
+}
+
+.toneExtract {
+  --cube-icon-front-top: #00a672;
+  --cube-icon-front-bottom: #008152;
+  --cube-icon-back-ink: #89cfaf;
+  --cube-icon-light-back-ink: #007a4e;
+  --cube-icon-shadow: rgba(0, 129, 82, 0.42);
+}
+
+.toneAi {
+  --cube-icon-front-top: #8f76dc;
+  --cube-icon-front-bottom: #6e54b3;
+  --cube-icon-back-ink: #bfb4f0;
+  --cube-icon-light-back-ink: #6851a8;
+  --cube-icon-shadow: rgba(110, 84, 179, 0.42);
+}
+
+.toneAdvanced {
+  --cube-icon-front-top: #5488e4;
+  --cube-icon-front-bottom: #3565bb;
+  --cube-icon-back-ink: #9fbff5;
+  --cube-icon-light-back-ink: #3460af;
+  --cube-icon-shadow: rgba(53, 101, 187, 0.42);
+}
+
+/* Front-label sizing follows the label, not the hue (same rule as the cards). */
+.icon3dFrontSm { font-size: 9px; }
+.icon3dFrontMd { font-size: 11px; }
+.icon3dFrontLg { font-size: 13px; }
+.icon3dFrontIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon3dFrontIcon svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+}
+
+/* ── Perf: freeze all motion while scrolled out of view ────────────
+   Toggled by IntersectionObserver. Applied post-mount only, so the
+   server and client markup match exactly (no hydration mismatch). */
+.animPaused .glow,
+.animPaused .scene,
+.animPaused .cube,
+.animPaused .core {
+  animation-play-state: paused !important;
+}
+
+/* Light canvas: use pearl glass with a cool premium tint instead of grey smoke. */
+:global(html[data-theme="light"]) .cubie {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(235, 240, 255, 0.76) 58%, rgba(218, 228, 250, 0.7));
+  border-color: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.96),
+    inset 0 -1px 1px rgba(91, 112, 164, 0.14),
+    0 8px 18px rgba(83, 99, 145, 0.16),
+    0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
+:global(html[data-theme="light"]) .cube:hover .cubie {
+  border-color: rgba(255, 255, 255, 1);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(225, 233, 255, 0.86));
+}
+
+:global(html[data-theme="light"]) .cubieHole {
+  background: transparent;
+  border-color: rgba(100, 116, 139, 0.22);
+  box-shadow: none;
+}
+
+:global(html[data-theme="light"]) .icon3dBack {
+  /* Rear glyph ink switches to the darker tone on pearl glass — the dark-canvas
+     tint was near-invisible here. */
+  color: var(--cube-icon-light-back-ink);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(226, 233, 248, 0.92));
+  border-color: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 5px 10px -5px rgba(70, 85, 130, 0.26),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95);
+}
+
+/* ── Responsive: uniform scale keeps the design proportions exact ── */
+@media (max-width: 900px) {
+  .showcase { min-height: 660px; }
+  .stage { transform: scale(0.82); }
+}
+
+@media (max-width: 720px) {
+  .showcase { min-height: 500px; }
+  .stage { transform: scale(0.62); }
+}
+
+@media (max-width: 480px) {
+  .showcase { min-height: 400px; }
+  .stage { transform: scale(0.46); }
+}
+
+
+/* ── Reduced motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .glow,
+  .scene,
+  .cube,
+  .core {
+    animation: none !important;
+  }
+
+  .scene {
+    transform: translateY(0);
+  }
+
+  /* Hold a flattering static pose instead of the 0deg start frame */
+  .cube {
+    transform: rotateX(-15deg) rotateY(-28deg) rotateZ(5deg);
+  }
+
+  .cubie {
+    transition: none !important;
+  }
+}

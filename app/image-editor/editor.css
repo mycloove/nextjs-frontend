@@ -1,0 +1,868 @@
+/* app/image-editor/editor.css */
+/*new design 30 april*/
+/* ─────────────────────────────────────────────────────────────
+   mycloove · Image Editor  —  editor.css
+   Editor has its own internal light / dark theme (independent
+   of the global site theme). The topbar above uses the global
+   theme.css variables; everything inside .image-editor-container
+   uses the variables defined here.
+───────────────────────────────────────────────────────────── */
+
+/* ═══════════════════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════════════════ */
+.image-editor-container {
+
+  /* ── Light palette ── */
+  --bg-light:       #F7F6F3;
+  --bg2-light:      #EFEDE9;
+  --bg3-light:      #E6E4DF;
+  --sur-light:      #FFFFFF;
+  --bdr-light:      #E0DDD7;
+  --bdr2-light:     #C8C5BE;
+  --txt-light:      #1A1916;
+  --txt2-light:     #65635C;
+  --txt3-light:     #A09E98;
+  --acc-light:      #2D6BE4;
+  --acc-bg-light:   #EEF3FD;
+  --acc-bdr-light:  #BDD0F8;
+  --acc-txt-light:  #1A4FA8;
+  --grn-light:      #1A9260;
+  --grn-bg-light:   #E6F7F0;
+  --grn-bdr-light:  #A3DBBF;
+
+  /* ── Dark palette ── */
+  --bg-dark:        #111113;
+  --bg2-dark:       #18181B;
+  --bg3-dark:       #202024;
+  --sur-dark:       #1C1C20;
+  --bdr-dark:       #2A2A30;
+  --bdr2-dark:      #38383F;
+  --txt-dark:       #E6E4DE;
+  --txt2-dark:      #94928C;
+  --txt3-dark:      #56544F;
+  --acc-dark:       #4F8FF5;
+  --acc-bg-dark:    #192038;
+  --acc-bdr-dark:   #2B4A85;
+  --acc-txt-dark:   #82B0F8;
+  --grn-dark:       #2DBD7A;
+  --grn-bg-dark:    #0F2A1C;
+  --grn-bdr-dark:   #1D5C3A;
+}
+
+/* ── Apply light tokens ── */
+.image-editor-container.editor-light {
+  --bg:       var(--bg-light);
+  --bg2:      var(--bg2-light);
+  --bg3:      var(--bg3-light);
+  --sur:      var(--sur-light);
+  --bdr:      var(--bdr-light);
+  --bdr2:     var(--bdr2-light);
+  --txt:      var(--txt-light);
+  --txt2:     var(--txt2-light);
+  --txt3:     var(--txt3-light);
+  --acc:      var(--acc-light);
+  --acc-bg:   var(--acc-bg-light);
+  --acc-bdr:  var(--acc-bdr-light);
+  --acc-txt:  var(--acc-txt-light);
+  --grn:      var(--grn-light);
+  --grn-bg:   var(--grn-bg-light);
+  --grn-bdr:  var(--grn-bdr-light);
+}
+
+/* ── Apply dark tokens ── */
+.image-editor-container.editor-dark {
+  --bg:       var(--bg-dark);
+  --bg2:      var(--bg2-dark);
+  --bg3:      var(--bg3-dark);
+  --sur:      var(--sur-dark);
+  --bdr:      var(--bdr-dark);
+  --bdr2:     var(--bdr2-dark);
+  --txt:      var(--txt-dark);
+  --txt2:     var(--txt2-dark);
+  --txt3:     var(--txt3-dark);
+  --acc:      var(--acc-dark);
+  --acc-bg:   var(--acc-bg-dark);
+  --acc-bdr:  var(--acc-bdr-dark);
+  --acc-txt:  var(--acc-txt-dark);
+  --grn:      var(--grn-dark);
+  --grn-bg:   var(--grn-bg-dark);
+  --grn-bdr:  var(--grn-bdr-dark);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CONTAINER & WRAPPER
+═══════════════════════════════════════════════════════════ */
+.image-editor-container {
+  width: 100%;
+  background: var(--bg);
+  transition: background 0.28s ease, color 0.28s ease;
+}
+
+.editor-wrapper {
+  display: flex;
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto 2rem;
+  height: 580px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--bdr);
+  background: var(--bg);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+  transition: border-color 0.28s ease, box-shadow 0.28s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LEFT SIDEBAR  (tool tabs)
+═══════════════════════════════════════════════════════════ */
+.editor-sidebar {
+  width: 68px;
+  background: var(--sur);
+  border-right: 1px solid var(--bdr);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 0 14px;
+  flex-shrink: 0;
+  transition: background 0.28s, border-color 0.28s;
+}
+
+/* Logo mark */
+.editor-logo {
+  width: 36px;
+  height: 36px;
+  background: var(--acc);
+  border-radius: 10px;
+  margin-bottom: 22px;
+  flex-shrink: 0;
+  transition: background 0.28s;
+}
+.editor-logo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 7px;
+}
+
+/* Tab buttons */
+.editor-tab-btn {
+  width: 48px;
+  height: 56px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-bottom: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+  color: var(--txt3);
+}
+.editor-tab-btn:hover:not(.active) {
+  background: var(--bg2);
+}
+.editor-tab-btn.active {
+  background: var(--acc-bg);
+  border-color: var(--acc-bdr);
+}
+.editor-tab-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.editor-tab-icon svg {
+  width: 18px;
+  height: 18px;
+  color: var(--txt3);
+  transition: color 0.14s;
+}
+.editor-tab-btn.active .editor-tab-icon svg {
+  color: var(--acc);
+}
+.editor-tab-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--txt3);
+  transition: color 0.14s;
+}
+.editor-tab-btn.active .editor-tab-label {
+  color: var(--acc-txt);
+}
+
+.editor-divider {
+  width: 32px;
+  height: 1px;
+  background: var(--bdr);
+  margin: 10px 0;
+  transition: background 0.28s;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EDITOR TOPBAR  (inside the editor wrapper, above canvas)
+═══════════════════════════════════════════════════════════ */
+.editor-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  min-width: 0;
+  transition: background 0.28s;
+}
+
+.editor-topbar {
+  height: 46px;
+  border-bottom: 1px solid var(--bdr);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  gap: 10px;
+  flex-shrink: 0;
+  transition: border-color 0.28s;
+}
+
+.editor-tab-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--txt);
+  letter-spacing: -0.2px;
+  text-transform: capitalize;
+  transition: color 0.28s;
+}
+
+.editor-status-badge {
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 9px;
+  background: var(--bg2);
+  color: var(--txt2);
+  border: 1px solid var(--bdr);
+  transition: all 0.28s;
+}
+.editor-status-badge.ready {
+  background: var(--grn-bg);
+  color: var(--grn);
+  border-color: var(--grn-bdr);
+}
+
+/* Action buttons in topbar */
+.editor-top-btn {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--bdr);
+  background: var(--sur);
+  color: var(--txt2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+  white-space: nowrap;
+}
+.editor-top-btn:hover:not(:disabled) {
+  background: var(--bg2);
+  border-color: var(--bdr2);
+  color: var(--txt);
+}
+.editor-top-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.editor-export-btn {
+  background: var(--acc);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+}
+.editor-export-btn:hover:not(:disabled) {
+  background: var(--acc);
+  opacity: 0.88;
+  border-color: transparent;
+  color: #fff;
+}
+
+/* Editor-internal theme toggle (distinct from global ThemeToggle) */
+.editor-theme-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--bdr);
+  background: var(--sur);
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.14s, border-color 0.14s, transform 0.15s;
+  flex-shrink: 0;
+}
+.editor-theme-toggle:hover {
+  background: var(--bg2);
+  border-color: var(--bdr2);
+  transform: scale(1.06);
+}
+.editor-theme-toggle:active {
+  transform: scale(0.93);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CANVAS / DROP ZONE AREA
+═══════════════════════════════════════════════════════════ */
+.editor-canvas-area {
+  flex: 1;
+  background: var(--bg2);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  background-image:
+    linear-gradient(var(--bdr) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bdr) 1px, transparent 1px);
+  background-size: 28px 28px;
+  transition: background-color 0.28s;
+}
+
+/* Corner bracket decorations */
+.canvas-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--txt3);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.3;
+  pointer-events: none;
+}
+.corner-tl { top: 12px; left: 12px; border-top-width: 2px; border-left-width: 2px; }
+.corner-tr { top: 12px; right: 12px; border-top-width: 2px; border-right-width: 2px; }
+.corner-bl { bottom: 12px; left: 12px; border-bottom-width: 2px; border-left-width: 2px; }
+.corner-br { bottom: 12px; right: 12px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* Drop zone */
+.editor-dropzone {
+  width: 288px;
+  background: var(--sur);
+  border-radius: 18px;
+  border: 1.5px dashed var(--bdr2);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.editor-dropzone:hover {
+  border-color: var(--acc);
+  background: var(--acc-bg);
+  transform: translateY(-1px);
+}
+
+.editor-icon-box {
+  width: 54px;
+  height: 54px;
+  background: var(--acc-bg);
+  border: 1px solid var(--acc-bdr);
+  border-radius: 14px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--acc);
+  transition: background 0.28s, border-color 0.28s;
+}
+.editor-dropzone-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--txt);
+  margin: 8px 0 5px;
+  transition: color 0.28s;
+}
+.editor-dropzone-sub {
+  font-size: 11.5px;
+  color: var(--txt3);
+  transition: color 0.28s;
+}
+.editor-format-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 16px;
+}
+.editor-format-chips span {
+  background: var(--bg2);
+  border: 1px solid var(--bdr);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--txt2);
+  transition: background 0.28s, border-color 0.28s, color 0.28s;
+}
+
+/* ── Two-column preview ── */
+.editor-two-col-preview {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 16px;
+}
+.editor-preview-card {
+  text-align: center;
+  background: var(--sur);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid var(--bdr);
+  width: 230px;
+  transition: background 0.28s, border-color 0.28s;
+}
+.editor-preview-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--txt3);
+  margin-bottom: 9px;
+  transition: color 0.28s;
+}
+.editor-preview-img {
+  max-width: 100%;
+  max-height: 190px;
+  border-radius: 8px;
+  border: 1px solid var(--bdr);
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+.editor-preview-dim {
+  font-size: 10px;
+  color: var(--txt3);
+  margin-top: 7px;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.28s;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   STATUS BAR
+═══════════════════════════════════════════════════════════ */
+.editor-status-bar {
+  height: 30px;
+  border-top: 1px solid var(--bdr);
+  background: var(--sur);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  transition: background 0.28s, border-color 0.28s;
+}
+.editor-status-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.status-item-group {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 10.5px;
+}
+.status-label {
+  color: var(--txt3);
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  transition: color 0.28s;
+}
+.status-value {
+  color: var(--txt2);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.28s;
+}
+.status-sep {
+  color: var(--bdr2);
+}
+.status-divider {
+  width: 1px;
+  height: 13px;
+  background: var(--bdr);
+  transition: background 0.28s;
+}
+.editor-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bdr2);
+  transition: background 0.28s;
+  flex-shrink: 0;
+}
+.editor-status-dot.active {
+  background: var(--grn);
+  box-shadow: 0 0 0 2px var(--grn-bg);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RIGHT PANEL  (controls)
+═══════════════════════════════════════════════════════════ */
+.editor-right-panel {
+  width: 228px;
+  background: var(--sur);
+  border-left: 1px solid var(--bdr);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width 0.22s cubic-bezier(0.4,0,0.2,1), background 0.28s, border-color 0.28s;
+}
+.editor-right-panel.collapsed {
+  width: 52px;
+}
+
+.editor-panel-header {
+  padding: 13px 14px 10px;
+  border-bottom: 1px solid var(--bdr);
+  flex-shrink: 0;
+  transition: border-color 0.28s;
+}
+.editor-right-panel.collapsed .editor-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
+}
+.editor-panel-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--txt);
+  text-transform: capitalize;
+  letter-spacing: -0.1px;
+  transition: color 0.28s;
+}
+.editor-panel-sub {
+  font-size: 10px;
+  color: var(--txt3);
+  margin-top: 2px;
+  transition: color 0.28s;
+}
+
+/* Panel body — scrollable controls */
+.editor-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 13px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bdr2) transparent;
+  transition: background 0.28s;
+}
+.editor-panel-body::-webkit-scrollbar { width: 3px; }
+.editor-panel-body::-webkit-scrollbar-track { background: transparent; }
+.editor-panel-body::-webkit-scrollbar-thumb { background: var(--bdr2); border-radius: 4px; }
+.editor-panel-body.collapsed { display: none; }
+
+.editor-panel-footer {
+  padding: 11px 14px;
+  border-top: 1px solid var(--bdr);
+  flex-shrink: 0;
+  transition: border-color 0.28s;
+}
+.editor-right-panel.collapsed .editor-panel-footer {
+  padding: 10px 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* ── Panel toggle button ── */
+.editor-panel-toggle {
+  background: transparent;
+  border: 1px solid var(--bdr);
+  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--txt2);
+  font-size: 11px;
+  flex-shrink: 0;
+  transition: background 0.14s, border-color 0.14s, color 0.14s, transform 0.2s;
+}
+.editor-panel-toggle:hover {
+  background: var(--acc-bg);
+  border-color: var(--acc-bdr);
+  color: var(--acc);
+  transform: scale(1.06);
+}
+.editor-panel-toggle:active {
+  transform: scale(0.9);
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+
+/* ── Apply button ── */
+.editor-apply-btn {
+  width: 100%;
+  background: var(--acc);
+  border: none;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  letter-spacing: -0.1px;
+  transition: opacity 0.14s, transform 0.1s;
+}
+.editor-apply-btn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+.editor-apply-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.editor-apply-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Collapsed apply */
+.editor-right-panel.collapsed .editor-apply-btn {
+  width: 34px;
+  height: 72px;
+  padding: 0;
+  border-radius: 10px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 11px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FORM CONTROLS  (inside right panel)
+═══════════════════════════════════════════════════════════ */
+.editor-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--txt3);
+  display: block;
+  margin-bottom: 5px;
+  transition: color 0.28s;
+}
+.editor-value-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--txt2);
+  margin-left: 5px;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.28s;
+}
+.editor-hint {
+  font-size: 10px;
+  color: var(--txt3);
+  margin-top: 5px;
+  line-height: 1.5;
+  transition: color 0.28s;
+}
+
+/* Number input */
+.editor-input-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 5px;
+}
+.editor-number-input {
+  width: 64px;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--bdr);
+  border-radius: 8px;
+  padding: 5px 4px;
+  font-size: 12px;
+  color: var(--txt);
+  transition: border-color 0.14s, box-shadow 0.14s, background 0.28s, color 0.28s;
+}
+.editor-number-input:focus {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2.5px var(--acc-bdr);
+}
+
+/* Lock ratio button */
+.editor-lock-btn {
+  width: 30px;
+  height: 28px;
+  background: var(--acc-bg);
+  border: 1px solid var(--acc-bdr);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  flex-shrink: 0;
+  transition: background 0.14s, border-color 0.14s, transform 0.1s;
+}
+.editor-lock-btn:hover {
+  background: var(--acc-bdr);
+}
+.editor-lock-btn:active {
+  transform: scale(0.9);
+}
+
+/* Preset pills */
+.editor-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+}
+.editor-pill {
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  background: var(--sur);
+  border: 1px solid var(--bdr);
+  color: var(--txt2);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.editor-pill:hover:not(.active) {
+  background: var(--bg2);
+  border-color: var(--bdr2);
+}
+.editor-pill.active {
+  background: var(--acc-bg);
+  border-color: var(--acc-bdr);
+  color: var(--acc-txt);
+}
+
+/* Range slider */
+.editor-slider {
+  width: 100%;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg3);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.28s;
+}
+.editor-slider:focus { outline: none; }
+.editor-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  background: var(--acc);
+  border: 2.5px solid var(--sur);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.1s;
+}
+.editor-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.editor-slider::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  background: var(--acc);
+  border: 2.5px solid var(--sur);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Select */
+.editor-select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--bdr);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 11.5px;
+  color: var(--txt);
+  margin-top: 5px;
+  cursor: pointer;
+  transition: border-color 0.14s, background 0.28s, color 0.28s;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  padding-right: 28px;
+}
+.editor-select:focus {
+  outline: none;
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2.5px var(--acc-bdr);
+}
+
+/* Segmented control */
+.editor-segments {
+  display: flex;
+  background: var(--bg2);
+  border: 1px solid var(--bdr);
+  border-radius: 8px;
+  padding: 3px;
+  margin-top: 5px;
+  gap: 2px;
+  transition: background 0.28s, border-color 0.28s;
+}
+.editor-segment {
+  flex: 1;
+  text-align: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 0;
+  color: var(--txt2);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.editor-segment.active {
+  background: var(--sur);
+  border-color: var(--bdr);
+  color: var(--acc);
+}
+.editor-segment:hover:not(.active) {
+  background: var(--bg3);
+}
+
+/* Section divider inside panel */
+.editor-section-divider {
+  border: none;
+  border-top: 1px solid var(--bdr);
+  margin: 2px 0 0;
+  transition: border-color 0.28s;
+}
+
+/* Placeholder for coming-soon tabs */
+.editor-placeholder {
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--txt3);
+  padding: 20px 0;
+  border: 1.5px dashed var(--bdr2);
+  border-radius: 10px;
+  line-height: 1.6;
+  transition: color 0.28s, border-color 0.28s;
+}
+
+
+
+

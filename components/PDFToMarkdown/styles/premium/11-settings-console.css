@@ -1,0 +1,473 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   MR. MARKDOWN — calibration console (settings)
+
+   Appended last in the premium.css load order (see that file): it is a new
+   surface, not an insert into the 00–10 cascade. Everything is scoped to
+   `.mr-markdown-workspace`, so it reads the workspace palette (surface 4) and
+   its `data-theme` — never the global coral tokens, and never a fourth palette.
+
+   Instrument concept: the operator's own bench. One accent (workspace teal),
+   one signature motion (origin-anchored unfold from the seal), hairline-law
+   grouping, mono only for keys/ids/values.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.mr-markdown-workspace .mr-cfg-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ── Overlay + shell ─────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 42px 18px 22px;
+  background: color-mix(in srgb, var(--text) 30%, transparent);
+  backdrop-filter: blur(3px) saturate(1.05);
+  -webkit-backdrop-filter: blur(3px) saturate(1.05);
+  animation: mrCfgScrimIn 160ms ease both;
+}
+
+.mr-markdown-workspace .mr-cfg-console {
+  width: min(940px, calc(100vw - 36px));
+  height: min(660px, calc(100vh - 64px));
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'idbar idbar'
+    'rail pane'
+    'rail foot';
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--pm-r-xl, 20px);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--pm-sh-xl, var(--shadow-lg));
+  transform-origin: top right;
+  animation: mrCfgUnfold 320ms var(--pm-ease-spring, cubic-bezier(.34,1.56,.64,1)) both;
+}
+.mr-markdown-workspace .mr-cfg-console:focus { outline: none; }
+.mr-markdown-workspace .mr-cfg-console:focus-visible { box-shadow: var(--pm-sh-xl, var(--shadow-lg)), 0 0 0 3px var(--accent-line); }
+
+/* ── Identity header strip ───────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-identitybar {
+  grid-area: idbar; position: relative;
+  height: 64px; display: flex; align-items: center; gap: 12px;
+  padding: 0 14px 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, var(--accent) 8%), var(--surface));
+}
+.mr-markdown-workspace .mr-cfg-identitybar::after {
+  content: ''; position: absolute; inset: auto 0 -1px; height: 1px;
+  background: linear-gradient(90deg, transparent 2%, var(--accent-line) 40%, var(--accent-line) 64%, transparent 98%);
+  opacity: .5; pointer-events: none;
+}
+.mr-markdown-workspace .mr-cfg-identity-seal {
+  width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center;
+  overflow: hidden; border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: linear-gradient(145deg, var(--accent-light), var(--accent));
+  color: #fff; font-size: 13px; font-weight: 700;
+  box-shadow: 0 0 0 1px var(--line-strong), 0 3px 9px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.mr-markdown-workspace .mr-cfg-identity-img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.mr-markdown-workspace .mr-cfg-identity-copy { min-width: 0; display: grid; gap: 2px; flex: 1; }
+.mr-markdown-workspace .mr-cfg-identity-name { overflow: hidden; font-size: 14px; font-weight: 680; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+.mr-markdown-workspace .mr-cfg-identity-sub { display: flex; align-items: center; gap: 8px; overflow: hidden; color: var(--text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.mr-markdown-workspace .mr-cfg-identity-role {
+  padding: 2px 7px; border: 1px solid var(--accent-line); border-radius: 99px;
+  background: var(--accent-soft); color: var(--accent);
+  font: 700 8px var(--pm-font-mono); font-style: normal; letter-spacing: .09em; text-transform: uppercase;
+}
+.mr-markdown-workspace .mr-cfg-close {
+  width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--text-muted); cursor: pointer;
+  transition: color .14s ease, background .14s ease, border-color .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-close:hover { color: var(--text); background: var(--surface-muted); border-color: var(--line-strong); }
+.mr-markdown-workspace .mr-cfg-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Nav rail ────────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-rail {
+  grid-area: rail; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  /* Top padding is tight because the first group carries no leading divider — the
+     identity header's own rule already closes the space above it. */
+  padding: 8px 0 12px;
+  /* Deliberately not a scroll container: the rail holds at most a handful of
+     items and a scroll box would clip the right-side hover tooltips. */
+  overflow: visible;
+  /* The rail buttons animate in, and an animated element is its own stacking
+     context — that would strand each tooltip's z-index inside its button, where
+     the later-in-DOM pane paints straight over it. Lifting the rail above the
+     pane keeps the tooltips readable. */
+  position: relative;
+  z-index: 3;
+  border-right: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 66%, transparent);
+}
+.mr-markdown-workspace .mr-cfg-rail-group { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.mr-markdown-workspace .mr-cfg-rail-divider { width: 26px; height: 1px; flex: 0 0 auto; margin: 7px 0; background: linear-gradient(90deg, transparent, var(--line-strong), transparent); }
+.mr-markdown-workspace .mr-cfg-rail-btn {
+  position: relative; width: 40px; height: 40px; display: grid; place-items: center;
+  border: 1px solid transparent; border-radius: 12px;
+  background: transparent; color: var(--text-soft); cursor: pointer;
+  animation: mrCfgRailIn 260ms var(--pm-ease-out, cubic-bezier(.16,1,.3,1)) both;
+  transition: color .16s ease, background .16s ease, border-color .16s ease;
+}
+.mr-markdown-workspace .mr-cfg-rail-btn:hover { color: var(--text); background: color-mix(in srgb, var(--surface) 82%, var(--accent-soft) 18%); }
+.mr-markdown-workspace .mr-cfg-rail-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mr-markdown-workspace .mr-cfg-rail-btn.is-active {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent-soft) 88%, #fff 12%), color-mix(in srgb, var(--accent-soft) 70%, transparent));
+}
+.mr-markdown-workspace .mr-cfg-rail-btn.is-active::before {
+  content: ''; position: absolute; left: -1px; top: 50%; width: 3px; height: 20px;
+  transform: translateY(-50%); border-radius: 0 99px 99px 0; background: var(--accent);
+}
+.mr-markdown-workspace .mr-cfg-rail-icon { display: grid; place-items: center; line-height: 0; }
+/* The glyphs are 2px pixel cells: they must render at an integer size with no CSS
+   scaling, or crispEdges loses the grid and the marks blur. So the only state
+   change is colour — the rail button's own token (text → accent), never a
+   transform. `--text-soft` at rest keeps the chunkier pixel marks legible in
+   both themes where the old stroked set could sit at a lighter muted tone. */
+.mr-markdown-workspace .mr-cfg-rail-icon svg { display: block; }
+.mr-markdown-workspace .mr-cfg-rail-tip {
+  position: absolute; left: calc(100% + 12px); top: 50%; z-index: 5;
+  transform: translate(-4px, -50%); padding: 5px 9px;
+  border: 1px solid var(--line-strong); border-radius: 8px;
+  background: var(--text); color: var(--bg);
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .14s ease, transform .14s ease, visibility .14s;
+}
+.mr-markdown-workspace .mr-cfg-rail-btn:hover .mr-cfg-rail-tip,
+.mr-markdown-workspace .mr-cfg-rail-btn:focus-visible .mr-cfg-rail-tip { opacity: 1; visibility: visible; transform: translate(0, -50%); }
+
+/* ── Detail pane ─────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-pane {
+  grid-area: pane; min-height: 0; overflow-y: auto;
+  padding: 24px 30px 34px;
+  background: var(--surface);
+  scrollbar-width: thin;
+}
+.mr-markdown-workspace .mr-cfg-section { display: grid; gap: 20px; }
+.mr-markdown-workspace .mr-cfg-head { display: grid; gap: 5px; }
+.mr-markdown-workspace .mr-cfg-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--accent); font: 700 9px var(--pm-font-mono); letter-spacing: .13em; text-transform: uppercase;
+}
+.mr-markdown-workspace .mr-cfg-eyebrow::before { content: ''; width: 20px; height: 1px; background: currentColor; }
+.mr-markdown-workspace .mr-cfg-title { margin: 0; font-size: 20px; font-weight: 660; letter-spacing: -.03em; }
+.mr-markdown-workspace .mr-cfg-hint { max-width: 60ch; margin: 0; color: var(--text-muted); font-size: 12px; line-height: 1.55; }
+.mr-markdown-workspace .mr-cfg-note { margin: 0; color: var(--text-muted); font-size: 11.5px; line-height: 1.6; }
+.mr-markdown-workspace .mr-cfg-note-strong { padding: 11px 13px; border: 1px solid var(--accent-line); border-radius: var(--pm-r-md, 10px); background: var(--accent-soft); color: var(--text-soft); font-weight: 550; }
+
+/* ── Footer ──────────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-foot {
+  grid-area: foot; height: 46px; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 0 16px; border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 60%, var(--surface));
+}
+.mr-markdown-workspace .mr-cfg-foot-mark { color: var(--text-faint); font: 700 9px var(--pm-font-mono); letter-spacing: .12em; text-transform: uppercase; }
+.mr-markdown-workspace .mr-cfg-foot-action {
+  padding: 7px 12px; border: 1px solid var(--line); border-radius: 9px;
+  background: transparent; color: var(--text-soft);
+  font-size: 12px; font-weight: 600; text-decoration: none; cursor: pointer;
+  transition: color .14s ease, background .14s ease, border-color .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-foot-action:hover { color: var(--text); background: var(--surface-muted); border-color: var(--line-strong); }
+.mr-markdown-workspace .mr-cfg-foot-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mr-markdown-workspace .mr-cfg-foot-action-primary { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); }
+
+/* ── Groups / fields / buttons ───────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-group { display: grid; gap: 10px; }
+.mr-markdown-workspace .mr-cfg-group + .mr-cfg-group { padding-top: 18px; border-top: 1px solid var(--line); }
+.mr-markdown-workspace .mr-cfg-group-label { color: var(--text-faint); font: 700 9px var(--pm-font-mono); letter-spacing: .11em; text-transform: uppercase; }
+.mr-markdown-workspace .mr-cfg-form { display: grid; gap: 14px; max-width: 460px; }
+.mr-markdown-workspace .mr-cfg-field { display: grid; gap: 6px; }
+.mr-markdown-workspace .mr-cfg-field-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--text-soft); font-size: 11.5px; font-weight: 600; }
+.mr-markdown-workspace .mr-cfg-value { color: var(--accent); font: 700 11px var(--pm-font-mono); font-variant-numeric: tabular-nums; }
+.mr-markdown-workspace .mr-cfg-input {
+  width: 100%; height: 38px; padding: 0 12px;
+  border: 1px solid var(--line-strong); border-radius: var(--pm-r-md, 10px);
+  background: var(--surface-soft); color: var(--text); font-size: 13px; outline: none;
+  transition: border-color .14s ease, background .14s ease, box-shadow .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-input:hover { border-color: color-mix(in srgb, var(--accent) 30%, var(--line-strong)); }
+.mr-markdown-workspace .mr-cfg-input:focus { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-soft); }
+.mr-markdown-workspace .mr-cfg-input-readonly { background: var(--surface-muted); color: var(--text-muted); cursor: default; }
+.mr-markdown-workspace .mr-cfg-password { position: relative; display: block; }
+.mr-markdown-workspace .mr-cfg-password .mr-cfg-input { padding-right: 42px; }
+.mr-markdown-workspace .mr-cfg-reveal {
+  position: absolute; top: 50%; right: 5px; transform: translateY(-50%);
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border: 0; border-radius: 7px; background: transparent; color: var(--text-muted); cursor: pointer;
+}
+.mr-markdown-workspace .mr-cfg-reveal:hover { color: var(--text); background: var(--surface-muted); }
+.mr-markdown-workspace .mr-cfg-reveal:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mr-markdown-workspace .mr-cfg-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mr-markdown-workspace .mr-cfg-error { margin: 0; color: var(--pm-danger, #dc2626); font-size: 12px; }
+.mr-markdown-workspace .mr-cfg-saved { margin: 0; display: inline-flex; align-items: center; gap: 6px; color: var(--green); font-size: 12px; font-weight: 600; }
+.mr-markdown-workspace .mr-cfg-saved::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px var(--green-soft); }
+.mr-markdown-workspace .mr-cfg-pill { padding: 3px 8px; border: 1px solid var(--accent-line); border-radius: 99px; background: var(--accent-soft); color: var(--accent); font: 700 9px var(--pm-font-mono); letter-spacing: .08em; text-transform: uppercase; }
+
+.mr-markdown-workspace .mr-cfg-btn {
+  height: 36px; padding: 0 14px; display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--line-strong); border-radius: var(--pm-r-md, 10px);
+  background: var(--surface); color: var(--text-soft); font-size: 12.5px; font-weight: 600;
+  cursor: pointer; text-decoration: none;
+  transition: color .14s ease, background .14s ease, border-color .14s ease, transform .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-btn:hover:not(:disabled) { color: var(--text); border-color: var(--accent-line); transform: translateY(-1px); }
+.mr-markdown-workspace .mr-cfg-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mr-markdown-workspace .mr-cfg-btn:disabled { opacity: .5; cursor: not-allowed; }
+.mr-markdown-workspace .mr-cfg-btn-primary { border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 20%, transparent); }
+.mr-markdown-workspace .mr-cfg-btn-primary:hover:not(:disabled) { color: #fff; background: var(--accent-light); border-color: var(--accent-light); }
+.mr-markdown-workspace .mr-cfg-btn-quiet { border-color: transparent; background: transparent; color: var(--text-muted); }
+.mr-markdown-workspace .mr-cfg-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* ── Seal row (identity) ─────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-seal-row {
+  display: flex; align-items: center; gap: 16px; padding: 16px;
+  border: 1px solid var(--line); border-radius: var(--pm-r-lg, 14px);
+  background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
+}
+.mr-markdown-workspace .mr-cfg-seal {
+  width: 64px; height: 64px; flex: 0 0 64px; display: grid; place-items: center; overflow: hidden;
+  border: 2px solid var(--surface); border-radius: 50%;
+  background: linear-gradient(145deg, var(--accent-light), var(--accent)); color: #fff; font-size: 24px; font-weight: 700;
+  box-shadow: 0 0 0 1px var(--line-strong), 0 6px 16px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.mr-markdown-workspace .mr-cfg-seal-img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.mr-markdown-workspace .mr-cfg-seal-meta { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.mr-markdown-workspace .mr-cfg-seal-meta strong { overflow: hidden; font-size: 14px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.mr-markdown-workspace .mr-cfg-seal-meta span { color: var(--text-muted); font-size: 11px; }
+.mr-markdown-workspace .mr-cfg-seal-actions { position: relative; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* ── Rows + switch ───────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-row {
+  width: 100%; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 10px 12px; text-align: left;
+  border: 1px solid var(--line); border-radius: var(--pm-r-md, 10px);
+  background: color-mix(in srgb, var(--surface-soft) 55%, transparent);
+  cursor: pointer; transition: border-color .14s ease, background .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-row:hover { border-color: color-mix(in srgb, var(--accent) 26%, var(--line)); background: color-mix(in srgb, var(--accent-soft) 32%, var(--surface)); }
+.mr-markdown-workspace .mr-cfg-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mr-markdown-workspace .mr-cfg-row:disabled { opacity: .55; cursor: not-allowed; }
+.mr-markdown-workspace .mr-cfg-row-copy { display: grid; gap: 2px; }
+.mr-markdown-workspace .mr-cfg-row-copy strong { font-size: 12.5px; font-weight: 620; }
+.mr-markdown-workspace .mr-cfg-row-copy small { color: var(--text-muted); font-size: 11px; line-height: 1.45; }
+.mr-markdown-workspace .mr-cfg-switch {
+  position: relative; width: 40px; height: 22px; flex: 0 0 40px; border-radius: 99px;
+  border: 1px solid var(--line-strong); background: var(--surface-muted);
+  transition: background .18s var(--pm-ease-out, ease), border-color .18s ease;
+}
+.mr-markdown-workspace .mr-cfg-switch-knob {
+  position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--text-muted);
+  transition: transform .2s var(--pm-ease-spring, cubic-bezier(.34,1.56,.64,1)), background .18s ease;
+}
+.mr-markdown-workspace .mr-cfg-switch.is-on { background: var(--accent); border-color: transparent; }
+.mr-markdown-workspace .mr-cfg-switch.is-on .mr-cfg-switch-knob { transform: translateX(18px); background: #fff; }
+
+/* ── Segmented control ───────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-segmented {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px;
+  border: 1px solid var(--line); border-radius: var(--pm-r-md, 10px); background: var(--surface-soft);
+}
+.mr-markdown-workspace .mr-cfg-segment {
+  min-height: 46px; padding: 8px 10px; display: grid; gap: 2px; align-content: center;
+  border: 1px solid transparent; border-radius: var(--pm-r-sm, 8px);
+  background: transparent; color: var(--text-soft); text-align: left; cursor: pointer;
+  transition: background .14s ease, color .14s ease, border-color .14s ease, box-shadow .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-segment:hover { color: var(--text); }
+.mr-markdown-workspace .mr-cfg-segment:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mr-markdown-workspace .mr-cfg-segment-label { font-size: 12.5px; font-weight: 640; }
+.mr-markdown-workspace .mr-cfg-segment-hint { color: var(--text-muted); font-size: 10px; line-height: 1.4; }
+.mr-markdown-workspace .mr-cfg-segment.is-active { color: var(--accent); background: var(--surface); border-color: var(--accent-line); box-shadow: var(--shadow-sm); }
+.mr-markdown-workspace .mr-cfg-segment.is-active .mr-cfg-segment-hint { color: color-mix(in srgb, var(--accent) 72%, var(--text-muted)); }
+
+/* ── Range ───────────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-range { width: 100%; max-width: 320px; accent-color: var(--accent); }
+.mr-markdown-workspace .mr-cfg-range:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+/* ── Appearance tiles ────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-theme-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 460px; }
+.mr-markdown-workspace .mr-cfg-theme-tile {
+  display: grid; gap: 8px; padding: 12px; text-align: left;
+  border: 1px solid var(--line); border-radius: var(--pm-r-lg, 14px);
+  background: color-mix(in srgb, var(--surface-soft) 55%, transparent); color: var(--text); cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+.mr-markdown-workspace .mr-cfg-theme-tile:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 26%, var(--line)); box-shadow: var(--shadow-sm); }
+.mr-markdown-workspace .mr-cfg-theme-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mr-markdown-workspace .mr-cfg-theme-tile.is-active { border-color: var(--accent); background: var(--accent-soft); }
+/* Preview colours are fixed, not tokens: each tile must depict the theme it
+   selects, which by definition is not the active one. */
+.mr-markdown-workspace .mr-cfg-theme-preview {
+  position: relative; height: 66px; display: grid; align-content: center; gap: 6px; padding: 12px;
+  border: 1px solid var(--line-strong); border-radius: var(--pm-r-sm, 8px); overflow: hidden;
+}
+.mr-markdown-workspace .mr-cfg-theme-preview-light { background: #f7f4ef; }
+.mr-markdown-workspace .mr-cfg-theme-preview-dark { background: #171d1c; }
+.mr-markdown-workspace .mr-cfg-theme-preview-bar { width: 26px; height: 6px; border-radius: 3px; }
+.mr-markdown-workspace .mr-cfg-theme-preview-light .mr-cfg-theme-preview-bar { background: #2a5f5a; }
+.mr-markdown-workspace .mr-cfg-theme-preview-dark .mr-cfg-theme-preview-bar { background: #35c7b5; }
+.mr-markdown-workspace .mr-cfg-theme-preview-line { width: 80%; height: 5px; border-radius: 3px; }
+.mr-markdown-workspace .mr-cfg-theme-preview-line-short { width: 52%; }
+.mr-markdown-workspace .mr-cfg-theme-preview-light .mr-cfg-theme-preview-line { background: rgba(26,22,18,.18); }
+.mr-markdown-workspace .mr-cfg-theme-preview-dark .mr-cfg-theme-preview-line { background: rgba(239,245,243,.18); }
+.mr-markdown-workspace .mr-cfg-theme-check {
+  position: absolute; top: 9px; right: 9px; width: 20px; height: 20px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--accent); color: #fff;
+}
+.mr-markdown-workspace .mr-cfg-theme-label { font-size: 13px; font-weight: 640; }
+.mr-markdown-workspace .mr-cfg-theme-hint { color: var(--text-muted); font-size: 10.5px; line-height: 1.45; }
+
+/* ── Shortcut reference ──────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-keys { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.mr-markdown-workspace .mr-cfg-key-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.mr-markdown-workspace .mr-cfg-key-row:last-child { border-bottom: 0; }
+.mr-markdown-workspace .mr-cfg-key-label { color: var(--text-soft); font-size: 12px; }
+.mr-markdown-workspace .mr-cfg-key-caps { display: inline-flex; align-items: center; gap: 3px; }
+.mr-markdown-workspace .mr-cfg-key-caps > span { display: inline-flex; align-items: center; gap: 3px; }
+.mr-markdown-workspace .mr-cfg-key-plus { color: var(--text-faint); font-style: normal; font-size: 10px; }
+.mr-markdown-workspace .mr-cfg-key {
+  min-width: 26px; padding: 3px 7px; text-align: center;
+  border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 6px;
+  background: var(--surface); color: var(--text-soft);
+  font: 700 10.5px var(--pm-font-mono); line-height: 1;
+}
+
+/* ── Connections ─────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-providers { display: grid; gap: 10px; }
+.mr-markdown-workspace .mr-cfg-provider {
+  display: flex; align-items: center; gap: 14px; padding: 14px 15px;
+  border: 1px solid var(--line); border-radius: var(--pm-r-lg, 14px);
+  background: color-mix(in srgb, var(--surface-soft) 50%, transparent);
+}
+.mr-markdown-workspace .mr-cfg-provider.is-soon { opacity: .86; }
+.mr-markdown-workspace .mr-cfg-provider-mark {
+  width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 11px;
+  background: var(--surface); color: var(--text-soft);
+}
+/* The mark is a pixel glyph on a 16×16 grid, so it renders at an integer multiple
+   of 16 (32px → clean 2px cells with crispEdges) rather than an arbitrary size
+   that would snap unevenly. No hover here: the card is not interactive, and
+   highlighting it would imply a click that does not exist. */
+.mr-markdown-workspace .mr-cfg-provider-mark svg { width: 32px; height: 32px; }
+.mr-markdown-workspace .mr-cfg-provider-copy { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.mr-markdown-workspace .mr-cfg-provider-copy strong { font-size: 13px; font-weight: 640; }
+.mr-markdown-workspace .mr-cfg-provider-copy p { margin: 0; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.mr-markdown-workspace .mr-cfg-provider-status {
+  flex: 0 0 auto; padding: 4px 9px; border: 1px solid var(--line-strong); border-radius: 99px;
+  background: var(--surface-muted); color: var(--text-muted);
+  font: 700 9px var(--pm-font-mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.mr-markdown-workspace .mr-cfg-provider.is-connected .mr-cfg-provider-status { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+.mr-markdown-workspace .mr-cfg-provider.is-soon .mr-cfg-provider-status { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); }
+
+/* ── About ───────────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-about p { margin: 0; max-width: 62ch; color: var(--text-soft); font-size: 12.5px; line-height: 1.7; }
+.mr-markdown-workspace .mr-cfg-links { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.mr-markdown-workspace .mr-cfg-link {
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
+  padding: 11px 12px; border: 1px solid transparent; border-radius: var(--pm-r-md, 10px);
+  color: var(--text-soft); text-decoration: none;
+  transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-link:hover { background: var(--surface-muted); color: var(--text); border-color: var(--line); }
+.mr-markdown-workspace .mr-cfg-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mr-markdown-workspace .mr-cfg-link-label { font-size: 12.5px; font-weight: 600; }
+.mr-markdown-workspace .mr-cfg-link-hint { color: var(--text-faint); font-size: 10px; }
+.mr-markdown-workspace .mr-cfg-link-arrow { color: var(--accent); transition: transform .14s ease; }
+.mr-markdown-workspace .mr-cfg-link:hover .mr-cfg-link-arrow { transform: translateX(2px); }
+
+/* ── Activity log ────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-log { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.mr-markdown-workspace .mr-cfg-log-row {
+  display: flex; align-items: center; gap: 12px; padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.mr-markdown-workspace .mr-cfg-log-row:last-child { border-bottom: 0; }
+.mr-markdown-workspace .mr-cfg-log-mark { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+.mr-markdown-workspace .mr-cfg-log-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.mr-markdown-workspace .mr-cfg-log-body strong { font-size: 12.5px; font-weight: 620; }
+.mr-markdown-workspace .mr-cfg-log-body small { overflow: hidden; color: var(--text-muted); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
+.mr-markdown-workspace .mr-cfg-log-time { flex: 0 0 auto; color: var(--text-faint); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.mr-markdown-workspace .mr-cfg-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mr-markdown-workspace .mr-cfg-pager-count { color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.mr-markdown-workspace .mr-cfg-pager-nav { display: inline-flex; align-items: center; gap: 6px; }
+.mr-markdown-workspace .mr-cfg-pager-page { color: var(--text-soft); font: 700 10.5px var(--pm-font-mono); font-variant-numeric: tabular-nums; }
+.mr-markdown-workspace .mr-cfg-pager-btn {
+  width: 28px; height: 28px; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-muted); cursor: pointer;
+}
+.mr-markdown-workspace .mr-cfg-pager-btn:hover:not(:disabled) { color: var(--text); border-color: var(--accent-line); }
+.mr-markdown-workspace .mr-cfg-pager-btn:disabled { opacity: .4; cursor: not-allowed; }
+.mr-markdown-workspace .mr-cfg-pager-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Guest gate ──────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gate {
+  display: grid; justify-items: start; gap: 8px; padding: 22px;
+  border: 1px dashed var(--line-strong); border-radius: var(--pm-r-lg, 14px);
+  background: color-mix(in srgb, var(--surface-soft) 55%, transparent);
+}
+.mr-markdown-workspace .mr-cfg-gate-title { margin: 0; font-size: 13.5px; font-weight: 650; }
+.mr-markdown-workspace .mr-cfg-gate-hint { max-width: 52ch; margin: 0; color: var(--text-muted); font-size: 11.5px; line-height: 1.55; }
+
+/* ── Motion ──────────────────────────────────────────────────────────── */
+@keyframes mrCfgUnfold {
+  from { opacity: 0; transform: scale(.98) translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mrCfgRailIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mrCfgScrimIn { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mr-markdown-workspace .mr-cfg-overlay { animation: none; }
+  .mr-markdown-workspace .mr-cfg-console { animation: none; transform: none; }
+  .mr-markdown-workspace .mr-cfg-rail-btn { animation: none; }
+  .mr-markdown-workspace .mr-cfg-rail-btn,
+  .mr-markdown-workspace .mr-cfg-switch,
+  .mr-markdown-workspace .mr-cfg-switch-knob,
+  .mr-markdown-workspace .mr-cfg-theme-tile,
+  .mr-markdown-workspace .mr-cfg-btn,
+  .mr-markdown-workspace .mr-cfg-segment { transition: none; }
+  .mr-markdown-workspace .mr-cfg-theme-tile:hover,
+  .mr-markdown-workspace .mr-cfg-btn:hover:not(:disabled) { transform: none; }
+}
+
+/* ── Narrow viewport ─────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .mr-markdown-workspace .mr-cfg-overlay { padding: 0; }
+  .mr-markdown-workspace .mr-cfg-console {
+    width: 100vw; height: 100vh; border-radius: 0; border: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: 'idbar' 'rail' 'pane' 'foot';
+  }
+  .mr-markdown-workspace .mr-cfg-rail {
+    flex-direction: row; align-items: center; gap: 4px;
+    padding: 8px 10px; overflow-x: auto; overflow-y: hidden;
+    border-right: 0; border-bottom: 1px solid var(--line);
+  }
+  .mr-markdown-workspace .mr-cfg-rail-group { width: auto; flex-direction: row; }
+  .mr-markdown-workspace .mr-cfg-rail-divider { width: 1px; height: 22px; margin: 0 6px; background: linear-gradient(180deg, transparent, var(--line-strong), transparent); }
+  .mr-markdown-workspace .mr-cfg-rail-tip { display: none; }
+  .mr-markdown-workspace .mr-cfg-rail-btn.is-active::before { left: 50%; top: auto; bottom: -1px; width: 20px; height: 3px; transform: translateX(-50%); border-radius: 99px 99px 0 0; }
+  .mr-markdown-workspace .mr-cfg-pane { padding: 20px 18px 30px; }
+  .mr-markdown-workspace .mr-cfg-theme-grid { grid-template-columns: minmax(0, 1fr); }
+  .mr-markdown-workspace .mr-cfg-segmented { grid-auto-flow: row; grid-auto-columns: auto; }
+  .mr-markdown-workspace .mr-cfg-seal-row { flex-wrap: wrap; }
+  .mr-markdown-workspace .mr-cfg-seal-actions { width: 100%; justify-content: flex-start; }
+}

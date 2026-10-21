@@ -1,0 +1,488 @@
+/* ═══════════════════════════════════════════════════════════════
+   Pricing — "The Calibration Bench"
+
+   The measurement room of the ASTRUM workshop family (its siblings:
+   About is the front hall, Contact is the signal desk). Family DNA:
+   marketing neutrals from app/home.css + the mycloove blue accent
+   (#0b5ca8 light / #5b8def dark, both AA on the canvas) + Syne for
+   display + IBM Plex Mono for readouts (loaded module-locally in
+   page.tsx) + the blueprint floor the whole family stands on.
+
+   Doctrine change (2026-10-20): the plate no longer shows a bead
+   strand or a numeric counter — the allowance is never quoted on this
+   page. The plate sells the plan's shape; the meter inside each tool
+   is the only place the count exists. The signature flip survives as
+   the state readout: a mono phrase that rolls when the toggle turns,
+   and an accent hairline on the plate's top edge marks the one plan.
+   ═══════════════════════════════════════════════════════════════ */
+
+.page {
+  --myc-accent: #0b5ca8;
+  --myc-accent-hover: #0a4f91;
+  --myc-soft: #e6f2fd;
+  --myc-mono: var(--pr-font-mono, ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace);
+
+  padding: 0 0 56px;
+  /* the family floor: a blueprint grid one step above the canvas */
+  background-image:
+    linear-gradient(rgba(23, 33, 29, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 33, 29, 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+:global(html[data-theme="dark"]) .page {
+  --myc-accent: #5b8def;
+  --myc-accent-hover: #7da7f4;
+  --myc-soft: rgba(91, 141, 239, 0.14);
+  background-image:
+    linear-gradient(rgba(242, 244, 239, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(242, 244, 239, 0.032) 1px, transparent 1px);
+}
+
+.shell {
+  width: min(100%, 1000px);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── Hero ──────────────────────────────────────────────────────── */
+
+.hero { padding: 84px 0 40px; }
+
+.eyebrow {
+  margin: 0 0 16px;
+  font-family: var(--myc-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--myc-accent);
+}
+.eyebrowSpan { color: var(--faint); letter-spacing: 0.1em; font-weight: 400; }
+
+.title {
+  margin: 0 0 22px;
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4.8vw, 56px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.06;
+  color: var(--ink);
+  max-width: 13ch;
+}
+.titleAccent { display: block; color: var(--myc-accent); }
+
+.lede {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.specStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-top: 30px;
+  font-family: var(--myc-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+}
+.specItem { white-space: nowrap; }
+
+/* arrival: staggered rise, house curve */
+@keyframes prRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.hero > * { animation: prRise 600ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both; }
+.hero > *:nth-child(2) { animation-delay: 60ms; }
+.hero > *:nth-child(3) { animation-delay: 120ms; }
+.hero > *:nth-child(4) { animation-delay: 180ms; }
+
+/* ── The plate — hairline law: the group line IS the border ────── */
+
+.plate {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 34px 36px 30px;
+  box-shadow: var(--shadow-md);
+}
+/* the plan's engraving: one accent hairline on the top edge — identity,
+   not atmosphere (a few pixels of the only accent commit on this plate) */
+.plate::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--myc-accent);
+}
+
+.plateHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+
+.plateTag {
+  margin: 0 0 10px;
+  font-family: var(--myc-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--myc-accent);
+}
+
+.planName {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.planNote {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+.priceBlock { text-align: right; }
+.priceValue {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.priceMeta {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.plateRule {
+  height: 1px;
+  margin: 0 0 26px;
+  background: var(--line);
+}
+
+/* ── The state readout — the bench you operate ─────────────────── */
+
+.meterBlock { padding-bottom: 6px; }
+
+.meterHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.meterLabel {
+  display: block;
+  font-family: var(--myc-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--soft);
+}
+.segBtn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font-family: var(--myc-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color 200ms var(--ease-out, ease), background 200ms var(--ease-out, ease),
+    box-shadow 200ms var(--ease-out, ease);
+}
+.segBtn:hover { color: var(--muted); }
+.segBtn:focus-visible { outline: 2px solid var(--myc-accent); outline-offset: 2px; }
+.segOn {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-xs, 0 1px 2px rgba(23, 33, 29, 0.06));
+}
+.segOn:hover { color: var(--ink); }
+
+.meterRow {
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  padding: 16px 0 10px;
+}
+
+/* the readout — a caliper readout-phrase instead of a number */
+.readoutPhrase {
+  flex: none;
+  font-family: var(--myc-mono);
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: var(--myc-accent);
+}
+@keyframes prRoll {
+  from { opacity: 0; transform: translateY(52%); }
+  to { opacity: 1; transform: none; }
+}
+.readoutPhrase { animation: prRoll 420ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both; }
+
+.stateNote {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+/* the note lands just after the phrase, same house curve, smaller reach */
+.stateNote { animation: prRise 420ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) 60ms both; }
+
+/* ── The ledger — what the plan includes ───────────────────────── */
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  margin: 14px 0 26px;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.fact { background: var(--surface); padding: 18px 22px; }
+.fact b {
+  display: block;
+  font-family: var(--myc-mono);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  margin-bottom: 3px;
+}
+.fact span { font-size: 11.5px; color: var(--faint); }
+
+.plateCta {
+  display: flex;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+/* the ink stamp — ink on canvas, the family's register */
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 30px;
+  border-radius: 14px;
+  background: var(--ink);
+  color: var(--canvas);
+  font-family: var(--font-ui, 'Inter', sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 200ms var(--ease-out, ease), opacity 200ms var(--ease-out, ease);
+}
+.btnPrimary:hover { opacity: 0.92; transform: translateY(-1px); }
+.btnPrimary:focus-visible { outline: 2px solid var(--myc-accent); outline-offset: 3px; }
+
+.finePrint {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--faint);
+}
+
+/* ── Sections ──────────────────────────────────────────────────── */
+
+.section { padding: 64px 0 12px; }
+
+.sectionHead { margin-bottom: 30px; }
+.sectionIndex {
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--myc-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--myc-accent);
+}
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.rules {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.rule {
+  border-top: 1px solid var(--line);
+  padding: 18px 4px 6px;
+}
+.ruleNum {
+  display: block;
+  margin-bottom: 12px;
+  font-family: var(--myc-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.ruleTitle {
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.ruleDesc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+/* ── The sealed strip — an honest refusal, drawn as hatch ──────── */
+
+.sealed {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 30px 32px;
+  overflow: hidden;
+}
+/* diagonal seal hatch, one quiet pass */
+.sealed::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 14px,
+    color-mix(in srgb, var(--myc-accent) 7%, transparent) 14px 15px
+  );
+  pointer-events: none;
+}
+.sealedTag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--soft);
+  font-family: var(--myc-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+.sealedBody {
+  position: relative;
+  margin: 0 0 18px;
+  max-width: 62ch;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.sealedLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--myc-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--myc-accent);
+  text-decoration: none;
+}
+.sealedLink:hover { color: var(--myc-accent-hover); }
+.sealedLink:hover span { transform: translateX(3px); }
+.sealedLink span { transition: transform 200ms var(--ease-out, ease); }
+.sealedLink:focus-visible { outline: 2px solid var(--myc-accent); outline-offset: 3px; }
+
+.closing {
+  margin: 40px 0 24px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+.closing a { color: var(--myc-accent); }
+
+/* ── Scroll reveal (class applied properly by the client) ──────── */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 640ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform 640ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+.reveal[data-shown='true'] { opacity: 1; transform: none; }
+
+/* ── Responsive ────────────────────────────────────────────────── */
+
+@media (max-width: 760px) {
+  .rules { grid-template-columns: 1fr; gap: 4px; }
+  .facts { grid-template-columns: 1fr; }
+  .plate { padding: 26px 22px 24px; }
+  .plateHead { flex-direction: column; }
+  .priceBlock { text-align: left; }
+  .meterRow { flex-wrap: wrap; row-gap: 10px; }
+  .hero { padding-top: 64px; }
+}
+
+/* ── Motion safety: the bench goes silent, everything still lands ─ */
+
+@media (prefers-reduced-motion: reduce) {
+  .hero > * { animation: none; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .readoutPhrase, .stateNote { animation: none; }
+  .segBtn, .btnPrimary, .sealedLink span { transition: none; }
+  .btnPrimary:hover { transform: none; }
+}

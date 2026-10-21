@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UsagePeriod {
+  day
+  week
+
+  @@map("usage_period")
+}
+
+// ---------------------------------------------------------------------------
+// AI providers. The Next.js server is the key broker: it stores encrypted
+// provider keys here, resolves a per-feature provider chain, and forwards one
+// decrypted key to Flask per upstream call via a server-to-server header. The
+// browser never sees a key and Flask never reads one from disk when a config is
+// supplied. With no rows, every AI route falls back to the legacy env path.
+// ---------------------------------------------------------------------------
+enum AiDriver {
+  openai_compatible
+  gemini_native
+  huggingface
+
+  @@map("ai_driver")
+}
+
+enum AiFeature {
+  document_ai_chat
+  ai_analyzer_summary
+  document_ai_embedding
+
+  @@map("ai_feature")
+}
+
+model AiProvider {
+  id             String       @id @default(uuid()) @db.Uuid
+  key            String       @unique
+  label          String
+  driver         AiDriver
+  baseUrl        String?      @map("base_url")
+  chatModel      String?      @map("chat_model")
+  embeddingModel String?      @map("embedding_model")
+  embeddingDim   Int?         @map("embedding_dim")
+  enabled        Boolean      @default(true)
+  isCustom       Boolean      @default(false) @map("is_custom")
+  sortOrder      Int          @default(0) @map("sort_order")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  keys           AiProviderKey[]
+  routes         AiFeatureRoute[]
+
+  @@map("ai_providers")
+}
+
+model AiProviderKey {
+  id            String     @id @default(uuid()) @db.Uuid
+  providerId    String     @map("provider_id") @db.Uuid
+  label         String?
+  // AES-256-GCM envelope: v1:<b64 iv12>:<b64 tag16>:<b64 ct>. The plaintext key
+  // is never stored, returned, or logged.
+  ciphertext    String
+  last4         String?    @map("last4")
+  // A short, non-secret display prefix (e.g. "sk-or-v1-4d") so the bench can show
+  // "sk-or-v1-4d…d8f" instead of a bare "…d8f". The key itself is never stored.
+  prefix        String?    @map("prefix")
+  enabled       Boolean    @default(true)
+  lastError     String?    @map("last_error")
+  lastUsedAt    DateTime?  @map("last_used_at") @db.Timestamptz(6)
+  cooldownUntil DateTime?  @map("cooldown_until") @db.Timestamptz(6)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  provider      AiProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, enabled])
+  @@map("ai_provider_keys")
+}
+
+model AiFeatureRoute {
+  id         String     @id @default(uuid()) @db.Uuid
+  feature    AiFeature
+  providerId String     @map("provider_id") @db.Uuid
+  priority   Int        @default(0)
+  enabled    Boolean    @default(true)
+  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  provider   AiProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([feature, providerId])
+  @@index([feature, priority])
+  @@map("ai_feature_routes")
+}
+
+// ---------------------------------------------------------------------------
+// One system secret: the AI provider-key data key (DEK). Provider keys are
+// encrypted under this 32-byte key, which lives with the database so any server
+// pointed at the same DATABASE_URL can decrypt them — no machine-local .env
+// secret required. When AI_KEY_ENCRYPTION_SECRET is present at first init it is
+// adopted as the DEK and the row is stored `wrapped` by that same secret
+// (existing rows keep decrypting); otherwise a random DEK is stored unwrapped
+// (base64), the portable default.
+// ---------------------------------------------------------------------------
+model SystemSecret {
+  key       String   @id
+  value     String
+  wrapped   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("system_secrets")
+}
+
+model User {
+  id        String   @id @db.Uuid
+  email     String?
+  // Editable display name (D5). Supabase Auth owns the credential; this is the
+  // product-side username the profile panel lets the owner change. Nullable so
+  // every existing row and the sign-in upsert keep working untouched.
+  name      String?
+  // Profile photo URL in the public Supabase Storage `avatars` bucket (D6).
+  // The object path is scoped to this user's id; null renders as the initial.
+  avatarUrl String?  @map("avatar_url")
+  role      String   @default("User")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  featureUsageEvents FeatureUsageEvent[]
+
+  @@map("users")
+}
+
+model Tool {
+  toolId      String      @id @map("tool_id")
+  label       String
+  href        String
+  enabled     Boolean     @default(true)
+  guestLimit  Int         @map("guest_limit")
+  memberLimit Int         @map("member_limit")
+  period      UsagePeriod @default(day)
+  periodHours Int         @default(24) @map("period_hours")
+  sortOrder   Int         @default(0) @map("sort_order")
+  metadata    Json
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("tools")
+}
+
+model Usage {
+  id        String   @id @default(uuid()) @db.Uuid
+  anonId    String   @map("anon_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  toolId    String   @map("tool_id")
+  requestId String?  @unique @map("request_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([toolId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([anonId, createdAt(sort: Desc)])
+  @@map("usages")
+}
+
+model FeatureUsageEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  eventId   String   @unique @map("event_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  toolId    String   @map("tool_id")
+  // Processed file name (D4). Owner-visible only — the admin analytics query
+  // never selects it (D7). Nullable, sanitized and length-capped at the write
+  // edge; text-only tools and legacy rows leave it null.
+  fileName  String?  @map("file_name")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([toolId, createdAt(sort: Desc)])
+  @@map("feature_usage_events")
+}
+
+// ---------------------------------------------------------------------------
+// External integrations (D-GitHub). A connection records that one signed-in
+// account installed our GitHub App on a chosen set of repositories, plus the
+// single read-only repo link the workspace reads from. The installation access
+// token is deliberately NOT stored — it is minted on demand from the App
+// private key and cached in memory for its ~1h lifetime. `sealedMeta` is an
+// extra encrypted-at-rest copy of the account metadata under the shared data
+// key (lib/ai/keyring); the plaintext columns remain the read path because that
+// metadata is not secret and must render even when the keyring is unavailable.
+// ---------------------------------------------------------------------------
+model IntegrationConnection {
+  id           String               @id @default(uuid()) @db.Uuid
+  userId       String               @map("user_id") @db.Uuid
+  provider     String // 'github'
+  externalId   String               @map("external_id") // GitHub installation_id
+  accountLogin String?              @map("account_login")
+  accountType  String?              @map("account_type") // User | Organization
+  status       String               @default("connected") // connected | needs_reauth | revoked
+  sealedMeta   String?              @map("sealed_meta")
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  links        IntegrationRepoLink[]
+
+  @@unique([userId, provider, externalId])
+  @@index([userId, provider])
+  @@map("integration_connections")
+}
+
+model IntegrationRepoLink {
+  id            String                @id @default(uuid()) @db.Uuid
+  connectionId  String                @map("connection_id") @db.Uuid
+  repoId        String                @map("repo_id") // GitHub numeric repo id, as text
+  repoFullName  String                @map("repo_full_name")
+  defaultBranch String?               @map("default_branch")
+  selectedPath  String?               @map("selected_path") // e.g. README.md
+  lastReadAt    DateTime?             @map("last_read_at") @db.Timestamptz(6)
+  connection    IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, repoId])
+  @@map("integration_repo_links")
+}
+
+model AdminAuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  actorEmail String?  @map("actor_email")
+  action     String
+  targetType String   @map("target_type")
+  targetId   String?  @map("target_id")
+  requestId  String?  @map("request_id")
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@map("admin_audit_logs")
+}

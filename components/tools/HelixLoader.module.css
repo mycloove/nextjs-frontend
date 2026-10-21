@@ -1,0 +1,234 @@
+.deco {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.label {
+  font-family: var(--ft-mono, ui-monospace, 'Cascadia Code', Consolas, Menlo, monospace);
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  color: var(--text-muted, #9aa0ad);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── The double helix ──────────────────────────────────────── */
+.helix {
+  --helix-size: 44px;
+  --helix-dot: max(3px, calc(var(--helix-size) * 0.09));
+  --helix-travel: calc(var(--helix-size) * 0.32);
+  --helix-cols: 7;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: max(var(--helix-size), calc(var(--helix-dot) * var(--helix-cols)));
+  height: var(--helix-size);
+  flex: 0 0 auto;
+}
+
+.col {
+  position: relative;
+  display: block;
+  width: var(--helix-dot);
+  height: 100%;
+}
+
+.col::before,
+.col::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: var(--helix-dot);
+  height: var(--helix-dot);
+  margin-top: calc(var(--helix-dot) / -2);
+  border-radius: 50%;
+  background: var(--helix-c, var(--accent-start, #e0695a));
+  animation: helixWave 1.2s ease-in-out infinite;
+  animation-delay: calc(var(--n) * -0.14s);
+}
+
+.col::after {
+  opacity: 0.42;
+  animation-delay: calc(var(--n) * -0.14s - 0.6s);
+}
+
+@keyframes helixWave {
+  0%,
+  100% {
+    transform: translateY(calc(var(--helix-travel) * -1)) scale(0.55);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(var(--helix-travel)) scale(1.15);
+    opacity: 1;
+  }
+}
+
+/* ── Panel overlay ─────────────────────────────────────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: color-mix(in srgb, var(--bg-card, #14131c) 78%, transparent);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  animation: helixOverlayIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.overlayLabel {
+  font-family: var(--ft-mono, ui-monospace, 'Cascadia Code', Consolas, Menlo, monospace);
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  color: var(--text-muted, #9aa0ad);
+}
+
+@keyframes helixOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Morphing action button ────────────────────────────────── */
+.action {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 184px;
+  height: 42px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent-start, #e0695a), var(--accent-end, #b4552f));
+  color: #fff;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px var(--ft-accent-glow, rgba(255, 107, 107, 0.24));
+  transition:
+    transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.18s,
+    opacity 0.18s;
+}
+
+.action > span {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.actionIdle {
+  opacity: 1;
+  transition:
+    opacity 0.3s,
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.3s;
+}
+
+.actionBusy,
+.actionDone {
+  opacity: 0;
+  transform: scale(0.7);
+  filter: blur(3px);
+  pointer-events: none;
+  transition:
+    opacity 0.3s 0.1s,
+    transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s,
+    filter 0.3s;
+}
+
+.action[data-state='busy'] .actionIdle,
+.action[data-state='done'] .actionIdle {
+  opacity: 0;
+  transform: scale(0.7);
+  filter: blur(3px);
+}
+
+.action[data-state='busy'] .actionBusy {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.action[data-state='done'] .actionDone {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.action:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px var(--ft-accent-glow, rgba(255, 107, 107, 0.24));
+}
+
+.action:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.action:disabled {
+  cursor: not-allowed;
+}
+
+.check path {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+}
+
+.action[data-state='done'] .check path {
+  animation: helixDraw 0.5s 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes helixDraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── Reduced motion: hold a readable static frame ──────────── */
+@media (prefers-reduced-motion: reduce) {
+  .col::before,
+  .col::after {
+    animation: none;
+  }
+  .col::before {
+    transform: translateY(calc(var(--helix-travel) * -0.6)) !important;
+  }
+  .col::after {
+    transform: translateY(calc(var(--helix-travel) * 0.6)) !important;
+    opacity: 0.85;
+  }
+}

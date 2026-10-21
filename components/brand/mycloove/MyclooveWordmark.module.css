@@ -1,0 +1,201 @@
+/*
+  mycloove wordmark — component-owned styling.
+
+  Mirrors /branding/mycloove/tokens.css (values declared locally on .wordmark so the
+  wordmark has no dependency on any global token block). Brand rules and usage live
+  in /branding/mycloove/README.md.
+
+  Type is the reference lock: Baloo 2 at weight 700, tracking -0.01em.
+
+  Layout is a single non-wrapping flex row. .wordmark is flex: 0 0 auto so a tight
+  topbar can never shrink it, and .mark is an inline-flex row aligned on the text
+  baseline so "mycl" + beads + "ve" always sit level on one line and the name never
+  wraps.
+
+  Sizing is owned here, including the responsive step-down the homepage lockup needs.
+  mycloove is the single product brand; the retired ASTRUM path had its own raster
+  sizing in app/home.css.
+*/
+.wordmark {
+  --mycl-ink: #0a0a0a;
+  --mycl-cream: #f5f0e8;
+  --mycl-accent: #1d9bf0;
+  --mycl-accent-2: #5b8def;
+  --mycl-gold: #c9a86a;
+
+  /* Bead material — the brand's single accent: the orange brand-v2 octopus's
+     family is canonical (see the .orange block below); the blue pair is the
+     earlier cyan → sapphire glass set, kept for explicit opt-in. Values here
+     are the light-surface default; the dark-surface set lives on the
+     theme/tone overrides below. */
+  --mycl-bead-a: #38bdf8;
+  --mycl-bead-b: #0b5ca8;
+  --mycl-bead-shadow:
+    inset -0.045em -0.06em 0.09em rgba(11, 92, 168, 0.4),
+    inset 0.03em 0.045em 0.045em rgba(255, 255, 255, 0.7),
+    0.04em 0.08em 0.16em rgba(0, 0, 0, 0.05);
+
+  --mycl-fg: var(--mycl-ink);
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-family: var(--mycl-font), system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  text-transform: lowercase;
+  color: var(--mycl-fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* `auto` follows the theme: dark is the site default (:root), light is the override. */
+:global(html[data-theme='dark']) .auto {
+  --mycl-fg: var(--mycl-cream);
+  --mycl-bead-a: #7dd3fc;
+  --mycl-bead-b: #0284c7;
+  --mycl-bead-shadow:
+    inset -0.045em -0.06em 0.09em rgba(0, 0, 0, 0.5),
+    inset 0.03em 0.045em 0.06em rgba(255, 255, 255, 0.6);
+}
+
+.light {
+  --mycl-fg: var(--mycl-ink);
+}
+
+.dark {
+  --mycl-fg: var(--mycl-cream);
+  --mycl-bead-a: #7dd3fc;
+  --mycl-bead-b: #0284c7;
+  --mycl-bead-shadow:
+    inset -0.045em -0.06em 0.09em rgba(0, 0, 0, 0.5),
+    inset 0.03em 0.045em 0.06em rgba(255, 255, 255, 0.6);
+}
+
+/*
+  Orange bead family — the brand-orangev2 octopus's colours, sampled from the
+  artwork itself (highlight #FB9944, core #FE7405, deep folds #FB6504). The
+  light-surface pair deepens for contrast on paper (#c2410c), mirroring how the
+  blue pair deepens (#38bdf8 → #0b5ca8); the dark-surface pair brightens
+  (#fdba74 → #e25803), mirroring #7dd3fc → #0284c7. Only the bead tokens swap —
+  the glass material (gradient angle, highlights, black ambient insets) is
+  exactly the blue set's mechanism.
+*/
+.orange {
+  --mycl-bead-a: #fb923c;
+  --mycl-bead-b: #c2410c;
+  --mycl-bead-shadow:
+    inset -0.045em -0.06em 0.09em rgba(194, 65, 12, 0.4),
+    inset 0.03em 0.045em 0.045em rgba(255, 255, 255, 0.7),
+    0.04em 0.08em 0.16em rgba(0, 0, 0, 0.05);
+}
+
+/* Forced-dark tone under the orange accent keeps the brighter pair. */
+.orange.dark {
+  --mycl-bead-a: #fdba74;
+  --mycl-bead-b: #e25803;
+  --mycl-bead-shadow:
+    inset -0.045em -0.06em 0.09em rgba(0, 0, 0, 0.5),
+    inset 0.03em 0.045em 0.06em rgba(255, 255, 255, 0.6);
+}
+
+/* Dark theme + orange accent (the `auto` tone): same bright pair, at higher
+   specificity than the blue dark-theme .auto block above. */
+:global(html[data-theme='dark']) .orange.auto {
+  --mycl-bead-a: #fdba74;
+  --mycl-bead-b: #e25803;
+  --mycl-bead-shadow:
+    inset -0.045em -0.06em 0.09em rgba(0, 0, 0, 0.5),
+    inset 0.03em 0.045em 0.06em rgba(255, 255, 255, 0.6);
+}
+
+.gradient {
+  --mycl-fg: var(--mycl-accent);
+}
+
+/* ── The wordmark's letterforms ── */
+/* One non-wrapping row, baseline-aligned: the letters and the beads share a line. */
+.mark {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.glyph {
+  display: inline-block;
+}
+
+/* Doubled O — two overlapping beads. */
+.oo {
+  display: inline-flex;
+  align-items: center;
+  align-self: baseline;
+  margin: 0 0.04em;
+  flex: 0 0 auto;
+}
+
+/*
+  The bead: cyan → sapphire glass, lit from the top-left. The material is a radial
+  gradient (circle at 30% 30%) plus two inset highlights — white top-left, shadow
+  bottom-right — with a soft drop shadow on light surfaces only. The colour pair and
+  shadows swap with the surface (see the .dark / dark-theme overrides above).
+  Expressed in em so it scales with the size ladder; diameter ~0.62em matches the
+  letters' height.
+*/
+.bead {
+  width: 0.62em;
+  height: 0.62em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--mycl-bead-a), var(--mycl-bead-b));
+  box-shadow: var(--mycl-bead-shadow);
+  flex: 0 0 auto;
+}
+
+/* Second bead lifted and overlapped so the pair reads as one joined mark. */
+.bead + .bead {
+  margin-left: -0.2em;
+  transform: translateY(-0.12em);
+}
+
+/* Gradient tone paints the letters; the beads keep their own fill. */
+.gradient .glyph {
+  background: linear-gradient(90deg, var(--mycl-accent), var(--mycl-accent-2));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Accessible name for the wordmark (the visible glyphs are aria-hidden). */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Size ladder. */
+.sm { font-size: 22px; }
+.md { font-size: 32px; }
+.lg { font-size: 44px; }
+.xl { font-size: 64px; }
+
+/* Lockup step-down at narrow widths (the retired ASTRUM raster stepped 31 → 25 → 24 → 21px). */
+@media (max-width: 640px) {
+  .md { font-size: 26px; }
+}
+
+@media (max-width: 420px) {
+  .md { font-size: 24px; }
+}
+
+@media (max-width: 360px) {
+  .md { font-size: 22px; }
+}

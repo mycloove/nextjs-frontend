@@ -1,0 +1,147 @@
+/* Shared chrome for the app-level fallback surfaces (not-found, error).
+
+   Both render inside the root layout wrapped in `.home-page` (which owns the
+   global design tokens in app/home.css). The visual idea is a page that fell out
+   of the stack: two offset ghost sheets sit behind one real card, so the state
+   reads as a missing sheet rather than a generic centered "404" slab. One accent
+   (brand), quiet material, a single entrance motion, and a reduced-motion path. */
+
+.wrap {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 48px 24px 72px;
+}
+
+.stack {
+  position: relative;
+  width: min(100%, 520px);
+}
+
+.ghost,
+.ghostBack {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2xl);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.ghost {
+  transform: translate(10px, 10px) rotate(1.1deg);
+  opacity: 0.6;
+}
+
+.ghostBack {
+  transform: translate(-8px, 6px) rotate(-1.4deg);
+  opacity: 0.35;
+}
+
+.card {
+  position: relative;
+  padding: 40px 32px 34px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2xl);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(18px);
+  animation: stateRise 420ms var(--ease-out) both;
+}
+
+.code {
+  margin: 0 0 10px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3.6vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.lede {
+  margin: 12px 0 0;
+  max-width: 42ch;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.primary,
+.ghostBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base),
+    background var(--dur-fast);
+}
+
+.primary {
+  border: 0;
+  background: var(--brand-gradient);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-brand);
+}
+
+.ghostBtn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.ghostBtn:hover {
+  background: var(--soft);
+}
+
+@keyframes stateRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+
+  .primary:hover,
+  .ghostBtn:hover {
+    transform: none;
+  }
+}

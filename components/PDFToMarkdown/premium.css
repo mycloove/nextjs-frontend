@@ -1,0 +1,31 @@
+/* =====================================================================
+   PDF -> Markdown premium stylesheet entrypoint.
+   Keep imports in this order; it preserves the original cascade exactly.
+   ===================================================================== */
+
+@import './styles/premium/00-foundation.css';
+@import './styles/premium/01-upload-conversion.css';
+@import './styles/premium/02-workspace-layout.css';
+@import './styles/premium/03-editor-widgets.css';
+@import './styles/premium/04-workspace-skin-rail.css';
+@import './styles/premium/05-premium-panels.css';
+@import './styles/premium/06-focus-mode.css';
+@import './styles/premium/07-density-responsive.css';
+/* 08 restyles the entry screen over the upload skin in 04, and 09 is
+   appended last: it draws the entry card as a Markdown source surface
+   and supersedes 08's decorative glyph/spec/feature blocks. The numeric
+   order above remains load-bearing. */
+@import './styles/premium/08-entry-threshold.css';
+@import './styles/premium/09-syntax-canvas.css';
+/* 10 is the Markdown Merge collation dialog. Appended last, after the whole
+   00–09 cascade, exactly like 08/09: it is a new surface, not an insert into
+   the load-bearing order above. Do not reorder. */
+@import './styles/premium/10-merge.css';
+/* 11 is the calibration console (settings). Appended last for the same reason
+   as 08/09/10: it is a new surface, not an insert into the load-bearing order.
+   It is scoped to `.mr-markdown-workspace`, so it reads surface 4's palette. */
+@import './styles/premium/11-settings-console.css';
+/* 12 is the calibration console's Connections surface (the GitHub hand-off
+   dock). Appended last by the same rule: a new surface, never an insert into
+   the 00–11 cascade. Scoped to `.mr-markdown-workspace` like 11. */
+@import './styles/premium/12-connections.css';

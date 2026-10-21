@@ -1,0 +1,260 @@
+/* Team access is a small, high-consequence control surface. The layout gives
+   creation, current access and irreversible actions distinct visual weight. */
+.peoplePage .peopleHead {
+  align-items: center;
+  flex-direction: row;
+  gap: 24px;
+  margin-bottom: 22px;
+  padding-bottom: 20px;
+}
+
+.intro {
+  min-width: 0;
+}
+
+.lead {
+  margin: 0;
+}
+
+.seatCounter {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--bench-accent) 6%, var(--bench-card)), var(--bench-card) 72%);
+  border: 1px solid var(--bench-border);
+  border-left: 2px solid var(--bench-accent);
+  border-radius: var(--bench-r-card);
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 144px;
+  padding: 12px 16px;
+}
+
+.counterLabel {
+  color: var(--bench-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.counterValue {
+  color: var(--bench-text);
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.counterValue > span {
+  color: var(--bench-faint);
+  font-size: 12px;
+}
+
+.seatForm.seatForm {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--bench-card) 97%, var(--bench-accent)), var(--bench-card) 58%);
+  border: 1px solid color-mix(in srgb, var(--bench-border-hi) 72%, var(--bench-border));
+  border-radius: var(--bench-r-panel);
+  display: block;
+  margin-bottom: 24px;
+  padding: 20px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+}
+
+.formHead {
+  align-items: flex-end;
+  border-bottom: 1px solid var(--bench-border);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+}
+
+.formEyebrow {
+  margin-bottom: 5px;
+}
+
+.formTitle {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.formNote {
+  color: var(--bench-faint);
+  font-size: 11px;
+  margin: 0;
+}
+
+.formGrid {
+  display: grid;
+  gap: 16px 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.formGrid > * {
+  min-width: 0;
+}
+
+.field {
+  gap: 8px;
+}
+
+.field:focus-within {
+  color: var(--bench-text);
+}
+
+.field :global(input:focus-visible),
+.field :global(select:focus-visible) {
+  border-color: var(--bench-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bench-accent) 15%, transparent);
+}
+
+.fieldHint {
+  line-height: 1.45;
+  max-width: 58ch;
+}
+
+.formFooter {
+  align-items: center;
+  border-top: 1px solid var(--bench-border);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.formFootnote {
+  color: var(--bench-faint);
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.formFooter > button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding-inline: 16px;
+}
+
+.seatsPanel {
+  overflow: hidden;
+}
+
+.seatsHead > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.seatsHead {
+  align-items: center;
+}
+
+.totalSeats {
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: 999px;
+  color: var(--bench-muted);
+  flex: 0 0 auto;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  padding: 5px 9px;
+}
+
+.seatFilter {
+  background: var(--bench-sunk);
+  border-bottom: 1px solid var(--bench-border);
+  margin: 0;
+  max-width: none;
+  padding: 9px 18px;
+}
+
+.searchInput {
+  min-height: 32px;
+}
+
+.accountEmail {
+  font-weight: 550;
+  letter-spacing: -0.01em;
+}
+
+.seatRow:hover {
+  background: color-mix(in srgb, var(--bench-sunk) 55%, transparent);
+}
+
+.seatRow:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--bench-accent) 60%, transparent);
+  outline-offset: -2px;
+}
+
+.role {
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  width: fit-content;
+}
+
+.actionsHeading {
+  text-align: right;
+}
+
+@media (max-width: 1024px) {
+  .peoplePage .peopleHead {
+    align-items: center;
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 620px) {
+  .peoplePage .peopleHead {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .seatCounter {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .seatForm.seatForm {
+    padding: 16px;
+  }
+
+  .formHead {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+    row-gap: 16px;
+  }
+
+  .formFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .formFooter > button {
+    width: 100%;
+  }
+
+  .seatsHead {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .seatFilter {
+    padding-inline: 14px;
+  }
+}

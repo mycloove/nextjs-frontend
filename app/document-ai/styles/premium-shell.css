@@ -1,0 +1,1538 @@
+/* =============================================================
+   Document AI — Premium Application Shell
+   Scoped under `.doc-ai-shell` so it never leaks to the rest
+   of the site. Light/dark theme controlled via
+   `.doc-ai-shell[data-theme="dark"]`.
+   ============================================================= */
+
+.doc-ai-shell {
+  --paper: #FAF8F3;
+  --paper-alt: #F1EEE5;
+  --sidebar-bg: #F5F2EA;
+  --panel: #FFFFFF;
+  --ink: #191D2B;
+  --ink-soft: #5B5F70;
+  --ink-faint: #8A8D9B;
+  --text-body: #2C2F3B;
+  --signal: #2F6F5E;
+  --signal-deep: #1F4E42;
+  --signal-soft: #E4EFEA;
+  --mark: #D98F2B;
+  --mark-soft: #FBEAD0;
+  --mark-line: #D9A860;
+  --gap: #B5503A;
+  --gap-soft: #F6E4DF;
+  --line: #E3DDCC;
+  --line-soft: #ECE8DC;
+  --bubble-bg: #191D2B;
+  --bubble-text: #F4F2EA;
+  --shadow: 0 1px 2px rgba(25, 29, 43, 0.05),
+    0 10px 28px -14px rgba(25, 29, 43, 0.16);
+  --shadow-lg: 0 20px 60px -20px rgba(25, 29, 43, 0.35);
+  --grain-opacity: 0.03;
+  --sidebar-w: 272px;
+  --right-w: 308px;
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.doc-ai-shell[data-theme="dark"] {
+  --paper: #14171F;
+  --paper-alt: #1B1F2A;
+  --sidebar-bg: #10131A;
+  --panel: #1E222D;
+  --ink: #ECEAE2;
+  --ink-soft: #A7ABB8;
+  --ink-faint: #666B7A;
+  --text-body: #D7D5CC;
+  --signal: #4FA98C;
+  --signal-deep: #3E8B72;
+  --signal-soft: rgba(79, 169, 140, 0.15);
+  --mark: #EAAE4E;
+  --mark-soft: rgba(234, 174, 78, 0.16);
+  --mark-line: #C68F45;
+  --gap: #E2836A;
+  --gap-soft: rgba(226, 131, 106, 0.16);
+  --line: #2B2F3B;
+  --line-soft: #242832;
+  --bubble-bg: #2A2F3D;
+  --bubble-text: #ECEAE2;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -14px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 60px -20px rgba(0, 0, 0, 0.6);
+  --grain-opacity: 0.05;
+}
+
+.doc-ai-shell *,
+.doc-ai-shell *::before,
+.doc-ai-shell *::after {
+  box-sizing: border-box;
+}
+
+/* Ambient film grain */
+.doc-ai-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2000;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+.doc-ai-shell .mono {
+  font-family: "IBM Plex Mono", ui-monospace, "Menlo", monospace;
+}
+.doc-ai-shell .serif {
+  font-family: "Source Serif 4", Georgia, serif;
+}
+
+.doc-ai-shell svg.icon {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.doc-ai-shell button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.doc-ai-shell ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.doc-ai-shell ::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 8px;
+}
+.doc-ai-shell ::-webkit-scrollbar-track {
+  background: transparent;
+}
+.doc-ai-shell :focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+.doc-ai-shell .app-shell {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ---------- LEFT SIDEBAR ---------- */
+.doc-ai-shell .sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+.doc-ai-shell .sb-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.doc-ai-shell .sb-mark {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+.doc-ai-shell .sb-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 12px 8px;
+}
+.doc-ai-shell .new-chat-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  justify-content: center;
+  background: var(--signal-deep);
+  color: #F3F7F4;
+  border: none;
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 14px;
+  transition: filter 0.15s ease;
+}
+.doc-ai-shell .new-chat-btn:hover {
+  filter: brightness(1.1);
+}
+.doc-ai-shell .cmdk-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-bottom: 18px;
+  text-align: left;
+}
+.doc-ai-shell .cmdk-trigger .kbd {
+  margin-left: auto;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  background: var(--paper-alt);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--ink-faint);
+}
+.doc-ai-shell .sb-section-label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 0 8px;
+  margin: 16px 0 6px;
+}
+.doc-ai-shell .sb-section-label:first-of-type {
+  margin-top: 0;
+}
+.doc-ai-shell .sb-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--ink-soft);
+  width: 100%;
+  text-align: left;
+  font-weight: 500;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.doc-ai-shell .sb-nav-item .icon {
+  color: var(--ink-faint);
+}
+.doc-ai-shell .sb-nav-item:hover {
+  background: var(--paper-alt);
+}
+.doc-ai-shell .sb-nav-item.active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-weight: 600;
+}
+.doc-ai-shell .sb-nav-item.active .icon {
+  color: var(--signal);
+}
+.doc-ai-shell .sb-project {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+.doc-ai-shell .sb-project:hover {
+  background: var(--paper-alt);
+}
+.doc-ai-shell .sb-project .icon {
+  color: var(--mark);
+}
+.doc-ai-shell .sb-project-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-ai-shell .sb-project-count {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--ink-faint);
+  background: var(--paper-alt);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+.doc-ai-shell .sb-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.14s ease;
+  border: none;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+}
+.doc-ai-shell .sb-recent:hover {
+  background: var(--paper-alt);
+}
+.doc-ai-shell .sb-recent.active {
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.doc-ai-shell .sb-recent-title {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doc-ai-shell .sb-recent-meta {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+.doc-ai-shell .sb-footer {
+  border-top: 1px solid var(--line);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.doc-ai-shell .sb-user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.doc-ai-shell .sb-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--signal-deep);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Source Serif 4", Georgia, serif;
+  font-weight: 600;
+  font-size: 12.5px;
+  flex-shrink: 0;
+}
+.doc-ai-shell .sb-user-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.doc-ai-shell .sb-user-plan {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 9.5px;
+  color: var(--signal);
+  letter-spacing: 0.04em;
+}
+.doc-ai-shell .icon-btn {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 6px;
+  color: var(--ink-faint);
+  display: flex;
+  margin-left: auto;
+}
+.doc-ai-shell .icon-btn:hover {
+  background: var(--paper-alt);
+  color: var(--ink);
+}
+
+/* Theme toggle */
+.doc-ai-shell .theme-toggle {
+  display: flex;
+  align-items: center;
+  background: var(--paper-alt);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 3px;
+  position: relative;
+  width: 100%;
+}
+.doc-ai-shell .theme-toggle button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 0;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  position: relative;
+  z-index: 2;
+  transition: color 0.2s ease;
+}
+.doc-ai-shell .theme-toggle button.active {
+  color: #fff;
+}
+.doc-ai-shell .theme-toggle .slider {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  background: var(--signal-deep);
+  border-radius: 16px;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+.doc-ai-shell[data-theme="dark"] .theme-toggle .slider {
+  transform: translateX(100%);
+}
+
+/* ---------- MAIN COLUMN ---------- */
+.doc-ai-shell .main-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+.doc-ai-shell .topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 22px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+  flex-shrink: 0;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+.doc-ai-shell .crumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  min-width: 0;
+}
+.doc-ai-shell .crumb b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.doc-ai-shell .crumb .sep {
+  color: var(--ink-faint);
+}
+.doc-ai-shell .crumb-doc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-ai-shell .topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.doc-ai-shell .btn-ghost {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 6.5px 11px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.doc-ai-shell .btn-ghost:hover {
+  background: var(--paper-alt);
+}
+.doc-ai-shell .btn-ghost .kbd {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  background: var(--paper-alt);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--ink-faint);
+}
+.doc-ai-shell .hamburger {
+  display: none;
+}
+
+.doc-ai-shell .content-row {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* ---------- CHAT PANEL ---------- */
+.doc-ai-shell .panel-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--paper);
+}
+.doc-ai-shell .doc-strip {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line-soft);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.doc-ai-shell .doc-thumb {
+  width: 52px;
+  height: 66px;
+  border-radius: 5px;
+  background: var(--panel);
+  border: 1.5px solid var(--line);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.doc-ai-shell .doc-thumb.active {
+  border-color: var(--signal);
+  color: var(--signal-deep);
+  box-shadow: var(--shadow);
+}
+.doc-ai-shell .doc-thumb.upload {
+  border-style: dashed;
+  color: var(--ink-faint);
+  font-family: inherit;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.doc-ai-shell .chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px 8%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.doc-ai-shell .msg-user {
+  align-self: flex-end;
+  max-width: 66%;
+  background: var(--bubble-bg);
+  color: var(--bubble-text);
+  font-size: 13.5px;
+  line-height: 1.55;
+  padding: 11px 15px;
+  border-radius: 12px 12px 3px 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.doc-ai-shell .note {
+  max-width: 78%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px 12px 12px 12px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+.doc-ai-shell .note-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.doc-ai-shell .note-label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--signal);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.doc-ai-shell .note-label::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+.doc-ai-shell .note-label.gap-label {
+  color: var(--gap);
+}
+.doc-ai-shell .note-label.gap-label::before {
+  background: var(--gap);
+}
+.doc-ai-shell .note-body {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-body);
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.doc-ai-shell .note-body b,
+.doc-ai-shell .note-body strong {
+  color: var(--ink);
+}
+.doc-ai-shell .cite-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.doc-ai-shell .cite-chip {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--signal-deep);
+  background: var(--signal-soft);
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.doc-ai-shell .cite-chip.gap-chip {
+  color: var(--gap);
+  background: var(--gap-soft);
+}
+
+/* Verified seal */
+.doc-ai-shell .seal {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+  cursor: default;
+  background: radial-gradient(circle, var(--signal-deep) 0 38%, transparent 39%),
+    repeating-conic-gradient(
+      var(--signal-soft) 0deg 15deg,
+      transparent 15deg 30deg
+    );
+}
+.doc-ai-shell .seal::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.doc-ai-shell .seal[title]:hover {
+  filter: brightness(1.08);
+}
+
+.doc-ai-shell .thinking-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.doc-ai-shell .thinking-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--signal);
+  animation: dai-bounce 1.2s infinite ease-in-out both;
+}
+.doc-ai-shell .thinking-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.doc-ai-shell .thinking-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes dai-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+  40% { transform: translateY(-3px); opacity: 1; }
+}
+
+.doc-ai-shell .composer-wrap {
+  border-top: 1px solid var(--line);
+  padding: 14px 8%;
+  flex-shrink: 0;
+  background: var(--panel);
+}
+.doc-ai-shell .composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 9px 9px 16px;
+  background: var(--paper-alt);
+}
+.doc-ai-shell .composer-input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  resize: none;
+  max-height: 160px;
+  line-height: 1.5;
+}
+.doc-ai-shell .composer-input::placeholder {
+  color: var(--ink-faint);
+}
+.doc-ai-shell .send-btn {
+  background: var(--signal-deep);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+.doc-ai-shell .send-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.doc-ai-shell .send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.doc-ai-shell .composer-hint {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--ink-faint);
+  margin-top: 7px;
+  text-align: center;
+}
+
+/* ---------- RIGHT PANEL ---------- */
+.doc-ai-shell .right-panel {
+  width: var(--right-w);
+  flex-shrink: 0;
+  border-left: 1px solid var(--line);
+  background: var(--paper-alt);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden; /* children own the scroll; panel just clips */
+}
+.doc-ai-shell .rp-insights-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.doc-ai-shell .rp-head {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.doc-ai-shell .rp-title {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-weight: 600;
+  font-size: 14.5px;
+  margin: 0 0 2px;
+  color: var(--ink);
+}
+.doc-ai-shell .rp-sub {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.doc-ai-shell .rp-section {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.doc-ai-shell .rp-section:last-child {
+  border-bottom: none;
+}
+.doc-ai-shell .rp-section-label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 10px;
+}
+.doc-ai-shell .rp-source {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  text-align: left;
+  width: 100%;
+  padding: 0;
+}
+.doc-ai-shell .rp-source:hover b {
+  color: var(--signal-deep);
+}
+.doc-ai-shell .rp-source-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mark);
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.doc-ai-shell .rp-source.gap .rp-source-dot {
+  background: var(--gap);
+}
+.doc-ai-shell .rp-source b {
+  color: var(--ink);
+  display: block;
+  font-size: 11.5px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  margin-bottom: 1px;
+  font-weight: 500;
+}
+.doc-ai-shell .rp-entity-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 5px 0;
+  color: var(--ink-soft);
+}
+.doc-ai-shell .rp-entity-row b {
+  color: var(--ink);
+  font-weight: 500;
+}
+.doc-ai-shell .rp-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  padding: 4px 0;
+}
+.doc-ai-shell .rp-meta-row span:last-child {
+  color: var(--ink-soft);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.doc-ai-shell .rp-empty {
+  font-size: 12px;
+  color: var(--ink-faint);
+  line-height: 1.5;
+}
+
+/* ---------- STATUS FOOTER ---------- */
+.doc-ai-shell .status-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--line);
+  background: var(--sidebar-bg);
+  padding: 6px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+}
+.doc-ai-shell .status-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.doc-ai-shell .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--signal);
+  display: inline-block;
+  margin-right: 6px;
+}
+
+/* ---------- COMMAND PALETTE ---------- */
+.doc-ai-shell .cmdk-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 16, 0.45);
+  z-index: 200;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  backdrop-filter: blur(2px);
+}
+.doc-ai-shell .cmdk-overlay.show {
+  display: flex;
+}
+.doc-ai-shell .cmdk-modal {
+  width: 560px;
+  max-width: 88vw;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.doc-ai-shell .cmdk-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.doc-ai-shell .cmdk-input-row .icon {
+  color: var(--ink-faint);
+}
+.doc-ai-shell .cmdk-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+}
+.doc-ai-shell .cmdk-input::placeholder {
+  color: var(--ink-faint);
+}
+.doc-ai-shell .cmdk-esc {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.doc-ai-shell .cmdk-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+}
+.doc-ai-shell .cmdk-group-label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding: 8px 10px 4px;
+}
+.doc-ai-shell .cmdk-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+.doc-ai-shell .cmdk-item:hover,
+.doc-ai-shell .cmdk-item.sel {
+  background: var(--paper-alt);
+  color: var(--ink);
+}
+.doc-ai-shell .cmdk-item .icon {
+  color: var(--ink-faint);
+}
+.doc-ai-shell .cmdk-item .kbd {
+  margin-left: auto;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+
+.doc-ai-shell .overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 16, 0.4);
+  z-index: 40;
+}
+.doc-ai-shell .overlay.show {
+  display: block;
+}
+
+/* Upload progress bar inline */
+.doc-ai-shell .upload-progress {
+  width: 100%;
+  height: 3px;
+  background: var(--line-soft);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.doc-ai-shell .upload-progress-bar {
+  height: 100%;
+  background: var(--signal);
+  transition: width 0.3s ease;
+}
+
+.doc-ai-shell .banner-error {
+  background: var(--gap-soft);
+  color: var(--gap);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  align-self: flex-start;
+  max-width: 78%;
+}
+
+@media (max-width: 1080px) {
+  .doc-ai-shell .right-panel {
+    display: none;
+  }
+  .doc-ai-shell.right-panel-open .right-panel {
+    display: flex;
+  }
+}
+@media (max-width: 760px) {
+  .doc-ai-shell .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+  }
+  .doc-ai-shell .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.3);
+  }
+  .doc-ai-shell .hamburger {
+    display: flex;
+  }
+  .doc-ai-shell .crumb-doc span {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .doc-ai-shell .btn-ghost .lbl {
+    display: none;
+  }
+  .doc-ai-shell .chat-scroll {
+    padding: 18px 5%;
+  }
+  .doc-ai-shell .composer-wrap {
+    padding: 12px 5%;
+  }
+  .doc-ai-shell .msg-user,
+  .doc-ai-shell .note {
+    max-width: 88%;
+  }
+  .doc-ai-shell .status-footer {
+    font-size: 9.5px;
+    padding: 6px 12px;
+  }
+  .doc-ai-shell .cmdk-modal {
+    width: 92vw;
+  }
+}
+
+/* =============================================================
+   Source Viewer — right-panel "source" mode
+   Triggered when the user clicks a cite-chip in the chat or
+   a source row in the Insights panel. Renders the exact
+   passage with a soft flash pulse + amber highlight.
+   ============================================================= */
+
+.doc-ai-shell .rp-mode-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  margin: 12px 16px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.doc-ai-shell .rp-mode-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  flex: 1;
+  text-align: center;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.doc-ai-shell .rp-mode-tab:hover:not(:disabled) {
+  color: var(--ink);
+}
+.doc-ai-shell .rp-mode-tab.active {
+  background: var(--signal-soft);
+  color: var(--signal-deep);
+  font-weight: 600;
+}
+.doc-ai-shell[data-theme="dark"] .rp-mode-tab.active {
+  color: var(--signal);
+}
+.doc-ai-shell .rp-mode-tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.doc-ai-shell .cite-chip {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease,
+    transform 0.12s ease;
+}
+.doc-ai-shell .cite-chip:hover {
+  background: var(--signal-soft);
+  border-color: var(--signal);
+}
+.doc-ai-shell .cite-chip:active {
+  transform: translateY(1px);
+}
+
+/* Source viewer layout — sticky header + pager + scrollable stack */
+.doc-ai-shell .sv-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-ai-shell .sv-doc-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-alt);
+}
+.doc-ai-shell .sv-back {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 9px 5px 6px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.doc-ai-shell .sv-back:hover {
+  color: var(--ink);
+  border-color: var(--signal);
+}
+.doc-ai-shell .sv-doc-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+  flex: 1;
+}
+.doc-ai-shell .sv-doc-name {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+.doc-ai-shell .sv-crumb {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+}
+.doc-ai-shell .sv-crumb-key {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.doc-ai-shell .sv-crumb-sep {
+  opacity: 0.6;
+}
+.doc-ai-shell .sv-crumb-val {
+  color: var(--signal);
+  font-weight: 600;
+}
+.doc-ai-shell .sv-gap-tag {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--gap-soft);
+  color: var(--gap);
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+}
+
+/* Pager */
+.doc-ai-shell .sv-pager {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--paper-alt);
+}
+.doc-ai-shell .sv-pager-btn {
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.doc-ai-shell .sv-pager-btn:hover:not(:disabled) {
+  color: var(--signal);
+  border-color: var(--signal);
+  background: var(--signal-soft);
+}
+.doc-ai-shell .sv-pager-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.doc-ai-shell .sv-pager-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+.doc-ai-shell .sv-pager-index {
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 12px;
+}
+.doc-ai-shell .sv-pager-of {
+  opacity: 0.7;
+}
+.doc-ai-shell .sv-pager-total {
+  color: var(--ink);
+  font-weight: 500;
+}
+.doc-ai-shell .sv-pager-caption {
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 9.5px;
+  margin-left: 4px;
+}
+
+/* Scrollable stack of citation cards */
+.doc-ai-shell .sv-stack {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+  scroll-padding-top: 8px;
+}
+
+.doc-ai-shell .sv-page {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  outline: none;
+}
+.doc-ai-shell .sv-page:hover {
+  border-color: var(--ink-faint);
+}
+.doc-ai-shell .sv-page:focus-visible {
+  border-color: var(--signal);
+}
+.doc-ai-shell .sv-page.active {
+  border-color: var(--signal);
+  box-shadow: 0 0 0 1px var(--signal-soft), var(--shadow);
+  cursor: default;
+}
+.doc-ai-shell .sv-page.gap.active {
+  border-color: var(--gap);
+  box-shadow: 0 0 0 1px var(--gap-soft), var(--shadow);
+}
+.doc-ai-shell .sv-page-inner {
+  padding: 14px 16px 16px;
+  position: relative;
+  z-index: 1;
+}
+.doc-ai-shell .sv-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+.doc-ai-shell .sv-page-num {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.doc-ai-shell .sv-page.active .sv-page-num {
+  color: var(--signal);
+}
+.doc-ai-shell .sv-page.gap.active .sv-page-num {
+  color: var(--gap);
+}
+.doc-ai-shell .sv-body {
+  font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-body);
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+.doc-ai-shell .sv-body p {
+  margin: 0 0 8px;
+}
+.doc-ai-shell .sv-body p:last-child {
+  margin-bottom: 0;
+}
+.doc-ai-shell .sv-empty {
+  font-size: 12px;
+  color: var(--ink-soft);
+  padding: 24px 8px;
+  text-align: center;
+  line-height: 1.55;
+}
+.doc-ai-shell .sv-empty-small {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* Amber highlight for the target sentence */
+.doc-ai-shell .sv-mark {
+  background: var(--mark-soft);
+  color: var(--ink);
+  padding: 1px 3px;
+  border-radius: 3px;
+  box-shadow: inset 0 -2px 0 var(--mark-line);
+}
+
+/* Flash pulse ring — remounted via `key={nonce}` to replay */
+.doc-ai-shell .sv-flash-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 0 0 0 var(--signal);
+  animation: sv-pulse 900ms cubic-bezier(0.22, 0.61, 0.36, 1) 1;
+}
+.doc-ai-shell .sv-flash-ring.gap {
+  animation-name: sv-pulse-gap;
+}
+
+@keyframes sv-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(47, 111, 94, 0.55),
+      inset 0 0 0 2px rgba(47, 111, 94, 0.65);
+  }
+  60% {
+    box-shadow: 0 0 0 10px rgba(47, 111, 94, 0),
+      inset 0 0 0 1px rgba(47, 111, 94, 0.25);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 111, 94, 0),
+      inset 0 0 0 0 rgba(47, 111, 94, 0);
+  }
+}
+@keyframes sv-pulse-gap {
+  0% {
+    box-shadow: 0 0 0 0 rgba(181, 80, 58, 0.55),
+      inset 0 0 0 2px rgba(181, 80, 58, 0.65);
+  }
+  60% {
+    box-shadow: 0 0 0 10px rgba(181, 80, 58, 0),
+      inset 0 0 0 1px rgba(181, 80, 58, 0.25);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(181, 80, 58, 0),
+      inset 0 0 0 0 rgba(181, 80, 58, 0);
+  }
+}
+
+.doc-ai-shell .sv-footnote {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  font-style: italic;
+  padding: 8px 16px 12px;
+  border-top: 1px solid var(--line-soft);
+  background: var(--paper-alt);
+  line-height: 1.4;
+}
+@media (max-width: 900px) {
+  .doc-ai-shell {
+    --right-w: 288px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-ai-shell * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ================================================================== */
+/* Source Viewer — paginated (Citation Jump v2)                       */
+/* Added for the click-a-citation → jump + flash feature. Class names */
+/* mirror the reference mockup so the DOM+CSS stay 1:1.               */
+/* ================================================================== */
+.doc-ai-shell .sv-pagebar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.doc-ai-shell .sv-pagebar-label { letter-spacing: 0.02em; }
+.doc-ai-shell .sv-pagebar-label b { color: var(--ink); font-weight: 600; }
+
+.doc-ai-shell .sv-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+  background: var(--paper-alt);
+}
+
+.doc-ai-shell .sv-page-doc {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 26px 24px;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--text-body);
+  scroll-margin-top: 14px;
+}
+
+.doc-ai-shell .sv-page-doc .sv-page-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-faint);
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.doc-ai-shell .sv-page-doc .sv-heading {
+  font-family: 'Source Serif 4', serif;
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--ink);
+  margin: 14px 0 8px;
+}
+.doc-ai-shell .sv-page-doc .sv-heading.sv-heading-2 { font-size: 12.5px; }
+
+.doc-ai-shell .sv-page-doc .sv-para { margin: 0 0 12px; }
+
+.doc-ai-shell .sv-page-doc .sv-empty {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-faint);
+  text-align: center;
+  padding: 32px 12px;
+}
+
+.doc-ai-shell .sv-hl {
+  background: var(--mark-soft, #FBEAD0);
+  padding: 0 1px;
+  border-radius: 2px;
+  scroll-margin-top: 60px;
+}
+.doc-ai-shell .sv-hl.gap {
+  background: var(--gap-soft, #F6E4DF);
+  border-bottom: 1.5px dotted var(--gap, #B5503A);
+}
+.doc-ai-shell .sv-hl.flash { animation: docAiFlashPulse 1.3s ease; }
+@keyframes docAiFlashPulse {
+  0%   { background-color: var(--mark-strong, #F3CD8E); box-shadow: 0 0 0 3px var(--mark-strong, #F3CD8E); }
+  100% { background-color: var(--mark-soft, #FBEAD0); box-shadow: 0 0 0 0 transparent; }
+}
+.doc-ai-shell .sv-hl.gap.flash { animation: docAiFlashPulseGap 1.3s ease; }
+@keyframes docAiFlashPulseGap {
+  0%   { background-color: #EBB7A5; box-shadow: 0 0 0 3px #EBB7A5; }
+  100% { background-color: var(--gap-soft, #F6E4DF); box-shadow: 0 0 0 0 transparent; }
+}

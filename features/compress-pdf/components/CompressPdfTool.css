@@ -1,0 +1,723 @@
+/*
+ * Compress PDF — "the compression engine console".
+ *
+ * A single self-contained surface, scoped behind `.acx-page` so none of its
+ * generic-looking selectors (a dark grid, mode cards, a terminal) can leak
+ * into any other route. Tokens are declared on the root and mirrored for the
+ * light theme; the socket/mono face is the route's JetBrains Mono variable.
+ * The dark palette is the mockup's verbatim (#030303 base, #36B39C signal).
+ */
+
+.acx-page {
+  --acx-bg-base: #030303;
+  --acx-bg-panel: #0a0a0a;
+  --acx-bg-card: #111111;
+  --acx-bg-hover: #151515;
+  --acx-border-dim: #1f1f1f;
+  --acx-border-strong: #333333;
+  --acx-text-main: #fafafa;
+  --acx-text-muted: #888888;
+  --acx-accent: #36b39c;
+  --acx-accent-glow: rgba(54, 179, 156, 0.15);
+  --acx-accent-border: rgba(54, 179, 156, 0.4);
+  --acx-danger: #ef4444;
+  --acx-danger-glow: rgba(239, 68, 68, 0.15);
+  --acx-danger-border: rgba(239, 68, 68, 0.45);
+  --acx-ok: #4ade80;
+  --acx-grid-line: #111111;
+  --acx-btn-bg: #fafafa;
+  --acx-btn-fg: #000000;
+  --acx-radius-md: 12px;
+  --acx-radius-lg: 24px;
+  --acx-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --acx-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  color: var(--acx-text-main);
+  background-color: var(--acx-bg-base);
+  background-image:
+    linear-gradient(to right, var(--acx-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--acx-grid-line) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
+  overflow-x: hidden;
+}
+
+.acx-page *,
+.acx-page *::before,
+.acx-page *::after {
+  box-sizing: border-box;
+}
+
+/* Light theme: same instrument, daylight dial. The terminal stays dark — it
+   is a console — but the material around it matches the app's light shell. */
+html[data-theme="light"] .acx-page {
+  --acx-bg-base: #f4f5f7;
+  --acx-bg-panel: #ffffff;
+  --acx-bg-card: #ffffff;
+  --acx-bg-hover: #f0f2f4;
+  --acx-border-dim: #e3e6e9;
+  --acx-border-strong: #cdd2d7;
+  --acx-text-main: #0b0c0e;
+  --acx-text-muted: #5c636b;
+  --acx-accent: #1c8b78;
+  --acx-accent-glow: rgba(28, 139, 120, 0.1);
+  --acx-accent-border: rgba(28, 139, 120, 0.35);
+  --acx-danger: #c0392b;
+  --acx-danger-glow: rgba(192, 57, 43, 0.1);
+  --acx-danger-border: rgba(192, 57, 43, 0.35);
+  --acx-grid-line: rgba(0, 0, 0, 0.05);
+  --acx-btn-bg: #0b0c0e;
+  --acx-btn-fg: #ffffff;
+}
+
+.acx-page :is(button, [role="radio"], a):focus-visible {
+  outline: 2px solid var(--acx-accent);
+  outline-offset: 3px;
+}
+
+/* Site bar --------------------------------------------------------------
+   The same app chrome as /split-pdf's sitebar: a sticky 62px band, blurred
+   translucent background, a hairline base, and an inner row aligned to the
+   workspace column — [octopus] / mycloove / Compress PDF on the left, a
+   grid-icon "All tools" link on the right. Replaces the mockup's standalone
+   brand + version badge so this full-screen tool reads as part of the app. */
+.acx-sitebar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: 62px;
+  border-bottom: 1px solid var(--acx-border-dim);
+  background: color-mix(in srgb, var(--acx-bg-base) 94%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.acx-sitebar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(100%, 1400px);
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+.acx-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: var(--acx-text-muted);
+  font-size: 13px;
+}
+
+.acx-logo-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  border-radius: 50%;
+}
+
+.acx-site-separator {
+  flex: 0 0 auto;
+  color: var(--acx-border-strong);
+}
+
+.acx-site-brand {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.acx-breadcrumb b {
+  overflow: hidden;
+  color: var(--acx-text-main);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acx-all-tools {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--acx-border-dim);
+  border-radius: 7px;
+  color: var(--acx-text-muted);
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 0.16s, border-color 0.16s, background 0.16s;
+}
+
+.acx-all-tools svg {
+  width: 15px;
+  height: 15px;
+}
+
+.acx-all-tools:hover {
+  border-color: var(--acx-accent-border);
+  background: var(--acx-bg-hover);
+  color: var(--acx-text-main);
+}
+
+/* Workspace ------------------------------------------------------------- */
+.acx-main {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  gap: 40px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+/* Left: target mass visualizer */
+.acx-visualizer {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 460px;
+  overflow: hidden;
+  border: 1px solid var(--acx-border-dim);
+  border-radius: var(--acx-radius-lg);
+  background: radial-gradient(circle at center, var(--acx-bg-panel) 0%, var(--acx-bg-base) 100%);
+}
+
+.acx-core-label {
+  position: absolute;
+  top: 32px;
+  left: 32px;
+  color: var(--acx-text-muted);
+  font-family: var(--acx-mono);
+  font-size: 12px;
+}
+
+.acx-core {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 320px;
+  height: 320px;
+}
+
+.acx-ring {
+  position: absolute;
+  border: 1px dashed var(--acx-border-dim);
+  border-radius: 50%;
+  transition: all 0.8s var(--acx-spring);
+}
+
+.acx-ring-1 {
+  width: 100%;
+  height: 100%;
+  border-color: var(--acx-accent-border);
+  opacity: 0.5;
+  animation: acx-spin 20s linear infinite;
+}
+
+.acx-ring-2 {
+  width: 75%;
+  height: 75%;
+  border-color: var(--acx-accent-border);
+  animation: acx-spin 15s linear infinite reverse;
+}
+
+@keyframes acx-spin {
+  100% { transform: rotate(360deg); }
+}
+
+.acx-mass {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50%;
+  height: 50%;
+  border: 2px solid var(--acx-accent);
+  border-radius: 50%;
+  background: var(--acx-accent-glow);
+  box-shadow: 0 0 40px var(--acx-accent-glow), inset 0 0 20px var(--acx-accent-glow);
+  transition: transform 0.8s var(--acx-spring), background 0.5s, border-color 0.5s, box-shadow 0.5s;
+}
+
+.acx-size {
+  color: var(--acx-text-main);
+  font-family: var(--acx-mono);
+  font-size: 24px;
+  font-weight: 500;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  animation: acx-fade-in 0.3s var(--acx-spring);
+}
+
+.acx-size-sub {
+  position: absolute;
+  bottom: -32px;
+  color: var(--acx-text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+  transition: color 0.5s;
+}
+
+@keyframes acx-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Right: controls */
+.acx-controls {
+  display: flex;
+  flex: 0 0 420px;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.acx-file-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px 10px 20px;
+  border: 1px solid var(--acx-border-dim);
+  border-radius: 99px;
+  background: var(--acx-bg-panel);
+}
+
+.acx-file-pill > svg {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  color: var(--acx-text-muted);
+}
+
+.acx-file-open {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 2px 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.acx-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acx-file-size {
+  flex: 0 0 auto;
+  color: var(--acx-text-muted);
+  font-family: var(--acx-mono);
+  font-size: 12px;
+}
+
+.acx-file-x {
+  flex: 0 0 auto;
+  display: flex;
+  padding: 5px;
+  color: var(--acx-text-muted);
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.acx-file-x:hover {
+  color: var(--acx-danger);
+  background: var(--acx-danger-glow);
+}
+
+/* Empty-state drop zone — the pill opens into a proper target so it is
+   obvious the document goes here. A dashed accent frame with a soft top
+   glow; it lifts with a halo the moment a file is dragged over the page. */
+.acx-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 30px 22px;
+  border: 1px dashed var(--acx-accent-border);
+  border-radius: var(--acx-radius-md);
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  background:
+    radial-gradient(120% 130% at 50% 0%, var(--acx-accent-glow) 0%, transparent 62%),
+    var(--acx-bg-panel);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
+}
+
+.acx-drop:hover {
+  border-style: solid;
+  border-color: var(--acx-accent);
+  box-shadow: 0 12px 30px -16px var(--acx-accent);
+}
+
+.acx-drop.over {
+  border-style: solid;
+  border-color: var(--acx-accent);
+  background:
+    radial-gradient(120% 130% at 50% 0%, var(--acx-accent-glow) 0%, transparent 72%),
+    var(--acx-bg-hover);
+  box-shadow: 0 0 0 3px var(--acx-accent-glow), 0 16px 36px -16px var(--acx-accent);
+  transform: translateY(-1px);
+}
+
+.acx-drop-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 6px;
+  border: 1px solid var(--acx-accent-border);
+  border-radius: 14px;
+  color: var(--acx-accent);
+  background: var(--acx-accent-glow);
+  transition: transform 0.25s var(--acx-spring), box-shadow 0.25s;
+}
+
+.acx-drop-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.acx-drop.over .acx-drop-icon {
+  transform: translateY(-2px);
+  animation: acx-drop-pulse 1.6s ease-in-out infinite;
+}
+
+.acx-drop-title {
+  color: var(--acx-text-main);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.acx-drop-sub {
+  color: var(--acx-text-muted);
+  font-size: 12.5px;
+}
+
+.acx-drop-link {
+  color: var(--acx-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.acx-drop-meta {
+  margin-top: 6px;
+  color: var(--acx-text-muted);
+  font-family: var(--acx-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+@keyframes acx-drop-pulse {
+  0%, 100% { box-shadow: 0 0 18px var(--acx-accent-glow); }
+  50% { box-shadow: 0 0 30px var(--acx-accent-glow); }
+}
+
+.acx-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.acx-mode {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding: 18px 20px;
+  border: 1px solid var(--acx-border-dim);
+  border-radius: var(--acx-radius-md);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  background: var(--acx-bg-card);
+  cursor: pointer;
+  transition: border-color 0.3s, background 0.3s, transform 0.2s;
+}
+
+.acx-mode:hover:not(:disabled) {
+  border-color: var(--acx-border-strong);
+  background: var(--acx-bg-hover);
+}
+
+.acx-mode.active {
+  border-color: var(--acx-accent);
+  background: var(--acx-accent-glow);
+}
+
+.acx-mode.danger.active {
+  border-color: var(--acx-danger);
+  background: var(--acx-danger-glow);
+}
+
+.acx-mode:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.acx-mode-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.acx-mode-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.acx-mode-reduction {
+  color: var(--acx-accent);
+  font-family: var(--acx-mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.acx-mode.danger .acx-mode-reduction {
+  color: var(--acx-danger);
+}
+
+.acx-mode-desc {
+  color: var(--acx-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Terminal -------------------------------------------------------------- */
+.acx-terminal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 116px;
+  padding: 16px;
+  overflow-y: auto;
+  border: 1px solid var(--acx-border-dim);
+  border-radius: var(--acx-radius-md);
+  background: #000000;
+  color: var(--acx-ok);
+  font-family: var(--acx-mono);
+  font-size: 11px;
+}
+
+.acx-log {
+  opacity: 0;
+  animation: acx-fade-in 0.1s forwards;
+}
+
+.acx-log.dim {
+  color: var(--acx-text-muted);
+}
+
+.acx-log.warn {
+  color: var(--acx-danger);
+}
+
+/* Run bar (progress + cancel) — additive; hidden unless a run is active. */
+.acx-runbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.acx-progress {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--acx-border-dim);
+}
+
+.acx-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--acx-accent-glow), var(--acx-accent));
+  transition: width 0.25s ease;
+}
+
+.acx-pct {
+  color: var(--acx-text-muted);
+  font-family: var(--acx-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.acx-cancel {
+  padding: 5px 10px;
+  color: var(--acx-danger);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--acx-danger-glow);
+  border: 1px solid var(--acx-danger-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Notes / errors */
+.acx-note,
+.acx-err {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.acx-note {
+  color: var(--acx-text-main);
+  background: var(--acx-accent-glow);
+  border: 1px solid var(--acx-accent-border);
+}
+
+.acx-err {
+  color: var(--acx-danger);
+  background: var(--acx-danger-glow);
+  border: 1px solid var(--acx-danger-border);
+}
+
+/* Execute --------------------------------------------------------------- */
+.acx-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: auto;
+  padding: 16px;
+  border: none;
+  border-radius: var(--acx-radius-md);
+  color: var(--acx-btn-fg);
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--acx-btn-bg);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.3s, opacity 0.3s;
+}
+
+.acx-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(127, 127, 127, 0.22);
+}
+
+.acx-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.acx-btn.success {
+  color: #06281a;
+  background: var(--acx-ok);
+}
+
+.acx-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.acx-clear {
+  align-self: center;
+  padding: 2px;
+  color: var(--acx-text-muted);
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.acx-clear:hover {
+  color: var(--acx-text-main);
+}
+
+/* Drag feedback — the whole workspace is the drop target. */
+.acx-drag .acx-visualizer {
+  border-color: var(--acx-accent-border);
+  box-shadow: inset 0 0 0 1px var(--acx-accent-border);
+}
+
+@keyframes acx-spin-fast {
+  to { transform: rotate(360deg); }
+}
+
+.acx-spin {
+  animation: acx-spin-fast 0.75s linear infinite;
+  transform-origin: center;
+}
+
+/* Responsive ------------------------------------------------------------ */
+@media (max-width: 1024px) {
+  .acx-main {
+    gap: 28px;
+    padding: 28px 24px 40px;
+  }
+
+  .acx-controls {
+    flex-basis: 380px;
+  }
+}
+
+@media (max-width: 860px) {
+  .acx-sitebar-inner {
+    padding: 0 18px;
+  }
+
+  .acx-main {
+    flex-direction: column;
+    padding: 22px 18px 40px;
+  }
+
+  .acx-controls {
+    flex: 1 1 auto;
+  }
+
+  .acx-visualizer {
+    min-height: 360px;
+  }
+
+  .acx-core {
+    width: 260px;
+    height: 260px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acx-page *,
+  .acx-page *::before,
+  .acx-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

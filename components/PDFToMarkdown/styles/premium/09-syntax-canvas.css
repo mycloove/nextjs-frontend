@@ -1,0 +1,260 @@
+/* =====================================================================
+   09 — SYNTAX CANVAS
+   The entry/import card as the `.md` file you are about to create:
+   frontmatter head, editor gutter, live syntax line, and a capability
+   ledger written in real Markdown tokens.
+
+   Loaded LAST by premium.css (after 08). It supersedes the decorative
+   PDF→page glyph, the spec plate and the generic feature tiles that 08
+   used to draw. Scoped to .mr-markdown-upload so the editor workspace —
+   which shares .pm-dropzone via the queue's compact variant — is
+   untouched. All rules are presentation only; the dropzone contract
+   (getRootProps / input / open) is unchanged.
+   ===================================================================== */
+
+/* ── Frontmatter head ───────────────────────────────────────────────── */
+.pm-root.mr-markdown-upload .pm-converter-head {
+  flex-direction: column;
+  align-items: stretch;
+}
+.pm-root.mr-markdown-upload .pm-head-doc {
+  width: 100%;
+}
+.pm-root.mr-markdown-upload .pm-head-rule {
+  display: block;
+  color: var(--pm-border-strong);
+  font: 600 11px/1 var(--pm-font-mono);
+  letter-spacing: 0.24em;
+  user-select: none;
+}
+.pm-root.mr-markdown-upload .pm-head-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 9px 0;
+}
+.pm-root.mr-markdown-upload .pm-head-fields > div {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+.pm-root.mr-markdown-upload .pm-head-fields dt {
+  color: var(--pm-text-muted);
+  font: 500 10.5px/1.5 var(--pm-font-mono);
+  letter-spacing: 0.06em;
+}
+.pm-root.mr-markdown-upload .pm-head-fields dd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--pm-text-primary);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.pm-root.mr-markdown-upload .pm-head-fields dd svg {
+  flex: 0 0 auto;
+  color: var(--pm-text-subtle);
+}
+.pm-root.mr-markdown-upload .pm-head-title {
+  margin: 0;
+  color: var(--pm-text-primary);
+  font: 650 16px/1.2 var(--pm-font-sans);
+  letter-spacing: -0.03em;
+}
+
+/* ── Dropzone: calm source surface + editor gutter ──────────────────── */
+.pm-root.mr-markdown-upload .pm-dropzone:not(.pm-dropzone-compact) {
+  background: var(--pm-bg-inset);
+  padding-left: 56px;
+  /* Clip the absolute gutter to the dropzone's 14px corners. The gutter is a
+     square span pinned top/left/bottom, so without this its tinted fill and
+     its hairline poked out past the rounded corners as square patches. */
+  overflow: hidden;
+}
+/* Keyboard focus was invisible on the dropzone itself (only the inner CTA and
+   the write-editor link had rings), so tabbing onto the file target showed
+   nothing. Same teal ring language as the rest of the entry screen. */
+.pm-root.mr-markdown-upload .pm-dropzone:focus-visible {
+  outline: none;
+  border-color: var(--pm-brand-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pm-brand-500) 30%, transparent);
+}
+.pm-root.mr-markdown-upload .pm-drop-gutter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  /* Fill the rail: eight top-aligned digits left the bottom half of the gutter
+     an empty hairline, which read as the frame "running out" rather than as a
+     line-numbered source file. */
+  justify-content: space-between;
+  gap: 7px;
+  padding: 22px 12px;
+  border-right: 1px solid var(--pm-border-subtle);
+  background: color-mix(in srgb, var(--pm-bg-surface) 55%, transparent);
+  color: var(--pm-text-subtle);
+  font: 500 10.5px/1 var(--pm-font-mono);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  user-select: none;
+}
+.pm-root.mr-markdown-upload .pm-drop-gutter i {
+  font-style: normal;
+  transition: color var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-dropzone:hover .pm-drop-gutter {
+  color: var(--pm-text-muted);
+}
+.pm-root.mr-markdown-upload .pm-dropzone.pm-dropzone-active .pm-drop-gutter {
+  color: var(--pm-text-muted);
+}
+.pm-root.mr-markdown-upload .pm-dropzone.pm-dropzone-active .pm-drop-gutter i:first-child {
+  color: var(--pm-brand-500);
+}
+
+/* ── Stage: live syntax line + instruction + actions ────────────────── */
+.pm-root.mr-markdown-upload .pm-drop-stage {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.pm-root.mr-markdown-upload .pm-drop-insert {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--pm-brand-500);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-dropzone.pm-dropzone-active .pm-drop-insert {
+  opacity: 0.7;
+}
+.pm-root.mr-markdown-upload .pm-drop-prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  margin: 0 0 16px;
+  padding: 6px 12px;
+  border: 1px solid var(--pm-border-base);
+  border-radius: 8px;
+  background: var(--pm-bg-surface);
+  font: 500 12px var(--pm-font-mono);
+  overflow: hidden;
+}
+.pm-root.mr-markdown-upload .pm-drop-prompt-key {
+  flex: 0 0 auto;
+  color: var(--pm-text-muted);
+}
+.pm-root.mr-markdown-upload .pm-drop-prompt-value {
+  min-width: 0;
+  color: var(--pm-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-dropzone.pm-dropzone-active .pm-drop-prompt-value {
+  color: var(--pm-brand-500);
+}
+.pm-root.mr-markdown-upload .pm-drop-caret {
+  flex: 0 0 auto;
+  width: 2px;
+  height: 1.05em;
+  border-radius: 1px;
+  background: var(--pm-brand-500);
+  opacity: 0;
+}
+.pm-root.mr-markdown-upload .pm-dropzone.pm-dropzone-active .pm-drop-caret {
+  opacity: 1;
+  animation: pm-drop-caret-blink 1s steps(1, end) infinite;
+}
+@keyframes pm-drop-caret-blink {
+  0%, 50%   { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
+/* ── Capability ledger: real Markdown tokens ────────────────────────── */
+.pm-root.mr-markdown-upload .pm-drop-ledger {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px 16px;
+  width: 100%;
+  margin: 24px 0 0;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--pm-border-base);
+  list-style: none;
+}
+.pm-root.mr-markdown-upload .pm-drop-ledger li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.pm-root.mr-markdown-upload .pm-drop-ledger code {
+  min-width: 24px;
+  display: inline-grid;
+  place-items: center;
+  padding: 2px 6px;
+  border: 1px solid var(--pm-border-base);
+  border-radius: 6px;
+  background: var(--pm-bg-surface);
+  color: var(--pm-brand-500);
+  font: 600 10.5px/1.5 var(--pm-font-mono);
+}
+.pm-root.mr-markdown-upload .pm-drop-ledger span {
+  color: var(--pm-text-muted);
+  font-size: 10.5px;
+  transition: color var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-dropzone.pm-dropzone-active .pm-drop-ledger code {
+  border-color: color-mix(in srgb, var(--pm-brand-500) 42%, transparent);
+}
+.pm-root.mr-markdown-upload .pm-dropzone.pm-dropzone-active .pm-drop-ledger span {
+  color: var(--pm-text-secondary);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .pm-root.mr-markdown-upload .pm-dropzone:not(.pm-dropzone-compact) {
+    padding-left: 20px;
+  }
+  .pm-root.mr-markdown-upload .pm-drop-gutter {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .pm-root.mr-markdown-upload .pm-drop-ledger {
+    gap: 6px 12px;
+  }
+  .pm-root.mr-markdown-upload .pm-head-fields > div {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+  .pm-root.mr-markdown-upload .pm-head-fields dt {
+    display: none;
+  }
+}
+
+/* ── Reduced motion: resting state, no choreography ─────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .pm-root.mr-markdown-upload .pm-drop-caret {
+    animation: none;
+  }
+  .pm-root.mr-markdown-upload .pm-drop-prompt-value,
+  .pm-root.mr-markdown-upload .pm-drop-insert,
+  .pm-root.mr-markdown-upload .pm-drop-gutter i,
+  .pm-root.mr-markdown-upload .pm-drop-ledger span {
+    transition: none;
+  }
+}

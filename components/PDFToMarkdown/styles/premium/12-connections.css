@@ -1,0 +1,575 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   MR. MARKDOWN — Connections: the hand-off dock (GitHub)
+
+   Appended last in the premium.css load order (see that file): a new surface,
+   not an insert into the 00–11 cascade. Everything is scoped to
+   `.mr-markdown-workspace`, so it reads the workspace palette (surface 4) and
+   its `data-theme` — never the global coral tokens, never a fourth palette.
+
+   Instrument concept: a dock at the edge of the bench that shows exactly what
+   leaves it, where it goes, and proves the link is live. One accent (workspace
+   teal) for identity/action; amber is reserved for a pending or re-auth state
+   and is the only other colour. One signature motion: the tether draws into the
+   slot on arrival in the connected state; everything else stays quiet.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Dock frame ──────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-dock { display: grid; gap: 12px; }
+.mr-markdown-workspace .mr-cfg-gh-dock-error { display: grid; justify-items: start; gap: 10px; }
+
+/* ── The dock bar: state + the one action, first thing in the pane ───── */
+/* It reuses the console's provider-row vocabulary (mark / copy / status chip)
+   and adds an action slot, so there is exactly one place to connect, reconnect
+   and disconnect — and the pane never repeats its title three times. The state
+   chip is 11-settings-console.css's own `.mr-cfg-provider-status`, coloured by
+   the `is-connected` / `is-pending` class the bar already carries. */
+.mr-markdown-workspace .mr-cfg-gh-dockbar {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center; column-gap: 12px; row-gap: 10px;
+}
+.mr-markdown-workspace .mr-cfg-gh-dockbar .mr-cfg-provider-mark { grid-column: 1; }
+.mr-markdown-workspace .mr-cfg-gh-dockbar .mr-cfg-provider-copy { grid-column: 2; }
+.mr-markdown-workspace .mr-cfg-gh-dockbar .mr-cfg-provider-status { grid-column: 3; }
+.mr-markdown-workspace .mr-cfg-gh-dockbar-actions {
+  grid-column: 4; display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap;
+}
+.mr-markdown-workspace .mr-cfg-gh-dockbar-scope {
+  margin: 0; color: var(--text-soft); font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere;
+}
+
+/* ── Visibility chip (globe = public, padlock = private) ─────────────── */
+.mr-markdown-workspace .mr-cfg-gh-vis {
+  display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;
+  padding: 2px 7px; border: 1px solid var(--line-strong); border-radius: 99px;
+  color: var(--text-muted); background: var(--surface-muted);
+  font: 700 8px var(--pm-font-mono); letter-spacing: .07em; text-transform: uppercase; white-space: nowrap;
+}
+.mr-markdown-workspace .mr-cfg-gh-vis-mark { display: inline-flex; }
+.mr-markdown-workspace .mr-cfg-gh-vis-mark svg { width: 9px; height: 9px; display: block; }
+.mr-markdown-workspace .mr-cfg-gh-vis.is-private { color: var(--text-soft); }
+
+/* ── Stage label (Browse / Edit / Publish) ───────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-level {
+  display: flex; align-items: baseline; gap: 9px; min-width: 0;
+}
+.mr-markdown-workspace .mr-cfg-gh-level > em {
+  flex: 0 0 auto; color: var(--accent); font: 700 9px var(--pm-font-mono);
+  font-style: normal; letter-spacing: .13em; text-transform: uppercase;
+}
+.mr-markdown-workspace .mr-cfg-gh-level > span {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text-faint); font: 500 10px var(--pm-font-mono); font-variant-numeric: tabular-nums;
+}
+
+.mr-markdown-workspace .mr-cfg-gh-meta {
+  margin: 0; color: var(--text-faint); font-size: 10.5px; font-variant-numeric: tabular-nums;
+}
+
+/* ── Card (shared shell for every state) ─────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-card {
+  position: relative;
+  display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 14px;
+  padding: 14px 16px; overflow: hidden;
+  border: 1px solid var(--line); border-radius: var(--pm-r-lg, 14px);
+  background: color-mix(in srgb, var(--surface-soft) 50%, transparent);
+}
+.mr-markdown-workspace .mr-cfg-gh-card.is-picker { grid-template-columns: minmax(0, 1fr); }
+.mr-markdown-workspace .mr-cfg-gh-card.is-live { border-color: color-mix(in srgb, var(--green) 30%, var(--line)); }
+.mr-markdown-workspace .mr-cfg-gh-card.is-amber { border-color: color-mix(in srgb, var(--amber) 38%, var(--line)); }
+.mr-markdown-workspace .mr-cfg-gh-main { min-width: 0; display: grid; gap: 11px; }
+
+/* ── Slot + drawn tether (the one signature moment) ──────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-slot {
+  grid-column: 1; align-self: start;
+  width: 48px; height: 56px; display: grid; justify-items: center; align-content: center; gap: 5px;
+  border: 1px dashed var(--line-strong); border-radius: var(--pm-r-md, 10px);
+  background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--text-soft);
+}
+.mr-markdown-workspace .mr-cfg-gh-slot svg { width: 28px; height: 28px; display: block; }
+.mr-markdown-workspace .mr-cfg-gh-slot-hint {
+  color: var(--text-faint); font: 700 8px var(--pm-font-mono); letter-spacing: .1em; text-transform: uppercase;
+}
+.mr-markdown-workspace .mr-cfg-gh-tether {
+  grid-column: 1; position: relative; align-self: stretch; justify-self: center;
+  width: 1px; margin: 6px 0; background: var(--accent-line);
+  transform-origin: top center; transform: scaleY(0);
+  animation: mrCfgTether 360ms var(--pm-ease-out, cubic-bezier(.16,1,.3,1)) 90ms both;
+}
+.mr-markdown-workspace .mr-cfg-gh-tether::before,
+.mr-markdown-workspace .mr-cfg-gh-tether::after {
+  content: ''; position: absolute; left: 50%; width: 7px; height: 7px; border-radius: 50%;
+  transform: translateX(-50%); background: var(--green);
+}
+.mr-markdown-workspace .mr-cfg-gh-tether::before { top: -4px; box-shadow: 0 0 0 3px var(--green-soft); }
+.mr-markdown-workspace .mr-cfg-gh-tether::after { bottom: -4px; }
+.mr-markdown-workspace .mr-cfg-gh-card.is-amber .mr-cfg-gh-tether { background: color-mix(in srgb, var(--amber) 55%, transparent); }
+.mr-markdown-workspace .mr-cfg-gh-card.is-amber .mr-cfg-gh-tether::before,
+.mr-markdown-workspace .mr-cfg-gh-card.is-amber .mr-cfg-gh-tether::after { background: var(--amber); }
+
+/* ── Head + seal ─────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mr-markdown-workspace .mr-cfg-gh-head strong { font-size: 14px; font-weight: 660; letter-spacing: -.01em; }
+.mr-markdown-workspace .mr-cfg-gh-scope { color: var(--text-muted); font-size: 11.5px; line-height: 1.4; }
+.mr-markdown-workspace .mr-cfg-gh-seal {
+  margin-left: auto; padding: 3px 9px; border-radius: 99px;
+  font: 700 9px var(--pm-font-mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.mr-markdown-workspace .mr-cfg-gh-seal.is-live { border: 1px solid var(--green); background: var(--green-soft); color: var(--green); }
+.mr-markdown-workspace .mr-cfg-gh-seal.is-amber { border: 1px solid color-mix(in srgb, var(--amber) 40%, transparent); background: color-mix(in srgb, var(--amber) 12%, transparent); color: var(--amber); }
+
+/* ── "Why we ask" disclosure ─────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-why { border-top: 1px solid var(--line); padding-top: 9px; }
+.mr-markdown-workspace .mr-cfg-gh-why > summary {
+  cursor: pointer; color: var(--text-soft); font-size: 11.5px; font-weight: 600; list-style: none;
+}
+.mr-markdown-workspace .mr-cfg-gh-why > summary::-webkit-details-marker { display: none; }
+.mr-markdown-workspace .mr-cfg-gh-why > summary::before {
+  content: '+'; display: inline-block; width: 14px; color: var(--accent); font-family: var(--pm-font-mono);
+}
+.mr-markdown-workspace .mr-cfg-gh-why[open] > summary::before { content: '–'; }
+.mr-markdown-workspace .mr-cfg-gh-why > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.mr-markdown-workspace .mr-cfg-gh-why-body { display: grid; gap: 8px; padding: 9px 0 2px 14px; }
+.mr-markdown-workspace .mr-cfg-gh-allow,
+.mr-markdown-workspace .mr-cfg-gh-deny { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.mr-markdown-workspace .mr-cfg-gh-allow li,
+.mr-markdown-workspace .mr-cfg-gh-deny li { position: relative; padding-left: 15px; font-size: 11px; line-height: 1.5; }
+.mr-markdown-workspace .mr-cfg-gh-allow li { color: var(--text-soft); }
+.mr-markdown-workspace .mr-cfg-gh-deny li { color: var(--text-muted); }
+.mr-markdown-workspace .mr-cfg-gh-allow li::before { content: '✓'; position: absolute; left: 0; color: var(--green); font-size: 10px; }
+.mr-markdown-workspace .mr-cfg-gh-deny li::before { content: '×'; position: absolute; left: 0; color: var(--text-faint); font-size: 11px; }
+
+/* ── Actions + notes ─────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mr-markdown-workspace .mr-cfg-gh-fine { color: var(--text-faint); font-size: 10.5px; line-height: 1.5; }
+.mr-markdown-workspace .mr-cfg-gh-note {
+  margin: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--pm-r-md, 10px);
+  background: var(--surface-muted); color: var(--text-soft); font-size: 11.5px; line-height: 1.55;
+}
+.mr-markdown-workspace .mr-cfg-gh-banner {
+  margin: 0; padding: 9px 11px; border: 1px solid color-mix(in srgb, var(--amber) 38%, transparent);
+  border-radius: var(--pm-r-md, 10px); background: color-mix(in srgb, var(--amber) 10%, transparent);
+  color: var(--text-soft); font-size: 11.5px; line-height: 1.55;
+}
+.mr-markdown-workspace .mr-cfg-gh-danger { border-color: var(--pm-danger, #dc2626); color: var(--pm-danger, #dc2626); }
+.mr-markdown-workspace .mr-cfg-gh-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--pm-danger, #dc2626) 10%, transparent); color: var(--pm-danger, #dc2626); }
+
+/* ── Repository picker ───────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-repos { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; max-height: 268px; overflow-y: auto; scrollbar-width: thin; }
+.mr-markdown-workspace .mr-cfg-gh-repo {
+  width: 100%; display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  padding: 10px 12px; text-align: left; cursor: pointer;
+  border: 1px solid var(--line); border-radius: var(--pm-r-md, 10px);
+  background: var(--surface); color: var(--text);
+  transition: border-color .14s ease, background .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-gh-repo:hover { border-color: color-mix(in srgb, var(--accent) 26%, var(--line)); }
+.mr-markdown-workspace .mr-cfg-gh-repo:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mr-markdown-workspace .mr-cfg-gh-repo.is-active { border-color: var(--accent); background: var(--accent-soft); }
+.mr-markdown-workspace .mr-cfg-gh-repo-name { font-size: 12.5px; font-weight: 620; font-family: var(--pm-font-mono); }
+.mr-markdown-workspace .mr-cfg-gh-repo .mr-cfg-gh-vis { margin-left: 0; }
+.mr-markdown-workspace .mr-cfg-gh-repo-branch { color: var(--text-faint); font: 500 10px var(--pm-font-mono); }
+.mr-markdown-workspace .mr-cfg-gh-repo-desc { flex: 1 1 100%; color: var(--text-muted); font-size: 10.5px; line-height: 1.45; }
+.mr-markdown-workspace .mr-cfg-gh-field { display: grid; gap: 5px; max-width: 420px; }
+.mr-markdown-workspace .mr-cfg-gh-field-label { color: var(--text-soft); font-size: 11.5px; font-weight: 600; }
+
+/* ── Connected spec sheet ────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-spec { margin: 0; display: grid; gap: 1px; }
+.mr-markdown-workspace .mr-cfg-gh-spec-row {
+  display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; align-items: baseline;
+  padding: 7px 0; border-bottom: 1px solid var(--line);
+}
+.mr-markdown-workspace .mr-cfg-gh-spec-row:last-child { border-bottom: 0; }
+.mr-markdown-workspace .mr-cfg-gh-spec-row dt {
+  color: var(--text-faint); font: 700 9px var(--pm-font-mono); letter-spacing: .1em; text-transform: uppercase;
+}
+.mr-markdown-workspace .mr-cfg-gh-spec-row dd { margin: 0; color: var(--text-soft); font-size: 12px; overflow-wrap: anywhere; }
+.mr-markdown-workspace .mr-cfg-mono { font-family: var(--pm-font-mono); font-variant-numeric: tabular-nums; }
+
+/* ── Read proof ──────────────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-proof {
+  display: grid; gap: 7px; padding: 11px 12px;
+  border: 1px solid var(--line); border-radius: var(--pm-r-md, 10px);
+  background: var(--surface);
+}
+.mr-markdown-workspace .mr-cfg-gh-proof-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mr-markdown-workspace .mr-cfg-gh-proof-label { color: var(--text-faint); font: 700 9px var(--pm-font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.mr-markdown-workspace .mr-cfg-gh-proof-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--green); font: 700 10.5px var(--pm-font-mono); font-variant-numeric: tabular-nums; }
+.mr-markdown-workspace .mr-cfg-gh-proof-body {
+  margin: 0; max-height: 132px; overflow: auto; padding: 9px 10px;
+  border-radius: var(--pm-r-sm, 8px); background: var(--surface-muted); color: var(--text-soft);
+  font: 500 10.5px/1.6 var(--pm-font-mono); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+/* ── Loading: the house kinetic sphere, never a fake percentage ──────── */
+/* One loader for the whole surface — `components/KineticSphere.tsx`, the same
+   mark PDF→Images uses. Equal dots with no depth cue shimmer without claiming a
+   percentage, and the dots inherit `currentColor`, so the sphere wears whatever
+   ink its button does. Replaces the old CSS pulsing dot. */
+.mr-markdown-workspace .mr-cfg-gh-sphere {
+  flex: 0 0 auto; color: inherit;
+  animation: mrCfgOrbIn 380ms var(--pm-ease-spring, cubic-bezier(.34,1.56,.64,1)) both;
+}
+.mr-markdown-workspace .mr-cfg-gh-inline-loader {
+  display: inline-flex; align-items: center; gap: 9px; margin: 0;
+  color: var(--text-soft); font-size: 11.5px; line-height: 1.4;
+}
+.mr-markdown-workspace .mr-cfg-gh-inline-loader .mr-cfg-gh-sphere { color: var(--accent); }
+
+/* ── Action buttons: busy stays readable, disabled is a palette ──────── */
+/* The console's blanket `.mr-cfg-btn:disabled { opacity: .5 }` washes out a
+   filled button — white-on-accent at 50% is the classic unreadable case. Inside
+   Connections the two states are therefore drawn explicitly instead of dimmed. */
+.mr-markdown-workspace .mr-cfg-gh-action { opacity: 1; }
+.mr-markdown-workspace .mr-cfg-gh-action[aria-busy='true'] { cursor: progress; }
+.mr-markdown-workspace .mr-cfg-gh-action-label {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Unavailable (not working): a legible muted palette, unmistakably inert. */
+.mr-markdown-workspace .mr-cfg-gh-action.mr-cfg-btn:disabled:not([aria-busy='true']) {
+  border-color: var(--line); background: var(--surface-muted); color: var(--text-faint);
+  box-shadow: none; transform: none;
+}
+.mr-markdown-workspace .mr-cfg-gh-action.mr-cfg-btn-primary:disabled:not([aria-busy='true']) {
+  border-color: var(--line); background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--text-muted); box-shadow: none;
+}
+.mr-markdown-workspace .mr-cfg-gh-action.mr-cfg-btn-quiet:disabled:not([aria-busy='true']) { color: var(--text-faint); }
+.mr-markdown-workspace .mr-cfg-gh-action.mr-cfg-gh-danger:disabled:not([aria-busy='true']) {
+  border-color: var(--line); background: transparent; color: var(--text-faint);
+}
+/* A working primary button keeps its full accent fill; a working quiet or link
+   control keeps its own ink — the sphere, not a fade, says "running". */
+.mr-markdown-workspace .mr-cfg-gh-action.mr-cfg-btn-primary[aria-busy='true'] {
+  color: #fff; background: var(--accent); border-color: var(--accent);
+}
+
+/* ── Provider row states (extends 11-settings-console.css) ───────────── */
+.mr-markdown-workspace .mr-cfg-provider.is-pending .mr-cfg-provider-status {
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
+  background: color-mix(in srgb, var(--amber) 12%, transparent); color: var(--amber);
+}
+.mr-markdown-workspace .mr-cfg-provider.is-disconnected .mr-cfg-provider-status { color: var(--text-muted); }
+
+/* ── Empty-install explanation (no repos on the installed account) ───── */
+.mr-markdown-workspace .mr-cfg-gh-empty { display: grid; gap: 10px; }
+.mr-markdown-workspace .mr-cfg-gh-empty-fix {
+  display: grid; gap: 4px; margin: 0; padding: 0 0 0 15px; list-style: none;
+}
+.mr-markdown-workspace .mr-cfg-gh-empty-fix li {
+  position: relative; padding-left: 15px; color: var(--text-muted); font-size: 11px; line-height: 1.5;
+}
+.mr-markdown-workspace .mr-cfg-gh-empty-fix li::before {
+  content: '→'; position: absolute; left: 0; color: var(--accent); font-size: 10px;
+}
+
+/* ── Read & write panel ──────────────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-card.is-writer { border-color: var(--line); }
+.mr-markdown-workspace .mr-cfg-gh-target { border-bottom: 1px solid var(--line); padding-bottom: 9px; }
+.mr-markdown-workspace .mr-cfg-gh-target dd {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11.5px;
+}
+.mr-markdown-workspace .mr-cfg-gh-target dd .mr-cfg-gh-vis { margin-left: 0; }
+.mr-markdown-workspace .mr-cfg-gh-capability { display: grid; gap: 10px; }
+
+.mr-markdown-workspace .mr-cfg-gh-browser { display: grid; gap: 8px; padding-top: 4px; }
+.mr-markdown-workspace .mr-cfg-gh-browser-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mr-markdown-workspace .mr-cfg-gh-linkbtn {
+  padding: 0; border: 0; background: transparent; color: var(--accent);
+  font-size: 10.5px; font-weight: 600; cursor: pointer; text-decoration: none;
+}
+.mr-markdown-workspace .mr-cfg-gh-linkbtn:hover { text-decoration: underline; }
+.mr-markdown-workspace .mr-cfg-gh-linkbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.mr-markdown-workspace .mr-cfg-gh-linkbtn:disabled {
+  /* Legible, not faded: a text action that is unavailable drops to the quiet
+     tertiary ink instead of being washed out by opacity. */
+  opacity: 1; color: var(--text-faint); cursor: not-allowed; text-decoration: none;
+}
+.mr-markdown-workspace .mr-cfg-gh-linkbtn.mr-cfg-gh-action { display: inline-flex; align-items: center; gap: 6px; }
+
+/* A text action that is working collapses to the sphere alone (see
+   ActionButton's `iconOnlyWhileLoading`): the label leaves the flow, so the
+   control must keep a real touch target and read as busy, not disabled. */
+.mr-markdown-workspace .mr-cfg-gh-action[data-icon-only] {
+  justify-content: center; padding: 0 5px; min-width: 26px; min-height: 26px;
+  cursor: progress; text-decoration: none;
+}
+
+.mr-markdown-workspace .mr-cfg-gh-files {
+  display: grid; gap: 1px; margin: 0; padding: 0; list-style: none;
+  max-height: 208px; overflow-y: auto; scrollbar-width: thin;
+  border: 1px solid var(--line); border-radius: var(--pm-r-md, 10px); background: var(--surface);
+}
+.mr-markdown-workspace .mr-cfg-gh-file {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 11px; text-align: left; cursor: pointer;
+  border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--text-soft);
+  transition: background .14s ease, color .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-gh-file:last-child { border-bottom: 0; }
+.mr-markdown-workspace .mr-cfg-gh-file:hover { background: var(--surface-muted); color: var(--text); }
+.mr-markdown-workspace .mr-cfg-gh-file:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mr-markdown-workspace .mr-cfg-gh-file.is-active { background: var(--accent-soft); color: var(--accent); }
+.mr-markdown-workspace .mr-cfg-gh-file-path {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font: 500 11px var(--pm-font-mono);
+}
+.mr-markdown-workspace .mr-cfg-gh-file-size { flex: 0 0 auto; color: var(--text-faint); font: 500 10px var(--pm-font-mono); font-variant-numeric: tabular-nums; }
+
+.mr-markdown-workspace .mr-cfg-gh-writer { display: grid; gap: 10px; padding-top: 6px; border-top: 1px solid var(--line); }
+.mr-markdown-workspace .mr-cfg-gh-writer-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
+.mr-markdown-workspace .mr-cfg-gh-writer-head .mr-cfg-gh-level { flex: 1 1 220px; }
+.mr-markdown-workspace .mr-cfg-gh-writer-tools { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mr-markdown-workspace .mr-cfg-gh-editor {
+  width: 100%; min-height: 156px; max-height: 46vh; padding: 11px 12px; resize: vertical;
+  border: 1px solid var(--line-strong); border-radius: var(--pm-r-md, 10px);
+  background: var(--surface-soft); color: var(--text);
+  font: 500 11.5px/1.65 var(--pm-font-mono); outline: none; white-space: pre; overflow: auto;
+  transition: border-color .14s ease, background .14s ease, box-shadow .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-gh-editor:focus { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-soft); }
+.mr-markdown-workspace .mr-cfg-gh-publish { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.mr-markdown-workspace .mr-cfg-gh-publishrow { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.mr-markdown-workspace .mr-cfg-gh-mode { flex: 1 1 320px; max-width: 420px; }
+.mr-markdown-workspace .mr-cfg-gh-publish-error { display: grid; justify-items: start; gap: 9px; }
+/* ── Inline notices (former toasts, now in-panel and dismissible) ─────── */
+/* One notice for every outcome the dock reports — a publish result, a hand-over
+   confirmation, a refusal — so feedback never grows a second look. The dismiss
+   control is a real button: keyboard-reachable, named, legible at rest. */
+.mr-markdown-workspace .mr-cfg-gh-notice {
+  width: 100%; display: flex; align-items: flex-start; gap: 9px;
+  padding: 9px 10px 9px 11px; border: 1px solid var(--line); border-radius: var(--pm-r-md, 10px);
+  font-size: 11.5px; line-height: 1.5;
+}
+.mr-markdown-workspace .mr-cfg-gh-notice.is-success {
+  border-color: color-mix(in srgb, var(--green) 30%, var(--line));
+  background: var(--green-soft); color: var(--text-soft);
+}
+.mr-markdown-workspace .mr-cfg-gh-notice.is-success .mr-cfg-gh-notice-icon { color: var(--green); }
+.mr-markdown-workspace .mr-cfg-gh-notice.is-error {
+  border-color: color-mix(in srgb, var(--pm-danger, #dc2626) 34%, var(--line));
+  background: color-mix(in srgb, var(--pm-danger, #dc2626) 10%, transparent); color: var(--text-soft);
+}
+.mr-markdown-workspace .mr-cfg-gh-notice.is-error .mr-cfg-gh-notice-icon { color: var(--pm-danger, #dc2626); }
+.mr-markdown-workspace .mr-cfg-gh-notice-icon { flex: 0 0 auto; font-weight: 700; }
+.mr-markdown-workspace .mr-cfg-gh-notice-body { flex: 1 1 auto; min-width: 0; }
+.mr-markdown-workspace .mr-cfg-gh-notice-dismiss {
+  flex: 0 0 auto; display: grid; place-items: center; width: 20px; height: 20px; margin: -1px -1px 0 0;
+  border: 1px solid transparent; border-radius: 6px; background: transparent;
+  color: var(--text-faint); cursor: pointer;
+  transition: color .14s ease, background .14s ease, border-color .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-gh-notice-dismiss:hover { color: var(--text); border-color: var(--line-strong); background: var(--surface); }
+.mr-markdown-workspace .mr-cfg-gh-notice-dismiss:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ── Identity: connected seal + account avatar ───────────────────────── */
+/* The seal lives in the console identity header (Phase A), so the workspace
+   states its GitHub link where the operator already reads identity. Green means
+   connected, amber means the owner must reconnect — never a silent green. */
+.mr-markdown-workspace .mr-cfg-identity-github {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px; border-radius: 99px; white-space: nowrap;
+  border: 1px solid var(--green); background: var(--green-soft); color: var(--green);
+  font: 700 8px var(--pm-font-mono); font-style: normal; letter-spacing: .09em; text-transform: uppercase;
+}
+.mr-markdown-workspace .mr-cfg-identity-github.is-amber {
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
+  background: color-mix(in srgb, var(--amber) 12%, transparent); color: var(--amber);
+}
+.mr-markdown-workspace .mr-cfg-identity-github-dot {
+  width: 5px; height: 5px; flex: 0 0 5px; border-radius: 50%; background: currentColor;
+}
+.mr-markdown-workspace .mr-cfg-gh-avatar {
+  width: 22px; height: 22px; flex: 0 0 22px; border-radius: 50%; object-fit: cover;
+  border: 1px solid var(--line-strong); background: var(--surface-muted);
+}
+
+/* ── Motion ──────────────────────────────────────────────────────────── */
+@keyframes mrCfgTether { from { transform: scaleY(0); opacity: .2; } to { transform: scaleY(1); opacity: 1; } }
+@keyframes mrCfgOrbIn { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mr-markdown-workspace .mr-cfg-gh-tether { animation: none; transform: none; }
+  .mr-markdown-workspace .mr-cfg-gh-sphere { animation: none; }
+  .mr-markdown-workspace .mr-cfg-gh-repo,
+  .mr-markdown-workspace .mr-cfg-gh-file,
+  .mr-markdown-workspace .mr-cfg-gh-editor { transition: none; }
+}
+
+/* ── Narrow viewport ─────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .mr-markdown-workspace .mr-cfg-gh-card { grid-template-columns: minmax(0, 1fr); }
+  .mr-markdown-workspace .mr-cfg-gh-slot { justify-self: start; }
+  .mr-markdown-workspace .mr-cfg-gh-tether { display: none; }
+  .mr-markdown-workspace .mr-cfg-gh-spec-row { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+  .mr-markdown-workspace .mr-cfg-gh-publish { grid-template-columns: minmax(0, 1fr); }
+  .mr-markdown-workspace .mr-cfg-gh-mode { max-width: none; }
+  .mr-markdown-workspace .mr-cfg-gh-publishrow { align-items: stretch; }
+  /* The bar keeps state first and drops status + action to their own rows, so
+     the connect/disconnect control is never squeezed off the edge. */
+  .mr-markdown-workspace .mr-cfg-gh-dockbar { grid-template-columns: auto minmax(0, 1fr); }
+  .mr-markdown-workspace .mr-cfg-gh-dockbar .mr-cfg-provider-status { grid-column: 1; grid-row: 2; justify-self: start; }
+  .mr-markdown-workspace .mr-cfg-gh-dockbar-actions { grid-column: 1 / -1; grid-row: 3; justify-content: flex-start; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   EDIT → COMMIT SYNC — the "edited" state, the compare view, and the editor's
+   commit popover. Appended to the Connections partial because it is the same
+   conversation (a document bound to a GitHub file), and because the workspace
+   topbar is inside the same `.mr-markdown-workspace` scope.
+   One amber = "edited, pending"; one green = "synced"; `--pm-danger` = a real
+   removal in a diff. No fourth colour, no new animation beyond a quiet chip dot.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── The "Edited" chip (panel rows, editor filename section) ─────────── */
+.mr-markdown-workspace .mr-cfg-gh-dirty {
+  display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto;
+  padding: 1px 7px; border-radius: 99px; white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--amber) 42%, transparent);
+  background: color-mix(in srgb, var(--amber) 13%, transparent);
+  color: var(--amber);
+  font: 700 8.5px var(--pm-font-mono); letter-spacing: .08em; text-transform: uppercase;
+}
+
+/* ── Recent-edits priority group (above the plain file list) ─────────── */
+.mr-markdown-workspace .mr-cfg-gh-recent { display: grid; gap: 6px; padding: 2px 0 4px; }
+.mr-markdown-workspace .mr-cfg-gh-recent-list {
+  display: grid; gap: 1px; margin: 0; padding: 0; list-style: none;
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, var(--line));
+  border-radius: var(--pm-r-md, 10px); overflow: hidden;
+  background: color-mix(in srgb, var(--amber) 6%, var(--surface));
+}
+
+/* ── Remote drift notice (review before commit) ──────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-remote { display: grid; justify-items: start; gap: 9px; }
+
+/* ── Current | Compare viewswitch ───────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-viewswitch { display: flex; }
+.mr-markdown-workspace .mr-cfg-gh-viewswitch .mr-cfg-segmented { max-width: 260px; }
+
+/* ── Compare view: unified diff ─────────────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-compare {
+  display: grid; gap: 8px;
+  border: 1px solid var(--line-strong); border-radius: var(--pm-r-md, 10px);
+  background: var(--surface-soft); padding: 10px 11px;
+}
+.mr-markdown-workspace .mr-cfg-gh-compare-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  color: var(--text-soft); font: 700 10px var(--pm-font-mono); letter-spacing: .06em; text-transform: uppercase;
+}
+.mr-markdown-workspace .mr-cfg-gh-compare-count { display: inline-flex; gap: 8px; font-variant-numeric: tabular-nums; }
+.mr-markdown-workspace .mr-cfg-gh-compare-count em { font-style: normal; }
+.mr-markdown-workspace .mr-cfg-gh-compare-count .is-add { color: var(--green); }
+.mr-markdown-workspace .mr-cfg-gh-compare-count .is-remove { color: var(--pm-danger, #ef4444); }
+
+.mr-markdown-workspace .mr-cfg-gh-diff {
+  margin: 0; padding: 0; list-style: none;
+  max-height: 44vh; overflow: auto; scrollbar-width: thin;
+  border-radius: var(--pm-r-sm, 8px); background: var(--surface);
+  font: 500 11px/1.55 var(--pm-font-mono); font-variant-numeric: tabular-nums;
+}
+.mr-markdown-workspace .mr-cfg-gh-diff-row {
+  display: grid; grid-template-columns: 40px 40px 16px minmax(0, 1fr);
+  align-items: start; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.mr-markdown-workspace .mr-cfg-gh-diff-no {
+  padding: 1px 6px; text-align: right; color: var(--text-faint);
+  border-right: 1px solid var(--line); user-select: none;
+}
+.mr-markdown-workspace .mr-cfg-gh-diff-mark { padding: 1px 3px; text-align: center; user-select: none; }
+.mr-markdown-workspace .mr-cfg-gh-diff-text { padding: 1px 8px; }
+.mr-markdown-workspace .mr-cfg-gh-diff-row.is-same { color: var(--text-muted); }
+.mr-markdown-workspace .mr-cfg-gh-diff-row.is-add { background: var(--green-soft); color: var(--text-soft); }
+.mr-markdown-workspace .mr-cfg-gh-diff-row.is-add .mr-cfg-gh-diff-mark { color: var(--green); }
+.mr-markdown-workspace .mr-cfg-gh-diff-row.is-remove {
+  background: color-mix(in srgb, var(--pm-danger, #ef4444) 10%, transparent); color: var(--text-soft);
+}
+.mr-markdown-workspace .mr-cfg-gh-diff-row.is-remove .mr-cfg-gh-diff-mark { color: var(--pm-danger, #ef4444); }
+
+/* ── Workspace filename chip (editor topbar) ─────────────────────────── */
+.mr-markdown-workspace .mr-doc-commit-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 1px 8px; border-radius: 99px; white-space: nowrap;
+  font: 700 9px var(--pm-font-mono); letter-spacing: .05em; text-transform: uppercase;
+}
+.mr-markdown-workspace .mr-doc-commit-chip.is-dirty {
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+  background: color-mix(in srgb, var(--amber) 14%, transparent); color: var(--amber);
+}
+.mr-markdown-workspace .mr-doc-commit-chip.is-synced {
+  border: 1px solid var(--line-strong); background: var(--surface-muted); color: var(--text-muted);
+}
+.mr-markdown-workspace .mr-doc-commit-dot {
+  width: 5px; height: 5px; flex: 0 0 5px; border-radius: 50%; background: currentColor;
+}
+.mr-markdown-workspace .mr-doc-commit-action {
+  padding: 1px 8px; border-radius: 99px; cursor: pointer; white-space: nowrap;
+  border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent);
+  background: transparent; color: var(--amber);
+  font: 700 9px var(--pm-font-mono); letter-spacing: .05em; text-transform: uppercase;
+  transition: background .14s ease, color .14s ease;
+}
+.mr-markdown-workspace .mr-doc-commit-action:hover { background: color-mix(in srgb, var(--amber) 16%, transparent); }
+.mr-markdown-workspace .mr-doc-commit-action:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+
+/* ── Commit popover (editor fast path) ──────────────────────────────── */
+.mr-markdown-workspace .mr-cfg-gh-pop-overlay {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 20px;
+  background: color-mix(in srgb, var(--bg, #000) 46%, transparent);
+  backdrop-filter: blur(2px);
+}
+.mr-markdown-workspace .mr-cfg-gh-pop {
+  width: min(560px, 100%); max-height: min(86vh, 780px); overflow: auto; scrollbar-width: thin;
+  display: grid; gap: 12px; padding: 16px 18px;
+  border: 1px solid var(--line-strong); border-radius: var(--pm-r-lg, 14px);
+  background: var(--surface); color: var(--text); outline: none;
+  box-shadow: var(--pm-sh-lg, 0 24px 60px -24px rgba(0, 0, 0, .5));
+  animation: mrCfgPopIn 220ms var(--pm-ease-out, cubic-bezier(.16, 1, .3, 1)) both;
+}
+.mr-markdown-workspace .mr-cfg-gh-pop-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.mr-markdown-workspace .mr-cfg-gh-pop-head strong { display: block; font-size: 14px; font-weight: 660; letter-spacing: -.01em; }
+.mr-markdown-workspace .mr-cfg-gh-pop-eyebrow {
+  display: block; color: var(--accent); font: 700 9px var(--pm-font-mono);
+  letter-spacing: .13em; text-transform: uppercase; margin-bottom: 2px;
+}
+.mr-markdown-workspace .mr-cfg-gh-pop-close {
+  flex: 0 0 auto; display: grid; place-items: center; width: 26px; height: 26px;
+  border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer;
+  transition: color .14s ease, background .14s ease, border-color .14s ease;
+}
+.mr-markdown-workspace .mr-cfg-gh-pop-close:hover { color: var(--text); border-color: var(--line-strong); background: var(--surface-muted); }
+.mr-markdown-workspace .mr-cfg-gh-pop-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mr-markdown-workspace .mr-cfg-gh-pop-target {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--pm-r-md, 10px);
+  background: var(--surface-muted); color: var(--text-soft); font-size: 11.5px;
+}
+.mr-markdown-workspace .mr-cfg-gh-pop-target .mr-cfg-gh-vis { margin-left: 0; }
+.mr-markdown-workspace .mr-cfg-gh-pop-body {
+  margin: 0; max-height: 34vh; overflow: auto; padding: 10px 11px;
+  border: 1px solid var(--line); border-radius: var(--pm-r-md, 10px);
+  background: var(--surface-soft); color: var(--text);
+  font: 500 11.5px/1.65 var(--pm-font-mono); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.mr-markdown-workspace .mr-cfg-gh-pop-row { display: flex; }
+.mr-markdown-workspace .mr-cfg-gh-pop-row .mr-cfg-segmented { flex: 1 1 auto; }
+.mr-markdown-workspace .mr-cfg-gh-pop-actions {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+  padding-top: 4px; border-top: 1px solid var(--line);
+}
+
+@keyframes mrCfgPopIn { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mr-markdown-workspace .mr-cfg-gh-pop { animation: none; }
+  .mr-markdown-workspace .mr-cfg-gh-diff-row { transition: none; }
+  .mr-markdown-workspace .mr-doc-commit-action { transition: none; }
+}
+
+@media (max-width: 720px) {
+  .mr-markdown-workspace .mr-cfg-gh-diff-row { grid-template-columns: 30px 30px 14px minmax(0, 1fr); }
+  .mr-markdown-workspace .mr-cfg-gh-pop { max-height: 92vh; }
+  .mr-markdown-workspace .mr-cfg-gh-pop-actions { justify-content: stretch; }
+  .mr-markdown-workspace .mr-cfg-gh-pop-actions .mr-cfg-btn { flex: 1 1 auto; }
+}

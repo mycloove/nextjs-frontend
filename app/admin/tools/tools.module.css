@@ -1,0 +1,143 @@
+.toolsPage {
+  max-width: 1280px;
+}
+
+.pageHead {
+  align-items: center;
+  border-bottom: 0;
+  margin-bottom: 4px;
+  padding-bottom: 0;
+}
+
+.eyebrow {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  letter-spacing: 0.16em;
+}
+
+.eyebrow span {
+  color: var(--bench-accent);
+  font-size: 14px;
+}
+
+.pageTitle {
+  font-size: clamp(27px, 3vw, 34px);
+  letter-spacing: -0.045em;
+  margin-bottom: 9px;
+}
+
+.pageLead {
+  margin: 0;
+  max-width: 54ch;
+}
+
+.pageActions :global(a) {
+  min-height: 38px;
+}
+
+.quotaNote {
+  border-bottom: 1px solid var(--bench-border);
+  color: var(--bench-faint);
+  font-size: 11.5px;
+  line-height: 1.55;
+  margin: 18px 0 24px;
+  padding: 0 0 18px;
+}
+
+.degraded,
+.attention {
+  border-radius: var(--bench-r-card);
+}
+
+.toolbar {
+  align-items: center;
+  background: color-mix(in srgb, var(--bench-card) 66%, transparent);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-panel);
+  gap: 10px;
+  margin-bottom: 26px;
+  padding: 10px;
+}
+
+.toolbar > :global(button) {
+  min-height: 38px;
+}
+
+.toolbar > :global(div:nth-child(2)) {
+  margin-left: auto;
+}
+
+.group {
+  margin-bottom: 38px;
+}
+
+.groupTitle {
+  font-size: 10px;
+  letter-spacing: 0.17em;
+  margin-bottom: 12px;
+}
+
+.cards {
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+}
+
+.card {
+  border-radius: 12px;
+  padding: 17px 18px 14px;
+  min-height: 222px;
+}
+
+.card:hover {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.cardHead {
+  margin-bottom: 20px;
+}
+
+.gauges {
+  gap: 16px;
+}
+
+.gauge {
+  min-width: 0;
+}
+
+.cardFoot {
+  margin-top: auto;
+  padding-top: 13px;
+}
+
+.card:focus-within {
+  border-color: color-mix(in srgb, var(--bench-accent) 56%, var(--bench-border));
+}
+
+@media (max-width: 1024px) {
+  .pageHead {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 700px) {
+  .toolbar > :global(div:nth-child(2)) {
+    margin-left: 0;
+  }
+
+  .pageActions {
+    width: 100%;
+  }
+
+  .pageActions :global(a) {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card:hover {
+    transform: none;
+  }
+}

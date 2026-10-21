@@ -1,0 +1,1117 @@
+/*
+ * AI Providers desk.
+ *
+ * Scoped to /admin/ai so the shared bench styles stay untouched. Every colour
+ * here is a bench token — the surface is the same instrument panel, and status
+ * is still carried by chips and dots rather than a new palette.
+ *
+ * Type scale follows the bench: 13px body, 11px uppercase labels, mono for
+ * anything an operator reads character by character (ids, models, key tails).
+ */
+
+/* One rhythm for everything inside a provider card. The base .card is a flex
+   column; this orders its lower half without fighting the shared padding. */
+.body {
+  display: grid;
+  gap: 16px;
+}
+
+/* The collapsed remainder of a card: keys, model settings and the action row.
+   It re-establishes the same rhythm .body had, so expanding only reveals the
+   content and never re-flows the identity or capability chips above it. */
+.bodyRest {
+  display: grid;
+  gap: 16px;
+}
+
+/* The one control that changes the card's depth. Kept as a full-width bar rather
+   than a trailing link so the whole card reads as a lid that opens, and the
+   chevron turning a quarter-turn is the only motion the eye needs. */
+.revealToggle {
+  align-items: center;
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  color: var(--bench-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 7px;
+  justify-content: center;
+  padding: 7px 12px;
+  transition: background var(--bench-dur) var(--bench-ease-in-out), border-color var(--bench-dur) var(--bench-ease-in-out), color var(--bench-dur) var(--bench-ease-in-out);
+  width: 100%;
+}
+
+.revealToggle:hover {
+  background: var(--bench-sunk);
+  border-color: var(--bench-border-hi);
+  color: var(--bench-text);
+}
+
+.revealToggle svg {
+  height: 14px;
+  transition: transform var(--bench-dur) var(--bench-ease-in-out);
+  width: 14px;
+}
+
+.revealToggle[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
+.providerHead {
+  align-items: center;
+  display: flex;
+  gap: 13px;
+  min-width: 0;
+}
+
+.providerTile {
+  align-items: center;
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: 11px;
+  color: var(--bench-accent);
+  display: grid;
+  flex: none;
+  height: 44px;
+  place-items: center;
+  width: 44px;
+}
+
+.providerTile svg {
+  height: 23px;
+  width: 23px;
+}
+
+.tileGemini {
+  color: var(--bench-accent);
+}
+
+.tileOpenai {
+  color: var(--bench-on-text);
+}
+
+.tileHf {
+  color: var(--bench-draft-text);
+}
+
+.providerTitle {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.providerMeta {
+  color: var(--bench-faint);
+  font-family: var(--font-jetbrains-mono, ui-monospace), monospace;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* Identity block: the label is the heading, the slug + driver + origin tag are a
+   single quiet meta row so the eye reads "which provider" before "what it is". */
+.providerId {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.providerMetaRow {
+  align-items: center;
+  color: var(--bench-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  gap: 7px;
+  line-height: 1.4;
+}
+
+.slug {
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: 5px;
+  color: var(--bench-text);
+  font-family: var(--font-jetbrains-mono, ui-monospace), monospace;
+  font-size: 11px;
+  padding: 1px 6px;
+}
+
+.metaDot {
+  color: var(--bench-border-hi);
+}
+
+.tag {
+  border: 1px solid var(--bench-border);
+  border-radius: 999px;
+  color: var(--bench-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  text-transform: uppercase;
+}
+
+.tagCustom {
+  border-color: var(--bench-accent);
+  color: var(--bench-accent);
+}
+
+/* A disabled instrument stays legible but recedes, so the live providers carry
+   the eye. Controls keep full contrast — the switch is how it is turned back on. */
+.cardDim .providerHead,
+.cardDim .caps {
+  opacity: 0.68;
+}
+
+/* ── Panel header counts ───────────────────────────────────────────────── */
+
+.panelHeadText {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.panelCounts {
+  align-items: center;
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.panelCount {
+  align-items: baseline;
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: 999px;
+  color: var(--bench-muted);
+  display: inline-flex;
+  font-size: 11.5px;
+  gap: 5px;
+  padding: 4px 11px;
+}
+
+.panelCount strong {
+  color: var(--bench-text);
+  font-family: var(--font-jetbrains-mono, ui-monospace), monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Capability chips ──────────────────────────────────────────────────── */
+
+.caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cap {
+  align-items: center;
+  border: 1px solid var(--bench-border);
+  border-radius: 999px;
+  color: var(--bench-muted);
+  display: inline-flex;
+  font-size: 11.5px;
+  font-weight: 500;
+  gap: 7px;
+  max-width: 100%;
+  padding: 4px 11px;
+}
+
+.capLabel {
+  font-family: var(--font-jetbrains-mono, ui-monospace), monospace;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The capability kind is the label; the model id is the reading. Keeping them
+   at different weights lets an operator scan "Chat / Embeddings" first, then
+   read the model only when it matters. */
+.capKind {
+  color: var(--bench-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.capOn .capKind {
+  color: var(--bench-on-text);
+}
+
+.capOn {
+  background: var(--bench-on-bg);
+  border-color: var(--bench-on-line);
+  color: var(--bench-on-text);
+}
+
+.capOff {
+  color: var(--bench-faint);
+  opacity: 0.8;
+}
+
+/* ── Status dots ───────────────────────────────────────────────────────── */
+
+.dot {
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+  height: 8px;
+  width: 8px;
+}
+
+.dotOk {
+  background: var(--bench-on-text);
+}
+
+.dotWarn {
+  background: var(--bench-draft-text);
+}
+
+.dotBad {
+  background: var(--bench-off-text);
+}
+
+.dotIdle {
+  background: var(--bench-border-hi);
+}
+
+/* ── Keys section ──────────────────────────────────────────────────────── */
+
+.section {
+  border-top: 1px solid var(--bench-border);
+  display: grid;
+  gap: 12px;
+  margin-top: 2px;
+  padding-top: 16px;
+}
+
+.sectionHead {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.sectionLabel {
+  align-items: center;
+  color: var(--bench-faint);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 7px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sectionLabel svg {
+  height: 14px;
+  width: 14px;
+}
+
+.sectionNote {
+  color: var(--bench-faint);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.keyMain {
+  align-items: center;
+  display: flex;
+  gap: 11px;
+  min-width: 0;
+}
+
+.keyBody {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.keyValueRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.keyValue {
+  font-family: var(--font-jetbrains-mono, ui-monospace), monospace;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.keyTag {
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: 999px;
+  color: var(--bench-muted);
+  font-size: 10.5px;
+  padding: 1px 8px;
+}
+
+.health {
+  color: var(--bench-faint);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.keyActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* ── Revealed secret ───────────────────────────────────────────────────── */
+
+.secretBox {
+  align-items: center;
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border-hi);
+  border-radius: var(--bench-r-chip);
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+}
+
+.secretText {
+  font-family: var(--font-jetbrains-mono, ui-monospace), monospace;
+  font-size: 12.5px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.secretActions {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+/* ── Feature chain steps ───────────────────────────────────────────────── */
+
+.steps {
+  display: grid;
+  gap: 2px;
+}
+
+.step {
+  align-items: center;
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  display: flex;
+  gap: 13px;
+  padding: 11px 13px;
+}
+
+.stepOff {
+  opacity: 0.62;
+}
+
+.stepIndex {
+  align-items: center;
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border-hi);
+  border-radius: 50%;
+  color: var(--bench-text);
+  display: grid;
+  flex: none;
+  font-family: var(--font-jetbrains-mono, ui-monospace), monospace;
+  font-size: 12px;
+  font-weight: 600;
+  height: 26px;
+  place-items: center;
+  width: 26px;
+}
+
+.stepBody {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stepName {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepMeta {
+  color: var(--bench-faint);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.arrow {
+  color: var(--bench-faint);
+  font-size: 12px;
+  line-height: 1;
+  padding: 3px 0 3px 12px;
+}
+
+.chainTools {
+  align-items: flex-end;
+  display: flex;
+  gap: 10px;
+}
+
+.chainTools > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Disclosures ───────────────────────────────────────────────────────── */
+
+.advanced {
+  border-top: 1px solid var(--bench-border);
+  padding-top: 15px;
+}
+
+.advanced > summary {
+  align-items: center;
+  color: var(--bench-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 7px;
+  letter-spacing: 0.01em;
+  list-style: none;
+}
+
+.advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced > summary:hover {
+  color: var(--bench-text);
+}
+
+.advanced > summary svg {
+  height: 14px;
+  transition: transform var(--bench-dur) var(--bench-ease-in-out);
+  width: 14px;
+}
+
+.advanced[open] > summary {
+  color: var(--bench-text);
+  margin-bottom: 14px;
+}
+
+.advanced[open] > summary svg {
+  transform: rotate(90deg);
+}
+
+/* ── Hints and helpers ─────────────────────────────────────────────────── */
+
+.hint {
+  align-items: flex-start;
+  color: var(--bench-muted);
+  display: flex;
+  font-size: 12px;
+  gap: 8px;
+  line-height: 1.5;
+}
+
+.hint svg {
+  color: var(--bench-faint);
+  flex: none;
+  height: 15px;
+  margin-top: 1px;
+  width: 15px;
+}
+
+.grid2 {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+/* Providers carry keys and inline actions, so they get a wider minimum than the
+   shared .cards grid — two comfortable columns instead of three cramped ones. */
+.providerGrid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(470px, 1fr));
+}
+
+.chainGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+@media (max-width: 640px) {
+  .providerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Key rows ──────────────────────────────────────────────────────────── */
+
+.keyList {
+  display: grid;
+  gap: 8px;
+}
+
+.keyItem {
+  align-items: center;
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  justify-content: space-between;
+  padding: 11px 13px;
+}
+
+/* The revealed secret is the row's subject, so it takes the freed width and the
+   actions stay pinned to the right. */
+.keyItem > .secretBox {
+  flex: 1 1 260px;
+}
+
+.keyItemActions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.foot {
+  align-items: center;
+  border-top: 1px solid var(--bench-border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 2px;
+  padding-top: 15px;
+}
+
+.foot .hint {
+  flex: 1;
+}
+
+/* ── Add-a-key panel ───────────────────────────────────────────────────── */
+
+.addKey {
+  background: var(--bench-sunk);
+  border: 1px dashed var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  display: grid;
+  gap: 8px;
+  padding: 11px 12px;
+}
+
+.addKeyLabel {
+  color: var(--bench-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.addKeyRow {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.addKeyRow > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.addKeyHint {
+  color: var(--bench-faint);
+  font-size: 11px;
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .addKeyRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .addKeyRow > button {
+    width: 100%;
+  }
+}
+
+/* ── Test result ───────────────────────────────────────────────────────── */
+
+.keyBlock {
+  display: grid;
+  gap: 8px;
+}
+
+/* The live proof that a key works: the prompt that was sent and the model's own
+   reply. Success tints green, a failure tints red, and both keep the answer at
+   full contrast so it can be read, not just registered. */
+.testResult {
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  display: grid;
+  gap: 7px;
+  padding: 10px 12px;
+}
+
+.testResultOk {
+  background: var(--bench-on-bg);
+  border-color: var(--bench-on-line);
+}
+
+.testResultFail {
+  background: var(--bench-off-bg);
+  border-color: var(--bench-off-line);
+}
+
+.testResultHead {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.testResultHead svg {
+  flex: none;
+  height: 14px;
+  width: 14px;
+}
+
+.testResultOk .testResultHead svg {
+  color: var(--bench-on-text);
+}
+
+.testResultFail .testResultHead svg {
+  color: var(--bench-off-text);
+}
+
+.testPrompt {
+  color: var(--bench-muted);
+  font-family: var(--font-jetbrains-mono, ui-monospace), monospace;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.testMeta {
+  color: var(--bench-faint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.testAnswer {
+  color: var(--bench-text);
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* A button that carries an icon and a label: keep them on one line, centred, so
+   a narrow action row never folds "Test" onto a second line or drops the bolt
+   onto the baseline. */
+.iconBtn {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.iconBtn svg {
+  flex: none;
+}
+
+/* ── Test result footer ────────────────────────────────────────────────── */
+
+.testFoot {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.testModel {
+  align-items: center;
+  color: var(--bench-faint);
+  display: inline-flex;
+  flex-wrap: wrap;
+  font-size: 11px;
+  gap: 5px;
+}
+
+.testModel code {
+  color: var(--bench-muted);
+  font-family: var(--font-jetbrains-mono, ui-monospace), monospace;
+  font-size: 11px;
+}
+
+.testBadge {
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: 999px;
+  color: var(--bench-faint);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  text-transform: uppercase;
+}
+
+/* Page-level hierarchy: concise routing summary first, then the live provider
+   inventory and feature maps. All rules stay within the AI Providers route. */
+.aiPage {
+  max-width: 1280px;
+}
+
+.pageHead {
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+}
+
+.intro {
+  min-width: 0;
+}
+
+.pageTitle {
+  font-size: clamp(27px, 3vw, 34px);
+  letter-spacing: -0.045em;
+  margin-bottom: 8px;
+}
+
+.pageLead {
+  line-height: 1.5;
+  margin: 0;
+  max-width: 64ch;
+}
+
+.importButton {
+  min-height: 39px;
+}
+
+.alert {
+  border-radius: var(--bench-r-card);
+  margin-bottom: 14px;
+}
+
+.stats {
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.statCard {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--bench-card) 96%, var(--bench-accent)), var(--bench-card) 70%);
+  border-radius: 12px;
+  min-width: 0;
+  padding: 14px 16px;
+}
+
+.statCard .statLabel {
+  margin-bottom: 8px;
+}
+
+.statCard .statValue {
+  flex-wrap: wrap;
+  font-size: clamp(20px, 2.4vw, 25px);
+  gap: 5px 9px;
+  line-height: 1.2;
+}
+
+.statCard .statSub {
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.providerPanel,
+.featurePanel {
+  border-radius: 16px;
+  margin-bottom: 24px;
+}
+
+.providerPanelHead,
+.featurePanelHead {
+  align-items: center;
+  margin: -18px -18px 18px;
+  padding: 15px 18px;
+}
+
+.providerPanel .providerGrid {
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
+}
+
+.providerCard {
+  border-radius: 12px;
+  gap: 15px;
+  min-width: 0;
+  padding: 17px;
+  transition: border-color var(--bench-dur) var(--bench-ease-in-out), box-shadow var(--bench-dur) var(--bench-ease-in-out), transform var(--bench-dur) var(--bench-ease-out);
+}
+
+.providerCard:hover {
+  border-color: var(--bench-border-hi);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
+  transform: translateY(-1px);
+}
+
+.providerCardHead {
+  align-items: flex-start;
+  margin: 0;
+}
+
+.providerCard .providerTitle {
+  overflow-wrap: anywhere;
+}
+
+.providerCard .body {
+  gap: 13px;
+}
+
+.providerCard .caps {
+  gap: 7px;
+}
+
+.providerCard .cap {
+  background: color-mix(in srgb, var(--bench-sunk) 72%, transparent);
+  border-radius: 7px;
+  min-width: 0;
+  padding: 6px 9px;
+}
+
+.providerCard .revealToggle {
+  background: transparent;
+  min-height: 36px;
+}
+
+.providerCard .revealToggle:hover {
+  background: var(--bench-sunk);
+}
+
+.providerCard .bodyRest {
+  gap: 14px;
+  padding-top: 2px;
+}
+
+.providerCard .modelSettings,
+.customProvider {
+  background: color-mix(in srgb, var(--bench-sunk) 62%, transparent);
+  border: 1px solid var(--bench-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.providerCard .modelSettings[open],
+.customProvider[open] {
+  background: var(--bench-sunk);
+}
+
+.providerCard .modelSettings[open] > summary,
+.customProvider[open] > summary {
+  margin-bottom: 12px;
+}
+
+.providerCard .section {
+  gap: 11px;
+  margin-top: 0;
+  padding-top: 13px;
+}
+
+.providerCard .keyItem {
+  border-radius: 8px;
+  padding: 10px 11px;
+}
+
+.providerCard .addKey {
+  border-style: solid;
+  border-radius: 9px;
+}
+
+.providerCard .foot {
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.customProvider {
+  margin-top: 18px;
+  padding: 14px 16px;
+}
+
+.customProvider > summary {
+  min-height: 24px;
+}
+
+.customProvider[open] > summary {
+  margin-bottom: 15px;
+}
+
+.customProvider .grid2 {
+  gap: 13px 18px;
+}
+
+.customProvider .actions {
+  border-top: 1px solid var(--bench-border);
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.featurePanelHead {
+  margin-bottom: 18px;
+}
+
+.featurePanel .chainGrid {
+  gap: 13px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 370px), 1fr));
+}
+
+.chainCard {
+  border-radius: 12px;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  transition: border-color var(--bench-dur) var(--bench-ease-in-out), box-shadow var(--bench-dur) var(--bench-ease-in-out);
+}
+
+.chainCard:hover {
+  border-color: var(--bench-border-hi);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+}
+
+.chainCard .sectionHead {
+  align-items: center;
+}
+
+.chainCard .sectionHead > :first-child {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.chainCard .providerMeta {
+  color: var(--bench-faint);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+
+.chainCard .step {
+  border-radius: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+.chainCard .stepName {
+  font-size: 12.5px;
+}
+
+.chainCard .chainTools {
+  align-items: flex-end;
+  border-top: 1px solid var(--bench-border);
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.chainCard .chainTools .field {
+  min-width: 0;
+}
+
+.providerCard :global(input:focus-visible),
+.providerCard :global(select:focus-visible),
+.chainCard :global(select:focus-visible),
+.customProvider :global(input:focus-visible),
+.customProvider :global(select:focus-visible) {
+  border-color: var(--bench-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bench-accent) 15%, transparent);
+}
+
+.revealToggle:focus-visible,
+.advanced > summary:focus-visible {
+  outline: 2px solid var(--bench-accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 1024px) {
+  .pageHead {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 700px) {
+  .providerPanelHead,
+  .featurePanelHead {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .providerPanel .providerGrid,
+  .featurePanel .chainGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .providerPanel .panelCounts {
+    flex-wrap: wrap;
+  }
+
+  .providerCard .foot {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .providerCard .foot .footerActions {
+    justify-content: flex-end;
+  }
+
+  .customProvider {
+    padding: 12px;
+  }
+
+  .chainCard .chainTools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .chainCard .chainTools > button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .providerCard:hover {
+    transform: none;
+  }
+}

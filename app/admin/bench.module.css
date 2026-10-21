@@ -1,0 +1,1816 @@
+/*
+ * The bench — a gauge cluster, not a dashboard.
+ *
+ * Instrument concept: a dark instrument panel where every number is a live
+ * reading and every control is a labelled switch. The operator arrives during an
+ * incident, so nothing here is exploratory — the two verbs are "open or close an
+ * instrument" and "clear a tally", both of which reach the live product at once.
+ *
+ * The category default this replaces: three equal stat cards, a coloured SaaS
+ * sidebar, pastel status pills, and a generic blue button doing no work. The
+ * accent below is the only blue on the surface and it means exactly one thing —
+ * "this is the commit action". Status is carried by the gauge and the chip.
+ *
+ * Colours are declared as tokens in both themes, never as bare hex in a rule.
+ * Inter arrives from app/layout.tsx; the mono cut is loaded by this app's own
+ * layout as --font-jetbrains-mono, because the substance of this surface is
+ * numerals and it cannot be allowed to fall back to whatever the OS supplies.
+ */
+
+.shell {
+  /* One step above the page void so type and hairlines stay readable in the dark. */
+  --bench-bg: #09090b;
+  --bench-card: #18181b;
+  --bench-sunk: #0f0f12;
+  --bench-border: #27272a;
+  --bench-border-hi: #3f3f46;
+  --bench-text: #fafafa;
+  --bench-muted: #a1a1aa;
+  --bench-faint: #71717a;
+
+  --bench-accent: #3b82f6;
+  --bench-accent-hi: #2563eb;
+  --bench-on-text: #4ade80;
+  --bench-on-bg: rgba(34, 197, 94, 0.1);
+  --bench-on-line: rgba(34, 197, 94, 0.22);
+  --bench-off-text: #f87171;
+  --bench-off-bg: rgba(248, 113, 113, 0.1);
+  --bench-off-line: rgba(248, 113, 113, 0.22);
+  --bench-draft-text: #facc15;
+  --bench-draft-bg: rgba(250, 204, 21, 0.1);
+  --bench-draft-line: rgba(250, 204, 21, 0.24);
+
+  --bench-r-chip: 6px;
+  --bench-r-card: 10px;
+  --bench-r-panel: 14px;
+
+  --bench-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --bench-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --bench-dur: 200ms;
+  --bench-dur-slow: 360ms;
+
+  background: var(--bench-bg);
+  color: var(--bench-text);
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  /* Deliberately no font-family here. app/layout.tsx puts Inter on <body> as a
+     next/font class, not as a variable, so naming 'Inter' in a child rule would
+     silently fall back to whatever the OS has. Inheriting is how this surface
+     gets the product's actual webfont. Only the mono cut is overridden, by the
+     variable this app's own layout declares. */
+  min-height: 100vh;
+}
+
+/* A designed second climate, not an inversion: the dark theme's identity is a
+   near-flat surface with hairline structure, so light gets real elevation on the
+   spine and a sunken field behind each card instead of the same borders. */
+:global([data-theme='light']) .shell {
+  --bench-bg: #f4f5f7;
+  --bench-card: #ffffff;
+  --bench-sunk: #eef0f3;
+  --bench-border: #dcdfe4;
+  --bench-border-hi: #b9bec7;
+  --bench-text: #16181d;
+  --bench-muted: #5b616e;
+  --bench-faint: #858c99;
+
+  --bench-accent: #2563eb;
+  --bench-accent-hi: #1d4ed8;
+  --bench-on-text: #15803d;
+  --bench-on-bg: rgba(21, 128, 61, 0.08);
+  --bench-on-line: rgba(21, 128, 61, 0.22);
+  --bench-off-text: #b91c1c;
+  --bench-off-bg: rgba(185, 28, 28, 0.07);
+  --bench-off-line: rgba(185, 28, 28, 0.2);
+  --bench-draft-text: #a16207;
+  --bench-draft-bg: rgba(161, 98, 7, 0.08);
+  --bench-draft-line: rgba(161, 98, 7, 0.22);
+}
+
+/* ── Spine ─────────────────────────────────────────────────────────────── */
+
+.spine {
+  background:
+    radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--bench-accent) 9%, transparent), transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bench-card) 96%, white 4%), var(--bench-card) 38%);
+  border-right: 1px solid var(--bench-border);
+  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.025), 12px 0 34px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 10px 14px 18px;
+  position: sticky;
+  scrollbar-color: var(--bench-border-hi) transparent;
+  scrollbar-width: thin;
+  top: 0;
+}
+
+/* The brand row is a nameplate: the two-line wordmark reads left, the mark sits
+   right, closed by a hairline that matches the spine's instrument-panel
+   structure. */
+.spineBrand {
+  align-items: center;
+  background: transparent;
+  border-bottom: 1px solid color-mix(in srgb, var(--bench-border-hi) 38%, transparent);
+  display: flex;
+  gap: 9px;
+  justify-content: space-between;
+  margin: -10px 0 3px;
+  padding: 10px 7px 8px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.spineBrandText {
+  align-items: baseline;
+  display: inline-flex;
+  flex-direction: row;
+  gap: 7px;
+  min-width: 0;
+}
+
+/* Wordmark — a subtle top-lit gradient gives the name an embossed, premium
+   finish flat colour does not; guarded by @supports so the fallback stays solid
+   where background-clip:text is unavailable. Accent blue is deliberately not
+   used here: on this surface it means "the commit action" and nothing else. */
+.spineBrandName {
+  color: var(--bench-text);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  text-transform: none;
+}
+
+/* Tiny wide-tracked second line — the classic professional nameplate pairing
+   under a bold logotype. Decorative (aria-hidden in the markup). */
+.spineBrandSub {
+  color: var(--bench-faint);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: lowercase;
+}
+
+/* ── Brand mark ──────────────────────────────────────────────────────────────
+   The blue product mark with its outer paper removed (brand-logo-premium-blue
+   .png), never recoloured and never given a backing plate. Only fitted: a soft
+   drop so the mark lifts off the spine. Purely decoration — aria-hidden in the
+   markup. */
+.spineBrandMark {
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  filter: drop-shadow(0 3px 8px rgba(2, 6, 23, 0.42));
+  margin-left: auto;
+  transition: transform 260ms var(--bench-ease-out), filter 260ms var(--bench-ease-out);
+}
+
+.spineBrand:hover .spineBrandMark {
+  filter: drop-shadow(0 4px 11px rgba(2, 6, 23, 0.5));
+  transform: translateY(-1px);
+}
+
+.spineBrandMarkImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.spineNav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 7px 1px;
+}
+
+.navItem {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--bench-muted);
+  display: flex;
+  font-size: 13px;
+  gap: 11px;
+  padding: 9px 10px;
+  text-decoration: none;
+  transition: background var(--bench-dur) var(--bench-ease-in-out), color var(--bench-dur) var(--bench-ease-in-out), border-color var(--bench-dur) var(--bench-ease-in-out), transform var(--bench-dur) var(--bench-ease-out);
+}
+
+.navItem:hover {
+  background: color-mix(in srgb, var(--bench-sunk) 82%, var(--bench-card));
+  border-color: color-mix(in srgb, var(--bench-border) 70%, transparent);
+  color: var(--bench-text);
+  transform: translateX(2px);
+}
+
+/* The active leaf is marked by an inset rule, not a filled block, so the spine
+   stays a hairline structure and the eye reads position before colour. */
+.navItem[aria-current='page'] {
+  background: linear-gradient(100deg, color-mix(in srgb, var(--bench-accent) 15%, var(--bench-sunk)), var(--bench-sunk) 76%);
+  border-color: color-mix(in srgb, var(--bench-accent) 19%, var(--bench-border));
+  color: var(--bench-text);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--bench-accent), 0 3px 12px rgba(0, 0, 0, 0.12);
+}
+
+.navItem[aria-current='page'] .navIcon {
+  color: var(--bench-accent);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--bench-accent) 34%, transparent));
+}
+
+.navIcon {
+  flex: 0 0 auto;
+  fill: none;
+  height: 16px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.75;
+  width: 16px;
+}
+
+.spineFoot {
+  background: color-mix(in srgb, var(--bench-card) 94%, transparent);
+  backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, var(--bench-border-hi) 62%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  bottom: 0;
+  margin-top: auto;
+  padding: 8px;
+  position: sticky;
+  z-index: 4;
+}
+
+.identity {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  min-width: 0;
+  padding: 0 2px 5px;
+}
+
+.avatar {
+  align-items: center;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--bench-accent) 23%, var(--bench-sunk)), var(--bench-sunk));
+  border: 1px solid color-mix(in srgb, var(--bench-accent) 30%, var(--bench-border));
+  border-radius: 999px;
+  color: var(--bench-text);
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  height: 28px;
+  justify-content: center;
+  letter-spacing: 0.02em;
+  width: 28px;
+}
+
+.identityText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.identityEmail {
+  color: var(--bench-text);
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identityRole {
+  color: var(--bench-faint);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* The reload indicator: the bench's own Kinetic Sphere (LoaderUI loader 6) takes
+   the refresh icon's place while the store is re-read. On the dark panel its
+   dots are painted white with a soft bloom, so the mark reads clearly against
+   the spine; the light theme, where white would vanish into the white panel,
+   keeps the same spheres in the near-black ink instead. Reduced-motion leaves
+   it as one still, legible frame. */
+.refreshOrb {
+  color: #ffffff;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.55));
+}
+
+:global([data-theme='light']) .refreshOrb {
+  color: var(--bench-text);
+  filter: drop-shadow(0 0 4px rgba(22, 24, 29, 0.3));
+}
+
+/* ── Spine utilities ─────────────────────────────────────────────────────────
+   Reload, tools and sign out sit on the last line of the spine as three square
+   icon buttons. Three labelled buttons could not fit the 236px column, and the
+   borderless text version made sign out read as absent, so the row is icons
+   only and the name is revealed on hover / focus as a tooltip. Each button
+   carries an aria-label, so the name is available to assistive tech even when
+   the tooltip is not painted. The row is centred under the identity so the
+   three controls read as one balanced cluster. */
+.spineFoot .spineActions {
+  border-top: 1px solid var(--bench-border);
+  gap: 5px;
+  justify-content: center;
+  padding: 6px 0 0;
+  width: 100%;
+}
+
+.spineAction {
+  align-items: center;
+  background: color-mix(in srgb, var(--bench-card) 56%, transparent);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--bench-muted);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 1 1 0;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  position: relative;
+  text-decoration: none;
+  transition: background var(--bench-dur) var(--bench-ease-in-out), border-color var(--bench-dur) var(--bench-ease-in-out), color var(--bench-dur) var(--bench-ease-in-out), transform var(--bench-dur) var(--bench-ease-out), box-shadow var(--bench-dur) var(--bench-ease-in-out);
+  width: auto;
+}
+
+.spineAction:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bench-accent) 12%, var(--bench-sunk));
+  border-color: color-mix(in srgb, var(--bench-accent) 24%, var(--bench-border));
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.13);
+  color: var(--bench-text);
+  transform: translateY(-1px);
+}
+
+.spineAction:last-child:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bench-off-text) 10%, var(--bench-sunk));
+  border-color: color-mix(in srgb, var(--bench-off-text) 25%, var(--bench-border));
+  color: var(--bench-off-text);
+}
+
+.spineAction:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* The tooltip: a small card above the button. It rises into place on hover and
+   keyboard focus, and is decoration only — the button's aria-label is the real
+   name, so the tip is hidden from assistive tech. */
+.spineActionTip {
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  bottom: calc(100% + 8px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+  color: var(--bench-text);
+  font-size: 11px;
+  font-weight: 500;
+  left: 50%;
+  opacity: 0;
+  padding: 4px 8px;
+  pointer-events: none;
+  position: absolute;
+  transform: translate(-50%, 4px);
+  transition: opacity var(--bench-dur) var(--bench-ease-out), transform var(--bench-dur) var(--bench-ease-out);
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.spineAction:hover .spineActionTip,
+.spineAction:focus-visible .spineActionTip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ── Refresh progress ────────────────────────────────────────────────────────
+   A hairline indeterminate bar pinned to the top of the stage while the store
+   is re-read. The accent only means "the commit action" elsewhere; here it
+   reads as the single live indicator of a read in flight. */
+.refreshBar {
+  background: color-mix(in srgb, var(--bench-accent) 20%, transparent);
+  height: 2px;
+  left: 0;
+  overflow: hidden;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 80;
+}
+
+.refreshBarFill {
+  background: linear-gradient(90deg, transparent, var(--bench-accent), transparent);
+  display: block;
+  height: 100%;
+  width: 40%;
+  animation: bench-load 1100ms var(--bench-ease-in-out) infinite;
+}
+
+@keyframes bench-load {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(275%); }
+}
+
+/* ── Stage & page frame ────────────────────────────────────────────────── */
+
+.stage {
+  min-width: 0;
+}
+
+.page {
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 40px 32px 96px;
+}
+
+.pageHead {
+  align-items: flex-end;
+  border-bottom: 1px solid var(--bench-border);
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  margin-bottom: 26px;
+  padding-bottom: 20px;
+}
+
+.pageEyebrow {
+  color: var(--bench-faint);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.pageTitle {
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  margin: 0 0 8px;
+}
+
+.pageLead {
+  color: var(--bench-muted);
+  display: block;
+  font-size: 13px;
+  max-width: 66ch;
+}
+
+.pageActions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+/* The store-missing banner is the loudest thing on the page when it is present:
+   quota fails open everywhere behind it, so an operator must be able to tell at
+   a glance that the numbers are not being enforced. */
+.degraded {
+  align-items: flex-start;
+  background: var(--bench-draft-bg);
+  border: 1px solid var(--bench-draft-line);
+  border-radius: var(--bench-r-chip);
+  color: var(--bench-text);
+  display: flex;
+  font-size: 13px;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 12px 14px;
+}
+
+.degradedTitle {
+  font-weight: 600;
+  margin: 0 0 3px;
+}
+
+.degradedBody {
+  color: var(--bench-muted);
+  margin: 0;
+}
+
+.degradedBody code {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 12px;
+}
+
+/* ── Stats ─────────────────────────────────────────────────────────────── */
+
+.stats {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin-bottom: 28px;
+}
+
+.stat {
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-card);
+  padding: 16px 18px;
+}
+
+.statLabel {
+  color: var(--bench-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.statValue {
+  align-items: baseline;
+  display: flex;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  gap: 8px;
+  letter-spacing: -0.04em;
+}
+
+.statSub {
+  color: var(--bench-muted);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.statAlert .statValue {
+  color: var(--bench-off-text);
+}
+
+/* ── Panels & tables ───────────────────────────────────────────────────── */
+
+.panel {
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-panel);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.panelHead {
+  align-items: center;
+  border-bottom: 1px solid var(--bench-border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 14px 18px;
+}
+
+.panelTitle {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.panelNote {
+  color: var(--bench-faint);
+  font-size: 11px;
+  margin: 0;
+}
+
+/* A panel whose body is a card grid gets an inner gutter. Without it the first
+   row's top border lands on the header rule and the outer columns kiss the panel
+   frame, so two hairlines read as one doubled line. The header bleeds back out to
+   the panel edge so its divider still runs the full width. */
+.panelPad {
+  padding: 18px;
+}
+
+.panelPad .panelHead {
+  margin: -18px -18px 18px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  border-collapse: collapse;
+  text-align: left;
+  width: 100%;
+}
+
+.th {
+  border-bottom: 1px solid var(--bench-border);
+  color: var(--bench-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  padding: 11px 18px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.td {
+  border-bottom: 1px solid var(--bench-border);
+  font-size: 13px;
+  padding: 13px 18px;
+  vertical-align: middle;
+}
+
+.td:last-child,
+.tr:last-child .td {
+  border-bottom: 0;
+}
+
+.tr:hover .td {
+  background: var(--bench-sunk);
+}
+
+.cellStack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cellPrimary {
+  font-weight: 500;
+}
+
+.cellSub {
+  color: var(--bench-faint);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.featureLink {
+  align-items: center;
+  color: var(--bench-accent);
+  display: inline-flex;
+  font-size: 11px;
+  gap: 4px;
+  margin-top: 3px;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.featureLink:hover { text-decoration: underline; }
+
+.usageBar {
+  background: var(--bench-sunk);
+  border-radius: 999px;
+  height: 7px;
+  max-width: 220px;
+  min-width: 90px;
+  overflow: hidden;
+}
+
+.usageBarFill {
+  background: var(--bench-accent);
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  transition: width var(--bench-dur) var(--bench-ease-out);
+}
+
+.attention {
+  align-items: center;
+  background: var(--bench-draft-bg);
+  border: 1px solid var(--bench-draft-line);
+  border-radius: var(--bench-r-chip);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  padding: 12px 14px;
+}
+
+.attentionTitle {
+  color: var(--bench-draft-text);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 3px;
+}
+
+.attentionBody {
+  color: var(--bench-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.attentionLinks {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.attentionLinks a,
+.attentionLinks span {
+  border: 1px solid var(--bench-draft-line);
+  border-radius: var(--bench-r-chip);
+  color: var(--bench-text);
+  font-size: 11px;
+  padding: 5px 8px;
+  text-decoration: none;
+}
+
+.attentionLinks a:hover {
+  background: var(--bench-card);
+}
+
+.cellSubMono {
+  color: var(--bench-faint);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.cellMuted {
+  color: var(--bench-muted);
+}
+
+.cellNum {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.cellRight {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.actionsCell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.rowActions {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* ── Badges ────────────────────────────────────────────────────────────── */
+
+.badge {
+  border: 1px solid transparent;
+  border-radius: var(--bench-r-chip);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  padding: 3px 7px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.badgeOn {
+  background: var(--bench-on-bg);
+  border-color: var(--bench-on-line);
+  color: var(--bench-on-text);
+}
+
+.badgeOff {
+  background: var(--bench-off-bg);
+  border-color: var(--bench-off-line);
+  color: var(--bench-off-text);
+}
+
+.badgeDraft {
+  background: var(--bench-draft-bg);
+  border-color: var(--bench-draft-line);
+  color: var(--bench-draft-text);
+}
+
+.badgeNeutral {
+  background: var(--bench-sunk);
+  border-color: var(--bench-border);
+  color: var(--bench-muted);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+
+.btn {
+  background: transparent;
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  color: var(--bench-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  min-height: 36px;
+  padding: 7px 13px;
+  transition: background var(--bench-dur) var(--bench-ease-in-out), border-color var(--bench-dur) var(--bench-ease-in-out), opacity var(--bench-dur) var(--bench-ease-in-out);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--bench-sunk);
+  border-color: var(--bench-border-hi);
+}
+
+.btnPrimary {
+  background: var(--bench-accent);
+  border-color: var(--bench-accent);
+  color: #ffffff;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: var(--bench-accent-hi);
+  border-color: var(--bench-accent-hi);
+}
+
+.btnDanger {
+  color: var(--bench-off-text);
+}
+
+.btnDanger:hover:not(:disabled) {
+  background: var(--bench-off-bg);
+  border-color: var(--bench-off-line);
+}
+
+.btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.btnIcon {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--bench-r-chip);
+  color: var(--bench-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  padding: 0;
+  width: 36px;
+}
+
+.btnIcon:hover:not(:disabled) {
+  background: var(--bench-sunk);
+  border-color: var(--bench-border);
+  color: var(--bench-text);
+}
+
+.btnIcon:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.btn:focus-visible,
+.btnIcon:focus-visible,
+.spineAction:focus-visible,
+.navItem:focus-visible,
+.segment:focus-visible,
+.switch:focus-visible,
+.select:focus-visible,
+.input:focus-visible,
+.capInput:focus-visible,
+.dialogConfirm:focus-visible,
+.pagerControl:focus-visible {
+  outline: 2px solid var(--bench-accent);
+  outline-offset: 2px;
+}
+
+/* ── Toolbar ───────────────────────────────────────────────────────────── */
+
+.toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.search {
+  align-items: center;
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  color: var(--bench-faint);
+  display: flex;
+  gap: 8px;
+  max-width: 320px;
+  padding: 7px 11px;
+  width: 100%;
+}
+
+.search:focus-within {
+  border-color: var(--bench-border-hi);
+  color: var(--bench-muted);
+}
+
+.searchInput {
+  background: none;
+  border: 0;
+  color: var(--bench-text);
+  font: inherit;
+  font-size: 13px;
+  min-width: 0;
+  outline: none;
+  width: 100%;
+}
+
+.segmented {
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  display: flex;
+  padding: 3px;
+}
+
+.segment {
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  color: var(--bench-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 11px;
+  white-space: nowrap;
+}
+
+.segment:hover {
+  color: var(--bench-text);
+}
+
+.segmentOn {
+  background: var(--bench-sunk);
+  color: var(--bench-text);
+  font-weight: 500;
+}
+
+.segmentCount {
+  color: var(--bench-faint);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  margin-left: 5px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ── Tool groups & cards ───────────────────────────────────────────────── */
+
+.group {
+  margin-bottom: 34px;
+}
+
+.groupTitle {
+  align-items: center;
+  color: var(--bench-faint);
+  display: flex;
+  font-size: 11px;
+  font-weight: 700;
+  gap: 12px;
+  letter-spacing: 0.14em;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+/* The hairline does the grouping, so the eye reads structure before it reads a
+   colour — and the group name stays at 11px because it is a label, not content. */
+.groupTitle::after {
+  background: var(--bench-border);
+  content: '';
+  flex: 1;
+  height: 1px;
+}
+
+.groupCount {
+  color: var(--bench-muted);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  order: 3;
+}
+
+.cards {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+}
+
+.card {
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-card);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px 14px;
+  position: relative;
+  transition: border-color var(--bench-dur) var(--bench-ease-in-out), opacity var(--bench-dur) var(--bench-ease-in-out);
+  /* Signature moment: the cluster arrives already lit, 40ms apart, so a wall of
+     eighteen gauges reads as one instrument rather than eighteen cards. */
+  animation: bench-rise var(--bench-dur-slow) var(--bench-ease-out) both;
+  animation-delay: calc(var(--bench-stagger, 0) * 40ms);
+}
+
+@keyframes bench-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.card:hover {
+  border-color: var(--bench-border-hi);
+}
+
+/* Withdrawn dims the identity and the switch only. Its caps stay live, because
+   re-opening the instrument with the wrong number written against it is the one
+   thing this screen exists to prevent. */
+.cardOff .cardId {
+  opacity: 0.55;
+}
+
+.cardOff .chip {
+  background: var(--bench-off-bg);
+  border-color: var(--bench-off-line);
+  color: var(--bench-off-text);
+}
+
+.cardDirty {
+  border-color: var(--bench-draft-line);
+}
+
+.cardBusy {
+  opacity: 0.6;
+}
+
+.cardHead {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.cardId {
+  align-items: center;
+  display: flex;
+  gap: 11px;
+  min-width: 0;
+  transition: opacity var(--bench-dur) var(--bench-ease-in-out);
+}
+
+.cardIcon {
+  align-items: center;
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: 8px;
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 16px;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.cardName {
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardHref {
+  color: var(--bench-faint);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.cardHref:hover {
+  color: var(--bench-muted);
+  text-decoration: underline;
+}
+
+.cardSide {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 7px;
+}
+
+.chip {
+  border: 1px solid transparent;
+  border-radius: var(--bench-r-chip);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  padding: 3px 7px;
+  text-transform: uppercase;
+}
+
+.chipOn {
+  background: var(--bench-on-bg);
+  border-color: var(--bench-on-line);
+  color: var(--bench-on-text);
+}
+
+.chipOff {
+  background: var(--bench-off-bg);
+  border-color: var(--bench-off-line);
+  color: var(--bench-off-text);
+}
+
+.chipDraft {
+  background: var(--bench-draft-bg);
+  border-color: var(--bench-draft-line);
+  color: var(--bench-draft-text);
+}
+
+/* ── The switch ────────────────────────────────────────────────────────── */
+
+.switch {
+  align-items: center;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  gap: 7px;
+  padding: 0;
+}
+
+.switch:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.switchTrack {
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: 999px;
+  display: block;
+  height: 18px;
+  position: relative;
+  transition: background var(--bench-dur) var(--bench-ease-in-out), border-color var(--bench-dur) var(--bench-ease-in-out);
+  width: 32px;
+}
+
+.switchThumb {
+  background: var(--bench-faint);
+  border-radius: 999px;
+  display: block;
+  height: 12px;
+  left: 2px;
+  position: absolute;
+  top: 2px;
+  transition: transform var(--bench-dur) var(--bench-ease-out), background var(--bench-dur) var(--bench-ease-in-out);
+  width: 12px;
+}
+
+.switchOn .switchTrack {
+  background: var(--bench-on-bg);
+  border-color: var(--bench-on-line);
+}
+
+.switchOn .switchThumb {
+  background: var(--bench-on-text);
+  transform: translateX(14px);
+}
+
+.switchLabel {
+  color: var(--bench-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.switchOn .switchLabel {
+  color: var(--bench-on-text);
+}
+
+/* ── Gauges ────────────────────────────────────────────────────────────── */
+
+.gauges {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gaugeHead {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+
+.gaugeName {
+  color: var(--bench-muted);
+  font-size: 11.5px;
+}
+
+.gaugeFull {
+  color: var(--bench-off-text);
+}
+
+.gaugeNum {
+  align-items: center;
+  color: var(--bench-muted);
+  display: flex;
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  gap: 4px;
+}
+
+.gaugeLimit {
+  color: var(--bench-faint);
+}
+
+.gaugeTrack {
+  background: var(--bench-sunk);
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+}
+
+/* A full bar is not "danger" — it is the instrument at its cap. The colour steps
+   at eighty percent so an approaching limit is legible before it is reached. */
+.gaugeFill {
+  border-radius: 999px;
+  height: 100%;
+  transition: width var(--bench-dur-slow) var(--bench-ease-out), background var(--bench-dur) var(--bench-ease-in-out);
+}
+
+.fillNormal {
+  background: var(--bench-muted);
+}
+
+.fillWarn {
+  background: var(--bench-draft-text);
+}
+
+.fillFull {
+  background: var(--bench-off-text);
+}
+
+.fillNone {
+  background: var(--bench-border);
+  height: 100%;
+  width: 100%;
+}
+
+.gaugeFoot {
+  color: var(--bench-faint);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  margin-top: 5px;
+}
+
+.capInput {
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: 4px;
+  color: var(--bench-text);
+  font-family: inherit;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  padding: 2px 4px;
+  text-align: center;
+  width: 5ch;
+}
+
+.capInput:focus {
+  border-color: var(--bench-accent);
+}
+
+/* ── Card foot ─────────────────────────────────────────────────────────── */
+
+.cardFoot {
+  align-items: center;
+  border-top: 1px solid var(--bench-border);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+.select {
+  background: var(--bench-sunk);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  color: var(--bench-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  min-height: 36px;
+  outline: none;
+  padding: 5px 8px;
+}
+
+.toolbar > .select {
+  max-width: 100%;
+}
+
+.select option {
+  background-color: var(--bench-card);
+  color: var(--bench-text);
+}
+
+.select:focus {
+  border-color: var(--bench-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bench-accent) 18%, transparent);
+}
+
+.cardActions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.dirtyNote {
+  color: var(--bench-draft-text);
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+}
+
+/* ── Dialog ────────────────────────────────────────────────────────────── */
+
+.scrim {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 60;
+  animation: bench-fade var(--bench-dur) var(--bench-ease-out) both;
+}
+
+@keyframes bench-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dialog {
+  animation: bench-settle var(--bench-dur) var(--bench-ease-out) both;
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-panel);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  max-width: 460px;
+  padding: 22px;
+  width: 100%;
+}
+
+@keyframes bench-settle {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+.dialogEyebrow {
+  color: var(--bench-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.dialogTitle {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin: 0 0 10px;
+}
+
+.dialogBody {
+  color: var(--bench-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0 0 14px;
+}
+
+.dialogList {
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+}
+
+.dialogListRow {
+  align-items: baseline;
+  border-bottom: 1px solid var(--bench-border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.dialogListRow:last-child {
+  border-bottom: 0;
+}
+
+.dialogListKey {
+  color: var(--bench-faint);
+  font-size: 11px;
+}
+
+.dialogListValue {
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dialogActions {
+  border-top: 1px solid var(--bench-border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 18px;
+  padding-top: 16px;
+}
+
+/* The footer buttons keep their own size instead of stretching across the row. */
+.dialogActions > button {
+  flex: 0 0 auto;
+}
+
+.dialogField {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.dialogFieldLabel {
+  color: var(--bench-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.dialogField .dialogConfirm {
+  margin-bottom: 0;
+}
+
+.dialogConfirm {
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  color: var(--bench-text);
+  font: inherit;
+  font-size: 12px;
+  margin-bottom: 14px;
+  outline: none;
+  padding: 8px 11px;
+  width: 100%;
+}
+
+.dialogConfirm:focus {
+  border-color: var(--bench-accent);
+}
+
+/* ── Toasts ────────────────────────────────────────────────────────────── */
+
+.toasts {
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  position: fixed;
+  right: 22px;
+  z-index: 70;
+}
+
+.toast {
+  align-items: flex-start;
+  animation: bench-rise var(--bench-dur) var(--bench-ease-out) both;
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-left-width: 3px;
+  border-radius: var(--bench-r-chip);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  display: flex;
+  gap: 9px;
+  max-width: 380px;
+  padding: 11px 14px;
+  pointer-events: auto;
+}
+
+.toastText {
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.toastOk {
+  border-left-color: var(--bench-on-text);
+}
+
+.toastBad {
+  border-left-color: var(--bench-off-text);
+}
+
+.toastInfo {
+  border-left-color: var(--bench-accent);
+}
+
+.toastIcon {
+  flex: 0 0 auto;
+  height: 15px;
+  margin-top: 1px;
+  width: 15px;
+}
+
+.toastOk .toastIcon {
+  color: var(--bench-on-text);
+}
+
+.toastBad .toastIcon {
+  color: var(--bench-off-text);
+}
+
+.toastInfo .toastIcon {
+  color: var(--bench-accent);
+}
+
+/* ── Forms ─────────────────────────────────────────────────────────────── */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fieldLabel {
+  color: var(--bench-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.fieldHint {
+  color: var(--bench-faint);
+  font-size: 11px;
+  margin: 0;
+}
+
+.input {
+  background: var(--bench-card);
+  border: 1px solid var(--bench-border);
+  border-radius: var(--bench-r-chip);
+  color: var(--bench-text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  padding: 8px 11px;
+  width: 100%;
+}
+
+.input:focus {
+  border-color: var(--bench-accent);
+}
+
+.input::placeholder {
+  color: var(--bench-faint);
+}
+
+.input:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.seatForm {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(170px, 1.1fr) minmax(170px, 1fr) minmax(190px, 1.2fr) auto;
+  margin-bottom: 26px;
+}
+
+.field > .select {
+  width: 100%;
+}
+
+.seatForm > .btn {
+  align-self: end;
+}
+
+.seatSearchToolbar {
+  margin-bottom: 12px;
+}
+
+/* ── Empty states ──────────────────────────────────────────────────── */
+
+.empty {
+  border: 1px dashed var(--bench-border);
+  border-radius: var(--bench-r-card);
+  padding: 34px 24px;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 6px;
+}
+
+.emptyBody {
+  color: var(--bench-muted);
+  font-size: 13px;
+  margin: 0 auto;
+  max-width: 52ch;
+}
+
+.pager {
+  align-items: center;
+  border-top: 1px solid var(--bench-border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 12px 18px;
+}
+
+.pagerNote {
+  color: var(--bench-faint);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pagerControl {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.pagerControlDisabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.auditDetails summary {
+  color: var(--bench-muted);
+  cursor: pointer;
+  font-size: 12px;
+  text-decoration: underline;
+  text-decoration-color: var(--bench-border-hi);
+  text-underline-offset: 3px;
+}
+
+.auditDetails pre {
+  background: var(--bench-sunk);
+  border-radius: var(--bench-r-chip);
+  color: var(--bench-muted);
+  font-family: var(--font-jetbrains-mono), ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+  max-width: min(420px, 72vw);
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+.auditDetails summary:focus-visible {
+  outline: 2px solid var(--bench-accent);
+  outline-offset: 3px;
+}
+
+/* ── Narrow ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  /* The spine becomes a scrollable rail. Its links are real links, so it works
+     without JavaScript; only the arrangement changes. */
+  .spine {
+    border-bottom: 1px solid var(--bench-border);
+    border-right: 0;
+    height: auto;
+    overflow: visible;
+    padding: 16px 16px 12px;
+    position: static;
+  }
+
+  .spineBrand {
+    padding-bottom: 8px;
+  }
+
+  .spineNav {
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .navItem {
+    white-space: nowrap;
+  }
+
+  .spineFoot {
+    display: block;
+    position: static;
+    margin-top: 10px;
+    padding: 10px;
+  }
+
+  .identity {
+    margin-bottom: 9px;
+  }
+
+  .spineFoot .spineActions {
+    flex-wrap: nowrap;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .spineFoot .spineAction {
+    flex: 0 0 36px;
+  }
+
+  .page {
+    padding: 26px 18px 80px;
+  }
+
+  .pageHead {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 620px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search {
+    max-width: none;
+  }
+
+  .segmented {
+    overflow-x: auto;
+  }
+
+  /* The seat form's three tracks want about 400px and a phone does not have it.
+     They stack here, and the commit button takes the full width — the only
+     control on this surface sized by its container rather than its label. */
+  .seatForm {
+    grid-template-columns: 1fr;
+  }
+
+  .seatForm > .btn {
+    width: 100%;
+  }
+
+  .spineFoot {
+    align-items: flex-start;
+  }
+
+  .spineFoot .spineActions {
+    gap: 4px;
+  }
+
+  .toasts {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+  }
+
+  .toast {
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell *,
+  .shell *::before,
+  .shell *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

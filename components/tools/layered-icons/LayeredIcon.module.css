@@ -1,0 +1,307 @@
+/* Shared layered icon primitives.
+   Card hover owns the interaction state.
+
+   One material, four signals: the front tile's hue encodes the tool's
+   capability group — Convert / Extract / AI / Advanced — and sits in the same
+   hue family as the tool card's --tool-accent, so one card never shows two
+   competing colours (the previous per-tool hues did, and read as muddy).
+   Palettes are calibrated in OKLCH: every tone shares one lightness/chroma
+   step per theme and only the hue rotates, which is what keeps them clean
+   instead of the old desaturated mid-tones (olive/terracotta/dusty-mauve).
+   The rear tile is a pure neutral in both themes; colour lives in its glyph
+   ink and hairline, not in a tinted gradient wash — with deliberate exceptions
+   where the pairing *is* the meaning: FASTA Tools (`.toneFasta`) and Word to
+   PDF (`.toneWord`), each coloured on both tiles and reasoned in its own
+   comment below. */
+
+.group {
+  /* Neutral defaults — every tone class below re-points these. */
+  --layer-front-top: #d6634a;
+  --layer-front-bottom: #ac422a;
+  --layer-front-shadow: rgba(172, 66, 42, 0.36);
+  --layer-back-ink: #a1402a;
+  --layer-back-top: #ffffff;
+  --layer-back-bottom: #eff3f6;
+  --layer-back-shadow: rgba(23, 33, 29, 0.16);
+  --layer-dark-front-top: #ec836b;
+  --layer-dark-front-bottom: #c75a42;
+  --layer-dark-front-shadow: rgba(199, 90, 66, 0.48);
+  --layer-dark-back-ink: #efaa9a;
+  position: relative;
+  display: block;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  perspective: 800px;
+  transform-style: preserve-3d;
+  isolation: isolate;
+}
+
+.tile {
+  position: absolute;
+  display: flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  transition: transform 400ms cubic-bezier(0.25, 1, 0.3, 1), background 400ms cubic-bezier(0.25, 1, 0.3, 1);
+}
+
+.back {
+  top: 0;
+  left: 0;
+  z-index: 1;
+  color: var(--layer-back-ink);
+  /* An opaque neutral keeps the rear tile crisp and lets the front tile be the
+     only colour carrier. Opacity here also means no backdrop-filter is needed. */
+  background: linear-gradient(145deg, var(--layer-back-top), var(--layer-back-bottom));
+  border: 1px solid rgba(23, 33, 29, 0.07);
+  box-shadow:
+    0 7px 15px -9px var(--layer-back-shadow),
+    0 1px 2px rgba(23, 33, 29, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  transform: translateZ(-8px);
+}
+
+.back svg { width: 18px; height: 18px; }
+
+.front {
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  color: #fff;
+  background: linear-gradient(135deg, var(--layer-front-top), var(--layer-front-bottom));
+  box-shadow:
+    0 10px 20px -9px var(--layer-front-shadow),
+    0 2px 5px -3px rgba(15, 23, 42, 0.26),
+    inset 0 1px 1px rgba(255, 255, 255, 0.34);
+  transform: translateZ(8px);
+}
+
+.front::after {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: inherit;
+  content: '';
+  pointer-events: none;
+}
+
+/* Front label sizing follows the label, not the hue — "PDF"/"IMG"/"ALL"/"DNA"
+   need less room than "W"/"Aa", and "M" carries the widest gesture. */
+.frontSm { font-size: 13px; }
+.frontMd { font-size: 16px; }
+.frontLg { font-size: 20px; }
+.frontIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.frontIcon svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+}
+
+.back .chaplinHat { width: 20px; height: 20px; transform: rotate(-10deg); transition: transform 400ms cubic-bezier(0.25, 1, 0.3, 1); }
+
+/* ── Four signals ────────────────────────────────────────────────────────
+   Hues matched to the home tool-card accents (app/home.css .accent-*):
+   Convert H34 · Extract H164 · AI H293 · Advanced H261. */
+.toneConvert {
+  --layer-front-top: #d6634a;
+  --layer-front-bottom: #ac422a;
+  --layer-front-shadow: rgba(172, 66, 42, 0.36);
+  --layer-back-ink: #a1402a;
+  --layer-dark-front-top: #ec836b;
+  --layer-dark-front-bottom: #c75a42;
+  --layer-dark-front-shadow: rgba(199, 90, 66, 0.48);
+  --layer-dark-back-ink: #efaa9a;
+}
+
+.toneSplit,
+.toneMerge,
+.toneRotate,
+.toneCompress {
+  --layer-front-top: #10b981;
+  --layer-front-bottom: #047857;
+  --layer-front-shadow: rgba(4, 120, 87, 0.36);
+  --layer-back-ink: #064e3b;
+  --layer-dark-front-top: #34d399;
+  --layer-dark-front-bottom: #059669;
+  --layer-dark-front-shadow: rgba(5, 150, 105, 0.48);
+  --layer-dark-back-ink: #6ee7b7;
+}
+
+.toneExtract {
+  --layer-front-top: #00a672;
+  --layer-front-bottom: #008152;
+  --layer-front-shadow: rgba(0, 129, 82, 0.36);
+  --layer-back-ink: #007a4e;
+  --layer-dark-front-top: #3abf8e;
+  --layer-dark-front-bottom: #009a68;
+  --layer-dark-front-shadow: rgba(0, 154, 104, 0.48);
+  --layer-dark-back-ink: #89cfaf;
+}
+
+.toneAi {
+  --layer-front-top: #8f76dc;
+  --layer-front-bottom: #6e54b3;
+  --layer-front-shadow: rgba(110, 84, 179, 0.36);
+  --layer-back-ink: #6851a8;
+  --layer-dark-front-top: #a893f1;
+  --layer-dark-front-bottom: #856cce;
+  --layer-dark-front-shadow: rgba(133, 108, 206, 0.48);
+  --layer-dark-back-ink: #bfb4f0;
+}
+
+.toneAdvanced {
+  --layer-front-top: #5488e4;
+  --layer-front-bottom: #3565bb;
+  --layer-front-shadow: rgba(53, 101, 187, 0.36);
+  --layer-back-ink: #3460af;
+  --layer-dark-front-top: #73a4f9;
+  --layer-dark-front-bottom: #4c7ed6;
+  --layer-dark-front-shadow: rgba(76, 126, 214, 0.48);
+  --layer-dark-back-ink: #9fbff5;
+}
+
+/* FASTA Tools — the one variant whose rear tile is coloured, on purpose.
+   The tool is a double helix: two strands read as a pair, so the mark pairs
+   two tints instead of a colour tile on a grey sheet. The rear tile is the
+   "reading strand" in cyan; the front tile keeps the Advanced indigo that the
+   home card's --tool-accent already uses, so the card still shows one accent
+   family rather than two competing hues. Light keeps the rear a pale glass so
+   it never out-shouts the front; dark drops it to a deep cyan-graphite. The
+   glyph ink is the complementary cyan at each theme's contrast step. */
+.toneFasta {
+  --layer-front-top: #5b7fe0;
+  --layer-front-bottom: #3a5ac4;
+  --layer-front-shadow: rgba(58, 90, 196, 0.4);
+  --layer-back-ink: #2f7fa0;
+  --layer-back-top: #eafaff;
+  --layer-back-bottom: #d3eefc;
+  --layer-dark-front-top: #6f9bf5;
+  --layer-dark-front-bottom: #4a6fd6;
+  --layer-dark-front-shadow: rgba(74, 111, 214, 0.5);
+  --layer-dark-back-ink: #6fd0e6;
+}
+
+.toneFasta .back {
+  background: linear-gradient(150deg, var(--layer-back-top), var(--layer-back-bottom));
+  border-color: rgba(47, 127, 160, 0.18);
+  box-shadow:
+    0 7px 15px -9px rgba(47, 127, 160, 0.28),
+    0 1px 2px rgba(23, 33, 29, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+:global(html[data-theme="dark"]) .toneFasta .back {
+  color: var(--layer-dark-back-ink);
+  background: linear-gradient(150deg, #17313f, #0d1b25);
+  border-color: rgba(111, 208, 230, 0.2);
+  box-shadow:
+    0 9px 17px -10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Word to PDF — the second paired-tile variant, and the pairing is literal:
+   the two formats own two colours (Word azure #2b579a, PDF coral), so the mark
+   reads as the transformation itself — a blue document becoming a coral PDF —
+   instead of a coral tile on a grey sheet. The front keeps the Convert coral
+   the home card's --tool-accent already carries, so the card still leads with
+   one accent; the rear is the source's own azure. Light keeps the rear a pale
+   azure glass so the front stays dominant; dark drops it to an azure-graphite
+   and lifts the glyph ink to hold contrast. */
+.toneWord {
+  --layer-front-top: #d6634a;
+  --layer-front-bottom: #ac422a;
+  --layer-front-shadow: rgba(172, 66, 42, 0.36);
+  --layer-back-ink: #2b579a;
+  --layer-back-top: #e9f2ff;
+  --layer-back-bottom: #d3e3fb;
+  --layer-back-shadow: rgba(43, 87, 154, 0.26);
+  --layer-dark-front-top: #ec836b;
+  --layer-dark-front-bottom: #c75a42;
+  --layer-dark-front-shadow: rgba(199, 90, 66, 0.48);
+  --layer-dark-back-ink: #7fb0f0;
+}
+
+.toneWord .back {
+  background: linear-gradient(150deg, var(--layer-back-top), var(--layer-back-bottom));
+  border-color: rgba(43, 87, 154, 0.18);
+  box-shadow:
+    0 7px 15px -9px var(--layer-back-shadow),
+    0 1px 2px rgba(23, 33, 29, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+:global(html[data-theme="dark"]) .toneWord .back {
+  color: var(--layer-dark-back-ink);
+  background: linear-gradient(150deg, #17243d, #0d1524);
+  border-color: rgba(127, 176, 240, 0.2);
+  box-shadow:
+    0 9px 17px -10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Rear tile goes to deep neutral graphite on the dark canvas; the hue stays in
+   the glyph ink so it never washes into a muddy tint. The front tile lifts to a
+   luminous step of the same hue, which is what keeps it clean on a dark card. */
+:global(html[data-theme="dark"]) .back {
+  color: var(--layer-dark-back-ink);
+  background: linear-gradient(145deg, #262b30, #151a1f);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 9px 17px -10px rgba(0, 0, 0, 0.68),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+:global(html[data-theme='dark']) .toneSplit .back,
+:global(html[data-theme='dark']) .toneMerge .back,
+:global(html[data-theme='dark']) .toneRotate .back,
+:global(html[data-theme='dark']) .toneCompress .back {
+  color: #6ee7b7;
+  background: linear-gradient(145deg, #334155, #1e293b);
+}
+
+:global(html[data-theme="dark"]) .front {
+  background: linear-gradient(135deg, var(--layer-dark-front-top), var(--layer-dark-front-bottom));
+  box-shadow:
+    0 10px 20px -9px var(--layer-dark-front-shadow),
+    0 2px 5px -3px rgba(0, 0, 0, 0.42),
+    inset 0 1px 1px rgba(255, 255, 255, 0.28);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .group:hover .back,
+  :global(.home-tool-card:hover) .group .back,
+  :global(.aurora-card:hover) .group .back {
+    transform: translate3d(-3px, -3px, -16px) rotate(-3deg);
+  }
+
+  .group:hover .front,
+  :global(.home-tool-card:hover) .group .front,
+  :global(.aurora-card:hover) .group .front {
+    transform: translate3d(3px, 3px, 16px) rotate(3deg);
+  }
+
+  /* Only Mr. Markdown renders a chaplin hat, so this targets the glyph itself
+     rather than a tone class (its tone is now shared with the other Convert tools). */
+  .group:hover .chaplinHat,
+  :global(.home-tool-card:hover) .chaplinHat,
+  :global(.aurora-card:hover) .chaplinHat {
+    transform: translateY(-2px) rotate(-22deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .chaplinHat { transition-duration: 0.01ms; }
+}

@@ -1,0 +1,990 @@
+/* =====================================================================
+   08 — ENTRY THRESHOLD
+   The "Document workspace" start screen: editorial masthead, continuation
+   rail, fresh-page door. Scoped to .mr-markdown-upload so the editor
+   workspace reached via "Blank Markdown" is untouched — that class exists
+   only on the upload view root.
+   Loaded LAST by premium.css; the numeric @import order is load-bearing
+   (see premium.css), and this partial intentionally overrides the upload
+   skin in 04 for the elements it restyles.
+   Fonts: JetBrains Mono + Noto Sans Bengali arrive via next/font in
+   app/(tools)/mr-markdown/page.tsx. They are consumed ONLY by the
+   token overrides below; the workspace keeps its existing mono
+   resolution on purpose.
+   ===================================================================== */
+
+/* ── Entry-scope tokens ─────────────────────────────────────────────── */
+.pm-root.mr-markdown-upload {
+  --pm-font-mono: var(--font-jetbrains-mono, 'JetBrains Mono'), 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  --pm-font-bengali: var(--font-noto-bengali, 'Noto Sans Bengali'), 'Noto Sans Bengali', 'Noto Sans', sans-serif;
+  /* Section rhythm: every direct child of the shell separates by one gap.
+     04 zeroes .pm-root's flex gap for this view, and the legacy per-section
+     margins (history 24 / footer 32 / hero 52) disagreed with each other —
+     the "sections touching" bug. One mechanism replaces all of them. */
+  --pm-section-gap: 56px;
+  /* Ink does the work, the mark (teal) annotates. The entry CTA is
+     ink-on-paper; teal stays reserved for selection, focus and emphasis. */
+  --pm-entry-ink: #1c211f;
+  --pm-entry-ink-hover: #2b3330;
+  --pm-entry-paper: #fbfaf7;
+  /* The teal skin re-points --pm-border-focus but not this shadow variant,
+     so .pm-focus elements (mode cards) showed a violet ring on a teal
+     surface. One ring colour per skin — teal here. */
+  --pm-sh-ring-focus: 0 0 0 3px color-mix(in srgb, var(--pm-brand-500) 30%, transparent);
+}
+
+/* Section rhythm: applies in both shell states — start view (masthead,
+   threshold, options, history, footer) and queue view (queue card,
+   options, history, footer). Per-section margins are zeroed so this is
+   the single source of vertical spacing between sections. */
+.pm-root.mr-markdown-upload .pm-shell > * + * {
+  margin-top: var(--pm-section-gap);
+}
+.pm-root.mr-markdown-upload .pm-history-panel { margin-top: 0; }
+.pm-root.mr-markdown-upload .pm-footer { margin-top: 0; }
+
+[data-theme='dark'] .pm-root.mr-markdown-upload {
+  --pm-entry-ink: #eff5f3;
+  --pm-entry-ink-hover: #dcebe8;
+  --pm-entry-paper: #1b2321;
+}
+
+/* ── Masthead ───────────────────────────────────────────────────────── */
+.pm-root.mr-markdown-upload .pm-studio-hero {
+  align-items: start;
+  gap: 56px;
+  margin-bottom: 0; /* spacing to the next section comes from --pm-section-gap */
+}
+.pm-root.mr-markdown-upload .pm-studio-eyebrow {
+  margin-bottom: 22px;
+  font-size: 10.5px;
+}
+.pm-root.mr-markdown-upload .pm-studio-hero h1 {
+  font: 700 clamp(34px, 4.2vw, 56px)/1.06 var(--pm-font-display);
+  letter-spacing: -0.035em;
+}
+.pm-root.mr-markdown-upload .pm-studio-hero-copy > p {
+  max-width: 560px;
+  margin-top: 22px;
+}
+.pm-entry-bangla {
+  max-width: 560px;
+  margin: 14px 0 0;
+  color: var(--pm-text-secondary);
+  font: 400 16px/1.9 var(--pm-font-bengali);
+}
+.pm-root.mr-markdown-upload .pm-studio-workspace small {
+  font-size: 9.5px;
+}
+
+/* Signature moment: the masthead arrives as raw Markdown syntax and
+   resolves. The `**` marks flank the line in mono teal, hold while the
+   words land with a staggered reveal, then slide out — and the accent
+   phrase settles into the mark colour. Plays once, ~1.1s total. */
+.pm-md-mark {
+  display: inline-block;
+  position: relative;
+  top: -0.6em;
+  margin: 0;
+  color: var(--pm-brand-500);
+  font: 600 0.42em var(--pm-font-mono);
+  letter-spacing: 0;
+  opacity: 0;
+  animation-duration: 980ms;
+  animation-timing-function: var(--pm-ease-out);
+  animation-fill-mode: both;
+}
+.pm-md-mark-left  { margin-right: 0.35em; animation-name: pm-md-mark-left; }
+.pm-md-mark-right { margin-left: 0.35em;  animation-name: pm-md-mark-right; }
+@keyframes pm-md-mark-left {
+  0%   { opacity: 0; transform: translateX(0.5em); }
+  14%  { opacity: 1; transform: translateX(0); }
+  52%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-0.8em); }
+}
+@keyframes pm-md-mark-right {
+  0%   { opacity: 0; transform: translateX(-0.5em); }
+  14%  { opacity: 1; transform: translateX(0); }
+  52%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(0.8em); }
+}
+.pm-entry-word {
+  display: inline-block;
+  animation: pm-entry-word-in 420ms var(--pm-ease-out) both;
+}
+@keyframes pm-entry-word-in {
+  from { opacity: 0; transform: translateY(0.32em); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pm-entry-headline em {
+  animation: pm-em-resolve 620ms var(--pm-ease-out) 520ms both;
+}
+@keyframes pm-em-resolve {
+  from { color: var(--pm-text-primary); }
+  to   { color: var(--pm-brand-500); }
+}
+
+/* Ink CTA — the page-level primary. The converter's own teal actions are
+   deliberately untouched (file-selection component stays as-is). */
+.pm-root.mr-markdown-upload .pm-entry-cta {
+  background: var(--pm-entry-ink);
+  border-color: var(--pm-entry-ink);
+  color: var(--pm-entry-paper);
+  box-shadow: var(--pm-sh-sm);
+}
+.pm-root.mr-markdown-upload .pm-entry-cta:hover:not(:disabled) {
+  background: var(--pm-entry-ink-hover);
+  border-color: var(--pm-entry-ink-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--pm-sh-md);
+}
+.pm-root.mr-markdown-upload .pm-entry-cta:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pm-brand-500) 30%, transparent);
+}
+
+/* Keyboard-first hints replace the old trust-badge row. */
+.pm-root.mr-markdown-upload .pm-entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 22px;
+  margin-top: 26px;
+  color: var(--pm-text-muted);
+  font: 500 11px var(--pm-font-sans);
+}
+.pm-root.mr-markdown-upload .pm-entry-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* ── Continuation rail (replaces the fake usage card) ───────────────── */
+.pm-root.mr-markdown-upload .pm-continuation {
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+  border: 1px solid var(--pm-border-strong);
+  border-radius: 20px;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--pm-bg-surface) 92%, transparent), color-mix(in srgb, var(--pm-bg-inset) 78%, transparent));
+  box-shadow: var(--pm-sh-sm);
+}
+.pm-continuation-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.pm-continuation-head > span {
+  color: var(--pm-text-muted);
+  font: 600 10px var(--pm-font-mono);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.pm-continuation-head > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  padding: 3px 8px 3px 10px;
+  margin: -3px -8px -3px 0;
+  border-radius: 999px;
+  color: var(--pm-brand-500);
+  font: 600 10.5px var(--pm-font-sans);
+  cursor: pointer;
+  transition: background var(--pm-dur-fast) var(--pm-ease-out),
+              color var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-continuation-head > button:hover {
+  background: color-mix(in srgb, var(--pm-brand-500) 11%, transparent);
+}
+.pm-continuation-head > button:focus-visible { outline: 2px solid var(--pm-border-focus); outline-offset: 2px; }
+.pm-continuation-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--pm-brand-500) 15%, transparent);
+  font: 700 9.5px var(--pm-font-mono);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.pm-continuation-chevron {
+  display: inline-flex;
+  transition: transform var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-continuation-toggle.is-open .pm-continuation-chevron { transform: rotate(180deg); }
+
+.pm-continuation-list { display: flex; flex-direction: column; }
+.pm-continuation-list.is-expanded {
+  max-height: min(46vh, 360px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 5px;
+  margin-right: -5px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pm-border-strong) transparent;
+}
+.pm-continuation-list.is-expanded::-webkit-scrollbar { width: 6px; }
+.pm-continuation-list.is-expanded::-webkit-scrollbar-track { background: transparent; }
+.pm-continuation-list.is-expanded::-webkit-scrollbar-thumb {
+  background: var(--pm-border-strong);
+  border-radius: 999px;
+}
+.pm-continuation-list.is-expanded::-webkit-scrollbar-thumb:hover { background: var(--pm-text-subtle); }
+
+.pm-continuation-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--pm-border-subtle);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-continuation-item:last-child,
+.pm-continuation-item.is-last { border-bottom: 0; }
+.pm-continuation-item:hover { transform: translateX(2px); }
+.pm-continuation-item:focus-visible {
+  outline: 2px solid var(--pm-border-focus);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+@keyframes pmContinuationEnter {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pm-continuation-item.is-extra { animation: pmContinuationEnter 380ms var(--pm-ease-out) both; }
+.pm-continuation-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  border: 1px solid var(--pm-border-base);
+  border-radius: 9px;
+  background: var(--pm-bg-inset);
+  color: var(--pm-brand-500);
+}
+.pm-continuation-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pm-continuation-body strong {
+  color: var(--pm-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pm-continuation-body small {
+  color: var(--pm-text-muted);
+  font: 500 10.5px var(--pm-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.pm-continuation-tail {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  min-width: 42px;
+  height: 20px;
+}
+.pm-continuation-time {
+  grid-area: 1 / 1;
+  color: var(--pm-text-subtle);
+  font: 500 10px var(--pm-font-mono);
+  transition: opacity var(--pm-dur-fast) var(--pm-ease-out),
+              transform var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-continuation-go {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  color: var(--pm-brand-500);
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity var(--pm-dur-fast) var(--pm-ease-out),
+              transform var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-continuation-item:hover .pm-continuation-time,
+.pm-continuation-item:focus-visible .pm-continuation-time { opacity: 0; transform: translateX(5px); }
+.pm-continuation-item:hover .pm-continuation-go,
+.pm-continuation-item:focus-visible .pm-continuation-go { opacity: 1; transform: translateX(0); }
+.pm-continuation-empty {
+  padding: 26px 4px 12px;
+  color: var(--pm-text-subtle);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+/* ── Threshold grid + fresh-page door ───────────────────────────────── */
+.pm-root.mr-markdown-upload .pm-new-document-grid {
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+}
+.pm-root.mr-markdown-upload .pm-start-panel {
+  padding: 24px;
+  border-radius: 20px;
+  border-color: var(--pm-border-base);
+  background: linear-gradient(168deg, color-mix(in srgb, var(--pm-bg-surface) 94%, transparent), color-mix(in srgb, var(--pm-bg-inset) 82%, transparent));
+  box-shadow: var(--pm-sh-sm);
+}
+.pm-root.mr-markdown-upload .pm-start-panel-eyebrow {
+  margin-bottom: 12px;
+  font-size: 10px;
+}
+/* The panel head is the fork stated plainly: one specific line, no
+   explanatory filler — the two affordances below already say what they do,
+   and the third privacy reassurance on this screen was pure noise. */
+.pm-root.mr-markdown-upload .pm-start-panel h2 {
+  margin: 0 0 18px;
+  font-size: 21px;
+}
+
+/* The fresh-page door: a paper card with one teal rule, instead of a
+   second solid-teal button competing with the converter. */
+.pm-root.mr-markdown-upload .pm-start-choice {
+  position: relative;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid var(--pm-border-strong);
+  border-radius: 14px;
+  background: var(--pm-entry-paper);
+  color: var(--pm-text-primary);
+  overflow: hidden;
+  transition: transform var(--pm-dur-base) var(--pm-ease-out),
+              border-color var(--pm-dur-base) var(--pm-ease-out),
+              box-shadow var(--pm-dur-base) var(--pm-ease-out),
+              background var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-start-choice::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 99px;
+  background: var(--pm-brand-500);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-start-choice:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--pm-brand-500) 42%, var(--pm-border-strong));
+  background: var(--pm-entry-paper);
+  box-shadow: var(--pm-sh-md);
+}
+.pm-root.mr-markdown-upload .pm-start-choice:hover::before { transform: scaleY(1); }
+.pm-root.mr-markdown-upload .pm-start-choice:active { transform: translateY(0) scale(0.99); }
+.pm-root.mr-markdown-upload .pm-start-choice:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pm-brand-500) 30%, transparent);
+}
+
+/* Abstract "document beginning" glyph: a miniature .md page — ghost
+   hairlines with one teal headline rule. */
+.pm-fresh-glyph {
+  width: 38px;
+  height: 46px;
+  flex: 0 0 38px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 8px;
+  border: 1px solid var(--pm-border-strong);
+  border-radius: 8px;
+  background: var(--pm-bg-surface);
+  box-shadow: var(--pm-sh-sm);
+}
+.pm-fresh-glyph i {
+  height: 2px;
+  border-radius: 2px;
+  background: var(--pm-border-strong);
+}
+.pm-fresh-glyph i:first-child {
+  height: 3px;
+  width: 62%;
+  background: var(--pm-brand-500);
+}
+.pm-fresh-glyph i:nth-child(2) { width: 100%; }
+.pm-fresh-glyph i:nth-child(3) { width: 78%; }
+
+.pm-root.mr-markdown-upload .pm-start-choice strong {
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+.pm-root.mr-markdown-upload .pm-start-choice small {
+  font-size: 11px;
+  opacity: 0.78;
+}
+.pm-root.mr-markdown-upload .pm-start-choice-tail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pm-text-subtle);
+}
+.pm-root.mr-markdown-upload .pm-start-choice-tail svg {
+  color: var(--pm-text-subtle);
+  transition: transform var(--pm-dur-fast) var(--pm-ease-out), color var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-start-choice:hover .pm-start-choice-tail svg {
+  color: var(--pm-brand-500);
+  transform: translateX(2px);
+}
+
+/* Presets: a settings ledger, not tag pills. Each row states the preset's
+   real bundle — engraved line icon, name, and the mode/language it applies
+   in mono on the right — so the panel tells the truth about what a preset
+   does. Rows share the continuation rail's hairline language and the
+   fresh-page door's teal active rule, so the whole screen reads as one
+   instrument. */
+.pm-root.mr-markdown-upload .pm-start-panel .pm-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+}
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--pm-border-subtle);
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-text-secondary);
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--pm-dur-fast) var(--pm-ease-out),
+              transform var(--pm-dur-base) var(--pm-ease-out),
+              background var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset:last-child {
+  border-bottom: 0;
+}
+/* The teal rule marks the chosen entry — the same device as the fresh-page
+   door: previewed on hover, held on the active preset. */
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  bottom: 9px;
+  width: 2px;
+  border-radius: 99px;
+  background: var(--pm-brand-500);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset:hover {
+  color: var(--pm-text-primary);
+  transform: translateX(2px);
+}
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset:hover::before,
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset.pm-preset-active::before {
+  transform: scaleY(1);
+}
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset.pm-preset-active {
+  color: var(--pm-text-primary);
+  background: color-mix(in srgb, var(--pm-brand-500) 6%, transparent);
+  box-shadow: none;
+}
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset:active {
+  transform: translateX(2px) scale(0.99);
+}
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset:focus-visible {
+  outline: none;
+  border-radius: 8px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pm-brand-500) 30%, transparent);
+}
+.pm-root.mr-markdown-upload .pm-preset-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--pm-border-base);
+  border-radius: 8px;
+  background: var(--pm-bg-inset);
+  color: var(--pm-text-muted);
+  transition: color var(--pm-dur-fast) var(--pm-ease-out),
+              border-color var(--pm-dur-fast) var(--pm-ease-out),
+              background var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset:hover .pm-preset-icon {
+  color: var(--pm-text-secondary);
+}
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset.pm-preset-active .pm-preset-icon {
+  border-color: color-mix(in srgb, var(--pm-brand-500) 55%, transparent);
+  background: color-mix(in srgb, var(--pm-brand-500) 12%, var(--pm-bg-inset));
+  color: var(--pm-brand-500);
+}
+.pm-root.mr-markdown-upload .pm-preset-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.pm-root.mr-markdown-upload .pm-preset-effect {
+  color: var(--pm-text-muted);
+  font: 500 9.5px var(--pm-font-mono);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition: color var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-start-panel .pm-preset.pm-preset-active .pm-preset-effect {
+  color: var(--pm-brand-500);
+}
+/* Colophon: the panel's own truth, not a third privacy claim — the import
+   card head and the footer already carry that assurance. */
+.pm-root.mr-markdown-upload .pm-start-panel-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 18px;
+  color: var(--pm-text-muted);
+  font: 400 10.5px/1.55 var(--pm-font-sans);
+}
+.pm-root.mr-markdown-upload .pm-start-panel-note svg {
+  flex: 0 0 auto;
+  color: var(--pm-text-subtle);
+}
+
+/* ── Scroll-point emphasis: one pulse on the converter frame ────────── */
+@keyframes pm-frame-pulse {
+  0%   { box-shadow: var(--pm-sh-lg), 0 0 0 0 color-mix(in srgb, var(--pm-brand-500) 22%, transparent); }
+  40%  { box-shadow: var(--pm-sh-lg), 0 0 0 8px color-mix(in srgb, var(--pm-brand-500) 16%, transparent); }
+  100% { box-shadow: var(--pm-sh-lg), 0 0 0 8px transparent; }
+}
+.pm-root.mr-markdown-upload .pm-converter-pulse > .pm-hero {
+  animation: pm-frame-pulse 950ms var(--pm-ease-out) 1;
+}
+
+/* ── Converter card — head ──────────────────────────────────────────── */
+/* One inset discipline for the whole card: head padding, dropzone margin
+   and capability padding all align to the same 20px rail. */
+.pm-root.mr-markdown-upload .pm-converter-head {
+  padding: 22px 20px 18px;
+}
+.pm-root.mr-markdown-upload .pm-converter-head span.pm-converter-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pm-brand-500);
+  font: 600 10px var(--pm-font-mono);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.pm-root.mr-markdown-upload .pm-converter-head span.pm-converter-eyebrow::before {
+  content: "";
+  width: 18px;
+  height: 1px;
+  background: currentColor;
+}
+.pm-root.mr-markdown-upload .pm-converter-head h2 {
+  margin: 10px 0 0;
+  font: 650 17px/1.2 var(--pm-font-sans);
+  letter-spacing: -0.03em;
+}
+.pm-root.mr-markdown-upload .pm-converter-head p {
+  margin: 5px 0 0;
+  color: var(--pm-text-muted);
+  font-size: 12px;
+}
+.pm-root.mr-markdown-upload .pm-converter-head strong.pm-converter-privacy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--pm-border-base);
+  border-radius: 8px;
+  color: var(--pm-text-muted);
+  font: 500 10px var(--pm-font-mono);
+  letter-spacing: 0.02em;
+}
+
+/* ── Converter card — dropzone with focus-lock brackets ─────────────── */
+/* Solid hairline + viewfinder brackets replace the generic dashed
+   placeholder. The dropzone contract (getRootProps / input / open) is
+   untouched; brackets are decorative spans with pointer-events none. */
+.pm-root.mr-markdown-upload .pm-dropzone {
+  border: 1px solid var(--pm-border-base);
+}
+.pm-root.mr-markdown-upload .pm-dropzone:not(.pm-dropzone-compact) {
+  position: relative;
+  min-height: 300px;
+  margin: 18px 20px;
+  padding: 36px 30px;
+  border-radius: 14px;
+  border-color: var(--pm-border-base);
+  background: radial-gradient(circle at 50% 0%, var(--pm-bg-active), transparent 16rem), var(--pm-bg-inset);
+  transition: border-color var(--pm-dur-base) var(--pm-ease-out),
+              background var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-dropzone:not(.pm-dropzone-compact):hover {
+  border-color: color-mix(in srgb, var(--pm-brand-500) 36%, var(--pm-border-base));
+}
+.pm-root.mr-markdown-upload .pm-dropzone:not(.pm-dropzone-compact).pm-dropzone-active {
+  border-color: var(--pm-brand-500);
+  background: color-mix(in srgb, var(--pm-brand-500) 5%, var(--pm-bg-inset));
+  animation: none; /* replaces 01's violet pm-glow loop */
+  transform: none;
+}
+
+/* Focus-lock viewfinder corners were removed in 09: the dropzone is framed
+   as a Markdown source surface (frontmatter head, gutter, syntax line),
+   not a camera viewfinder. */
+
+.pm-root.mr-markdown-upload .pm-drop-title {
+  font: 650 16.5px/1.3 var(--pm-font-sans);
+  letter-spacing: -0.02em;
+}
+.pm-root.mr-markdown-upload .pm-drop-sub {
+  max-width: 420px;
+  margin: 0 auto 20px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.pm-root.mr-markdown-upload .pm-drop-actions {
+  flex-direction: column;
+  gap: 12px;
+}
+.pm-root.mr-markdown-upload .pm-drop-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+/* The spec plate and the four generic feature tiles were removed in 09:
+   their meaning now lives in the Markdown-token capability ledger, which
+   09 styles. */
+
+/* ── Options panel ──────────────────────────────────────────────────── */
+/* Section-head voice applies to the queue and history heads on this page
+   too — one voice, typographic only, layout untouched. */
+.pm-root.mr-markdown-upload .pm-section-head {
+  padding: 15px 18px;
+}
+.pm-root.mr-markdown-upload .pm-section-title {
+  font: 650 12.5px/1 var(--pm-font-sans);
+  letter-spacing: -0.02em;
+}
+.pm-root.mr-markdown-upload .pm-section-title svg {
+  color: var(--pm-brand-500);
+}
+.pm-root.mr-markdown-upload .pm-panel-body {
+  padding: 18px;
+  gap: 14px;
+}
+
+/* Mode picker: one calibration channel, not three boxes. The three
+   strategies are mutually exclusive, so they read as positions on a single
+   hairline-divided track; the selected one carries the same teal rule as the
+   Quick-start ledger, so "this is the active setting" reads identically
+   everywhere on the screen. The floating corner check is gone with it. */
+.pm-root.mr-markdown-upload .pm-mode-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid var(--pm-border-base);
+  border-radius: var(--pm-r-md);
+  background: var(--pm-bg-inset);
+  overflow: hidden;
+}
+.pm-root.mr-markdown-upload .pm-mode-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 0;
+  padding: 13px 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  transition: background var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-mode-card + .pm-mode-card {
+  border-left: 1px solid var(--pm-border-subtle);
+}
+.pm-root.mr-markdown-upload .pm-mode-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--pm-brand-500);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--pm-dur-base) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-mode-card:hover {
+  border-color: transparent;
+  background: var(--pm-bg-hover);
+  transform: none;
+}
+.pm-root.mr-markdown-upload .pm-mode-card.pm-mode-active {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--pm-brand-500) 7%, transparent);
+  box-shadow: none;
+}
+.pm-root.mr-markdown-upload .pm-mode-card.pm-mode-active::before {
+  transform: scaleX(1);
+}
+.pm-root.mr-markdown-upload .pm-mode-icon {
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-text-muted);
+  transition: color var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-mode-card.pm-mode-active .pm-mode-icon {
+  background: none;
+  border-color: transparent;
+  color: var(--pm-brand-500);
+}
+.pm-root.mr-markdown-upload .pm-mode-name {
+  color: var(--pm-text-secondary);
+  font: 650 12px var(--pm-font-sans);
+  letter-spacing: -0.01em;
+  transition: color var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-mode-card.pm-mode-active .pm-mode-name {
+  color: var(--pm-text-primary);
+}
+.pm-root.mr-markdown-upload .pm-mode-sub {
+  color: var(--pm-text-muted);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+/* Bangla + language switches: one group, hairline-divided — a switch is a
+   setting row, not a boxed card. */
+.pm-root.mr-markdown-upload .pm-switch-group {
+  border: 1px solid var(--pm-border-base);
+  border-radius: var(--pm-r-md);
+  background: var(--pm-bg-inset);
+  overflow: hidden;
+}
+.pm-root.mr-markdown-upload .pm-switch-group .pm-toggle-row {
+  padding: 13px 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.pm-root.mr-markdown-upload .pm-switch-group .pm-toggle-row + .pm-toggle-row {
+  border-top: 1px solid var(--pm-border-subtle);
+}
+.pm-root.mr-markdown-upload .pm-switch-group .pm-toggle-label svg {
+  color: var(--pm-text-muted);
+}
+.pm-root.mr-markdown-upload .pm-toggle-name {
+  color: var(--pm-text-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.pm-root.mr-markdown-upload .pm-toggle-sub {
+  margin-top: 2px;
+  color: var(--pm-text-muted);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+/* Labeled fields */
+.pm-root.mr-markdown-upload .pm-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pm-root.mr-markdown-upload .pm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.pm-root.mr-markdown-upload .pm-field-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--pm-text-secondary);
+  font: 600 11px var(--pm-font-sans);
+  letter-spacing: -0.005em;
+}
+.pm-root.mr-markdown-upload .pm-field-label svg {
+  color: var(--pm-text-muted);
+}
+.pm-root.mr-markdown-upload .pm-field .pm-input,
+.pm-root.mr-markdown-upload .pm-field .pm-select {
+  font-family: var(--pm-font-mono);
+  font-size: 12px;
+}
+
+/* Note: quiet colophon instead of a blue info box */
+.pm-root.mr-markdown-upload .pm-note {
+  padding: 12px 2px 0;
+  border: 0;
+  border-top: 1px solid var(--pm-border-base);
+  border-radius: 0;
+  background: none;
+  color: var(--pm-text-muted);
+  font: 400 10.5px/1.65 var(--pm-font-sans);
+}
+.pm-root.mr-markdown-upload .pm-note svg {
+  color: var(--pm-text-muted);
+}
+.pm-root.mr-markdown-upload .pm-note strong {
+  color: var(--pm-text-secondary);
+  font-weight: 600;
+}
+
+/* ── Footer — colophon ──────────────────────────────────────────────── */
+/* The maker's mark: trust, identity and help in one quiet strip. Each
+   action now carries its real shortcut chip, so the help text is not just
+   a label — it names the key that fires it. */
+.pm-root.mr-markdown-upload .pm-footer-main {
+  padding: 17px 20px;
+  gap: 20px;
+}
+.pm-root.mr-markdown-upload .pm-footer-assurance-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border: 1px solid var(--pm-border-base);
+  border-radius: 9px;
+  background: var(--pm-bg-inset);
+  color: var(--pm-text-muted);
+}
+.pm-root.mr-markdown-upload .pm-footer-assurance strong {
+  font-size: 11.5px;
+  letter-spacing: -0.01em;
+}
+.pm-root.mr-markdown-upload .pm-footer-assurance small {
+  color: var(--pm-text-muted);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+.pm-root.mr-markdown-upload .pm-footer-action {
+  gap: 8px;
+  font: 600 10.5px var(--pm-font-sans);
+  transition: border-color var(--pm-dur-fast) var(--pm-ease-out),
+              background var(--pm-dur-fast) var(--pm-ease-out),
+              color var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-footer-action .pm-kbd {
+  padding: 1px 5px;
+  background: var(--pm-bg-inset);
+  border-bottom-width: 1px;
+  color: var(--pm-text-muted);
+  font-size: 9.5px;
+  transition: color var(--pm-dur-fast) var(--pm-ease-out),
+              border-color var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-footer-action:hover .pm-kbd,
+.pm-root.mr-markdown-upload .pm-footer-action:focus-visible .pm-kbd {
+  border-color: var(--pm-border-strong);
+  color: var(--pm-text-secondary);
+}
+.pm-root.mr-markdown-upload .pm-footer-meta {
+  font: 500 10px var(--pm-font-mono);
+}
+.pm-root.mr-markdown-upload .pm-footer-meta a {
+  transition: color var(--pm-dur-fast) var(--pm-ease-out);
+}
+.pm-root.mr-markdown-upload .pm-footer-status {
+  gap: 6px;
+  color: var(--pm-text-secondary);
+  font-family: var(--pm-font-bengali), var(--pm-font-mono);
+  font-size: 10.5px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 940px) {
+  .pm-root.mr-markdown-upload { --pm-section-gap: 48px; }
+  .pm-root.mr-markdown-upload .pm-studio-hero {
+    gap: 30px;
+  }
+  .pm-root.mr-markdown-upload .pm-continuation { max-width: 480px; }
+}
+@media (max-width: 900px) {
+  .pm-root.mr-markdown-upload .pm-new-document-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .pm-root.mr-markdown-upload { --pm-section-gap: 40px; }
+  .pm-root.mr-markdown-upload .pm-fields { grid-template-columns: 1fr; }
+  /* The mode track stacks: dividers turn horizontal, the active rule still
+     marks the chosen position. */
+  .pm-root.mr-markdown-upload .pm-mode-grid { grid-template-columns: 1fr; }
+  .pm-root.mr-markdown-upload .pm-mode-card + .pm-mode-card {
+    border-left: 0;
+    border-top: 1px solid var(--pm-border-subtle);
+  }
+  .pm-root.mr-markdown-upload .pm-dropzone:not(.pm-dropzone-compact) {
+    min-height: 280px;
+    margin: 14px;
+    padding: 28px 16px;
+  }
+}
+@media (max-width: 560px) {
+  .pm-root.mr-markdown-upload { --pm-section-gap: 32px; }
+  .pm-root.mr-markdown-upload .pm-studio-hero h1 { font-size: clamp(30px, 8.6vw, 38px); }
+  .pm-root.mr-markdown-upload .pm-entry-meta { gap: 8px 16px; }
+  .pm-root.mr-markdown-upload .pm-new-document-grid { gap: 18px; }
+}
+
+/* ── Reduced motion: static rendered state, no choreography ─────────── */
+@media (prefers-reduced-motion: reduce) {
+  .pm-entry-word,
+  .pm-entry-headline em { animation: none; }
+  .pm-md-mark { animation: none; opacity: 0; }
+  .pm-root.mr-markdown-upload .pm-converter-pulse > .pm-hero { animation: none; }
+  .pm-root.mr-markdown-upload .pm-start-panel.pm-anim-in,
+  .pm-root.mr-markdown-upload .pm-continuation.pm-anim-in { animation: none; }
+  .pm-root.mr-markdown-upload .pm-start-choice,
+  .pm-root.mr-markdown-upload .pm-start-choice::before,
+  .pm-root.mr-markdown-upload .pm-start-choice-tail svg,
+  .pm-continuation-item { transition: none; }
+  .pm-continuation-item.is-extra { animation: none; }
+  .pm-continuation-chevron,
+  .pm-continuation-time,
+  .pm-continuation-go { transition: none; }
+  .pm-root.mr-markdown-upload .pm-dropzone,
+  .pm-root.mr-markdown-upload .pm-mode-card,
+  .pm-root.mr-markdown-upload .pm-mode-card::before,
+  .pm-root.mr-markdown-upload .pm-start-panel .pm-preset,
+  .pm-root.mr-markdown-upload .pm-start-panel .pm-preset::before,
+  .pm-root.mr-markdown-upload .pm-preset-icon,
+  .pm-root.mr-markdown-upload .pm-preset-effect,
+  .pm-root.mr-markdown-upload .pm-footer-action,
+  .pm-root.mr-markdown-upload .pm-footer-action .pm-kbd { transition: none; }
+}

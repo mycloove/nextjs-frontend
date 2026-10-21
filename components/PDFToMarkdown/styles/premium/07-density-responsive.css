@@ -1,0 +1,954 @@
+/* ── Final compact workspace density pass ─────────────────────────────
+   Keeps interactive structure unchanged while reserving stable space for
+   navigation, export actions, preview formats, and status messaging. */
+.mr-markdown-workspace {
+  grid-template-rows: 56px minmax(0, 1fr) 32px;
+}
+.mr-markdown-workspace .pm-ws-topbar {
+  height: 56px;
+  padding: 0 14px;
+  grid-template-columns: minmax(280px, 1fr) minmax(210px, 360px) minmax(300px, 1fr);
+  gap: 14px;
+}
+.mr-markdown-workspace .mr-nav-identity {
+  min-width: 0;
+  overflow: hidden;
+  gap: 11px;
+}
+.mr-markdown-workspace .mr-brand-link,
+.mr-markdown-workspace .mr-document-title {
+  min-width: 0;
+}
+.mr-markdown-workspace .mr-brand-link {
+  gap: 8px;
+}
+.mr-markdown-workspace .pm-ws-brand-mark {
+  width: 29px;
+  height: 29px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.mr-markdown-workspace .mr-brand-name {
+  font-size: 13.5px;
+  letter-spacing: 0;
+}
+.mr-markdown-workspace .mr-studio-badge {
+  padding: 2px 5px;
+  font-size: 7.5px;
+}
+.mr-markdown-workspace .mr-nav-divider {
+  height: 24px;
+}
+.mr-markdown-workspace .mr-document-title {
+  overflow: hidden;
+  gap: 8px;
+}
+.mr-markdown-workspace .mr-document-icon {
+  width: 27px;
+  height: 27px;
+  flex-basis: 27px;
+  border-radius: 7px;
+}
+.mr-markdown-workspace .mr-document-title-button {
+  display: block;
+  max-width: 180px;
+  overflow: hidden;
+  font-size: 11.5px;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mr-markdown-workspace .mr-document-title-input {
+  width: min(180px, 100%);
+  font-size: 11.5px;
+}
+.mr-markdown-workspace .mr-document-meta {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.mr-markdown-workspace .mr-command-trigger {
+  height: 34px;
+  min-width: 0;
+  border-radius: 9px;
+  padding: 0 7px 0 10px;
+}
+.mr-markdown-workspace .mr-command-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mr-markdown-workspace .pm-ws-actions {
+  min-width: 0;
+  gap: 6px;
+}
+.mr-markdown-workspace .mr-nav-control-group {
+  height: 33px;
+  gap: 1px;
+  padding: 2px;
+}
+.mr-markdown-workspace .mr-nav-control-group .mr-icon-only {
+  width: 27px;
+  height: 27px;
+}
+.mr-markdown-workspace .mr-new-btn,
+.mr-markdown-workspace .mr-export-btn {
+  height: 33px;
+  padding: 0 11px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.mr-markdown-workspace .mr-export-menu {
+  top: calc(100% + 10px);
+  width: 264px;
+  padding: 6px;
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(26,22,18,.16), 0 3px 10px rgba(26,22,18,.06);
+  transform: translateY(-6px) scale(.985);
+}
+.mr-markdown-workspace .mr-export-menu-open {
+  transform: translateY(0) scale(1);
+}
+.mr-markdown-workspace .mr-export-menu::before {
+  top: -5px;
+  right: 24px;
+  width: 9px;
+  height: 9px;
+}
+.mr-markdown-workspace .mr-export-menu button {
+  min-height: 36px;
+  gap: 10px;
+  padding: 5px 9px;
+  border-radius: 7px;
+}
+.mr-markdown-workspace .mr-export-format {
+  width: 54px;
+  flex-basis: 54px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 9px;
+}
+.mr-markdown-workspace .mr-export-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mr-markdown-workspace .mr-export-group-start {
+  margin-top: 5px;
+  padding-top: 9px !important;
+}
+
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-item,
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-right {
+  min-width: 0;
+}
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mr-markdown-workspace .pm-export-bar-premium {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  gap: 7px;
+  background: var(--surface-muted);
+}
+.mr-markdown-workspace .pm-export-formats {
+  min-width: 0;
+  gap: 1px;
+  padding: 2px;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.mr-markdown-workspace .pm-export-format-btn {
+  height: 24px;
+  gap: 4px;
+  padding: 0 7px;
+  border-radius: 6px;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+.mr-markdown-workspace .pm-export-copy-btn {
+  height: 26px;
+  gap: 5px;
+  padding: 0 9px;
+  border-radius: 7px;
+  font-size: 10px;
+}
+
+@media (max-width: 980px) {
+  .mr-markdown-workspace .pm-ws-topbar {
+    grid-template-columns: minmax(170px, 1fr) minmax(190px, 300px) auto;
+    gap: 10px;
+  }
+}
+@media (max-width: 820px) {
+  .mr-markdown-workspace .pm-ws-topbar {
+    grid-template-columns: auto minmax(160px, 1fr) auto;
+  }
+  .mr-markdown-workspace .pm-export-format-btn {
+    padding: 0 7px;
+  }
+}
+@media (max-width: 560px) {
+  .mr-markdown-workspace {
+    grid-template-rows: 52px minmax(0, 1fr) 32px;
+  }
+  .mr-markdown-workspace .pm-ws-topbar {
+    height: 52px;
+    padding: 0 8px;
+    grid-template-columns: auto 34px minmax(0, 1fr);
+    gap: 6px;
+  }
+  .mr-markdown-workspace .mr-command-trigger {
+    width: 34px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+  .mr-markdown-workspace .mr-export-menu {
+    position: fixed;
+    top: 58px;
+    right: 8px;
+    width: min(264px, calc(100vw - 16px));
+  }
+  .mr-markdown-workspace .pm-export-bar-premium {
+    padding: 0 8px;
+    gap: 5px;
+  }
+  .mr-markdown-workspace .pm-export-copy-btn {
+    width: 28px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+/* Upload dashboard footer */
+.mr-markdown-upload .pm-footer {
+  margin-top: 32px;
+  overflow: hidden;
+  border: 1px solid var(--pm-border-base);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--pm-bg-surface) 82%, transparent);
+  box-shadow: var(--pm-sh-sm);
+}
+.mr-markdown-upload .pm-footer-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 17px 18px;
+}
+.mr-markdown-upload .pm-footer-assurance {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.mr-markdown-upload .pm-footer-assurance-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  border: 1px solid color-mix(in srgb, var(--pm-success) 28%, var(--pm-border-base));
+  border-radius: 9px;
+  background: var(--pm-success-soft);
+  color: var(--pm-success);
+}
+.mr-markdown-upload .pm-footer-assurance > span:last-child { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.mr-markdown-upload .pm-footer-assurance strong { color: var(--pm-text-primary); font-size: 11.5px; }
+.mr-markdown-upload .pm-footer-assurance small { color: var(--pm-text-muted); font-size: 9.5px; line-height: 1.4; }
+.mr-markdown-upload .pm-footer-actions { display: flex; align-items: center; gap: 6px; }
+.mr-markdown-upload .pm-footer-action {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid var(--pm-border-base);
+  border-radius: 8px;
+  background: var(--pm-bg-surface);
+  color: var(--pm-text-secondary);
+  font: 600 10px var(--pm-font-sans);
+  cursor: pointer;
+  transition: border-color var(--pm-dur-fast), background var(--pm-dur-fast), color var(--pm-dur-fast);
+}
+.mr-markdown-upload .pm-footer-action:hover { border-color: var(--pm-border-strong); background: var(--pm-bg-hover); color: var(--pm-text-primary); }
+.mr-markdown-upload .pm-footer-action:focus-visible { outline: 2px solid var(--pm-border-focus); outline-offset: 2px; }
+.mr-markdown-upload .pm-footer-meta {
+  min-height: 37px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 18px;
+  border-top: 1px solid var(--pm-border-base);
+  background: color-mix(in srgb, var(--pm-bg-inset) 72%, transparent);
+  color: var(--pm-text-muted);
+  font: 500 9px var(--pm-font-mono);
+}
+.mr-markdown-upload .pm-footer-meta > span:first-child { margin-right: auto; }
+.mr-markdown-upload .pm-footer-meta strong { color: var(--pm-text-secondary); font-weight: 600; }
+.mr-markdown-upload .pm-footer-status { display: inline-flex; align-items: center; gap: 6px; }
+.mr-markdown-upload .pm-footer-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--pm-success); box-shadow: 0 0 0 3px var(--pm-success-soft); }
+.mr-markdown-upload .pm-footer-meta a { display: inline-flex; align-items: center; gap: 5px; color: var(--pm-text-secondary); text-decoration: none; }
+.mr-markdown-upload .pm-footer-meta a:hover { color: var(--pm-brand-500); }
+
+@media (max-width: 700px) {
+  .mr-markdown-upload .pm-footer-main { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .mr-markdown-upload .pm-footer-actions { width: 100%; }
+  .mr-markdown-upload .pm-footer-action { flex: 1; justify-content: center; }
+}
+@media (max-width: 460px) {
+  .mr-markdown-upload .pm-footer-meta { flex-wrap: wrap; gap: 8px 14px; }
+  .mr-markdown-upload .pm-footer-meta > span:first-child { width: 100%; margin-right: 0; }
+}
+@media (max-width:560px) {
+  .mr-markdown-workspace .mr-focus-header { height:46px; padding:0 8px; }
+  .mr-markdown-workspace .mr-focus-view-switcher { gap:2px; padding:2px; }
+  .mr-markdown-workspace .mr-focus-view-switcher button { min-width:38px; width:38px; height:30px; padding:0; }
+  .mr-markdown-workspace .mr-focus-view-switcher button span,
+  .mr-markdown-workspace .mr-focus-icon-btn,
+  .mr-markdown-workspace .mr-focus-exit kbd { display:none; }
+  .mr-markdown-workspace .mr-focus-exit { height:32px; padding:0 10px; }
+  .mr-markdown-workspace.pm-focus-mode .pm-ws-pane-head { margin-top:0; }
+  .mr-markdown-workspace.pm-focus-mode .pm-editor-toolbar-premium { display:none; }
+  .mr-markdown-workspace.pm-focus-mode.mr-focus-write .pm-ws-pane-head,
+  .mr-markdown-workspace.pm-focus-mode.mr-focus-write .pm-editor-body { width:calc(100% - 12px); }
+  .mr-markdown-workspace.pm-focus-mode .pm-editor-gutter { min-width:46px; padding:24px 10px 64px 0; font-size:10px; line-height:24px; }
+  .mr-markdown-workspace.pm-focus-mode .pm-editor-textarea { padding:24px 18px 64px; font-size:13px; line-height:24px; }
+  .mr-markdown-workspace.pm-focus-mode .pm-editor-highlight { left:46px; padding:24px 18px 64px; font-size:13px; line-height:24px; }
+  .mr-markdown-workspace.pm-focus-mode .mr-rich-editor { padding:30px 24px 64px; font-size:14px; }
+  .mr-markdown-workspace.pm-focus-mode.mr-focus-preview .pm-preview-body { padding:10px; }
+  .mr-markdown-workspace.pm-focus-mode.mr-focus-preview .pm-preview-inner { padding:28px 23px; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .mr-markdown-workspace.pm-focus-mode .pm-ws-editor,
+  .mr-markdown-workspace.pm-focus-mode .pm-ws-preview,
+  .mr-markdown-workspace .mr-focus-exit,
+  .mr-markdown-workspace .mr-focus-status.is-editing i { animation:none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ENTERPRISE TOOL RAIL — final interaction and density pass
+   ═══════════════════════════════════════════════════════════════════════ */
+.mr-markdown-workspace .mr-premium-toolrail {
+  isolation:isolate;
+  padding-top:12px;
+  border-right-color:color-mix(in srgb,var(--line-strong) 76%,transparent);
+}
+.mr-markdown-workspace .mr-premium-rail-group { gap:3px; }
+.mr-markdown-workspace .mr-premium-rail-btn {
+  width:40px;
+  height:40px;
+  border-radius:11px;
+  cursor:pointer;
+}
+.mr-markdown-workspace .mr-premium-rail-btn::after {
+  content:"";
+  position:absolute;
+  inset:4px;
+  border-radius:8px;
+  pointer-events:none;
+  box-shadow:inset 0 1px color-mix(in srgb,var(--surface) 25%,transparent);
+  opacity:0;
+  transition:opacity .16s ease;
+}
+.mr-markdown-workspace .mr-premium-rail-btn:hover::after,
+.mr-markdown-workspace .mr-premium-rail-btn.is-active::after { opacity:1; }
+.mr-markdown-workspace .mr-premium-rail-btn:disabled {
+  cursor:not-allowed;
+  opacity:.5;
+  transform:none;
+  box-shadow:none;
+}
+.mr-markdown-workspace .mr-premium-rail-btn.is-active::before {
+  left:-10px;
+  height:24px;
+}
+.mr-markdown-workspace .mr-premium-rail-badge {
+  top:-2px;
+  right:-6px;
+  max-width:34px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-variant-numeric:tabular-nums;
+}
+.mr-markdown-workspace .mr-premium-rail-tooltip {
+  left:calc(100% + 11px);
+  min-height:34px;
+  padding:7px 9px 7px 11px;
+  border-radius:9px;
+  font-size:11.5px;
+  letter-spacing:-.005em;
+}
+.mr-markdown-workspace .mr-premium-rail-divider { margin:8px 0; }
+.mr-markdown-workspace .mr-premium-toolrail.is-compact { padding-top:9px; }
+.mr-markdown-workspace .mr-premium-toolrail.is-compact .mr-premium-rail-group { gap:1px; }
+.mr-markdown-workspace .mr-premium-toolrail.is-compact .mr-premium-rail-divider { margin:5px 0; }
+.mr-markdown-workspace .mr-premium-toolrail.is-compact .mr-premium-rail-btn { width:38px; height:35px; }
+.mr-markdown-workspace .mr-rail-panel-head > button:focus-visible,
+.mr-markdown-workspace .mr-rail-panel-action:focus-visible,
+.mr-markdown-workspace .mr-rail-primary-action:focus-visible,
+.mr-markdown-workspace .mr-rail-outline-list button:focus-visible {
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+.mr-markdown-workspace .mr-rail-panel-action:disabled:not([aria-busy="true"]) {
+  cursor:not-allowed;
+  opacity:.52;
+  filter:saturate(.55);
+}
+.mr-markdown-workspace .mr-rail-panel-action:disabled:not([aria-busy="true"]):hover {
+  border-color:var(--line);
+  background:color-mix(in srgb,var(--surface-muted) 55%,transparent);
+  transform:none;
+}
+@media (max-height:720px) and (min-width:561px) {
+  .mr-markdown-workspace .mr-premium-toolrail { padding-top:7px; }
+  .mr-markdown-workspace .mr-premium-rail-group { gap:1px; }
+  .mr-markdown-workspace .mr-premium-rail-divider { margin:4px 0; }
+  .mr-markdown-workspace .mr-premium-rail-btn { height:35px; border-radius:9px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .mr-markdown-workspace .pm-editor-toolbar-premium .pm-editor-tool,
+  .mr-markdown-workspace .mr-premium-rail-btn::after { transition:none; }
+}
+
+/*
+ * Final enterprise navigation refinement.
+ * Keep this pass scoped to the Markdown workspace so the shared editor styles
+ * and the other conversion tools remain unaffected.
+ */
+.mr-markdown-workspace {
+  grid-template-rows: 52px minmax(0, 1fr) 32px;
+}
+
+.mr-markdown-workspace .pm-ws-topbar {
+  position: relative;
+  height: 52px;
+  min-width: 0;
+  padding: 0 13px;
+  grid-template-columns: minmax(260px, 1fr) minmax(190px, 310px) minmax(290px, 1fr);
+  gap: 12px;
+  overflow: visible;
+}
+
+.mr-markdown-workspace .mr-nav-identity,
+.mr-markdown-workspace .mr-document-copy,
+.mr-markdown-workspace .mr-command-trigger,
+.mr-markdown-workspace .pm-ws-actions {
+  min-width: 0;
+}
+
+.mr-markdown-workspace .mr-nav-identity {
+  gap: 10px;
+}
+
+.mr-markdown-workspace .mr-brand-link {
+  flex-shrink: 1;
+}
+
+.mr-markdown-workspace .mr-document-title-button,
+.mr-markdown-workspace .mr-document-title-input {
+  max-width: min(170px, 100%);
+}
+
+.mr-markdown-workspace .mr-document-meta {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mr-markdown-workspace .mr-command-trigger {
+  width: min(100%, 310px);
+  justify-self: center;
+  height: 32px;
+  border-radius: 8px;
+  padding: 0 7px 0 10px;
+}
+
+.mr-markdown-workspace .mr-command-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mr-markdown-workspace .mr-command-hint span {
+  min-width: 18px;
+  padding: 2px 4px;
+  font-size: 8px;
+}
+
+.mr-markdown-workspace .pm-ws-actions {
+  gap: 5px;
+  overflow: visible;
+}
+
+.mr-markdown-workspace .mr-new-btn,
+.mr-markdown-workspace .mr-export-btn {
+  height: 31px;
+  padding-inline: 10px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.mr-markdown-workspace .mr-icon-only,
+.mr-markdown-workspace .mr-avatar {
+  width: 29px;
+  height: 29px;
+}
+
+/* Compact, predictable export menu: labels remain readable without excess width. */
+.mr-markdown-workspace .mr-export-menu {
+  z-index: 100;
+  top: calc(100% + 8px);
+  width: 242px;
+  padding: 5px;
+  border-radius: 12px;
+}
+
+.mr-markdown-workspace .mr-export-menu button {
+  min-height: 34px;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 7px;
+}
+
+.mr-markdown-workspace .mr-export-format {
+  width: 49px;
+  flex-basis: 49px;
+  padding: 4px 5px;
+  border-radius: 6px;
+  font-size: 8.5px;
+}
+
+.mr-markdown-workspace .mr-export-label {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mr-markdown-workspace .mr-export-group-start {
+  margin-top: 4px;
+  padding-top: 8px !important;
+}
+
+/* The preview format footer deliberately shares the 32px workspace status rhythm. */
+.mr-markdown-workspace .pm-export-bar-premium {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  gap: 6px;
+}
+
+.mr-markdown-workspace .pm-export-formats {
+  max-width: 100%;
+  gap: 1px;
+  padding: 2px;
+}
+
+.mr-markdown-workspace .pm-export-format-btn {
+  height: 24px;
+  min-width: 0;
+  gap: 3px;
+  padding: 0 6px;
+  font-size: 8.5px;
+}
+
+.mr-markdown-workspace .pm-export-copy-btn {
+  flex: 0 0 auto;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 10px;
+}
+
+@media (max-width: 980px) {
+  .mr-markdown-workspace .pm-ws-topbar {
+    grid-template-columns: minmax(160px, 1fr) minmax(170px, 260px) auto;
+    gap: 9px;
+  }
+}
+
+@media (max-width: 820px) {
+  .mr-markdown-workspace .pm-ws-topbar {
+    grid-template-columns: auto minmax(160px, 1fr) auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .mr-markdown-workspace {
+    grid-template-rows: 50px minmax(0, 1fr) 32px;
+  }
+
+  .mr-markdown-workspace .pm-ws-topbar {
+    height: 50px;
+    padding: 0 8px;
+    grid-template-columns: auto 34px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .mr-markdown-workspace .mr-export-menu {
+    top: 56px;
+    width: min(242px, calc(100vw - 16px));
+  }
+}
+
+/* Workspace status bar: compact groups stay legible at editor-panel widths. */
+.mr-markdown-workspace .pm-ws-footer-premium {
+  container: pm-workspace-footer / inline-size;
+  height: 32px;
+  min-width: 0;
+  padding: 0 11px;
+  gap: 9px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface-muted) 90%, var(--surface));
+  box-shadow: inset 0 1px color-mix(in srgb, var(--surface) 58%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.mr-markdown-workspace .pm-ws-foot-primary,
+.mr-markdown-workspace .pm-ws-foot-metrics,
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-right {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.mr-markdown-workspace .pm-ws-foot-primary {
+  flex: 1 1 auto;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.mr-markdown-workspace .pm-ws-foot-metrics {
+  flex: 0 1 auto;
+  gap: 7px;
+  overflow: hidden;
+}
+
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-right {
+  flex: 0 0 auto;
+  margin-left: auto;
+  gap: 6px;
+  padding-left: 9px;
+  border-left: 1px solid var(--line-strong);
+}
+
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-item {
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-status {
+  overflow: visible;
+  color: var(--text-soft);
+  text-overflow: clip;
+}
+
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-format {
+  color: color-mix(in srgb, var(--text-soft) 86%, var(--text-muted));
+  font-weight: 600;
+}
+
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-conf {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-sync {
+  color: var(--text-soft);
+}
+
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-sep {
+  width: 1px;
+  height: 11px;
+  background: color-mix(in srgb, var(--line-strong) 78%, transparent);
+}
+
+.mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-dot {
+  width: 5px;
+  height: 5px;
+  box-shadow: 0 0 0 2px var(--green-soft) !important;
+}
+
+@container pm-workspace-footer (max-width: 590px) {
+  .mr-markdown-workspace .pm-ws-foot-read { display: none; }
+}
+
+@container pm-workspace-footer (max-width: 525px) {
+  .mr-markdown-workspace .pm-ws-foot-chars,
+  .mr-markdown-workspace .pm-ws-foot-encoding,
+  .mr-markdown-workspace .pm-ws-foot-eol,
+  .mr-markdown-workspace .pm-ws-foot-right .pm-ws-foot-sep { display: none; }
+}
+
+@container pm-workspace-footer (max-width: 430px) {
+  .mr-markdown-workspace .pm-ws-foot-format,
+  .mr-markdown-workspace .pm-ws-foot-sep-format { display: none; }
+  .mr-markdown-workspace .pm-ws-foot-primary,
+  .mr-markdown-workspace .pm-ws-foot-metrics { gap: 5px; }
+}
+
+@container pm-workspace-footer (max-width: 350px) {
+  .mr-markdown-workspace .pm-ws-foot-sep-conf,
+  .mr-markdown-workspace .pm-ws-foot-words { display: none; }
+  .mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-right { padding-left: 7px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FOCUS MODE — final visual hierarchy pass
+   The focus header is the mode navigator; each view gets a clear canvas
+   treatment without changing the editor's DOM or interaction model.
+   ═══════════════════════════════════════════════════════════════════════ */
+.mr-markdown-workspace.pm-focus-mode .mr-focus-header {
+  height: 46px;
+  padding-inline: clamp(14px, 2.5vw, 34px);
+  border-bottom-color: color-mix(in srgb, var(--accent) 14%, var(--line));
+  background: color-mix(in srgb, var(--surface) 92%, var(--bg));
+  box-shadow: 0 8px 28px rgba(15, 23, 42, .055), inset 0 -1px color-mix(in srgb, var(--surface) 60%, transparent);
+}
+.mr-markdown-workspace.pm-focus-mode,
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split {
+  grid-template-rows: 46px minmax(0, 1fr);
+}
+.mr-markdown-workspace.pm-focus-mode .mr-focus-view-switcher {
+  padding: 3px;
+  border-color: color-mix(in srgb, var(--line-strong) 82%, var(--accent));
+  background: color-mix(in srgb, var(--surface-muted) 86%, var(--accent-soft));
+}
+.mr-markdown-workspace.pm-focus-mode .mr-focus-view-switcher button {
+  position: relative;
+  min-width: 78px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 10.5px;
+}
+.mr-markdown-workspace.pm-focus-mode .mr-focus-view-switcher button.is-active {
+  color: var(--text);
+  background: var(--surface);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, .09), inset 0 0 0 1px var(--line);
+}
+
+/* Find & Replace is intentionally a compact utility card in focus mode. */
+.mr-markdown-workspace.pm-focus-mode .pm-find-bar {
+  position: absolute;
+  top: calc(18px + 48px + 42px + 10px);
+  left: 0;
+  right: 0;
+  width: min(640px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, .13), 0 2px 8px rgba(15, 23, 42, .07), inset 0 1px color-mix(in srgb, var(--surface) 72%, transparent);
+  backdrop-filter: blur(16px) saturate(1.18);
+  -webkit-backdrop-filter: blur(16px) saturate(1.18);
+  z-index: 45;
+}
+.mr-markdown-workspace.pm-focus-mode .pm-find-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+.mr-markdown-workspace.pm-focus-mode .pm-find-row-replace {
+  padding-top: 7px;
+}
+.mr-markdown-workspace.pm-focus-mode .pm-find-input-wrap {
+  height: 32px;
+  border-radius: 8px;
+}
+.mr-markdown-workspace.pm-focus-mode .pm-find-input {
+  font-size: 11.5px;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-write .pm-find-bar {
+  top: 10px;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-find-bar {
+  top: calc(40px + 38px + 8px);
+  width: min(600px, calc(100% - 24px));
+}
+
+/* Split mode: two equal-status work surfaces separated by a quiet divider. */
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split {
+  grid-template-columns: clamp(14px, 1.8vw, 26px) minmax(360px, var(--pm-ws-split)) 5px minmax(380px, 1fr) clamp(14px, 1.8vw, 26px);
+  grid-template-areas: 'focus focus focus focus focus' '. editor drag preview .';
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-ws-editor,
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-ws-preview {
+  background: var(--bg);
+  margin-block: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 14px 38px rgba(15, 23, 42, .065);
+  overflow: hidden;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-ws-editor {
+  border-right-color: color-mix(in srgb, var(--line) 58%, transparent);
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-ws-preview {
+  border-left-color: color-mix(in srgb, var(--line) 46%, transparent);
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-ws-drag {
+  position: relative;
+  width: 5px;
+  margin-block: 10px 14px;
+  border-radius: 99px;
+  background: transparent;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-ws-drag::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  border-radius: 99px;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--line-strong) 82%, transparent) 18%, color-mix(in srgb, var(--line-strong) 82%, transparent) 82%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--surface) 72%, transparent), 0 10px 26px rgba(15, 23, 42, .08);
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-ws-drag:hover::before {
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 50%, transparent) 18%, color-mix(in srgb, var(--accent) 50%, transparent) 82%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent), 0 10px 26px rgba(15, 23, 42, .1);
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-editor-overlay-host {
+  position:fixed;
+  inset:0;
+  width:auto;
+  height:auto;
+  z-index:1000;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-ws-pane-head {
+  height: 40px;
+  padding-inline: 15px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--bg));
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-ws-pane-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-editor-toolbar-premium {
+  min-height: 38px;
+  padding-inline: 10px;
+  background: var(--surface);
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-editor-body {
+  background: var(--surface);
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-preview-body {
+  padding: 0;
+  background: var(--surface);
+}
+/* Same single-surface rule as the full-screen preview view. */
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-preview-inner {
+  display: grid;
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 26px clamp(20px, 3vw, 42px) 40px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-emoji-popover {
+  width: min(300px, calc(100vw - 24px)) !important;
+  max-height: min(326px, calc(100vh - 24px)) !important;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-emoji-grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 2px;
+  padding: 7px;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-emoji-tile { height: 29px; }
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .pm-emoji-char { font-size: 17px; }
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .mr-diagram-insert-menu {
+  width: min(306px, calc(100vw - 24px));
+  max-height: min(364px, calc(100vh - 24px));
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .mr-diagram-insert-head {
+  gap: 7px;
+  padding: 10px;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .mr-diagram-insert-head input { padding: 7px 9px; }
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .mr-diagram-insert-item {
+  gap: 8px;
+  padding: 7px;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .mr-diagram-insert-engine { flex-basis: 58px; }
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .mr-diagram-insert-copy small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-split .mr-diagram-insert-foot { padding: 9px 11px; }
+
+/* Preview mode: reading surface first, controls second. */
+.mr-markdown-workspace.pm-focus-mode.mr-focus-preview .pm-ws-pane-head {
+  height: 48px;
+  padding-inline: clamp(16px, 3vw, 32px);
+  border-bottom-color: transparent;
+  background: var(--surface);
+  box-shadow: none;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-preview .pm-ws-preview {
+  margin: clamp(10px, 1.5vw, 16px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 16px 44px rgba(15, 23, 42, .075);
+  overflow: hidden;
+}
+.mr-markdown-workspace.pm-focus-mode.mr-focus-preview .pm-preview-body {
+  padding: 0;
+  background: var(--surface);
+}
+/* Preview mode fills the whole panel: the body no longer adds a gutter, so
+   the rendered document runs edge to edge inside the focus card instead of
+   sitting on a second, smaller card (the old nested "screen"). */
+.mr-markdown-workspace.pm-focus-mode.mr-focus-preview .pm-preview-inner {
+  display: grid;
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: clamp(26px, 3.6vw, 48px) clamp(26px, 5vw, 78px) clamp(34px, 4.6vw, 64px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (max-width: 820px) {
+  .mr-markdown-workspace.pm-focus-mode .mr-focus-header { height: 46px; }
+  .mr-markdown-workspace.pm-focus-mode .mr-focus-view-switcher button { min-width: 66px; }
+  .mr-markdown-workspace.pm-focus-mode .pm-find-bar { width: calc(100% - 24px); }
+}
+@media (max-width: 560px) {
+  .mr-markdown-workspace.pm-focus-mode .mr-focus-header { height: 46px; }
+  .mr-markdown-workspace.pm-focus-mode .mr-focus-view-switcher button { min-width: 38px; width: 38px; }
+  .mr-markdown-workspace.pm-focus-mode .pm-find-bar { top: calc(8px + 48px + 8px); margin: 0 auto; padding: 6px 8px; }
+  .mr-markdown-workspace.pm-focus-mode.mr-focus-preview .pm-preview-body { padding: 10px; }
+  .mr-markdown-workspace.pm-focus-mode.mr-focus-preview .pm-preview-inner { padding: 28px 22px; }
+}

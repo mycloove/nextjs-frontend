@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>Merge Markdown</title>
+  <g stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M26 8H12a6 6 0 0 0-6 6V50a6 6 0 0 0 6 6H26" stroke="#7F918E"/>
+    <path d="M38 8H52a6 6 0 0 1 6 6V50a6 6 0 0 1-6 6H38" stroke="#3B4745"/>
+  </g>
+  <g stroke-width="1.2" stroke-linejoin="round">
+    <path fill="#7F918E" stroke="#7F918E" d="M17.1 17.1h3.8v3.8h-3.8zM17.1 23.6h3.8v3.8h-3.8zM17.1 30.1h3.8v3.8h-3.8zM17.1 36.6h3.8v3.8h-3.8zM17.1 43.1h3.8v3.8h-3.8zM23.6 23.6h3.8v3.8h-3.8z"/>
+    <path fill="#3B4745" stroke="#3B4745" d="M43.1 17.1h3.8v3.8h-3.8zM43.1 23.6h3.8v3.8h-3.8zM43.1 30.1h3.8v3.8h-3.8zM43.1 36.6h3.8v3.8h-3.8zM43.1 43.1h3.8v3.8h-3.8zM36.6 23.6h3.8v3.8h-3.8z"/>
+  </g>
+  <path fill="#7F918E" d="M32.1 29.5H30.7a1.2 1.2 0 0 0-1.2 1.2v2.6a1.2 1.2 0 0 0 1.2 1.2h1.4Z"/>
+  <path fill="#3B4745" d="M32 29.5h1.3a1.2 1.2 0 0 1 1.2 1.2v2.6a1.2 1.2 0 0 1-1.2 1.2H32Z"/>
+</svg>

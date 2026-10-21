@@ -1,0 +1,92 @@
+/* Shared error banner. Colours come from the global tool tokens in
+   app/theme.css so the banner adapts to both themes without a per-tool
+   override; the danger tint is mixed locally so the accent set stays small. */
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #e5484d 34%, var(--border-base, rgba(255, 255, 255, 0.08)));
+  background: color-mix(in srgb, #e5484d 10%, transparent);
+  color: var(--text-primary, #e4e2ee);
+  font-size: 13px;
+  line-height: 1.55;
+  animation: bannerIn 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #e5484d;
+}
+
+.text {
+  flex: 1;
+  margin: 0;
+}
+
+.action {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, #e5484d 40%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  color: #e5484d;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.action:hover {
+  background: #e5484d;
+  color: #fff;
+}
+
+.dismiss {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.dismiss:hover {
+  background: color-mix(in srgb, #e5484d 14%, transparent);
+  color: var(--text-primary, #e4e2ee);
+}
+
+.action:focus-visible,
+.dismiss:focus-visible {
+  outline: 2px solid #e5484d;
+  outline-offset: 2px;
+}
+
+@keyframes bannerIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation: none;
+  }
+}

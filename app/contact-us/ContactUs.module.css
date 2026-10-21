@@ -1,0 +1,744 @@
+/* ═══════════════════════════════════════════════════════════════
+   Contact — "The Signal Room"
+
+   Instrument concept: contact is a live transmission channel between
+   the visitor's desk and the workshop. The composer is an instrument
+   input; the message is real mass loaded onto the wire; everything
+   else on the page is the channel's readout — four lamps driven by
+   real field validation, packets sized by the real message length,
+   a real clock and an honestly computed reply window.
+
+   Honesty laws (house standard):
+   • lamps light only when the requirement is really satisfied;
+   • packets derive from the actual message length — never invented;
+   • in-flight shows an indeterminate sweep — never a fake percent;
+   • if the mail transport is not configured, the link refuses and
+     points at the direct email (no silent failure).
+
+   Pillars: marketing-surface neutrals (app/home.css via .home-page)
+   + the mycloove blue accent shared with About/Pricing (#0b5ca8
+   light / #5b8def dark). Accent means action or identity, once.
+   IBM Plex Mono is loaded on this page only (see page.tsx) — the
+   console readout register is a regional decision, per §3 of the
+   design-system reference.
+   ═══════════════════════════════════════════════════════════════ */
+
+.page {
+  --myc-accent: #0b5ca8;        /* 6.4:1 on the light canvas */
+  --myc-accent-hover: #0a4f91;
+  --myc-accent-ink: #ffffff;    /* on-accent text: 7.9:1 */
+  --myc-fog: rgba(11, 92, 168, 0.10);
+  --myc-glow: rgba(11, 92, 168, 0.20);
+  --myc-ok: #26734d;
+  --myc-fault: #9c3418;
+  --myc-grid: rgba(23, 33, 29, 0.045);
+  --myc-mono: var(--cu-font-mono, ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace);
+}
+
+:global(html[data-theme="dark"]) .page {
+  --myc-accent: #5b8def;        /* 5.2:1 on the dark canvas */
+  --myc-accent-hover: #7da7f4;
+  --myc-accent-ink: #0e1310;    /* on-accent text: 5.4:1 */
+  --myc-fog: rgba(91, 141, 239, 0.13);
+  --myc-glow: rgba(91, 141, 239, 0.28);
+  --myc-ok: #7bc69a;
+  --myc-fault: #f0937a;
+  --myc-grid: rgba(242, 244, 239, 0.035);
+}
+
+/* The instrument-room floor: a blueprint grid one step above the canvas. */
+.page {
+  min-height: 100dvh;
+  background-image:
+    linear-gradient(var(--myc-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--myc-grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+.shell {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+/* ── The mono voice (console readouts) ─────────────────────────── */
+
+.monoLabel {
+  font-family: var(--myc-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+
+.hero { padding: 88px 0 42px; }
+
+.eyebrow {
+  margin: 0 0 16px;
+  font-family: var(--myc-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--myc-accent);
+}
+.eyebrowSpan { color: var(--faint); letter-spacing: 0.1em; font-weight: 400; }
+
+.title {
+  margin: 0 0 22px;
+  max-width: 15ch;
+  font-family: var(--font-display);
+  font-size: clamp(34px, 5vw, 58px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  color: var(--ink);
+}
+.titleAccent { color: var(--myc-accent); white-space: nowrap; }
+
+.lede {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 16.5px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.ledeBn {
+  margin: 14px 0 0;
+  font-size: 14px;
+  color: var(--faint);
+}
+.ledeBn b { color: var(--muted); font-weight: 500; }
+
+.heroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-top: 30px;
+  font-family: var(--myc-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+}
+.heroMetaLabel { display: block; margin-bottom: 3px; color: var(--myc-accent); font-weight: 500; }
+
+/* Arrival: staggered rise, house curve */
+@keyframes cuRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.hero > * { animation: cuRise 600ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both; }
+.hero > *:nth-child(2) { animation-delay: 60ms; }
+.hero > *:nth-child(3) { animation-delay: 120ms; }
+.hero > *:nth-child(4) { animation-delay: 180ms; }
+.hero > *:nth-child(5) { animation-delay: 240ms; }
+
+/* ── The console — 7/5 asymmetric, hairline law, no box borders ── */
+
+.console {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.console > section {
+  background: var(--surface);
+  padding: 32px 34px;
+}
+
+.composer { border-right: 1px solid var(--line-soft); }
+
+.consoleHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 26px;
+}
+.stateLabel { color: var(--muted); }
+.stateLabelArmed { color: var(--myc-accent); }
+
+/* ── Composer fields: instrument inputs on hairline rulers ─────── */
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.field {
+  position: relative;
+  padding-top: 18px;
+  margin-bottom: 8px;
+}
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 10px 2px 12px;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--ink);
+  font-family: var(--font-ui, 'Inter', sans-serif);
+  font-size: 15px;
+  caret-color: var(--myc-accent);
+  -webkit-appearance: none;
+}
+.inputBase::placeholder { color: transparent; }
+.field textarea {
+  min-height: 132px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+/* the ruler under each field */
+.rail {
+  position: relative;
+  display: block;
+  height: 1px;
+  background: var(--line);
+}
+.railFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  height: 1px;
+  width: 0;
+  background: var(--myc-accent);
+  transition: width 360ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+.field:focus-within .railFill {
+  width: 100%;
+}
+.fieldFilled:focus-within .railFill,
+.fieldFilled .railFill { width: 100%; }
+
+.tick {
+  position: absolute;
+  top: -5px;
+  display: block;
+  height: 11px;
+  width: 1px;
+  background: var(--line);
+  pointer-events: none;
+}
+.tickA { left: 0; }
+.tickB { left: calc(50% - 0.5px); }
+.tickC { right: 0; }
+.tickFull1 { left: 25%; }
+.tickFull2 { left: 75%; }
+
+.label {
+  position: absolute;
+  left: 2px;
+  top: 30px;
+  color: var(--faint);
+  font-family: var(--font-ui, 'Inter', sans-serif);
+  font-size: 14px;
+  pointer-events: none;
+  transform-origin: left top;
+  transition: transform 200ms var(--ease-out, ease), color 200ms var(--ease-out, ease);
+}
+/* float on focus or when genuinely filled (pure CSS, no fake state) */
+.field:focus-within label,
+.fieldFilled label {
+  transform: translateY(-30px) scale(0.79);
+}
+.field:focus-within label { color: var(--myc-accent); }
+.req { color: var(--myc-accent); margin-left: 2px; }
+
+.charcount {
+  position: absolute;
+  right: 2px;
+  bottom: -18px;
+  font-family: var(--myc-mono);
+  font-size: 10px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.charcountOver { color: var(--myc-fault); }
+
+/* ── Terms ─────────────────────────────────────────────────────── */
+
+.terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 26px 0 24px;
+  cursor: pointer;
+}
+.checkboxWrap { position: relative; flex-shrink: 0; margin-top: 3px; }
+.checkboxInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.checkboxBox {
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: transparent;
+  transition: background 120ms var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)),
+    border-color 120ms var(--ease-out, ease), color 120ms var(--ease-out, ease);
+}
+.checkboxInput:checked ~ .checkboxBox {
+  background: var(--myc-accent);
+  border-color: var(--myc-accent);
+  color: var(--myc-accent-ink);
+}
+.checkboxInput:focus-visible ~ .checkboxBox {
+  outline: 2px solid var(--myc-accent);
+  outline-offset: 2px;
+}
+.termsText {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.link {
+  color: var(--myc-accent);
+  text-decoration: none;
+}
+.link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Status banner (honest success / failure) ──────────────────── */
+
+.status {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.55;
+  animation: cuRise 300ms var(--ease-out, ease);
+}
+.statusIcon { display: flex; margin-top: 2px; flex-shrink: 0; }
+.success {
+  background: rgba(52, 211, 153, 0.09);
+  border: 1px solid rgba(52, 211, 153, 0.22);
+  color: #5eead4;
+}
+.error {
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.22);
+  color: #fca5a5;
+}
+:global(html[data-theme="light"]) .success {
+  background: rgba(16, 185, 129, 0.07);
+  border-color: rgba(16, 185, 129, 0.28);
+  color: #0c8a62;
+}
+:global(html[data-theme="light"]) .error {
+  background: rgba(214, 69, 69, 0.06);
+  border-color: rgba(214, 69, 69, 0.24);
+  color: #c23b3b;
+}
+
+/* ── The ink CTA — the one accent-filled element on the surface ── */
+
+.submitBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 15px 22px;
+  border: none;
+  border-radius: 14px;
+  background: var(--myc-accent);
+  color: var(--myc-accent-ink);
+  font-family: var(--font-ui, 'Inter', sans-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 200ms var(--ease-out, ease),
+    box-shadow 200ms var(--ease-out, ease),
+    transform 120ms var(--ease-out, ease);
+}
+.submitBtn:hover:not(:disabled) {
+  background: var(--myc-accent-hover);
+  box-shadow: 0 8px 24px var(--myc-glow);
+}
+.submitBtn:active:not(:disabled) { transform: translateY(1px); }
+.submitBtn:disabled { opacity: 0.72; cursor: progress; }
+.submitBtn:focus-visible {
+  outline: 2px solid var(--myc-accent);
+  outline-offset: 3px;
+}
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid color-mix(in srgb, var(--myc-accent-ink) 35%, transparent);
+  border-top-color: var(--myc-accent-ink);
+  border-radius: 50%;
+  animation: cuSpin 700ms linear infinite;
+}
+@keyframes cuSpin { to { transform: rotate(360deg); } }
+
+/* ── The channel: lamps → wire → log → clock ───────────────────── */
+
+.channel { display: flex; flex-direction: column; gap: 22px; }
+
+.lamps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 24px;
+}
+.lamp {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 2px;
+  font-family: var(--myc-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+}
+.lampDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--faint);
+  border-radius: 50%;
+  transition: background 120ms var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)),
+    border-color 120ms var(--ease-out, ease), box-shadow 120ms var(--ease-out, ease);
+}
+.lampState { margin-left: auto; font-size: 9.5px; letter-spacing: 0.04em; color: var(--faint); }
+.lampOn { color: var(--ink); }
+.lampOn .lampDot {
+  background: var(--myc-accent);
+  border-color: var(--myc-accent);
+  box-shadow: 0 0 10px var(--myc-glow);
+}
+.lampOn .lampState { color: var(--myc-ok); }
+/* dotted accent ring while the visitor is working on an unsatisfied field */
+.lampTarget .lampDot { border-color: var(--myc-accent); border-style: dashed; }
+
+.wireRow {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 64px 1fr;
+  gap: 14px;
+  min-height: 224px;
+}
+.wireSide {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px 0;
+}
+.wireTerm {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.wireTerm b {
+  display: block;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+.wireTerm small {
+  font-family: var(--myc-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+/* the visitor's terminal reads right-aligned, like the desk it names */
+.wireYour { text-align: right; align-items: flex-end; }
+.wireNote {
+  margin: 0;
+  font-family: var(--myc-mono);
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--faint);
+}
+
+/* the wire */
+.wireRail {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+.wireCore {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+.wireCore::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--myc-accent);
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out, ease);
+}
+.wireArmed .wireCore::after { opacity: 0.28; }
+.wireFlight .wireCore::after { opacity: 0.7; }
+.wireFault .wireCore { background: color-mix(in srgb, var(--myc-fault) 55%, var(--line)); }
+
+.wireCap {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 9px;
+  height: 9px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  transition: border-color 200ms var(--ease-out, ease), background 200ms var(--ease-out, ease);
+}
+.capTop { top: 4px; }
+.capBottom { bottom: 4px; border-radius: 50%; }
+.wireArmed .wireCap { border-color: var(--myc-accent); }
+.wireSent .capBottom {
+  background: var(--myc-accent);
+  box-shadow: 0 0 18px var(--myc-glow);
+  border-color: var(--myc-accent);
+}
+@keyframes cuCapPulse {
+  0% { transform: translateX(-50%) scale(1); }
+  40% { transform: translateX(-50%) scale(1.8); background: var(--myc-fog); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+.wireFlight .capTop { animation: cuCapPulse 600ms var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) 1; }
+
+/* packets — the message's real mass, queued at the visitor's desk */
+.packets {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 200ms var(--ease-out, ease);
+}
+.pkt {
+  width: 5px;
+  height: 5px;
+  border-radius: 1.5px;
+  background: var(--myc-accent);
+  opacity: 0.9;
+  animation: cuPktIn 360ms var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both;
+}
+.pkt:nth-child(even) { opacity: 0.55; }
+@keyframes cuPktIn {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+.wireSent .packets { opacity: 0; }
+
+/* the signature moment: the spark travels the wire */
+.sparkTrack {
+  position: absolute;
+  inset: 0;
+  transform: translateY(0);
+  opacity: 0;
+  pointer-events: none;
+}
+.spark {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 7px;
+  height: 7px;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: var(--myc-accent);
+  box-shadow: 0 0 14px var(--myc-glow);
+}
+@keyframes cuFlight {
+  0% { opacity: 0; transform: translateY(0); }
+  12% { opacity: 1; }
+  88% { opacity: 1; transform: translateY(100%); }
+  100% { opacity: 0; transform: translateY(100%); }
+}
+.wireFlight .sparkTrack { animation: cuFlight 1100ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)) forwards; }
+
+/* the honest indeterminate sweep: transport latency is unknown */
+.wireFlight .wireRail::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  width: 3px;
+  height: 18%;
+  transform: translate(-50%, 0);
+  border-radius: 2px;
+  background: var(--myc-accent);
+  opacity: 0.5;
+  animation: cuSweep 1.05s var(--ease-out, ease) infinite alternate;
+}
+@keyframes cuSweep {
+  from { transform: translate(-50%, 0); }
+  to { transform: translate(-50%, 380%); }
+}
+
+/* session log — real events only */
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 112px;
+  padding: 12px 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--canvas) 55%, transparent);
+  font-family: var(--myc-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+.logLine {
+  display: flex;
+  gap: 8px;
+  color: var(--muted);
+  animation: cuRise 200ms var(--ease-out, ease) both;
+}
+.logTime {
+  flex: none;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.logKey { color: var(--myc-accent); font-weight: 500; }
+.logOk { color: var(--myc-ok); }
+.logFault { color: var(--myc-fault); }
+.logEmpty { color: var(--faint); font-style: italic; }
+
+/* clock + honestly computed reply window */
+.clockRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+}
+.clock {
+  margin-top: 4px;
+  font-family: var(--myc-mono);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.window {
+  font-family: var(--myc-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  text-align: right;
+}
+.windowOk b { color: var(--myc-ok); font-weight: 500; }
+.windowClosed b { color: var(--myc-accent); font-weight: 500; }
+
+/* ── Facts strip (same verified real claims as before) ─────────── */
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin: 26px 0 96px;
+  background: var(--line-soft);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: var(--shadow-xs, none);
+}
+.fact { background: var(--surface); padding: 26px 28px; }
+.factIcon {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--myc-accent);
+}
+.factTitle {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--font-ui, 'Inter', sans-serif);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.factBody { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+.factBody a { font-family: var(--myc-mono); font-size: 12.5px; }
+
+/* ── Scroll reveal (this page wires the class, properly) ───────── */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 640ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform 640ms var(--ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+.reveal[data-shown='true'] { opacity: 1; transform: none; }
+
+/* ── Responsive ────────────────────────────────────────────────── */
+
+@media (max-width: 940px) {
+  .console { grid-template-columns: 1fr; }
+  .composer { border-right: none; border-bottom: 1px solid var(--line-soft); }
+  .wireRow { min-height: 190px; }
+  .facts { grid-template-columns: 1fr; }
+  .hero { padding-top: 64px; }
+}
+
+@media (max-width: 560px) {
+  .shell { padding: 0 18px; }
+  .console > section { padding: 24px 20px; }
+  .formRow { grid-template-columns: 1fr; gap: 0; }
+  .lamps { grid-template-columns: 1fr; }
+  .wireRow { grid-template-columns: 1fr; }
+  .wireRail { display: none; }
+  .wireSide { flex-direction: row; gap: 18px; padding: 8px 0; }
+}
+
+/* ── Motion safety: everything lands, the wire goes silent ─────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .hero > * { animation: none; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .railFill,
+  .sparkTrack,
+  .wireFlight .wireRail::before,
+  .wireFlight .capTop,
+  .pkt,
+  .logLine { animation: none; }
+  .wireFlight .sparkTrack { opacity: 0; }
+  .submitBtn:hover:not(:disabled) { transform: none; }
+  .spinner { animation: none; }
+  .field input,
+  .field textarea,
+  .label,
+  .railFill,
+  .wireCap,
+  .packets,
+  .lampDot,
+  .checkboxBox,
+  .submitBtn,
+  .status,
+  .wireCore::after { transition: none; }
+}
