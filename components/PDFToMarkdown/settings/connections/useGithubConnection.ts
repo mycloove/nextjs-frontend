@@ -387,13 +387,23 @@ export function useGithubConnection(opts: { enabled: boolean; onPublished?: (res
   }, [])
 
   const connect = useCallback(() => {
+    // Open synchronously in the user gesture. Opening only after the install
+    // request resolves is commonly blocked as a popup; `noopener` also makes
+    // window.open return null in some browsers, which the old fallback treated
+    // as a blocked popup and navigated the current tab as well.
+    const githubWindow = window.open('about:blank', '_blank')
+    if (githubWindow) githubWindow.opener = null
     setBusy(true)
     setNote(null)
     setPhase('connecting')
     api<{ install_url: string }>('/api/integrations/github/install', { method: 'POST' }).then((result) => {
-      if (!aliveRef.current) return
+      if (!aliveRef.current) {
+        githubWindow?.close()
+        return
+      }
       setBusy(false)
       if (!result.ok) {
+        githubWindow?.close()
         if (result.code === 'config_missing') {
           setConfigured(false)
           setPhase('soon')
@@ -404,12 +414,15 @@ export function useGithubConnection(opts: { enabled: boolean; onPublished?: (res
         setNote(result.message)
         return
       }
-      // GitHub owns the install page: open it in a new tab and keep this console
-      // where it is. The focus listener re-reads status when the owner comes back.
-      const opened = window.open(result.body.install_url, '_blank', 'noopener,noreferrer')
-      if (!opened) window.location.assign(result.body.install_url)
-      setPhase('disconnected')
-      setNote('Finish choosing repositories on GitHub, then come back to this tab.')
+      if (githubWindow && !githubWindow.closed) {
+        githubWindow.location.replace(result.body.install_url)
+        setPhase('disconnected')
+        setNote('Finish choosing repositories on GitHub, then come back to this tab.')
+      } else {
+        // A popup blocker can reject the synchronous window.open. Use the
+        // current tab then; GitHub's setup callback returns to /mr-markdown.
+        window.location.assign(result.body.install_url)
+      }
     })
   }, [])
 
