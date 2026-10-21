@@ -123,25 +123,6 @@ const SHEET_MARKS = new Set([1, 4, 7]);
 /* The reading page's lines — each marks as the sweep passes it. */
 const SCAN_LINES = [96, 88, 100, 72, 92, 84, 64];
 
-/* ── Engine label ────────────────────────────────────────────
-   The response's `method` string is the one truthful source for
-   what produced the summary. A chain hit reads
-   "AI Analyzer (<driver> · <model> id)"; the legacy path names the
-   Hugging Face API or the local BART model. */
-
-const prettyModelId = (id: string) =>
-  id.split('/').pop()!.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
-const engineLabel = (method: string | undefined): string => {
-  if (!method) return 'AI Analyzer';
-  const inner = /AI Analyzer \(([^)]+)\)/.exec(method)?.[1];
-  if (!inner) return 'AI (legacy fallback)';
-  const [driver, model] = inner.split('·').map((part) => part.trim());
-  if (driver === 'gemini_native') return model ? prettyModelId(model) : 'Google Gemini';
-  if (driver === 'huggingface') return model ? prettyModelId(model) : 'Hugging Face';
-  return model ? prettyModelId(model) : driver;
-};
-
 /* ─────────────────────────────────────────────────────────────
    Component
    ───────────────────────────────────────────────────────────── */
@@ -154,7 +135,7 @@ export default function DocumentAnalyzer() {
   const [stats, setStats]       = useState<{
     totalPages: number; analyzedPages: number;
     origWords: number;  sumWords: number;
-    processingTime: number; note?: string; engine?: string;
+    processingTime: number; note?: string;
   } | null>(null);
   const [error, setError]       = useState<string | null>(null);
   const [pagePreviews, setPagePreviews] = useState<{page:number;preview:string}[]|null>(null);
@@ -227,7 +208,6 @@ export default function DocumentAnalyzer() {
         sumWords:       data.summary_length,
         processingTime: data.processing_time_seconds,
         note:           data.note,
-        engine:         typeof data.method === 'string' ? data.method : undefined,
       });
       if (data.page_previews) setPagePreviews(data.page_previews);
     } catch (e) {
@@ -765,6 +745,11 @@ export default function DocumentAnalyzer() {
         }
         .da-meta-item:last-child { border-right: none; margin-right: 0; padding-right: 0; }
         .da-meta-item b { color: var(--text-secondary); font-weight: 600; }
+        /* The engine reads as the product's own mark, not a vendor model id. */
+        .da-meta-item .da-engine {
+          font-family: 'Syne', sans-serif; font-weight: 800;
+          letter-spacing: -.02em; color: var(--text-primary);
+        }
 
         .da-note {
           display: flex; align-items: flex-start; gap: 8px;
@@ -973,7 +958,7 @@ export default function DocumentAnalyzer() {
                 <span>Mode</span><b>{modeLabel}</b>
               </div>
               <div className="da-meta-item">
-                <span>Engine</span><b>{engineLabel(stats.engine)}</b>
+                <span>Engine</span><b className="da-engine">mycloove</b>
               </div>
             </div>
 
