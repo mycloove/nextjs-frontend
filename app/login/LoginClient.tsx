@@ -7,26 +7,11 @@ import { fetchOwnRole } from "@/lib/supabase/roles";
 import { claimUsageAfterLogin } from "@/lib/usage/useUsageSnapshot";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  ClipboardEvent as ReactClipboardEvent,
-  FormEvent,
-  KeyboardEvent as ReactKeyboardEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import "../home.css";
 import "./login.css";
 
 type AuthMode = "login" | "register" | "reset";
-/* Register is a two-step intake: account details first, then a 6-digit code
-   emailed to the address from step 1 (signInWithOtp → verifyOtp). The password
-   collected in step 1 is applied once the account actually exists. */
-type RegisterStep = "details" | "code";
-
-const CODE_LENGTH = 6;
-const RESEND_SECONDS = 60;
 
 async function refuseIfTurnedOff(supabase: ReturnType<typeof createClient>) {
   const response = await fetch("/api/account/role", {
@@ -136,8 +121,6 @@ export default function LoginClient({
   signOutOnMount = false,
 }: LoginClientProps) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
-  const [registerStep, setRegisterStep] = useState<RegisterStep>("details");
-  const [pendingCodeEmail, setPendingCodeEmail] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -145,42 +128,27 @@ export default function LoginClient({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
-  // Auto-submit on the sixth OTP digit fires from input events; the ref keeps a
-  // double keypress from launching a second verification while the first runs.
+  // Submit handlers run from form events; the ref keeps a double click from
+  // launching a second request while the first is in flight.
   const busyRef = useRef(false);
   const [error, setError] = useState(authError ?? "");
   const [notice, setNotice] = useState("");
-  const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""));
-  const [resendIn, setResendIn] = useState(0);
-  const [pendingContinue, setPendingContinue] = useState(false);
-  const codeRefs = useRef<Array<HTMLInputElement | null>>([]);
   const router = useRouter();
 
   const isRegister = mode === "register";
   const isReset = mode === "reset";
-  const isVerify = isRegister && registerStep === "code";
 
-  const eyebrow = isReset
-    ? "Members"
-    : isVerify
-      ? "One step to go"
-      : isRegister
-        ? "New here"
-        : "Members";
+  const eyebrow = isReset ? "Members" : isRegister ? "New here" : "Members";
   const title = isReset
     ? "Set a new password"
-    : isVerify
-      ? "Verify your email"
-      : isRegister
-        ? "Create your account"
-        : "Welcome back";
+    : isRegister
+      ? "Create your account"
+      : "Welcome back";
   const subtitle = isReset
     ? "Choose a new password for your account, then sign in with it."
-    : isVerify
-      ? "Six digits are on their way to your inbox."
-      : isRegister
-        ? "Save your workspace and pick up document tasks later."
-        : "Sign in to keep your mycloove session across visits.";
+    : isRegister
+      ? "Save your workspace and pick up document tasks later."
+      : "Sign in to keep your mycloove session across visits.";
 
   const passwordHint = useMemo(() => {
     if ((!isRegister && !isReset) || password.length === 0) return "";
@@ -194,27 +162,9 @@ export default function LoginClient({
     void supabase.auth.signOut();
   }, [signOutOnMount]);
 
-  // A one-second-at-a-time chain keeps the countdown and its cleanup simple.
-  useEffect(() => {
-    if (resendIn <= 0) return;
-    const timer = setTimeout(() => setResendIn((s) => s - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [resendIn]);
-
-  // Landing on the code step should land the caret in the first box.
-  useEffect(() => {
-    if (!isVerify) return;
-    codeRefs.current[0]?.focus();
-  }, [isVerify]);
-
   const switchMode = (next: AuthMode) => {
     if (next === mode) return;
     setMode(next);
-    setRegisterStep("details");
-    setPendingCodeEmail("");
-    setCode(Array(CODE_LENGTH).fill(""));
-    setResendIn(0);
-    setPendingContinue(false);
     setError("");
     setNotice("");
     setEmailError("");
@@ -231,16 +181,6 @@ export default function LoginClient({
   const onEmailBlur = () => {
     if (!email.trim()) return;
     setEmailError(emailValidationError(email));
-  };
-
-  const backToDetails = () => {
-    setRegisterStep("details");
-    setPendingCodeEmail("");
-    setCode(Array(CODE_LENGTH).fill(""));
-    setResendIn(0);
-    setPendingContinue(false);
-    setError("");
-    setNotice("");
   };
 
   const finishAfterSignIn = async (
@@ -284,149 +224,6 @@ export default function LoginClient({
     }
   };
 
-  const verifyCode = async (digits: string[]) => {
-    if (busyRef.current) return;
-    const token = digits.join("");
-    if (token.length !== CODE_LENGTH) {
-      setError("Type all six digits of the code, then continue.");
-      return;
-    }
-    busyRef.current = true;
-    setBusy(true);
-    setError("");
-    setNotice("");
-
-    const supabase = createClient();
-    try {
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        email: pendingCodeEmail,
-        token,
-        type: "email",
-      });
-      if (verifyError) {
-        setError(describeAuthError(verifyError.message));
-        return;
-      }
-
-      // Step 1 collected a password; apply it now that the account exists so
-      // the next visit can use the password form. If it fails the session is
-      // still live and a password can be added later — say so and stay put
-      // rather than silently dropping the user on the home page.
-      if (password.length >= 8) {
-        const { error: updateError } = await supabase.auth.updateUser({
-          password,
-        });
-        if (updateError) {
-          setNotice(
-            "Your email is verified, but your password could not be saved. Continue in and add one under Settings.",
-          );
-          setPendingContinue(true);
-          setConfirmPassword("");
-          return;
-        }
-        setPassword("");
-        setConfirmPassword("");
-      }
-      await finishAfterSignIn(supabase);
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
-    }
-  };
-
-  const continueAfterVerify = async (
-    supabase: ReturnType<typeof createClient>,
-  ) => {
-    busyRef.current = true;
-    setBusy(true);
-    setError("");
-    try {
-      await finishAfterSignIn(supabase);
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
-    }
-  };
-
-  const onResend = async () => {
-    if (busyRef.current || resendIn > 0) return;
-    busyRef.current = true;
-    setBusy(true);
-    setError("");
-    try {
-      const supabase = createClient();
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: pendingCodeEmail,
-        options: { shouldCreateUser: true },
-      });
-      if (otpError) {
-        setError(describeAuthError(otpError.message));
-        return;
-      }
-      setResendIn(RESEND_SECONDS);
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      busyRef.current = false;
-      setBusy(false);
-    }
-  };
-
-  const setDigit = (index: number, raw: string) => {
-    const digit = raw.replace(/\D/g, "").slice(-1);
-    const next = [...code];
-    next[index] = digit;
-    setCode(next);
-    if (digit && index < CODE_LENGTH - 1) {
-      codeRefs.current[index + 1]?.focus();
-    }
-    if (next.every(Boolean)) void verifyCode(next);
-  };
-
-  const onCodeKeyDown = (
-    index: number,
-    event: ReactKeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (event.key === "Backspace" && !code[index] && index > 0) {
-      event.preventDefault();
-      const next = [...code];
-      next[index - 1] = "";
-      setCode(next);
-      codeRefs.current[index - 1]?.focus();
-      return;
-    }
-    if (event.key === "ArrowLeft" && index > 0) {
-      event.preventDefault();
-      codeRefs.current[index - 1]?.focus();
-      return;
-    }
-    if (event.key === "ArrowRight" && index < CODE_LENGTH - 1) {
-      event.preventDefault();
-      codeRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const onCodePaste = (event: ReactClipboardEvent<HTMLInputElement>) => {
-    event.preventDefault();
-    const digits = event.clipboardData
-      .getData("text")
-      .replace(/\D/g, "")
-      .slice(0, CODE_LENGTH)
-      .split("");
-    if (!digits.length) return;
-    const next = Array<string>(CODE_LENGTH).fill("");
-    digits.forEach((digit, index) => {
-      next[index] = digit;
-    });
-    setCode(next);
-    codeRefs.current[Math.min(digits.length, CODE_LENGTH - 1)]?.focus();
-    if (next.every(Boolean)) void verifyCode(next);
-  };
-
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
@@ -466,20 +263,11 @@ export default function LoginClient({
       return;
     }
 
-    if (isVerify) {
-      if (pendingContinue) {
-        await continueAfterVerify(supabase);
-        return;
-      }
-      await verifyCode(code);
-      return;
-    }
-
     const trimmedEmail = email.trim();
 
     if (isRegister) {
-      // Step 1: details. The email check is the hard gate the request asked
-      // for — no code is sent to an address that fails the structural check.
+      // The email check is the hard gate: no account is created for an address
+      // that fails the structural check.
       const emailMsg = emailValidationError(trimmedEmail);
       if (emailMsg) {
         setEmailError(emailMsg);
@@ -496,23 +284,48 @@ export default function LoginClient({
       busyRef.current = true;
       setBusy(true);
       try {
-        const { error: otpError } = await supabase.auth.signInWithOtp({
-          email: trimmedEmail,
-          options: {
-            shouldCreateUser: true,
-            // The display name rides along in user metadata; /auth/callback
-            // records it (and a provider photo) where the row is still empty.
-            data: { display_name: name.trim() || undefined },
-          },
-        });
-        if (otpError) {
-          setError(describeAuthError(otpError.message));
+        const { data: signUpData, error: signUpError } =
+          await supabase.auth.signUp({
+            email: trimmedEmail,
+            password,
+            options: {
+              // The display name rides along in user metadata.
+              data: { display_name: name.trim() || undefined },
+            },
+          });
+        if (signUpError) {
+          setError(describeAuthError(signUpError.message));
           return;
         }
-        setPendingCodeEmail(trimmedEmail);
-        setRegisterStep("code");
-        setCode(Array(CODE_LENGTH).fill(""));
-        setResendIn(RESEND_SECONDS);
+
+        // Supabase answers an already-registered address with a user that has
+        // no identities (enumeration protection). Treat it as an existing
+        // account instead of implying a new one was created.
+        if (signUpData.user && signUpData.user.identities?.length === 0) {
+          setMode("login");
+          setConfirmPassword("");
+          setNotice(
+            "That email already has an account. Log in with your password.",
+          );
+          return;
+        }
+
+        // With email confirmation off — the intended setup for an email and
+        // password account — sign-up returns a live session and the user is
+        // signed in immediately.
+        if (signUpData.session) {
+          await finishAfterSignIn(supabase);
+          return;
+        }
+
+        // Confirmation is still enabled on the Supabase project: the account
+        // exists, but password sign-in is refused until the address is
+        // confirmed. Say so plainly instead of showing a bare error.
+        setMode("login");
+        setConfirmPassword("");
+        setNotice(
+          "Your account is ready. Confirm the email we sent, then log in with your password.",
+        );
       } catch {
         setError("Something went wrong. Please try again.");
       } finally {
@@ -652,21 +465,9 @@ export default function LoginClient({
               <span aria-hidden="true">✦</span> {eyebrow}
             </p>
             <h1 id="auth-title">{title}</h1>
-            <p className="auth-lede">
-              {isVerify ? (
-                <>
-                  Six digits are heading to{" "}
-                  <strong className="auth-verify-email">
-                    {pendingCodeEmail}
-                  </strong>
-                  . Type them below to finish creating your account.
-                </>
-              ) : (
-                subtitle
-              )}
-            </p>
+            <p className="auth-lede">{subtitle}</p>
 
-            {!isReset && !isVerify ? (
+            {!isReset ? (
               <>
                 <div
                   className="auth-tabs"
@@ -730,58 +531,7 @@ export default function LoginClient({
               </>
             ) : null}
 
-            {isVerify ? (
-              <form
-                className="auth-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (pendingContinue) void continueAfterVerify(createClient());
-                  else void verifyCode(code);
-                }}
-                noValidate
-              >
-                <span className="auth-otp" aria-label="6-digit verification code">
-                  {code.map((digit, index) => (
-                    <input
-                      key={index}
-                      ref={(node) => {
-                        codeRefs.current[index] = node;
-                      }}
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete={index === 0 ? "one-time-code" : "off"}
-                      maxLength={1}
-                      aria-label={`Digit ${index + 1} of ${CODE_LENGTH}`}
-                      value={digit}
-                      disabled={busy || pendingContinue}
-                      onChange={(event) => setDigit(index, event.target.value)}
-                      onKeyDown={(event) => onCodeKeyDown(index, event)}
-                      onPaste={onCodePaste}
-                    />
-                  ))}
-                </span>
-
-                {error ? (
-                  <p className="auth-alert error" role="alert">
-                    {error}
-                  </p>
-                ) : null}
-                {notice ? (
-                  <p className="auth-alert success" role="status">
-                    {notice}
-                  </p>
-                ) : null}
-
-                <button type="submit" className="auth-submit" disabled={busy}>
-                  {busy
-                    ? "Please wait…"
-                    : pendingContinue
-                      ? "Continue"
-                      : "Verify code"}
-                </button>
-              </form>
-            ) : (
-              <form className="auth-form" onSubmit={onSubmit} noValidate>
+            <form className="auth-form" onSubmit={onSubmit} noValidate>
                 {isRegister ? (
                   <label className="auth-field">
                     <span>Full name</span>
@@ -873,40 +623,12 @@ export default function LoginClient({
                     : isReset
                       ? "Update password"
                       : isRegister
-                        ? "Send verification code"
+                        ? "Create account"
                         : "Log in"}
                 </button>
               </form>
-            )}
 
-            {isVerify ? (
-              <>
-                <div className="auth-resend">
-                  <span>Didn&apos;t get the code?</span>
-                  <button
-                    type="button"
-                    onClick={onResend}
-                    disabled={busy || resendIn > 0}
-                  >
-                    {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
-                  </button>
-                </div>
-                <p className="auth-verify-fallback">
-                  The same email also carries a sign-in link — open it on this
-                  device if you&apos;d rather not type the code.
-                </p>
-                <button
-                  type="button"
-                  className="auth-forgot"
-                  onClick={backToDetails}
-                  disabled={busy}
-                >
-                  Use a different email
-                </button>
-              </>
-            ) : null}
-
-            {!isReset && !isVerify ? (
+            {!isReset ? (
               <p className="auth-switch">
                 {isRegister ? (
                   <>
