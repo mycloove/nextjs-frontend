@@ -4,8 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import {
   deleteAdminRecord,
+  deleteUserAccountData,
   hasAnyAdminProfile,
   listAdminRecords,
+  readAccountForDeletion,
   readAccountStatus,
   seatAdminProfile,
   setAdminActive,
@@ -194,6 +196,88 @@ export async function setPlatformUserActive(actorId: string, targetId: string, a
   }
   const row = await setUserActive(targetId, active, audit)
   return { id: row.id, email: row.email, active: row.active, role: row.role as AppRole, created_at: row.createdAt.toISOString() }
+}
+
+/**
+ * Hard-deletes one regular account: the Supabase Auth sign-in first, then every
+ * product-side row in a single transaction, plus the avatar objects.
+ *
+ * Order matters. Auth is deleted first because the two stores cannot share a
+ * transaction: if Auth succeeds and the database write then fails, the person
+ * can no longer sign in and a retry finishes the cleanup; if the database were
+ * deleted first and Auth failed, the next sign-in would recreate an empty
+ * profile and the "deleted" account would silently come back. An Auth failure
+ * aborts before any product data is touched. A missing Auth user is treated as
+ * already deleted so the retry path above actually converges.
+ *
+ * Admin seats are refused here on purpose. They are removed from the Admins
+ * desk, where the "last active owner" invariant lives.
+ */
+export async function deletePlatformUser(
+  actorId: string,
+  targetId: string,
+  audit?: AdminAuditContext,
+) {
+  if (actorId === targetId) {
+    throw new SeatAdminError('You cannot delete the account you are signed in as.', 400)
+  }
+
+  let profile
+  try {
+    profile = await readAccountForDeletion(targetId)
+  } catch (error) {
+    throw accountWriteError(error, 'Could not read that account')
+  }
+  if (!profile) throw new SeatAdminError('That account is not here.', 404)
+  if (isAdminRole(profile.role)) {
+    throw new SeatAdminError('That is an admin account — manage it on the Admins desk.', 400)
+  }
+
+  const service = createServiceClient()
+  if (!service) {
+    throw new SeatAdminError('SUPABASE_SERVICE_ROLE_KEY is not set.', 503)
+  }
+
+  // Hard delete, not Supabase's soft-delete mode: the point of this action is
+  // that the person can never be restored or sign in again.
+  const removed = await service.auth.admin.deleteUser(targetId, false)
+  if (removed.error && !/not found|does not exist/i.test(removed.error.message)) {
+    throw new SeatAdminError(removed.error.message, 400)
+  }
+
+  /*
+   * The avatar lives in object storage, outside the database transaction. It is
+   * cleaned by listing the account's own folder rather than rebuilding the
+   * avatar route's object path, so a future filename change cannot leave an
+   * orphan behind. Best-effort: a missing object or an unconfigured bucket must
+   * not block deleting the account itself.
+   */
+  const avatars = service.storage.from('avatars')
+  const listed = await avatars.list(targetId)
+  if (listed.error) {
+    console.warn('Could not list a deleted account avatar', listed.error.message)
+  } else if (listed.data.length > 0) {
+    const cleaned = await avatars.remove(
+      listed.data.map((object) => `${targetId}/${object.name}`),
+    )
+    if (cleaned.error) {
+      console.warn('Could not remove a deleted account avatar', cleaned.error.message)
+    }
+  }
+
+  try {
+    return await deleteUserAccountData(targetId, audit)
+  } catch (error) {
+    throw accountWriteError(error, 'Could not delete every record for that account')
+  }
+}
+
+function accountWriteError(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : fallback
+  if (error instanceof UsageStoreMissing) return new SeatAdminError(message, 503)
+  if (message === 'That account is not here.') return new SeatAdminError(message, 404)
+  if (message.startsWith('That is an admin account')) return new SeatAdminError(message, 400)
+  return new SeatAdminError(message, 500)
 }
 
 export async function deletePlatformAdmin(actorId: string, targetId: string, audit?: AdminAuditContext) {

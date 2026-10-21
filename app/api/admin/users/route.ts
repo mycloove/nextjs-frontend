@@ -1,5 +1,5 @@
 import { clearAdminPersonUsage } from '@/lib/usage/controls'
-import { adminPermissionRefusal, adminRefusal, checkAdminWriteRate, requireAdmin, SeatAdminError, setPlatformUserActive } from '@/lib/usage/admin'
+import { adminPermissionRefusal, adminRefusal, checkAdminWriteRate, deletePlatformUser, requireAdmin, SeatAdminError, setPlatformUserActive } from '@/lib/usage/admin'
 import { randomUUID } from 'node:crypto'
 import { NextResponse } from 'next/server'
 
@@ -18,10 +18,10 @@ function fail(message: string, status: number, requestId: string) {
 /**
  * Clears the recorded calls of one person, on every tool.
  *
- * This is the only write on the users desk, and it is deliberately narrower
- * than /api/admin/tools: that one resets a tool's tally for everyone or for one
- * named account, this one resets one browser or one account across the whole
- * bench. Neither can undo the other, so both are kept.
+ * This is deliberately narrower than /api/admin/tools: that one resets a tool's
+ * tally for everyone or for one named account, this one resets one browser or
+ * one account across the whole bench. Neither can undo the other, so both are
+ * kept. Hard deletion of an account is the separate DELETE below.
  */
 export async function POST(request: Request) {
   const requestId = request.headers.get('x-request-id')?.trim() || randomUUID()
@@ -83,5 +83,51 @@ export async function POST(request: Request) {
     return withRequestId(NextResponse.json({ deleted, request_id: requestId }), requestId)
   } catch (error) {
     return fail(error instanceof Error ? error.message : 'Could not clear those calls', 400, requestId)
+  }
+}
+
+/**
+ * Permanently deletes one regular account.
+ *
+ * Owner-only: turning an account off or clearing its counters is reversible and
+ * an Operator may do both, but a hard delete removes the sign-in and every
+ * record behind it and cannot be undone. Admin seats are refused by the helper
+ * (they belong to the Admins desk, where the last-owner invariant lives).
+ */
+export async function DELETE(request: Request) {
+  const requestId = request.headers.get('x-request-id')?.trim() || randomUUID()
+  const gate = await requireAdmin()
+  if (!gate.ok) {
+    const refusal = adminRefusal(gate)
+    return fail(refusal.error, refusal.status, requestId)
+  }
+  const permission = adminPermissionRefusal(gate, 'owner')
+  if (permission) return fail(permission.error, permission.status, requestId)
+
+  let body: Record<string, unknown>
+  try {
+    body = await request.json() as Record<string, unknown>
+  } catch {
+    return fail('Invalid JSON', 400, requestId)
+  }
+
+  const userId = typeof body.user_id === 'string' ? body.user_id.trim() : ''
+  if (!userId) return fail('A user_id is required to delete an account.', 400, requestId)
+  if (!UUID_PATTERN.test(userId)) return fail('user_id is not an account id.', 400, requestId)
+  if (!checkAdminWriteRate()) {
+    return fail('Too many admin changes. Wait a minute and try again.', 429, requestId)
+  }
+
+  try {
+    const deleted = await deletePlatformUser(gate.user.id, userId, {
+      actorId: gate.user.id,
+      actorEmail: gate.user.email ?? null,
+      requestId,
+    })
+    return withRequestId(NextResponse.json({ ...deleted, request_id: requestId }), requestId)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Could not delete that account'
+    const status = error instanceof SeatAdminError ? error.status : 500
+    return fail(message, status, requestId)
   }
 }

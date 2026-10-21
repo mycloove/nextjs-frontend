@@ -624,6 +624,104 @@ export async function setUserActive(userId: string, active: boolean, audit?: Adm
   }
 }
 
+/**
+ * Reads the stored row before a hard delete. This deliberately does not go
+ * through readAccountStatus: that helper demotes an inactive bench account to
+ * "User", which would let the users desk hard-delete an admin whose seat is
+ * merely turned off. The stored role is what decides which desk owns it.
+ */
+export async function readAccountForDeletion(userId: string) {
+  const prisma = requirePrisma()
+  try {
+    return await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true, active: true },
+    })
+  } catch (error) {
+    rethrowStore(error)
+  }
+}
+
+export type AccountDeletionResult = {
+  id: string
+  email: string | null
+  usage_rows: number
+  feature_event_rows: number
+  integration_rows: number
+}
+
+/**
+ * Removes every product-side row owned by one regular account, in one
+ * transaction, and writes the audit entry in that same transaction.
+ *
+ * `usages` has no foreign key to `users`, and `integration_connections` has
+ * none either, so both have to be deleted explicitly — deleting only the
+ * profile would leave recorded calls and a live GitHub binding behind. Repo
+ * links cascade from their connection. `feature_usage_events` would cascade
+ * from the profile delete, but is deleted explicitly so the result can report
+ * how many rows went with the account.
+ *
+ * The bench audit log is intentionally kept: it records who deleted whom and
+ * is the deployment's accountability trail, not the deleted person's data.
+ */
+export async function deleteUserAccountData(
+  userId: string,
+  audit?: AdminAuditContext,
+): Promise<AccountDeletionResult> {
+  const prisma = requirePrisma()
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const before = await tx.user.findUnique({
+        where: { id: userId },
+        select: { email: true, role: true, active: true },
+      })
+      if (!before) throw new Error('That account is not here.')
+      if (BENCH_ROLES.includes(before.role)) {
+        throw new Error('That is an admin account — manage it on the Admins desk.')
+      }
+
+      const usage = await tx.usage.deleteMany({ where: { userId } })
+      const events = await tx.featureUsageEvent.deleteMany({ where: { userId } })
+      const integrations = await tx.integrationConnection.deleteMany({ where: { userId } })
+      await tx.user.delete({ where: { id: userId } })
+
+      if (audit) {
+        await appendAdminAudit(tx, audit, {
+          action: 'account.delete',
+          targetType: 'account',
+          targetId: userId,
+          before: {
+            email: before.email,
+            role: before.role,
+            active: before.active,
+            usage_rows: usage.count,
+            feature_event_rows: events.count,
+            integration_rows: integrations.count,
+          },
+          after: { deleted: true },
+        })
+      }
+
+      return {
+        id: userId,
+        email: before.email,
+        usage_rows: usage.count,
+        feature_event_rows: events.count,
+        integration_rows: integrations.count,
+      }
+    })
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message === 'That account is not here.' ||
+        error.message === 'That is an admin account — manage it on the Admins desk.')
+    ) {
+      throw error
+    }
+    rethrowStore(error)
+  }
+}
+
 export async function deleteAdminRecord(userId: string, audit?: AdminAuditContext) {
   const prisma = requirePrisma()
   try {

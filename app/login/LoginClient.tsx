@@ -532,101 +532,101 @@ export default function LoginClient({
             ) : null}
 
             <form className="auth-form" onSubmit={onSubmit} noValidate>
-                {isRegister ? (
-                  <label className="auth-field">
-                    <span>Full name</span>
-                    <input
-                      type="text"
-                      name="name"
-                      autoComplete="name"
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      placeholder="Your name (optional)"
-                      maxLength={80}
-                    />
-                  </label>
-                ) : null}
-
-                {!isReset ? emailField : null}
-
+              {isRegister ? (
                 <label className="auth-field">
-                  <span>{isReset ? "New password" : "Password"}</span>
-                  <span className="auth-password-wrap">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      autoComplete={
-                        isRegister || isReset ? "new-password" : "current-password"
-                      }
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder={
-                        isRegister || isReset
-                          ? "At least 8 characters"
-                          : "Your password"
-                      }
-                      minLength={isRegister || isReset ? 8 : undefined}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="auth-password-toggle"
-                      onClick={() => setShowPassword((open) => !open)}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? "Hide" : "Show"}
-                    </button>
-                  </span>
-                  {passwordHint ? <small>{passwordHint}</small> : null}
+                  <span>Full name</span>
+                  <input
+                    type="text"
+                    name="name"
+                    autoComplete="name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Your name (optional)"
+                    maxLength={80}
+                  />
                 </label>
+              ) : null}
 
-                {!isRegister && !isReset ? (
+              {!isReset ? emailField : null}
+
+              <label className="auth-field">
+                <span>{isReset ? "New password" : "Password"}</span>
+                <span className="auth-password-wrap">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    autoComplete={
+                      isRegister || isReset ? "new-password" : "current-password"
+                    }
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    placeholder={
+                      isRegister || isReset
+                        ? "At least 8 characters"
+                        : "Your password"
+                    }
+                    minLength={isRegister || isReset ? 8 : undefined}
+                    required
+                  />
                   <button
                     type="button"
-                    className="auth-forgot"
-                    onClick={onForgotPassword}
-                    disabled={busy}
+                    className="auth-password-toggle"
+                    onClick={() => setShowPassword((open) => !open)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    Forgot password?
+                    {showPassword ? "Hide" : "Show"}
                   </button>
-                ) : null}
+                </span>
+                {passwordHint ? <small>{passwordHint}</small> : null}
+              </label>
 
-                {(isRegister || isReset) && (
-                  <label className="auth-field">
-                    <span>Confirm password</span>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="confirmPassword"
-                      autoComplete="new-password"
-                      value={confirmPassword}
-                      onChange={(event) => setConfirmPassword(event.target.value)}
-                      placeholder="Repeat your password"
-                      required
-                    />
-                  </label>
-                )}
-
-                {error ? (
-                  <p className="auth-alert error" role="alert">
-                    {error}
-                  </p>
-                ) : null}
-                {notice ? (
-                  <p className="auth-alert success" role="status">
-                    {notice}
-                  </p>
-                ) : null}
-
-                <button type="submit" className="auth-submit" disabled={busy}>
-                  {busy
-                    ? "Please wait…"
-                    : isReset
-                      ? "Update password"
-                      : isRegister
-                        ? "Create account"
-                        : "Log in"}
+              {!isRegister && !isReset ? (
+                <button
+                  type="button"
+                  className="auth-forgot"
+                  onClick={onForgotPassword}
+                  disabled={busy}
+                >
+                  Forgot password?
                 </button>
-              </form>
+              ) : null}
+
+              {(isRegister || isReset) && (
+                <label className="auth-field">
+                  <span>Confirm password</span>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    placeholder="Repeat your password"
+                    required
+                  />
+                </label>
+              )}
+
+              {error ? (
+                <p className="auth-alert error" role="alert">
+                  {error}
+                </p>
+              ) : null}
+              {notice ? (
+                <p className="auth-alert success" role="status">
+                  {notice}
+                </p>
+              ) : null}
+
+              <button type="submit" className="auth-submit" disabled={busy}>
+                {busy
+                  ? "Please wait…"
+                  : isReset
+                    ? "Update password"
+                    : isRegister
+                      ? "Create account"
+                      : "Log in"}
+              </button>
+            </form>
 
             {!isReset ? (
               <p className="auth-switch">

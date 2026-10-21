@@ -20,7 +20,11 @@ type Row = {
   created: string
   calls_24h: number
   calls_total: number
+  /** Regular accounts only; admin seats are removed on the Admins desk. */
+  deletable?: boolean
 }
+
+type PendingAction = { row: Row; action: 'clear' | 'delete' }
 
 const PAGE_SIZE = 25
 
@@ -41,6 +45,7 @@ export default function UsersDesk({
   browserTotal,
   loadError,
   canEditUsers,
+  canDeleteUsers,
 }: {
   tab: UsersTab
   query: string
@@ -51,9 +56,10 @@ export default function UsersDesk({
   browserTotal: number
   loadError: string
   canEditUsers: boolean
+  canDeleteUsers: boolean
 }) {
   const [ask, setAsk] = useState<ConfirmSpec | null>(null)
-  const [pending, setPending] = useState<Row | null>(null)
+  const [pending, setPending] = useState<PendingAction | null>(null)
   const [busyId, setBusyId] = useState('')
   const [statusOverride, setStatusOverride] = useState<Record<string, boolean>>({})
   const { toasts, push, dismiss } = useBenchToasts()
@@ -80,7 +86,30 @@ export default function UsersDesk({
       tone: 'danger',
       typeToConfirm: 'CLEAR',
     })
-    setPending(row)
+    setPending({ row, action: 'clear' })
+  }
+
+  /*
+   * Deletion is the one irreversible action on this desk, so it names every
+   * store that goes with the account and still requires the email to be typed.
+   * The toggle and the tally clear stay reversible; this does not.
+   */
+  const askDelete = (row: Row) => {
+    setAsk({
+      eyebrow: 'Delete the account',
+      title: `Delete ${row.primary}?`,
+      body:
+        'This permanently removes the sign-in and every record attached to it: the profile and photo, recorded calls, feature-usage history and connected integrations. It cannot be undone. The bench audit log keeps a record that the deletion happened.',
+      facts: [
+        { label: 'Account', value: row.primary },
+        { label: 'Recorded · all time', value: count(row.calls_total) },
+      ],
+      cancelLabel: 'Keep the account',
+      confirmLabel: 'Delete account',
+      tone: 'danger',
+      typeToConfirm: row.primary,
+    })
+    setPending({ row, action: 'delete' })
   }
 
   const dismissAsk = () => {
@@ -88,29 +117,46 @@ export default function UsersDesk({
     setPending(null)
   }
 
-  const runClear = async () => {
+  const runAsk = async () => {
     if (!pending) return
+    const { row, action } = pending
     setAsk((current) => (current ? { ...current, busy: true } : current))
-    setBusyId(pending.id)
+    setBusyId(row.id)
     try {
-      const response = await fetch('/api/admin/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          pending.kind === 'browser' ? { anon_id: pending.id } : { user_id: pending.id },
-        ),
-      })
-      const payload = await response.json() as { deleted?: number; error?: string }
-      if (!response.ok) throw new Error(payload.error || 'Could not clear those calls')
-      const removed = payload.deleted ?? 0
-      push(
-        'ok',
-        `Cleared ${removed} recorded call${removed === 1 ? '' : 's'} for ${pending.primary}.`,
-      )
+      if (action === 'clear') {
+        const response = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            row.kind === 'browser' ? { anon_id: row.id } : { user_id: row.id },
+          ),
+        })
+        const payload = await response.json() as { deleted?: number; error?: string }
+        if (!response.ok) throw new Error(payload.error || 'Could not clear those calls')
+        const removed = payload.deleted ?? 0
+        push(
+          'ok',
+          `Cleared ${removed} recorded call${removed === 1 ? '' : 's'} for ${row.primary}.`,
+        )
+      } else {
+        const response = await fetch('/api/admin/users', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: row.id }),
+        })
+        const payload = await response.json() as { id?: string; error?: string }
+        if (!response.ok || !payload.id) {
+          throw new Error(payload.error || 'Could not delete that account')
+        }
+        push('ok', `${row.primary} and every record attached to it were deleted.`)
+        // The list is server-rendered; refresh so the deleted row and the
+        // account total both come from the database rather than local state.
+        router.refresh()
+      }
       setAsk(null)
       setPending(null)
     } catch (error) {
-      push('bad', error instanceof Error ? error.message : 'Could not clear those calls')
+      push('bad', error instanceof Error ? error.message : 'Could not complete that')
     } finally {
       setBusyId('')
     }
@@ -213,7 +259,7 @@ export default function UsersDesk({
           <h2 className={styles.panelTitle}>{tab === 'accounts' ? 'Accounts' : 'Browsers'}</h2>
           <p className={styles.panelNote}>
             {tab === 'accounts'
-              ? 'Signed in. Their role and sign-in are on the Admins desk.'
+              ? 'Signed in. Regular accounts can be turned off, cleared or deleted; admin seats stay on the Admins desk.'
               : 'No account, only a cookie id. Listed by recorded call volume.'}
           </p>
         </div>
@@ -277,26 +323,40 @@ export default function UsersDesk({
                       <td className={`${styles.td} ${styles.cellNum}`}>{count(row.calls_24h)}</td>
                       <td className={`${styles.td} ${styles.cellNum}`}>{count(row.calls_total)}</td>
                       {canEditUsers ? <td className={`${styles.td} ${styles.cellRight}`}>
-                        {row.kind === 'account' ? (
+                        <span className={styles.rowActions}>
+                          {row.kind === 'account' ? (
+                            <button
+                              type="button"
+                              className={styles.btn}
+                              onClick={() => toggleActive(row)}
+                              disabled={busy}
+                              title={(statusOverride[row.id] ?? row.active) ? 'Withdraw this account’s access' : 'Restore this account’s access'}
+                            >
+                              {(statusOverride[row.id] ?? row.active) ? 'Turn off' : 'Turn on'}
+                            </button>
+                          ) : null}
                           <button
                             type="button"
-                            className={styles.btn}
-                            onClick={() => toggleActive(row)}
+                            className={`${styles.btn} ${styles.btnDanger}`}
+                            onClick={() => askClear(row)}
                             disabled={busy}
-                            title={(statusOverride[row.id] ?? row.active) ? 'Withdraw this account’s access' : 'Restore this account’s access'}
+                            title="Clear this identity's recorded calls on every tool"
                           >
-                            {(statusOverride[row.id] ?? row.active) ? 'Turn off' : 'Turn on'}
+                            Clear calls
                           </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className={`${styles.btn} ${styles.btnDanger}`}
-                          onClick={() => askClear(row)}
-                          disabled={busy}
-                          title="Clear this identity's recorded calls on every tool"
-                        >
-                          Clear calls
-                        </button>
+                          {row.kind === 'account' && canDeleteUsers && row.deletable ? (
+                            <button
+                              type="button"
+                              className={`${styles.btn} ${styles.btnDanger}`}
+                              onClick={() => askDelete(row)}
+                              disabled={busy}
+                              title="Permanently delete this account and every record attached to it"
+                              aria-label={`Delete ${row.primary}`}
+                            >
+                              Delete
+                            </button>
+                          ) : null}
+                        </span>
                       </td> : null}
                     </tr>
                   )
@@ -337,7 +397,7 @@ export default function UsersDesk({
         ) : null}
       </div>
 
-      <ConfirmDialog spec={ask} onCancel={dismissAsk} onConfirm={() => void runClear()} />
+      <ConfirmDialog spec={ask} onCancel={dismissAsk} onConfirm={() => void runAsk()} />
       <BenchToasts toasts={toasts} onDismiss={dismiss} />
     </div>
   )

@@ -1,5 +1,6 @@
 import { adminEntryRedirect, requireAdmin } from '@/lib/usage/admin'
 import { readAdminGuests, readAdminUsers } from '@/lib/usage/controls'
+import { isAdminRole } from '@/lib/supabase/roles'
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import UsersDesk, { type UsersTab } from '../UsersDesk'
@@ -32,6 +33,7 @@ export default async function AdminUsersPage({
         browserTotal={0}
         loadError={gate.message ?? 'The bench is unavailable.'}
         canEditUsers={false}
+        canDeleteUsers={false}
       />
     )
   }
@@ -73,6 +75,7 @@ export default async function AdminUsersPage({
         created: row.created_at,
         calls_24h: row.calls_24h,
         calls_total: row.calls_total,
+        deletable: !isAdminRole(row.role),
       }))}
       accountTotal={accountsRead.data.total}
       browsers={browsersRead.data.rows.map((row) => ({
@@ -87,6 +90,7 @@ export default async function AdminUsersPage({
       browserTotal={browsersRead.data.total}
       loadError={loadError}
       canEditUsers={gate.role === 'Owner' || gate.role === 'Operator'}
+      canDeleteUsers={gate.role === 'Owner'}
     />
   )
 }

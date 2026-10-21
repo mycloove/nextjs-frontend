@@ -24,6 +24,7 @@ const ACTIONS = [
   ['tool.control.update', 'Tool settings changed'],
   ['tool.usage.reset', 'Tool usage cleared'],
   ['usage.person.clear', 'Person usage cleared'],
+  ['account.delete', 'Account deleted'],
 ] as const
 
 function shortTime(value: string) {
