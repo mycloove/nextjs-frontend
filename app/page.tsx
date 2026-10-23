@@ -62,6 +62,7 @@ const STRUCTURED_DATA = {
       '@id': `${SITE_URL}/#org`,
       name: 'mycloove',
       url: SITE_URL,
+      logo: `${SITE_URL}/quantum-core-octopus.png`,
       description: 'Calm, focused tools for PDF, Word, image, Markdown, and FASTA files.',
     },
     {

@@ -92,6 +92,33 @@ for (const url of inspectedLocations) {
     assert(value('og:image') && value('twitter:image'), 'Preserve the existing branded share image')
     const publicHtml = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
     if (url.pathname === '/') {
+      const structuredData = [...html.matchAll(/<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)].map(([, json]) => JSON.parse(json))
+      const organization = structuredData.flatMap((data) => data['@graph'] || [data]).find((data) => data['@type'] === 'Organization')
+      assert.equal(organization?.name, 'mycloove', 'Homepage must identify the real organization')
+      assert.equal(organization?.logo, `${canonicalOrigin.origin}/quantum-core-octopus.png`, 'Organization must reference the existing static brand mark')
+      const pngIcon = tags(html, 'link').find((tag) => tag.rel === 'icon' && tag.type === 'image/png')
+      assert(pngIcon?.href, 'Preserve the existing PNG favicon declaration')
+      // Favicon and Organization.logo are separate Google signals. Validate
+      // both assets without implying that Google must display either one.
+      for (const [label, href, minimum] of [['favicon', pngIcon.href, 8], ['Organization logo', organization.logo, 112]]) {
+        const assetURL = new URL(href, base)
+        assert([base.origin, canonicalOrigin.origin].includes(assetURL.origin), `Unexpected ${label} host`)
+        const response = await fetch(new URL(assetURL.pathname + assetURL.search, base), {
+          redirect: 'manual',
+          headers: { 'User-Agent': 'Googlebot-Image/1.0', Accept: 'image/png' },
+          signal: AbortSignal.timeout(30_000),
+        })
+        assert.equal(response.status, 200, `${label} must be publicly crawlable`)
+        assert.match(response.headers.get('content-type') || '', /image\/png/)
+        assert(!/noindex/i.test(response.headers.get('x-robots-tag') || ''), `${label} must not be noindexed`)
+        const image = Buffer.from(await response.arrayBuffer())
+        assert.equal(image.toString('hex', 0, 8), '89504e470d0a1a0a', `${label} must be a valid PNG`)
+        assert(image.length >= 24)
+        const width = image.readUInt32BE(16)
+        const height = image.readUInt32BE(20)
+        assert.equal(width, height, `${label} must be square`)
+        assert(width >= minimum, `${label} must be at least ${minimum}px`)
+      }
       for (const path of priorityPaths.slice(1)) assert(tags(publicHtml, 'a').some((tag) => tag.href === path), `Initial catalogue link missing: ${path}`)
       assert.match(publicHtml, /Tool catalogue/)
       assert(tags(publicHtml, 'article').some((tag) => (tag.class || '').split(/\s+/).includes('home-tool-card')), 'Tool descriptions missing from initial HTML')
