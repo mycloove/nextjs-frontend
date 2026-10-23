@@ -2,8 +2,13 @@ import ProfilePageClient from '@/components/profile/ProfilePageClient'
 import styles from '@/components/profile/profile.module.css'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 
-export const metadata = { title: 'Profile — mycloove' }
+export const metadata: Metadata = {
+  title: 'Profile',
+  robots: { index: false, follow: false },
+  alternates: { canonical: null },
+}
 
 /**
  * Deep-linkable profile page. Auth-gated on the server: a signed-out visitor is

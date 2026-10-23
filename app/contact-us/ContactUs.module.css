@@ -208,10 +208,14 @@
   font-size: 14px;
   font-weight: 400;
   line-height: 1.8;
+  transition: background-color 120ms var(--cu-arrive), border-color 120ms var(--cu-arrive), padding-inline 120ms var(--cu-arrive);
 }
 .field input::placeholder, .field textarea::placeholder { color: var(--cu-muted); opacity: 1; font-size: 12px; }
-.field input:focus, .field textarea:focus { border-bottom-color: var(--cu-accent); }
+.field:focus-within > label { color: var(--cu-accent); }
+.field input:focus, .field textarea:focus { padding-inline: 10px; border-bottom: 2px solid var(--cu-accent); background: color-mix(in srgb, var(--cu-accent-soft) 48%, transparent); }
+.field input:focus-visible, .field textarea:focus-visible { outline: none; }
 .field input[aria-invalid='true'], .field textarea[aria-invalid='true'] { border-bottom-color: var(--cu-fault); }
+.field input[aria-invalid='true']:focus, .field textarea[aria-invalid='true']:focus { border-bottom-color: var(--cu-fault); background: color-mix(in srgb, var(--cu-fault-soft) 42%, transparent); }
 .field textarea { min-height: 192px; resize: vertical; }
 .messageField { margin-bottom: 20px; }
 .messageMeta { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-top: 12px; }

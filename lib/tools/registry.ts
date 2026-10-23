@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { pageMetadata } from '../metadata.ts'
 
 export type ToolId =
   | 'image-to-pdf'
@@ -56,8 +57,24 @@ export function getTool(id: ToolId): ToolDefinition {
 
 export function toolMetadata(id: ToolId): Metadata {
   const tool = getTool(id)
-  return {
-    title: `${tool.label} | mycloove`,
-    description: tool.description,
+  const searchCopy: Partial<Record<ToolId, { title: string; description: string }>> = {
+    'pdf-to-markdown': {
+      title: 'Mr. Markdown: Online Markdown Editor',
+      description: 'Write Markdown with a live preview, or convert a PDF into editable Markdown. Review the extracted text, tables, and formatting before exporting.',
+    },
+    'bijoy-converter': {
+      title: 'Bijoy to Unicode Converter for Bangla',
+      description: 'Convert legacy Bijoy-encoded Bangla text to Unicode, then review and copy the result. Text conversion is separate from OCR for scanned images.',
+    },
+    'image-to-text': {
+      title: 'Image to Text Converter (OCR)',
+      description: 'Extract editable text from photos, screenshots, and scans with OCR. Choose available language options and review recognition errors before using the result.',
+    },
+    'pdf-to-word': {
+      title: 'PDF to Word Converter',
+      description: 'Convert a PDF into an editable DOCX document. Text-based PDFs and scanned pages follow different conversion paths; review layout and OCR results.',
+    },
   }
+  const copy = searchCopy[id]
+  return pageMetadata(tool.href, copy?.title ?? tool.label, copy?.description ?? tool.description)
 }

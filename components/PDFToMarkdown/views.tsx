@@ -1730,7 +1730,7 @@ export function Workspace({
                     <button role="menuitem" tabIndex={exportMenuOpen ? 0 : -1} className={cx('mr-export-option', fmt === 'json' && 'mr-export-group-start')} aria-describedby={exportMenuOpen && (fmt === 'pdf' || fmt === 'docx') ? `mr-export-cost-${fmt}` : undefined} onClick={() => { onDownload(fmt); setExportMenuOpen(false) }}>
                       <span className="mr-export-format">{ext}</span><span className="mr-export-label">{label}</span>
                     </button>
-                    {exportMenuOpen && (fmt === 'pdf' || fmt === 'docx') && creditState.snapshot?.prices[fmt === 'pdf' ? 'markdown-to-pdf' : 'pdf-to-markdown']?.enabled !== false ? <div id={`mr-export-cost-${fmt}`} className="mr-credit-cost mr-export-credit-cost"><CreditCost toolId={fmt === 'pdf' ? 'markdown-to-pdf' : 'pdf-to-markdown'} creditState={creditState} /></div> : null}
+                    {exportMenuOpen && (fmt === 'pdf' || fmt === 'docx') && creditState.snapshot?.prices[fmt === 'pdf' ? 'markdown-to-pdf' : 'pdf-to-markdown']?.enabled !== false ? <div id={`mr-export-cost-${fmt}`} className="mr-credit-cost mr-export-credit-cost"><CreditCost toolId={fmt === 'pdf' ? 'markdown-to-pdf' : 'pdf-to-markdown'} creditState={creditState} showActionLabel={false} /></div> : null}
                   </div>
                 ))}
             </div>
@@ -1957,7 +1957,7 @@ export function Workspace({
               <span className="mr-ws-ai-cta-arrow" aria-hidden="true">{Ic.arrow(14)}</span>
             </button>
             {creditState.snapshot?.prices['document-ai']?.enabled !== false ? <div className="mr-credit-cost mr-ai-credit-cost">
-              <span>AI refinement</span><CreditCost toolId="document-ai" creditState={creditState} />
+              <span>AI refinement</span><CreditCost toolId="document-ai" creditState={creditState} showActionLabel={false} />
             </div> : null}
           </div>
 
@@ -2572,7 +2572,7 @@ export function CommandPalette({
                       <span>{a.label}</span>
                       {a.kbd && <span className="pm-kbd">{a.kbd}</span>}
                     </div>
-                    {a.id === 'run' || a.id === 'dl-docx' ? creditState.snapshot?.prices['pdf-to-markdown']?.enabled !== false ? <div className="pm-credit-cost pm-cmdk-credit-cost"><CreditCost toolId="pdf-to-markdown" creditState={creditState} /></div> : null : ['ai-clean', 'ai-sum', 'ai-tr'].includes(a.id) ? creditState.snapshot?.prices['document-ai']?.enabled !== false ? <div className="pm-credit-cost pm-cmdk-credit-cost"><CreditCost toolId="document-ai" creditState={creditState} /></div> : null : null}
+                    {a.id === 'run' || a.id === 'dl-docx' ? creditState.snapshot?.prices['pdf-to-markdown']?.enabled !== false ? <div className="pm-credit-cost pm-cmdk-credit-cost"><CreditCost toolId="pdf-to-markdown" creditState={creditState} showActionLabel={false} /></div> : null : ['ai-clean', 'ai-sum', 'ai-tr'].includes(a.id) ? creditState.snapshot?.prices['document-ai']?.enabled !== false ? <div className="pm-credit-cost pm-cmdk-credit-cost"><CreditCost toolId="document-ai" creditState={creditState} showActionLabel={false} /></div> : null : null}
                   </div>
                 )
               })}

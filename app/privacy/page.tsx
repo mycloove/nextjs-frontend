@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/metadata";
 
 import LegalLayout, { type LegalSection } from "@/components/legal/LegalLayout";
 
@@ -8,11 +8,11 @@ import "../home.css";
 const CONTACT_EMAIL =
   process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "hello@mycloove.com";
 
-export const metadata: Metadata = {
-  title: { absolute: "Privacy — mycloove" },
-  description:
-    "How mycloove handles your data: what we process, what we keep, the cookies we use, your rights, and how to reach us.",
-};
+export const metadata = pageMetadata(
+  "/privacy",
+  "Privacy",
+  "How mycloove handles your data: what we process, what we keep, the cookies we use, your rights, and how to reach us.",
+);
 
 const sections: LegalSection[] = [
   {
@@ -51,14 +51,20 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          Files you upload are processed on our servers to produce the result
-          you requested. For most tools, the uploaded file and the generated
-          output are deleted from the server as soon as the response is sent.
+          File handling depends on the tool. Some operations run in your browser;
+          other tools send uploads to the processing service to produce your
+          result. Do not assume every upload or generated output is deleted as
+          soon as a response is sent.
         </p>
         <p>
-          Some features keep a document for the duration of a session — for
-          example, Document AI, so you can keep asking questions about it.
-          Ending or starting a new session releases it.
+          Document AI can retain uploaded documents and derived text or indexes
+          for follow-up questions. Retention depends on the service configuration;
+          ending a browser session is not a guarantee of server-side deletion.
+        </p>
+        <p>
+          Editors may save document text and workspace preferences in your browser
+          so you can resume your work. Mr. Markdown uses local browser storage
+          for completed documents. Browser storage and server storage are separate.
         </p>
       </>
     ),
@@ -112,8 +118,10 @@ const sections: LegalSection[] = [
         <p>
           We use a small number of processors to run the service — for example
           Supabase for authentication and the database, and an email service for
-          the contact form. They process data only to provide their function. We
-          do not sell personal data.
+          the contact form. AI features can send document content to the configured
+          model provider to produce an answer or analysis. Do not submit content
+          you are not authorized to share with the processing services. We do not
+          sell personal data.
         </p>
       </>
     ),
@@ -124,10 +132,11 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          Uploaded files and generated outputs are not kept beyond processing
-          (see &ldquo;Your files&rdquo;). Usage records are kept to apply limits
-          and to show your own activity. Account data is kept while your account
-          exists.
+          File and derived-content retention varies by feature (see
+          &ldquo;Your files&rdquo;). Usage records are kept to apply limits and
+          to show your own activity. Account data is kept while your account
+          exists. Contact us for deletion requests; this policy does not promise
+          an automatic deletion deadline that every tool enforces.
         </p>
       </>
     ),

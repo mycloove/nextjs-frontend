@@ -1,5 +1,12 @@
 import ToolRouteGate from "@/components/tools/ToolRouteGate";
+import { pageMetadata } from "@/lib/metadata";
 import "./styles/premium-shell.css";
+
+export const metadata = pageMetadata(
+  "/document-ai",
+  "Document AI: Chat with Your Documents",
+  "Ask questions about an uploaded document and review answers alongside its pages. AI answers can be wrong; check the source before relying on them.",
+);
 
 /**
  * Document AI shell.

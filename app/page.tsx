@@ -6,6 +6,7 @@ import LayeredIcon, { type LayeredIconVariant } from '@/components/tools/layered
 import Topbar2 from '@/components/Topbar2'
 import { toolIdForHomeCard } from '@/lib/usage/catalog'
 import { useToolAvailability } from '@/lib/usage/useToolAvailability'
+import { SITE_URL } from '@/lib/metadata'
 import Link from 'next/link'
 import { ChangeEvent, DragEvent as ReactDragEvent, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -24,7 +25,7 @@ type Tool = {
   format: string
   cta: string
   keywords: string
-  featured?: 'Most popular' | 'AI powered'
+  featured?: 'Editable document' | 'AI powered'
   route: string
   icon: 'images' | 'camera' | 'word' | 'document' | 'markdown' | 'clipboard' | 'search' | 'sparkle' | 'batch' | 'dna' | 'merge' | 'split' | 'rotate' | 'compress'
   accent: 'coral' | 'emerald' | 'indigo'
@@ -33,12 +34,12 @@ type Tool = {
 const tools: Tool[] = [
   { id: 'image-to-pdf', label: 'Images to PDF', description: 'Combine multiple images into one clean, shareable PDF.', group: 'Convert', badge: 'Fast', format: 'JPG + PNG to PDF', cta: 'Combine images', keywords: 'photo picture merge combine jpg jpeg png', route: '/image-to-pdf', icon: 'images', accent: 'coral' },
   { id: 'pdf-to-images', label: 'PDF to Images', description: 'Export every PDF page as a crisp, high-quality image.', group: 'Convert', badge: 'High quality', format: 'PDF to PNG', cta: 'Export pages', keywords: 'photo picture export png jpg pages', route: '/pdf-to-images', icon: 'camera', accent: 'coral' },
-  { id: 'pdf-to-word', label: 'PDF to Word', description: 'Turn a PDF into an editable DOCX while keeping it readable.', group: 'Convert', badge: 'Editable', format: 'PDF to DOCX', cta: 'Make it editable', keywords: 'word doc docx edit document', featured: 'Most popular', route: '/pdf-to-word', icon: 'word', accent: 'coral' },
-  { id: 'word-to-pdf', label: 'Word to PDF', description: 'Create a polished PDF from a Word document in seconds.', group: 'Convert', badge: 'Layout safe', format: 'DOCX to PDF', cta: 'Create PDF', keywords: 'word doc docx publish office', route: '/word-to-pdf', icon: 'document', accent: 'coral' },
+  { id: 'pdf-to-word', label: 'PDF to Word', description: 'Turn a PDF into an editable DOCX, then review its text and layout.', group: 'Convert', badge: 'Editable', format: 'PDF to DOCX', cta: 'Make it editable', keywords: 'word doc docx edit document', featured: 'Editable document', route: '/pdf-to-word', icon: 'word', accent: 'coral' },
+  { id: 'word-to-pdf', label: 'Word to PDF', description: 'Create a shareable PDF from a Word document.', group: 'Convert', badge: 'DOCX input', format: 'DOCX to PDF', cta: 'Create PDF', keywords: 'word doc docx publish office', route: '/word-to-pdf', icon: 'document', accent: 'coral' },
   { id: 'pdf-to-markdown', label: 'Mr. Markdown', description: 'Convert PDFs to Markdown, then edit and export in one workspace.', group: 'Convert', badge: 'Bangla', format: 'PDF to MD', cta: 'Extract Markdown', keywords: 'pdf to markdown mr markdown md text developer bangla', route: '/mr-markdown', icon: 'markdown', accent: 'coral' },
   { id: 'markdown-to-pdf', label: 'Markdown to PDF', description: 'Publish readable PDFs with native Bangla font support.', group: 'Convert', badge: 'Bangla', format: 'MD to PDF', cta: 'Publish PDF', keywords: 'markdown md print publish bangla', route: '/markdown-to-pdf', icon: 'clipboard', accent: 'coral' },
   { id: 'image-to-text', label: 'Image to Text', description: 'Extract reusable text from photos, screenshots, and scans.', group: 'Extract', badge: 'OCR', format: 'Image to text', cta: 'Extract text', keywords: 'ocr scan photo screenshot copy text', route: '/image-to-text', icon: 'search', accent: 'emerald' },
-  { id: 'ai-analyzer', label: 'AI Analyzer', description: 'Ask questions, summarize documents, and uncover key insights.', group: 'Ask AI', badge: 'Smart insights', format: 'PDF + AI', cta: 'Analyze a document', keywords: 'chat question summary insights document ai', featured: 'AI powered', route: '/ai-analyzer', icon: 'sparkle', accent: 'indigo' },
+  { id: 'ai-analyzer', label: 'AI Analyzer', description: 'Generate a document summary and analysis, then check the source.', group: 'Ask AI', badge: 'Document analysis', format: 'PDF + AI', cta: 'Analyze a document', keywords: 'summary insights document ai analysis', featured: 'AI powered', route: '/ai-analyzer', icon: 'sparkle', accent: 'indigo' },
   { id: 'batch', label: 'Batch Process', description: 'Run one repeatable workflow across multiple files at once.', group: 'Advanced', badge: 'Batch', format: 'Multi-file', cta: 'Build a batch', keywords: 'bulk multiple automation workflow files', route: '/batch-process', icon: 'batch', accent: 'indigo' },
   { id: 'fasta-tool', label: 'FASTA Tools', description: 'Inspect and work with biological sequences in one workspace.', group: 'Advanced', badge: 'Developer', format: 'FASTA + sequence', cta: 'Inspect sequence', keywords: 'dna biology bioinformatics sequence fasta fa', route: '/fasta-tools', icon: 'dna', accent: 'indigo' },
   { id: 'bijoy-converter', label: 'Bijoy to Unicode', description: 'Convert legacy Bijoy-encoded Bangla text into clean, searchable Unicode.', group: 'Extract', badge: 'Bangla', format: 'Bijoy to Unicode', cta: 'Convert Bijoy text', keywords: 'bijoy unicode bangla bengali legacy convert text', route: '/bijoy-converter', icon: 'search', accent: 'emerald' },
@@ -53,8 +54,6 @@ const tools: Tool[] = [
 
 /* Structured data for the marketing home. The home route is a client component,
    so it cannot export `metadata`; JSON-LD is the SEO signal it *can* carry. */
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://mycloove.com'
-
 const STRUCTURED_DATA = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -360,6 +359,10 @@ export default function Home() {
     () => status === 'loading' ? [] : tools.filter((tool) => enabled(toolIdForHomeCard(tool.id))),
     [enabled, status],
   )
+  // Public descriptions do not depend on a client request. This is an inventory,
+  // not an enabled snapshot: only a ready response can call entries available.
+  // Recommendations continue to use openTools and the original gate semantics.
+  const catalogueTools = status === 'ready' ? openTools : tools
 
   useEffect(() => {
     let frame: number | undefined
@@ -393,16 +396,16 @@ export default function Home() {
 
   const visibleTools = useMemo(() => {
     const term = query.trim().toLowerCase()
-    return openTools.filter((tool) => {
+    return catalogueTools.filter((tool) => {
       const matchesQuery = !term || `${tool.label} ${tool.description} ${tool.group} ${tool.badge} ${tool.format} ${tool.keywords}`.toLowerCase().includes(term)
       const matchesFilter = filter === 'All' || (filter === 'Favorites' ? favorites.includes(tool.id) : tool.group === filter)
       return matchesQuery && matchesFilter
     })
-  }, [favorites, filter, openTools, query])
+  }, [catalogueTools, favorites, filter, query])
 
   const filterCounts = useMemo(() => {
     const term = query.trim().toLowerCase()
-    const matchingQuery = openTools.filter((tool) => !term || `${tool.label} ${tool.description} ${tool.group} ${tool.badge} ${tool.format} ${tool.keywords}`.toLowerCase().includes(term))
+    const matchingQuery = catalogueTools.filter((tool) => !term || `${tool.label} ${tool.description} ${tool.group} ${tool.badge} ${tool.format} ${tool.keywords}`.toLowerCase().includes(term))
     const counts = filters.reduce<Record<Filter, number>>((next, item) => {
       next[item] = item === 'All'
         ? matchingQuery.length
@@ -411,7 +414,7 @@ export default function Home() {
     }, { All: 0, Convert: 0, Extract: 0, Edit: 0, 'Ask AI': 0, Advanced: 0, Favorites: 0 })
     counts.Favorites = matchingQuery.filter((tool) => favorites.includes(tool.id)).length
     return counts
-  }, [favorites, openTools, query])
+  }, [catalogueTools, favorites, query])
 
   const toggleFavorite = (id: string) => {
     setFavorites((current) => {
@@ -516,7 +519,7 @@ export default function Home() {
   }
 
   const recentTools = recents.map((id) => openTools.find((tool) => tool.id === id)).filter((tool): tool is Tool => Boolean(tool))
-  const featuredTools = filter === 'All' && !query.trim() ? visibleTools.filter((tool) => tool.featured) : []
+  const featuredTools = status === 'ready' && filter === 'All' && !query.trim() ? visibleTools.filter((tool) => tool.featured) : []
   const libraryTools = featuredTools.length ? visibleTools.filter((tool) => !tool.featured) : visibleTools
 
   return (
@@ -563,7 +566,7 @@ export default function Home() {
               <div className="home-preview-divider"/>
               <small className="home-preview-label">{selectedFileName ? 'Recommended next steps' : 'A simpler way to work'}</small>
               <div className="home-preview-actions">{recommendedTools.slice(0, 3).map((tool, index) => <Link href={tool.route} key={tool.id} onClick={() => addRecent(tool.id)} className={`${index === 0 ? 'primary ' : ''}accent-${tool.accent}`}><span className="preview-action-icon"><ToolIcon name={tool.icon}/></span><span><b>{tool.label}</b><small>{index === 0 ? 'Best match for your file' : tool.badge}</small></span><i aria-hidden="true">→</i></Link>)}</div>
-              <div className="home-preview-footer"><span><i/> Ready when you are</span><small>Nothing stored without your say-so</small></div>
+              <div className="home-preview-footer"><span><i/> Ready when you are</span><small>File handling varies by tool</small></div>
             </div>
             <b className="home-format-pill">Smart suggestions</b>
             <small className="home-processing"><i/> Private workspace</small>
@@ -583,7 +586,7 @@ export default function Home() {
             </div>
             <p id="hero-file-note" className={`home-file-note${fileError ? ' error' : ''}`} role={fileError ? 'alert' : undefined} aria-live="polite">{fileNote}</p>
             <div className="home-quick-actions" aria-label="Popular tools"><span>Popular:</span>{quickTools.map((tool) => <Link key={tool.id} href={tool.route} onClick={() => addRecent(tool.id)}>{tool.label}<i aria-hidden="true">→</i></Link>)}</div>
-            <ul className="home-benefits"><li>No account to start</li><li>Private by design</li><li>Built for quick tasks</li></ul>
+            <ul className="home-benefits"><li>Guest access for many tools</li><li>Review before you export</li><li>Focused document tasks</li></ul>
           </div>
         </section>
 
@@ -616,7 +619,7 @@ export default function Home() {
 
         <section className="home-tools" id="tools" aria-labelledby="tools-title">
           <div className="home-container">
-            <div className="home-section-heading"><div><p>Tool library</p><h2 id="tools-title">Open on the bench.<br/>The rest stays off the floor.</h2></div></div>
+            <div className="home-section-heading"><div><p>Tool library</p><h2 id="tools-title">Choose the tool.<br/>Keep the task in focus.</h2></div></div>
             <div className="home-tool-controls">
               <div className="home-search"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input ref={searchInputRef} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder='Try “edit Word”, “OCR”, or “Bangla PDF”' aria-label="Search tools by task, format, or outcome" aria-controls="tool-results" />{query ? <button type="button" onClick={() => { setQuery(''); searchInputRef.current?.focus() }} aria-label="Clear search">×</button> : <kbd aria-hidden="true">Ctrl K</kbd>}</div>
               <div className="home-filter-strip">
@@ -635,9 +638,9 @@ export default function Home() {
               <div className="aurora-section-head">
                 <div className="aurora-head-left">
                   <span className="aurora-head-tag">Recommended for you</span>
-                  <h2 id="featured-title" className="aurora-head-title">Most used on the bench</h2>
+                   <h2 id="featured-title" className="aurora-head-title">Two ways to start</h2>
                 </div>
-                <div className="aurora-head-right">Where most work starts</div>
+                 <div className="aurora-head-right">Editing or document analysis</div>
               </div>
 
               <div className="aurora-grid">
@@ -672,8 +675,9 @@ export default function Home() {
               </div>
             </section>}
 
-            {visibleTools.length > 0 && <div className="home-library-label home-library-label-all"><span>{featuredTools.length ? 'Explore every tool' : filter === 'Favorites' ? 'Your saved tools' : 'Available tools'}</span><small>{libraryTools.length} {libraryTools.length === 1 ? 'workspace' : 'workspaces'}</small></div>}
-            {status === 'loading' ? <p className="home-result-line" id="tool-results">Reading which instruments are open.</p> : visibleTools.length ? <div className="home-tool-grid" id="tool-results">{libraryTools.map((tool, i) => {
+            {visibleTools.length > 0 && <div className="home-library-label home-library-label-all"><span>{status !== 'ready' ? 'Tool catalogue' : featuredTools.length ? 'Explore every tool' : filter === 'Favorites' ? 'Your saved tools' : 'Available tools'}</span><small>{libraryTools.length} {status !== 'ready' ? 'catalogue entries' : libraryTools.length === 1 ? 'workspace' : 'workspaces'}</small></div>}
+            {status !== 'ready' && <p className="home-result-line" role="status">{status === 'loading' ? 'Reading live availability. Catalogue entries describe each tool, not whether it is open right now.' : 'Live availability could not be confirmed. Each workspace still checks its current limits before processing.'}</p>}
+            {visibleTools.length ? <div className="home-tool-grid" id="tool-results">{libraryTools.map((tool, i) => {
               const saved = favorites.includes(tool.id)
               return <div className={`home-tool-card-entry accent-${tool.accent}`} key={tool.id} style={{ animationDelay: `${i * 45}ms` }}>
                 <article className="home-tool-card">
@@ -690,16 +694,16 @@ export default function Home() {
                       </div>
                     </div>
                     <span className="home-tool-divider" aria-hidden="true" />
-                    <footer><b><i aria-hidden="true" />{tool.badge}</b><span className="home-tool-action"><span>{tool.cta}</span><i aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m6 3 5 5-5 5" /></svg></i></span></footer>
+                    <footer><b><i aria-hidden="true" />{tool.badge}</b><span className="home-tool-action"><span>{status === 'ready' ? tool.cta : 'View workspace'}</span><i aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m6 3 5 5-5 5" /></svg></i></span></footer>
                   </Link>
                   <button type="button" className={`home-tool-favorite ${saved ? 'saved' : ''}`} onClick={() => toggleFavorite(tool.id)} aria-label={`${saved ? 'Remove' : 'Add'} ${tool.label} ${saved ? 'from' : 'to'} saved tools`} aria-pressed={saved}><span aria-hidden="true">{saved ? '★' : '☆'}</span></button>
                 </article>
               </div>
-            })}</div> : <div className="home-empty" id="tool-results"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><h3>{openTools.length === 0 ? 'Nothing is open' : filter === 'Favorites' ? 'No saved tools yet' : 'No matching tools found'}</h3><p>{openTools.length === 0 ? 'Every instrument on the bench is withdrawn. They return here when an admin opens them.' : filter === 'Favorites' ? 'Select the star on any tool to keep your everyday workflows close.' : `We could not find a tool for “${query || filter}”. Try a format such as PDF, Word, image, or OCR.`}</p><div>{filter === 'Favorites' && openTools.length > 0 && <button type="button" className="home-button home-button-primary" onClick={() => setFilter('All')}>Browse all tools</button>}{openTools.length > 0 && <button type="button" className="home-button home-button-secondary" onClick={() => { setQuery(''); setFilter('All'); searchInputRef.current?.focus() }}>{filter === 'Favorites' ? 'Search tools' : 'Clear and search again'}</button>}</div></div>}
+            })}</div> : <div className="home-empty" id="tool-results"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><h3>{status === 'ready' && openTools.length === 0 ? 'Nothing is open' : filter === 'Favorites' ? 'No saved tools yet' : 'No matching tools found'}</h3><p>{status === 'ready' && openTools.length === 0 ? 'Every instrument on the bench is withdrawn. They return here when an admin opens them.' : filter === 'Favorites' ? 'Select the star on any tool to keep your everyday workflows close.' : `We could not find a tool for “${query || filter}”. Try a format such as PDF, Word, image, or OCR.`}</p><div>{filter === 'Favorites' && catalogueTools.length > 0 && <button type="button" className="home-button home-button-primary" onClick={() => setFilter('All')}>Browse all tools</button>}{catalogueTools.length > 0 && <button type="button" className="home-button home-button-secondary" onClick={() => { setQuery(''); setFilter('All'); searchInputRef.current?.focus() }}>{filter === 'Favorites' ? 'Search tools' : 'Clear and search again'}</button>}</div></div>}
           </div>
         </section>
 
-        <section className="home-trust" id="security" aria-labelledby="trust-title"><div className="home-container home-trust-panel"><div><p>Designed for confidence</p><h2 id="trust-title">Your document.<br/>Your decision.</h2></div><article><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span><b>Privacy by design</b><p>Clear processing and retention controls belong in every workflow.</p></article><article><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></span><b>Focused performance</b><p>Independent tools keep each task direct, quick, and understandable.</p></article><article><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/><path d="M19 5v6M16 8h6"/></svg></span><b>No forced account</b><p>Let people finish a simple task before asking for commitment.</p></article></div></section>
+        <section className="home-trust" id="security" aria-labelledby="trust-title"><div className="home-container home-trust-panel"><div><p>Designed for confidence</p><h2 id="trust-title">Your document.<br/>Your decision.</h2></div><article><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span><b>Know the file handling</b><p>Processing and retention differ by tool. Read the <Link href="/privacy">privacy policy</Link> before uploading sensitive files.</p></article><article><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></span><b>Focused workflows</b><p>Independent tools keep each task direct and understandable.</p></article><article><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/><path d="M19 5v6M16 8h6"/></svg></span><b>Guest access</b><p>Many tools support guest use. Some actions require an account; current limits are shown in the workspace.</p></article></div></section>
       </main>
 
       <HomeFooter />

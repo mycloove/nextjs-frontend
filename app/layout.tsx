@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import Script from 'next/script'
+import { SITE_URL } from '../lib/metadata'
 import './theme.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -48,8 +49,6 @@ const extensionErrorGuard = `
 })()
 `
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://mycloove.com'
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -63,14 +62,14 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'mycloove',
     title: 'mycloove — Calm document tools',
-    description: 'Convert, extract, edit, and understand PDF, Word, image, Markdown, and FASTA files — no account needed.',
+    description: 'Convert, extract, edit, and understand PDF, Word, image, Markdown, and FASTA files with focused document tools.',
     url: '/',
     locale: 'en_US',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'mycloove — Calm document tools',
-    description: 'Convert, extract, edit, and understand PDF, Word, image, Markdown, and FASTA files — no account needed.',
+    description: 'Convert, extract, edit, and understand PDF, Word, image, Markdown, and FASTA files with focused document tools.',
   },
   robots: { index: true, follow: true },
 }

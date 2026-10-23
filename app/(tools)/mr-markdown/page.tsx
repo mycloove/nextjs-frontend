@@ -3,6 +3,7 @@ import PDFToMarkdown from '@/components/PDFToMarkdown'
 import WithdrawnTool from '@/components/tools/WithdrawnTool'
 import { toolMetadata } from '@/lib/tools/registry'
 import { isToolOpen } from '@/lib/usage/controls'
+import MrMarkdownPublicInfo from './MrMarkdownPublicInfo'
 export const metadata = toolMetadata('pdf-to-markdown')
 
 /* Entry-screen identity fonts. Loaded here (not in the root layout) so they
@@ -28,7 +29,7 @@ export default async function Page() {
   }
   return (
     <div className={`${jetbrainsMono.variable} ${notoSansBengali.variable}`}>
-      <PDFToMarkdown />
+      <PDFToMarkdown publicInfo={<MrMarkdownPublicInfo />} />
     </div>
   )
 }

@@ -512,3 +512,35 @@
   .pm-history-panel .pm-section-meta { display: none; }
   .pm-history-time { min-width: auto; }
 }
+
+/* The public workflow is a quiet reading ledger, not a second entry hero.
+   It also renders during session restoration; no private content goes here. */
+.pm-public-info {
+  margin-top: 48px;
+  padding: 32px 0;
+  border-top: 1px solid var(--pm-border-strong);
+  color: var(--pm-text-primary);
+}
+.pm-public-info-label,
+.pm-public-info-status {
+  margin: 0 0 12px;
+  color: var(--pm-text-secondary);
+  font: 500 12px/1.6 var(--pm-font-sans);
+}
+.pm-public-info h2 { margin: 0 0 16px; font-size: clamp(24px, 3vw, 32px); line-height: 1.2; letter-spacing: -0.03em; }
+.pm-public-info h3 { margin: 0 0 12px; font-size: 16px; line-height: 1.4; }
+.pm-public-info p,
+.pm-public-info li { color: var(--pm-text-secondary); font-size: 14px; line-height: 1.8; }
+.pm-public-info-intro { max-width: 76ch; margin: 0 0 28px; }
+.pm-public-info-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+.pm-public-info-columns p { margin: 0 0 16px; }
+.pm-public-info ol { margin: 0; padding-left: 24px; }
+.pm-public-info li { margin-bottom: 8px; }
+.pm-public-info pre { margin: 20px 0 0; padding: 16px; overflow-x: auto; background: var(--pm-bg-inset); color: var(--pm-text-primary); border-left: 2px solid var(--pm-border-strong); font: 13px/1.8 ui-monospace, monospace; }
+.pm-public-info a { color: var(--pm-text-primary); text-decoration: underline; text-underline-offset: 4px; }
+.pm-public-info a:focus-visible { outline: 2px solid var(--pm-text-primary); outline-offset: 4px; }
+.pm-public-info-links { display: flex; flex-wrap: wrap; gap: 12px 20px; font-size: 14px; }
+@media (max-width: 760px) {
+  .pm-public-info { margin-top: 32px; padding-top: 24px; }
+  .pm-public-info-columns { grid-template-columns: 1fr; gap: 28px; }
+}

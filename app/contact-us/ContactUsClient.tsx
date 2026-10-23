@@ -33,7 +33,7 @@ const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SERVICE_ID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID ?? ''
 const TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID ?? ''
 const PUBLIC_KEY = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY ?? ''
-const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'hello@mycloove.com'
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'mycloove26@gmail.com'
 const emailJsReady = Boolean(SERVICE_ID && TEMPLATE_ID && PUBLIC_KEY)
 
 type FieldKey = 'name' | 'email' | 'message' | 'terms'

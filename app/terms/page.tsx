@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/metadata";
 
 import LegalLayout, { type LegalSection } from "@/components/legal/LegalLayout";
 
@@ -8,11 +8,11 @@ import "../home.css";
 const CONTACT_EMAIL =
   process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "hello@mycloove.com";
 
-export const metadata: Metadata = {
-  title: { absolute: "Terms — mycloove" },
-  description:
-    "The terms that govern your use of mycloove: your files, your account, usage limits, and acceptable use.",
-};
+export const metadata = pageMetadata(
+  "/terms",
+  "Terms",
+  "The terms that govern your use of mycloove: your files, your account, usage limits, and acceptable use.",
+);
 
 const sections: LegalSection[] = [
   {

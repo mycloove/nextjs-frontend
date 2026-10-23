@@ -1,11 +1,12 @@
 import type { MetadataRoute } from 'next'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://mycloove.com'
+import { SITE_URL } from '../lib/metadata'
 
 /**
  * Crawler directives. The conversion routes stay crawlable, but the private
  * surfaces (admin, auth, API) are disallowed — they would only waste crawl
- * budget and some require a session.
+ * budget and some require a session. These directives are not access control;
+ * the profile remains crawlable so its explicit noindex can be read.
  */
 export default function robots(): MetadataRoute.Robots {
   return {

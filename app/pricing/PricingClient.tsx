@@ -80,9 +80,9 @@ export default function PricingClient({ toolCount, monoClass = '' }: PricingProp
 
   /* Included with every way in — the plan's shape, no quotas quoted. */
   const included = [
-    { b: `All ${toolCount} instruments`, s: 'the full bench — converters, editors, Document AI' },
+    { b: `${toolCount}-tool catalogue`, s: 'converters, editors, and Document AI; availability is shown in each workspace' },
     { b: 'A clear allowance', s: 'the account menu shows your balance; billable actions show their credit cost' },
-    { b: 'Zero storage', s: 'files are processed, then removed' },
+    { b: 'Clear file handling', s: 'retention varies by tool; editors may save work in your browser' },
     { b: 'Bangla native', s: 'Unicode and Bijoy handled as first-class scripts' },
   ]
 
@@ -152,13 +152,13 @@ export default function PricingClient({ toolCount, monoClass = '' }: PricingProp
               <span className={styles.titleAccent}>Fair by design.</span>
             </h1>
             <p className={styles.lede}>
-              Every tool in the workshop is free within a fair allowance — no
-              card, no account to start. A higher-limit Pro plan is planned,
+               Tools are free within the current allowance. Many support guest
+               use; some actions require an account. A higher-limit Pro plan is planned,
               and it is not for sale.
             </p>
             <div className={styles.specStrip} aria-hidden="true">
               <span className={styles.specItem}>{toolCount} INSTRUMENTS</span>
-              <span className={styles.specItem}>NO STORAGE</span>
+              <span className={styles.specItem}>TOOL-SPECIFIC RETENTION</span>
               <span className={styles.specItem}>NO CARD</span>
             </div>
           </section>
@@ -173,7 +173,7 @@ export default function PricingClient({ toolCount, monoClass = '' }: PricingProp
               </div>
               <div className={styles.priceBlock}>
                 <span className={styles.priceValue}>$0</span>
-                <span className={styles.priceMeta}>No card, no account to start.</span>
+                <span className={styles.priceMeta}>No card. Account needs vary by action.</span>
               </div>
             </div>
 

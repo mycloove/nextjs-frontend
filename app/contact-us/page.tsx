@@ -1,5 +1,5 @@
-import type { Metadata } from 'next'
 import { IBM_Plex_Mono, Space_Grotesk } from 'next/font/google'
+import { pageMetadata } from '@/lib/metadata'
 import ContactUsClient from './ContactUsClient'
 
 const plexMono = IBM_Plex_Mono({
@@ -18,11 +18,11 @@ const display = Space_Grotesk({
   display: 'swap',
 })
 
-export const metadata: Metadata = {
-  title: { absolute: 'Contact | mycloove' },
-  description:
-    'A stuck file, a new idea, or a useful observation. Write to mycloove with a considered space for your message, in English or Bangla.',
-}
+export const metadata = pageMetadata(
+  '/contact-us',
+  'Contact',
+  'A stuck file, a new idea, or a useful observation. Write to mycloove with a considered space for your message, in English or Bangla.',
+)
 
 export default function ContactUsPage() {
   // Both faces are self-hosted and applied only inside the contact root.

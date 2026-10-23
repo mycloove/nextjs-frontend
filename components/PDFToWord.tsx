@@ -27,8 +27,8 @@ import { downloadBlob } from '@/lib/download/downloadOutputs'
    - The old "Conversion Mode" selector was dead UI — still gone.
    - The limit is Flask's MAX_CONTENT_LENGTH = 100 MB (app.py),
      enforced again in the browser for an instant message.
-   - Scanned PDFs fall back to OCR (English + Bangla) in
-     features/pdf_to_word.py; the note says exactly that.
+    - Scanned PDFs fall back to OCR in features/pdf_to_word.py.
+      Bangla depends on installed language data; layout is not guaranteed.
    - Conversion is indeterminate. No fake percentage exists.
    - The DOCX returned by the server is the same bytes the
      preview reads and the download saves.
@@ -2254,7 +2254,7 @@ export default function PDFToWord() {
                 <p className="p2w-lede">
                   {isDragActive
                     ? 'Release to load it into the docket.'
-                    : 'Drop a PDF here and get a real, editable Word document back. Layout, tables and images carry over, and you can proof the result before you download it.'}
+                    : 'Convert a PDF into an editable Word document, then review the result before downloading. Layout, tables and images can change; scanned pages follow an OCR path.'}
                 </p>
                 <div className="p2w-stage-actions">
                   <button type="button" className="p2w-btn is-primary" onClick={open}>
@@ -2291,9 +2291,9 @@ export default function PDFToWord() {
             </div>
 
             <ul className="p2w-facts">
-              <li><b>Layout carried across</b>Columns, spacing and reading order survive the retype.</li>
-              <li><b>Tables stay tables</b>Cells are rebuilt as editable Word tables, not screenshots.</li>
-              <li><b>Scans become text</b>OCR runs in English and Bangla when a PDF has no text layer.</li>
+              <li><b>Review the layout</b>Columns, spacing and reading order can change during conversion.</li>
+              <li><b>Check table structure</b>Text PDFs may retain editable cells; OCR output may rebuild plain paragraphs.</li>
+              <li><b>Scans need OCR</b>Language support depends on installed data. Compare recognized text with the source.</li>
             </ul>
           </section>
         )}

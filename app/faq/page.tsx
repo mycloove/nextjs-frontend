@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { pageMetadata } from "@/lib/metadata";
 
 import HomeFooter from "@/components/HomeFooter";
 import Topbar2 from "@/components/Topbar2";
@@ -8,11 +8,11 @@ import Topbar2 from "@/components/Topbar2";
 import "../home.css";
 import styles from "../marketing.module.css";
 
-export const metadata: Metadata = {
-  title: { absolute: "FAQ — mycloove" },
-  description:
-    "Answers to common questions about mycloove: pricing, accounts, what happens to your files, size limits, and Bangla support.",
-};
+export const metadata = pageMetadata(
+  "/faq",
+  "FAQ",
+  "Answers to common questions about mycloove: pricing, accounts, what happens to your files, size limits, and Bangla support.",
+);
 
 type Faq = { q: string; plain: string; body: ReactNode };
 
@@ -41,10 +41,10 @@ const FAQ: Faq[] = [
   {
     q: "What happens to my files?",
     plain:
-      "Your files are processed only to produce the result you asked for, then removed from the server. They are not stored, sold, or shared.",
+      "File handling varies by tool. Document AI may retain uploads and derived content for follow-up questions, and editors may save work in your browser. Read the privacy policy before uploading sensitive content.",
     body: (
       <>
-        <p>Your files are processed only to produce the result you asked for, then removed from the server. They are not stored, sold, or shared. The full detail is in the <Link href="/privacy">privacy policy</Link>.</p>
+        <p>File handling varies by tool. Document AI may retain uploads and derived content for follow-up questions, and editors may save work in your browser. Closing a tab does not guarantee that server-side content has been deleted. Read the <Link href="/privacy">privacy policy</Link> before uploading sensitive content.</p>
       </>
     ),
   },
@@ -61,10 +61,10 @@ const FAQ: Faq[] = [
   {
     q: "Can it read and convert Bangla?",
     plain:
-      "Yes. Bijoy to Unicode converts legacy Bijoy-encoded Bangla into clean Unicode, and the OCR tool can read Bangla text from images.",
+      "Bijoy to Unicode converts legacy Bijoy-encoded Bangla text. Bangla OCR depends on the processing service's installed language support; review every result against the source.",
     body: (
       <>
-        <p>Yes. The <Link href="/bijoy-converter">Bijoy to Unicode</Link> tool turns legacy Bijoy-encoded Bangla into clean, searchable Unicode, and the <Link href="/image-to-text">Image to Text</Link> tool can read Bangla from scans and photos.</p>
+        <p>The <Link href="/bijoy-converter">Bijoy to Unicode</Link> tool converts legacy Bijoy-encoded Bangla text. The <Link href="/image-to-text">Image to Text</Link> tool offers OCR language options, but Bangla recognition depends on the processing service&rsquo;s installed language support. Review every result against the source.</p>
       </>
     ),
   },

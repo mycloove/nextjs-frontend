@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import { IBM_Plex_Mono } from "next/font/google";
+import { pageMetadata } from "@/lib/metadata";
 
 import { TOOL_CATALOG } from "@/lib/usage/catalog";
 
@@ -12,11 +12,11 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: { absolute: "Pricing — mycloove" },
-  description:
-    "Every mycloove tool is free within a fair allowance — no card and no account to start. A higher-limit Pro plan is planned, and it is not for sale.",
-};
+export const metadata = pageMetadata(
+  "/pricing",
+  "Pricing",
+  "Use mycloove tools within the current free-use allowance. Review action costs and account requirements in each workspace. A Pro plan is planned, not for sale.",
+);
 
 export default function PricingPage() {
   // IBM Plex Mono is a register decision for this page's console readouts

@@ -59,7 +59,7 @@ export default function OpengraphImage() {
         </div>
 
         <div style={{ display: 'flex', fontSize: 24, color: '#7c869e' }}>
-          mycloove.com — no account needed
+          www.mycloove.com
         </div>
       </div>
     ),

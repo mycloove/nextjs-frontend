@@ -19,7 +19,7 @@
      → 4xx/5xx   { error }
    ═════════════════════════════════════════════════════════════════════════ */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { getApiErrorMessage, toolRequest } from '@/lib/api/client'
 import 'katex/dist/katex.min.css'
@@ -115,7 +115,7 @@ const applyPresetOptions = (
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════════════ */
 
-export default function PDFToMarkdown() {
+export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }) {
   // Both MR views share one resolved actor and one authoritative balance.
   const accountState = useAccountViewer()
   const creditState = useCreditBalance(accountState.status === 'loading' ? null : accountState.viewer?.id ?? 'guest')
@@ -1061,10 +1061,18 @@ export default function PDFToMarkdown() {
   /*
     First paint is held until the session restore above has decided where we are,
     so a hard reload inside the workspace never flashes the entry screen. The
-    shell is static and labelled busy; it lasts a single frame in practice.
+    public information is the same server-owned content used below the entry
+    screen. No intake UI or document state is mounted before restoration.
   */
   if (!booted) {
-    return <div className="pm-root" aria-busy="true" style={{ minHeight: '100vh' }} />
+    return (
+      <div className="pm-root mr-markdown-upload" style={{ minHeight: '100vh' }}>
+        <div className="pm-shell">
+          <p className="pm-public-info-status" role="status" aria-busy="true">Restoring your workspace...</p>
+          {publicInfo}
+        </div>
+      </div>
+    )
   }
 
   if (view === 'workspace' && activeJobId) {
@@ -1122,7 +1130,7 @@ export default function PDFToMarkdown() {
           <div className="pm-studio-account">
             <ToolSwitcher toolId="pdf-to-markdown" availability={navigationAvailability} />
             <AuthNavButton chrome="tool" accountState={accountState} creditState={creditState} creditDisplayToolId="pdf-to-markdown" />
-            {creditState.snapshot?.prices['pdf-to-markdown']?.enabled !== false && <div className="pm-conversion-cost"><CreditCost toolId="pdf-to-markdown" creditState={creditState} /></div>}
+            {creditState.snapshot?.prices['pdf-to-markdown']?.enabled !== false && <div className="pm-conversion-cost"><CreditCost toolId="pdf-to-markdown" creditState={creditState} showActionLabel={false} /></div>}
           </div>
         </div>
       </header>
@@ -1142,7 +1150,7 @@ export default function PDFToMarkdown() {
                 <em><span className="pm-entry-word" aria-hidden="true" style={{ animationDelay: '380ms' }}>clean</span>{' '}<span className="pm-entry-word" aria-hidden="true" style={{ animationDelay: '440ms' }}>Markdown.</span></em><span className="pm-md-mark pm-md-mark-right" aria-hidden="true">**</span>
               </h1>
               <p>Convert digital or scanned PDFs into structured Markdown, or start with a blank canvas and write exactly what you need.</p>
-              <p lang="bn" className="pm-entry-bangla">লিগ্যাসি বাংলা ডকুমেন্ট — বিজয় থেকে ইউনিকোড — নির্ভুলভাবে রূপান্তরিত হয়।</p>
+              <p lang="bn" className="pm-entry-bangla">লিগ্যাসি বাংলা লেখায় বিজয় থেকে ইউনিকোডের বিকল্প ব্যবহার করুন। রূপান্তরের পরে মূল লেখার সঙ্গে ফলাফল মিলিয়ে নিন।</p>
               <div className="pm-studio-actions">
                 <button type="button" className="pm-btn pm-btn-lg pm-entry-cta" onClick={scrollToConverter}>{Ic.upload(15)} Import a document</button>
               </div>
@@ -1252,7 +1260,7 @@ export default function PDFToMarkdown() {
               </div>
             </div>
             {creditState.snapshot?.prices['pdf-to-markdown']?.enabled !== false ? <div className="pm-conversion-cost pm-queue-credit-cost">
-              <span>Per PDF</span><CreditCost toolId="pdf-to-markdown" creditState={creditState} />
+              <span>Per PDF</span><CreditCost toolId="pdf-to-markdown" creditState={creditState} showActionLabel={false} />
             </div> : null}
             <div className="pm-queue">
               {jobs.map((j) => (
@@ -1314,6 +1322,7 @@ export default function PDFToMarkdown() {
             <a href="https://github.com/ahmed-jishan/pdf-smile" target="_blank" rel="noreferrer">GitHub {Ic.arrow(11)}</a>
           </div>
         </footer>
+        {publicInfo}
       </div>
 
       <CommandPalette open={cmdkOpen} actions={cmdActions} creditState={creditState} onClose={() => setCmdkOpen(false)} />
