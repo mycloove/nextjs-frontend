@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No tasks provided' }, { status: 400 })
   }
 
-  const quota = await beginToolQuota(request, 'batch-process')
+  const quota = await beginToolQuota(request, 'batch-process', formData)
   if (!quota.ok) return quota.response
 
   try {

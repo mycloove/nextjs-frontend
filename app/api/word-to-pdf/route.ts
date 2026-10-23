@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No Word file provided' }, { status: 400 })
   }
 
-  const quota = await beginToolQuota(request, 'word-to-pdf')
+  const quota = await beginToolQuota(request, 'word-to-pdf', formData)
   if (!quota.ok) return quota.response
 
   try {

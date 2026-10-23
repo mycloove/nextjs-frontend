@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       throw new RequestValidationError('Invalid quality option', 'invalid_quality')
     }
 
-    quota = await beginToolQuota(request, 'image-to-pdf')
+    quota = await beginToolQuota(request, 'image-to-pdf', formData)
     if (!quota.ok) return quota.response
 
     const result = await convertImagesToPdf(images, { pageSize, quality })
@@ -164,10 +164,11 @@ export async function POST(request: NextRequest) {
     }), { successful: true, fileName: images[0]?.name ?? null })
   } catch (error) {
     if (error instanceof RequestValidationError || error instanceof ImagesToPdfValidationError) {
-      return jsonError(
+      const failure = jsonError(
         { error: error.message, code: error.code, request_id: requestId },
         error.status,
       )
+      return quota?.ok ? quota.apply(failure) : failure
     }
 
     console.error('Image-to-PDF conversion failed', { requestId, error })

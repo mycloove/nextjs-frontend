@@ -1,16 +1,16 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import Link from 'next/link'
 import { type ComponentType } from 'react'
 import { getTool, type ToolId } from '@/lib/tools/registry'
-import AnimatedBrandLogo from '@/components/animated-brand-logo/AnimatedBrandLogo'
-import AuthNavButton from '@/components/AuthNavButton'
 import LayeredIcon, { type LayeredIconVariant } from '@/components/tools/layered-icons/LayeredIcon'
 import { HelixLoader } from '@/components/tools/HelixLoader'
-import UsageMeter from '@/components/tools/UsageMeter'
+import CreditCost from '@/components/tools/CreditCost'
+import { useAccountViewer } from '@/lib/account/useAccountViewer'
+import { useCreditBalance } from '@/lib/usage/useCreditBalance'
 import WithdrawnTool from '@/components/tools/WithdrawnTool'
 import { useToolAvailability } from '@/lib/usage/useToolAvailability'
+import ToolNavbar from './ToolNavbar'
 import styles from './ToolWorkspace.module.css'
 
 const components: Record<ToolId, ComponentType> = {
@@ -37,10 +37,8 @@ const components: Record<ToolId, ComponentType> = {
   'compress-pdf': dynamic(() => import('@/features/compress-pdf')),
 }
 
-/* mycloove brand chrome — the same topbar treatment as the Image Editor
-   ([octopus] / mycloove / page). The old "SmilePDF"/"ASTRUM" roots were stale
-   branding. ToolId is a closed union, so this record fails typecheck when a
-   tool is added. */
+/* The existing heading identity stays independent of the navigation index.
+   ToolId is closed, so new tools still require their own identity mapping. */
 const layeredIconVariants: Record<ToolId, LayeredIconVariant> = {
   'image-to-pdf': 'image-to-pdf',
   'pdf-to-images': 'pdf-to-images',
@@ -75,74 +73,22 @@ export default function ToolWorkspace({
      heading and DOM unchanged. */
   hideHeading?: boolean
 }) {
+  const account = useAccountViewer()
+  const credits = useCreditBalance(account.status === 'loading' ? null : account.viewer?.id ?? 'guest')
   const tool = getTool(toolId)
   const Tool = components[toolId]
-  const { ready, enabled } = useToolAvailability()
+  const availability = useToolAvailability()
+  const { ready, enabled } = availability
   const withdrawn = ready && !enabled(toolId)
 
-  /* Rotate PDF opts into the split-pdf "aligned frame" topbar
-     (topbarVariant="aligned"): the bar becomes a frame around the 1280px
-     content column and "All tools" grows the grid icon — split-pdf parity.
-     The default — today's full-bleed bar — is kept intact for every other
-     ToolWorkspace tool, so this branch must stay additive (conditionals only,
-     no change to the default DOM). */
+  /* Preserve Rotate PDF's aligned 1280px frame. Navigation changes do not
+     alter the content geometry, availability gate, or dynamic tool mount. */
   const aligned = topbarVariant === 'aligned'
-
-  const breadcrumb = (
-    <div className={styles.breadcrumb}>
-      <Link href="/" className={styles.brand} aria-label="mycloove home">
-        <AnimatedBrandLogo />
-      </Link>
-      <span className={styles.sep} aria-hidden="true">/</span>
-      <span className={styles.brandName}>mycloove</span>
-      <span className={styles.sep} aria-hidden="true">/</span>
-      <b>{tool.label}</b>
-    </div>
-  )
-
-  const topbarEnd = (
-    <div className={styles.topbarEnd}>
-      <UsageMeter toolId={toolId} />
-      <Link
-        className={`${styles.dashboardLink} ${toolId === 'merge-pdf' ? styles.dashboardLinkMerge : ''}`}
-        href="/"
-      >
-        {/* Default keeps a bare text child (byte-identical to the pre-variant
-            markup); the aligned variant and merge-pdf prepend the grid icon. */}
-        {aligned || toolId === 'merge-pdf' ? (
-          <>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
-            All tools
-          </>
-        ) : (
-          'All tools'
-        )}
-      </Link>
-      {/* The signed-in account control (avatar + profile slide-over) sits at the
-          far right on every (tools) page. chrome="tool" styles the logged-out
-          link from the profile module, since tool topbars do not import
-          home.css. Additive: the rest of the bar is unchanged. */}
-      <AuthNavButton chrome="tool" />
-    </div>
-  )
 
   return (
     <div className={`${styles.shell} ${toolId === 'merge-pdf' ? styles.shellMerge : ''}`}>
       <section className={styles.main}>
-        <header
-          className={`${styles.topbar} ${aligned ? styles.topbarAligned : ''} ${toolId === 'merge-pdf' ? styles.topbarMerge : ''}`}
-        >
-          {aligned ? (
-            <div className={styles.topbarInner}>{breadcrumb}{topbarEnd}</div>
-          ) : (
-            <>{breadcrumb}{topbarEnd}</>
-          )}
-        </header>
+        <ToolNavbar toolId={toolId} aligned={aligned} accountState={account} creditState={credits} availability={availability} />
         <main className={`${styles.content} ${toolId === 'merge-pdf' ? styles.contentMerge : ''}`}>
           {/* hideHeading: the whole identity row — the layered mark, the
               "Convert" eyebrow, the tool title and the description — is
@@ -163,6 +109,7 @@ export default function ToolWorkspace({
             </div>
           )}
           <section className={`${styles.toolSurface} ${toolId === 'merge-pdf' ? styles.toolSurfaceMerge : ''}`} aria-label={`${tool.label} workspace`}>
+            {!withdrawn && <CreditCost toolId={toolId} creditState={credits} />}
             {withdrawn ? <WithdrawnTool compact label={tool.label} /> : <Tool />}
           </section>
         </main>

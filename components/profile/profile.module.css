@@ -1,66 +1,90 @@
 /*
  * Profile surface — the user's own private console.
  *
- * Instrument concept: the operator's logbook. A quiet, precise panel over the
- * work they personally completed — identity, credential, and record. It is
+ * Instrument concept: Account Seal over the operator's private logbook. Identity
+ * and confirmed capacity stay compact; settings retain credential and record. It is
  * shared chrome (home topbar + every tool topbar), so it consumes the global
  * surface tokens and never reaches into another surface's palette. One accent
  * means identity (the avatar fill and the active tab); everything else is
  * neutral material.
  *
- * Signature moment: the slide-over stepping in from the right on the house
- * ease-out, with the tab indicator as the only other motion. Both collapse
- * under prefers-reduced-motion.
+ * The origin-anchored account reveal uses the house ease-out; numbers update
+ * directly, never count up. Both account and settings honor reduced motion.
  */
 
-/* ── Signed-in chip and menu ─────────────────────────────────────────────── */
+/* Account Seal: one 44px target, with the readout outside the clipped photo. */
 
 .account {
   position: relative;
+  flex: none;
+  font-family: 'Inter', sans-serif;
 }
 
 .chip {
-  display: grid;
-  width: 34px;
-  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
   flex: none;
-  place-items: center;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: 10px;
   background: transparent;
-  cursor: pointer;
-}
-
-/* Signed in, the gradient avatar is the only surface: the chip stays edge-free
-   so there is never a second ring around the circle. Only the guest chip needs
-   an outline, because it is a lone icon rather than a filled disc. */
-.chipGuest {
-  border: 1px solid var(--border-card);
-  background: var(--bg-item);
-  color: var(--text-secondary);
-  transition: background 130ms cubic-bezier(0.16, 1, 0.3, 1), border-color 130ms cubic-bezier(0.16, 1, 0.3, 1), color 130ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.chipGuest:hover {
-  background: var(--bg-item-hover);
-  border-color: var(--border-base);
   color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.avatarDock {
+  position: relative;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  align-items: start;
+  justify-items: start;
+  padding: 4px;
+}
+
+.accountAvatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--text-secondary) 32%, var(--bg-card));
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 120ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chip:hover .accountAvatar,
+.chip[aria-expanded='true'] .accountAvatar {
+  background: var(--bg-item-hover);
 }
 
 .chip:focus-visible,
+.menu:focus-visible,
+.menuClose:focus-visible,
 .menuItem:focus-visible,
+.creditRefresh:focus-visible,
 .primaryBtn:focus-visible,
 .secondaryBtn:focus-visible,
 .pagerBtn:focus-visible,
 .closeBtn:focus-visible,
 .input:focus-visible,
-.revealBtn:focus-visible,
-.mobileAction:focus-visible {
-  outline: 2px solid var(--accent-start);
+.revealBtn:focus-visible {
+  outline: 2px solid var(--text-secondary);
   outline-offset: 2px;
 }
 
+/* The existing settings-photo disc is shared by AvatarSection; keep its style
+   separate from the new compact account control. */
 .avatar {
   display: grid;
   width: 32px;
@@ -75,12 +99,6 @@
   letter-spacing: 0.01em;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: filter 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.chip:hover .avatar,
-.chip[aria-expanded='true'] .avatar {
-  filter: brightness(1.06);
-  transform: scale(1.04);
 }
 
 /* The uploaded photo rides the same disc as the initial: 100% fill, inherit
@@ -101,55 +119,105 @@
 }
 
 .menu {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 60;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
   display: flex;
-  min-width: 232px;
+  width: min(320px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
   flex-direction: column;
-  gap: 2px;
-  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  visibility: hidden;
+  padding: 16px;
   border: 1px solid var(--border-card);
   border-radius: 14px;
   background: var(--bg-card);
+  color: var(--text-primary);
   box-shadow: var(--shadow-card);
-  animation: profile-pop 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: 'Inter', sans-serif;
+  transform-origin: top right;
+  animation: profile-pop 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.menu[data-placement='above'] {
+  transform-origin: bottom right;
 }
 
 .menuIdentity {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px 10px;
-  margin-bottom: 4px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 44px;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 8px;
+  padding-bottom: 16px;
   border-bottom: 1px solid var(--divider);
 }
 
-.menuEmail {
+.menuIdText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menuName {
   overflow: hidden;
+  margin: 0;
   color: var(--text-primary);
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.menuRole {
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.menuSecondary {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuClose {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.menuClose:hover {
+  background: var(--bg-item-hover);
+}
+
+.identityCredit {
+  grid-column: 2 / -1;
+  min-width: 0;
+}
+
+.menuActions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--divider);
 }
 
 .menuItem {
   display: flex;
   align-items: center;
-  min-height: 36px;
-  padding: 0 10px;
+  min-height: 44px;
+  padding: 8px 12px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 10px;
   background: transparent;
   color: var(--text-primary);
   cursor: pointer;
@@ -164,80 +232,227 @@
   background: var(--bg-item-hover);
 }
 
-.menuItem:disabled {
+.menuItem:disabled,
+.creditRefresh:disabled {
   cursor: progress;
   opacity: 0.6;
 }
 
-/* ── Mobile sheet account block ──────────────────────────────────────────── */
+.accountMobile {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--divider);
+}
 
-.mobileAccount {
+.chipMobile {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 4px 8px;
+}
+
+.chipIdentity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chipIdentity strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipIdentity > span {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Badge numbers stay tabular and exact in the identity pill/popover. */
+.creditBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 20px;
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.creditBadgeDocked {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  min-width: 24px;
+  max-width: 44px;
+  padding: 2px 4px;
+  border-color: color-mix(in srgb, var(--text-secondary) 32%, var(--bg-card));
+  box-shadow: 0 0 0 2px var(--bg-card);
+  pointer-events: none;
+}
+
+.creditBadgePill {
+  max-width: 100%;
+  min-height: 24px;
+  padding: 4px 8px;
+  background: var(--bg-item);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.creditBadgeUnit {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.creditPanel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.creditHeading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.creditHeading h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.creditHeading > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.creditReadout {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.creditReadout strong {
+  max-width: 100%;
+  font-size: 32px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+
+.creditReadout > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.creditReadout .creditMode {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.creditDetails {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.mobileEmail {
-  margin: 12px 4px 4px;
-  color: var(--text-muted);
+  margin: 0;
   font-size: 12px;
-  text-align: center;
-  word-break: break-all;
+  line-height: 1.5;
 }
 
-.mobileAction {
+.creditDetails > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.creditDetails dt {
+  color: var(--text-secondary);
+}
+
+.creditDetails dd {
+  margin: 0;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.creditNote,
+.accountError {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.accountError {
+  padding: 8px 12px;
+  font-weight: 600;
+}
+
+.creditFreshness {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--border-card);
-  border-radius: 11px;
-  background: var(--bg-item);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: background 120ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.mobileAction:hover {
-  background: var(--bg-item-hover);
-}
-
-/* Signed-out link on the tool chrome (home keeps its own .home-login-btn). */
-.loginLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 34px;
-  padding: 7px 12px;
-  border: 1px solid var(--border-card);
-  border-radius: 20px;
-  background: var(--bg-item);
   color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 650;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: color 120ms cubic-bezier(0.16, 1, 0.3, 1), background 120ms cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
-.loginLink:hover {
+.creditFreshness > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.creditRefresh {
+  min-height: 44px;
+  flex: none;
+  padding: 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.creditRefresh:hover:not(:disabled) {
   background: var(--bg-item-hover);
 }
 
 .placeholder {
   display: inline-block;
-  min-width: 34px;
-  min-height: 34px;
-  border-radius: 20px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
   background: var(--bg-item);
-  opacity: 0.4;
   pointer-events: none;
 }
 
@@ -281,9 +496,10 @@
 }
 
 .navIdentity {
-  display: flex;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 6px 8px 16px;
   margin-bottom: 10px;
   border-bottom: 1px solid var(--divider);
@@ -334,10 +550,24 @@
 
 .navEmail {
   overflow: hidden;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 11.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.settingsCredit {
+  display: flex;
+  grid-column: 2;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.settingsCreditStatus {
+  color: var(--text-secondary);
+  font-size: 11px;
 }
 
 .navList {
@@ -351,7 +581,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 12px;
   border: 0;
   border-radius: 10px;
@@ -409,7 +639,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   border-radius: 10px;
   cursor: pointer;
@@ -423,6 +653,11 @@
   border: 1px solid var(--border-card);
   background: var(--bg-item);
   color: var(--text-secondary);
+}
+
+.navAction:disabled {
+  cursor: progress;
+  opacity: 0.6;
 }
 
 .navAction:hover {
@@ -477,8 +712,8 @@
   right: 16px;
   z-index: 2;
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border: 1px solid var(--border-card);
   border-radius: 10px;
@@ -642,8 +877,8 @@
   top: 50%;
   right: 5px;
   display: grid;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   transform: translateY(-50%);
   border: 0;
@@ -1053,7 +1288,7 @@
 }
 
 @keyframes profile-pop {
-  from { transform: translateY(-4px); opacity: 0; }
+  from { transform: translateY(4px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
@@ -1071,41 +1306,55 @@
   }
   .modalNav {
     width: 100%;
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+    padding: 12px 16px;
     border-right: 0;
     border-bottom: 1px solid var(--divider);
-    overflow-x: auto;
+    overflow: visible;
   }
   .navIdentity {
-    flex: none;
+    min-width: 0;
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-columns: 32px minmax(0, 1fr);
     padding: 0;
     margin: 0;
     border-bottom: 0;
   }
   .navIdText {
-    display: none;
+    min-width: 0;
   }
   .navAvatar {
-    width: 34px;
-    height: 34px;
-    font-size: 13px;
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+  .settingsCredit {
+    grid-column: 1 / -1;
+    padding-top: 4px;
   }
   .navList {
+    min-width: 0;
+    grid-column: 1 / -1;
+    grid-row: 2;
     flex-direction: row;
     gap: 4px;
+    overflow-x: auto;
   }
   .navItem {
-    min-height: 36px;
+    min-height: 44px;
+    flex: none;
     white-space: nowrap;
   }
   .navItem::before {
     display: none;
   }
   .navFooter {
-    flex: none;
+    grid-column: 2;
+    grid-row: 1;
     margin: 0;
     padding: 0;
     border-top: 0;
@@ -1113,12 +1362,20 @@
   .navAction,
   .navActionPrimary {
     width: auto;
-    min-height: 36px;
-    padding: 0 14px;
+    min-height: 44px;
+    padding: 0 12px;
     white-space: nowrap;
   }
   .modalBody {
-    padding: 24px 18px 32px;
+    flex: 1;
+    min-height: 0;
+    padding: 56px 16px 32px;
+  }
+  .modalBodyFixed {
+    padding: 0;
+  }
+  .modalPaneFixed {
+    padding: 56px 16px 20px;
   }
   .closeBtn {
     top: 12px;
@@ -1135,13 +1392,12 @@
   .navItem::before,
   .chip,
   .avatar,
+  .accountAvatar,
   .menuItem,
   .input,
   .revealBtn,
   .primaryBtn,
   .pagerBtn,
-  .mobileAction,
-  .loginLink,
   .closeBtn,
   .themePreview,
   .navItem,

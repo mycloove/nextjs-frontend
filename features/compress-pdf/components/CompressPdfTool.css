@@ -82,9 +82,14 @@ html[data-theme="light"] .acx-page {
    The same app chrome as /split-pdf's sitebar: a sticky 62px band, blurred
    translucent background, a hairline base, and an inner row aligned to the
    workspace column — [octopus] / mycloove / Compress PDF on the left, a
-   grid-icon "All tools" link on the right. Replaces the mockup's standalone
+   common tool index on the right. Replaces the mockup's standalone
    brand + version badge so this full-screen tool reads as part of the app. */
 .acx-sitebar {
+  --tool-nav-surface: var(--acx-bg-panel);
+  --tool-nav-text: var(--acx-text-main);
+  --tool-nav-secondary: var(--acx-text-muted);
+  --tool-nav-divider: var(--acx-border-strong);
+  --tool-nav-signal: var(--acx-accent);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -114,6 +119,22 @@ html[data-theme="light"] .acx-page {
   font-size: 13px;
 }
 
+.acx-site-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.acx-credit-cost {
+  --text-primary: var(--acx-text-main);
+  --text-secondary: var(--acx-text-muted);
+  --text-muted: var(--acx-text-muted);
+  color: var(--acx-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .acx-logo-link {
   display: inline-flex;
   flex: 0 0 auto;
@@ -137,33 +158,6 @@ html[data-theme="light"] .acx-page {
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.acx-all-tools {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid var(--acx-border-dim);
-  border-radius: 7px;
-  color: var(--acx-text-muted);
-  font-size: 12px;
-  text-decoration: none;
-  transition: color 0.16s, border-color 0.16s, background 0.16s;
-}
-
-.acx-all-tools svg {
-  width: 15px;
-  height: 15px;
-}
-
-.acx-all-tools:hover {
-  border-color: var(--acx-accent-border);
-  background: var(--acx-bg-hover);
-  color: var(--acx-text-main);
 }
 
 /* Workspace ------------------------------------------------------------- */
@@ -720,4 +714,10 @@ html[data-theme="light"] .acx-page {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+@media (max-width: 560px) {
+  .acx-site-separator, .acx-site-brand { display: none; }
+  .acx-sitebar-inner { gap: 10px; padding-inline: 16px; }
+  .acx-site-actions { gap: 8px; }
 }

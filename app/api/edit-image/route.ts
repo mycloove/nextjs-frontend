@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No valid image file provided' }, { status: 400 })
   }
 
-  const quota = await beginToolQuota(request, 'image-editor')
+  const quota = await beginToolQuota(request, 'image-editor', formData)
   if (!quota.ok) return quota.response
 
   try {

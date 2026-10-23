@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       throw new RequestValidationError('Invalid language option', 'invalid_language')
     }
 
-    quota = await beginToolQuota(request, 'image-to-text')
+    quota = await beginToolQuota(request, 'image-to-text', formData)
     if (!quota.ok) return quota.response
 
     const forwardFormData = new FormData()

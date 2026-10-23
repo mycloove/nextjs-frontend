@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const files = await collectPdfFiles(formData, { min: 1, max: 1, maxFileBytes, maxTotalBytes })
 
     const level = formText(formData, 'level', 'light').toLowerCase() as CompressLevel
-    quota = await beginToolQuota(request, 'compress-pdf')
+    quota = await beginToolQuota(request, 'compress-pdf', formData)
     if (!quota.ok) return quota.response
     const { bytes, originalBytes } = await compressPdf(files[0], level)
     return quota.apply(pdfResponse(bytes, `mycloove_${baseName(files[0].name)}_compressed.pdf`, requestId, {

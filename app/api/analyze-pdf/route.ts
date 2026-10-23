@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No PDF file provided' }, { status: 400 })
   }
 
-  const quota = await beginToolQuota(request, 'ai-analyzer')
+  const quota = await beginToolQuota(request, 'ai-analyzer', formData)
   if (!quota.ok) return quota.response
 
   try {

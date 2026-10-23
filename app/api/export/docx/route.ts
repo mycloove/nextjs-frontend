@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No Markdown content provided' }, { status: 400 })
   }
 
-  const quota = await beginToolQuota(request, 'pdf-to-markdown')
+  const quota = await beginToolQuota(request, 'pdf-to-markdown', incoming)
   if (!quota.ok) return quota.response
 
   try {

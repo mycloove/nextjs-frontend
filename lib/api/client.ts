@@ -1,3 +1,5 @@
+import { creditRequestHeaders, notifyCreditChange } from '@/lib/usage/credit-client'
+
 export class ApiClientError extends Error {
   constructor(
     message: string,
@@ -19,16 +21,17 @@ type ApiRequestInit = Omit<RequestInit, 'headers'> & {
  * existing download and JSON handling while receiving normalized network errors.
  */
 export async function toolRequest(input: string, init: ApiRequestInit = {}): Promise<Response> {
+  const headers = creditRequestHeaders(input, init.headers)
+  if (!headers.has('Accept')) headers.set('Accept', 'application/json, application/octet-stream, application/pdf, application/zip, */*')
   try {
     return await fetch(input, {
       ...init,
-      headers: {
-        Accept: 'application/json, application/octet-stream, application/pdf, application/zip, */*',
-        ...init.headers,
-      },
+      headers,
     })
   } catch (cause) {
     throw new ApiClientError('Unable to reach the processing service. Check your connection and try again.', undefined, cause)
+  } finally {
+    if (init.method?.toUpperCase() !== 'GET') notifyCreditChange()
   }
 }
 
@@ -47,7 +50,7 @@ export async function getApiErrorMessage(response: Response, fallback = 'The req
   }
 
   if (response.status === 429) {
-    return 'You have used this period’s conversions. Sign in or wait for the window to reset.'
+    return 'The available allowance is not enough for this action. Check your account credits or try again after the next return.'
   }
 
   return response.status === 503

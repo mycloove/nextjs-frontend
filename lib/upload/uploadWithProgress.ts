@@ -1,6 +1,7 @@
 'use client'
 
 import { ApiClientError, getApiErrorMessage } from '@/lib/api/client'
+import { creditRequestHeaders, notifyCreditChange } from '@/lib/usage/credit-client'
 
 /**
  * XHR-based form upload with real progress and cancellation.
@@ -36,6 +37,7 @@ export function uploadWithProgress(
     xhr.open(method, url)
     xhr.responseType = 'blob'
     xhr.setRequestHeader('Accept', 'application/json, application/octet-stream, */*')
+    creditRequestHeaders(url).forEach((value, name) => xhr.setRequestHeader(name, value))
 
     const onAbort = () => xhr.abort()
     signal?.addEventListener('abort', onAbort, { once: true })
@@ -46,13 +48,22 @@ export function uploadWithProgress(
       }
     }
 
-    const cleanup = () => signal?.removeEventListener('abort', onAbort)
+    const cleanup = () => {
+      signal?.removeEventListener('abort', onAbort)
+      notifyCreditChange()
+    }
 
     xhr.onload = () => {
       cleanup()
+      const headers = new Headers()
+      for (const line of xhr.getAllResponseHeaders().trim().split(/[\r\n]+/)) {
+        const separator = line.indexOf(':')
+        if (separator > 0) headers.append(line.slice(0, separator).trim(), line.slice(separator + 1).trim())
+      }
       resolve(new Response(xhr.response as Blob, {
         status: xhr.status,
         statusText: xhr.statusText,
+        headers,
       }))
     }
 

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (!file || typeof file === "string") {
     return jsonError("No PDF file provided.", "invalid_request", requestId, 400);
   }
-  const quota = await beginToolQuota(request, "pdf-editor");
+  const quota = await beginToolQuota(request, "pdf-editor", incoming);
   if (!quota.ok) return quota.response;
   const forwarded = new FormData();
   forwarded.append("file", file, file.name || "document.pdf");

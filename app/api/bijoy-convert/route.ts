@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const quota = await beginToolQuota(request, 'bijoy-converter')
+  const quota = await beginToolQuota(request, 'bijoy-converter', body)
   if (!quota.ok) return quota.response
 
   const controller = new AbortController()

@@ -4,6 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useDropzone } from 'react-dropzone'
 import AnimatedBrandLogo from '@/components/animated-brand-logo/AnimatedBrandLogo'
+import AuthNavButton from '@/components/AuthNavButton'
+import CreditCost from '@/components/tools/CreditCost'
+import { useAccountViewer } from '@/lib/account/useAccountViewer'
+import { useCreditBalance } from '@/lib/usage/useCreditBalance'
+import { useToolAvailability } from '@/lib/usage/useToolAvailability'
+import ToolSwitcher from '@/components/tools/ToolSwitcher'
 import { uploadWithProgress, getApiErrorMessage } from '@/lib/upload/uploadWithProgress'
 import { usePasteFiles } from '@/lib/upload/usePasteFiles'
 import { downloadBlob } from '@/lib/download/downloadOutputs'
@@ -162,6 +168,9 @@ interface CompressedResult {
 }
 
 export default function CompressPdfTool() {
+  const accountState = useAccountViewer()
+  const creditState = useCreditBalance(accountState.status === 'loading' ? null : accountState.viewer?.id ?? 'guest')
+  const availability = useToolAvailability()
   const [file, setFile] = useState<File | null>(null)
   const [mode, setMode] = useState<ModeId>('optimal')
   const [phase, setPhase] = useState<Phase>('idle')
@@ -314,7 +323,7 @@ export default function CompressPdfTool() {
 
   return (
     <div className={`acx-page${isDragActive ? ' acx-drag' : ''}`}>
-      <header className="acx-sitebar">
+      <header className="acx-sitebar" data-tool-navbar="compress-pdf">
         <div className="acx-sitebar-inner">
           <div className="acx-breadcrumb">
             <Link href="/" className="acx-logo-link" aria-label="mycloove home">
@@ -325,15 +334,10 @@ export default function CompressPdfTool() {
             <span className="acx-site-separator" aria-hidden="true">/</span>
             <b>Compress PDF</b>
           </div>
-          <Link className="acx-all-tools" href="/">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
-            <span>All tools</span>
-          </Link>
+          <div className="acx-site-actions">
+            <ToolSwitcher toolId="compress-pdf" availability={availability} />
+            <AuthNavButton chrome="tool" accountState={accountState} creditState={creditState} creditDisplayToolId="compress-pdf" />
+          </div>
         </div>
       </header>
 
@@ -452,6 +456,7 @@ export default function CompressPdfTool() {
             </div>
           )}
 
+          {phase === 'idle' && creditState.snapshot?.prices['compress-pdf']?.enabled !== false && <div className="acx-credit-cost"><CreditCost toolId="compress-pdf" creditState={creditState} /></div>}
           <button
             type="button"
             className={`acx-btn${result && phase === 'done' ? ' success' : ''}`}

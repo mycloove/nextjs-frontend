@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { IBM_Plex_Mono } from 'next/font/google'
+import { IBM_Plex_Mono, Space_Grotesk } from 'next/font/google'
 
 import AboutUsClient from './AboutUsClient'
 
@@ -10,14 +10,23 @@ const plexMono = IBM_Plex_Mono({
   display: 'swap',
 })
 
+// A folio-specific geometric display: the open, joined forms echo the brand
+// clasp. A distinct family also avoids activating shared chrome's Syne styles.
+const display = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  variable: '--myc-font-display',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
-  title: { absolute: 'About — mycloove' },
+  title: { absolute: 'About | mycloove' },
   description:
-    'mycloove builds precise, private document tools — designed with the care of a workshop, not the noise of a marketplace.',
+    'A file is only the beginning. Meet mycloove: thoughtful tools to convert, recover, edit, and understand your documents, with Bangla built into the collection.',
 }
 
 export default function AboutUsPage() {
-  // IBM Plex Mono is a register decision for this page's readouts/index
-  // (module-local: the variable mounts on the about root only).
-  return <AboutUsClient monoClass={plexMono.variable} />
+  // Route-scoped self-hosting keeps the folio and display typography reliable
+  // even when the global third-party font import is unavailable.
+  return <AboutUsClient fontClass={`${plexMono.variable} ${display.variable}`} />
 }

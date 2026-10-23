@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const quota = await beginToolQuota(request, 'pdf-to-images')
+  const quota = await beginToolQuota(request, 'pdf-to-images', formData)
   if (!quota.ok) return quota.response
 
   const dpi = formData.get('dpi') || '200'

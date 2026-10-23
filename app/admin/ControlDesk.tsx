@@ -1,11 +1,14 @@
 'use client'
 
 import type { ToolControl, ToolUsageSummary, UsagePeriod } from '@/lib/usage/types'
-import { useMemo, useState } from 'react'
+import type { CreditPolicyView } from '@/lib/usage/credit-types'
+import { useCallback, useMemo, useState } from 'react'
 import BenchIcon from './BenchIcon'
 import { BenchToasts, useBenchToasts } from './BenchToast'
 import { ConfirmDialog, type ConfirmSpec } from './ConfirmDialog'
+import CreditDesk, { type CreditPolicyReadStatus } from './CreditDesk'
 import styles from './bench.module.css'
+import credit from './credit.module.css'
 import view from './tools/tools.module.css'
 import { toolFace } from './toolFaces'
 
@@ -48,6 +51,8 @@ function toDraft(tool: ToolControl): Draft {
 function isDirty(draft: Draft, tool: ToolControl) {
   return (
     draft.period !== tool.period ||
+    draft.guest_limit.trim() === '' ||
+    draft.member_limit.trim() === '' ||
     Number(draft.guest_limit) !== tool.guest_limit ||
     Number(draft.member_limit) !== tool.member_limit
   )
@@ -86,19 +91,30 @@ export default function ControlDesk({
   const [busyId, setBusyId] = useState('')
   const [ask, setAsk] = useState<ConfirmSpec | null>(null)
   const [pending, setPending] = useState<Ask | null>(null)
-  const [resetEmail, setResetEmail] = useState('')
+  const [creditPolicy, setCreditPolicy] = useState<CreditPolicyView | null>(null)
+  const [creditStatus, setCreditStatus] = useState<CreditPolicyReadStatus>('loading')
   const { toasts, push, dismiss } = useBenchToasts()
+
+  const onPolicyChange = useCallback((policy: CreditPolicyView) => {
+    setCreditPolicy(policy)
+    if (policy.enabled) setFilter((current) => current === 'draft' ? 'all' : current)
+  }, [])
+  // A failed policy read must not present independent caps as the active pool.
+  // Only a confirmed disabled policy or missing credit schema/config is legacy.
+  const legacyCaps = creditStatus === 'legacy' || (creditStatus === 'ready' && creditPolicy?.enabled === false)
+  const pooledCredits = creditPolicy?.enabled === true && creditStatus !== 'legacy'
 
   const rows = useMemo(() => Object.values(tools), [tools])
 
   const dirtyIds = useMemo(() => {
     const set = new Set<string>()
+    if (!legacyCaps) return set
     for (const tool of rows) {
       const draft = drafts[tool.tool_id]
       if (draft && isDirty(draft, tool)) set.add(tool.tool_id)
     }
     return set
-  }, [rows, drafts])
+  }, [rows, drafts, legacyCaps])
 
   const counts = useMemo(
     () => ({
@@ -115,7 +131,7 @@ export default function ControlDesk({
     return rows.filter((tool) => {
       if (filter === 'on' && !tool.enabled) return false
       if (filter === 'off' && tool.enabled) return false
-      if (filter === 'draft' && !dirtyIds.has(tool.tool_id)) return false
+      if (filter === 'draft' && legacyCaps && !dirtyIds.has(tool.tool_id)) return false
       if (!term) return true
       return (
         tool.label.toLowerCase().includes(term) ||
@@ -123,7 +139,7 @@ export default function ControlDesk({
         tool.href.toLowerCase().includes(term)
       )
     })
-  }, [rows, search, filter, dirtyIds])
+  }, [rows, search, filter, dirtyIds, legacyCaps])
 
   const groups = useMemo(() => {
     const order: string[] = []
@@ -164,16 +180,21 @@ export default function ControlDesk({
   const readConflict = (payload: { tool?: ToolControl }) => payload.tool ?? null
 
   const saveCaps = async (tool: ToolControl) => {
+    if (!legacyCaps) return
     const draft = drafts[tool.tool_id]
     if (!draft) return
     const guest = Number(draft.guest_limit)
     const member = Number(draft.member_limit)
-    if (!Number.isFinite(guest) || guest < 0 || !Number.isInteger(guest)) {
+    if (!/^\d+$/.test(draft.guest_limit.trim()) || !Number.isSafeInteger(guest) || guest < 0) {
       push('bad', `${tool.label}: the guest cap must be a whole number of zero or more.`)
       return
     }
-    if (!Number.isFinite(member) || member < 0 || !Number.isInteger(member)) {
+    if (!/^\d+$/.test(draft.member_limit.trim()) || !Number.isSafeInteger(member) || member < 0) {
       push('bad', `${tool.label}: the signed-in cap must be a whole number of zero or more.`)
+      return
+    }
+    if (draft.period !== 'day' && draft.period !== 'week') {
+      push('bad', `${tool.label}: choose a day or week rolling window.`)
       return
     }
     setBusyId(tool.tool_id)
@@ -211,15 +232,21 @@ export default function ControlDesk({
 
   const askSwitch = (tool: ToolControl) => {
     const next = !tool.enabled
+    const price = creditPolicy?.prices.find((entry) => entry.tool_id === tool.tool_id)
     setAsk({
       eyebrow: next ? 'Open this instrument' : 'Withdraw this instrument',
       title: next ? `Turn ${tool.label} on?` : `Turn ${tool.label} off?`,
       body: next
-        ? 'It goes back on the homepage and starts accepting calls again, on the caps already saved below.'
-        : 'It leaves the homepage and new calls are refused until you turn it on again. The caps stay exactly as they are, so nothing you set is lost.',
-      facts: [
+        ? legacyCaps
+          ? 'It goes back on the homepage and starts accepting calls again, on the caps already saved below.'
+          : 'It goes back on the homepage and starts accepting new calls under the active server policy. Availability does not change allowance, spend or credit prices.'
+        : 'It leaves the homepage and new calls are refused until you turn it on again. Existing cap and credit settings stay as they are.',
+      facts: legacyCaps ? [
         { label: 'Guest cap', value: `${tool.guest_limit} / ${tool.period === 'week' ? 'week' : 'day'}` },
         { label: 'Signed-in cap', value: `${tool.member_limit} / ${tool.period === 'week' ? 'week' : 'day'}` },
+      ] : [
+        { label: 'Credit price', value: creditStatus === 'ready' && price ? `${price.cost} credits / action` : 'Policy not confirmed' },
+        { label: 'Wallet', value: pooledCredits ? 'Shared credit allowance; unchanged' : 'Server policy; unchanged' },
       ],
       cancelLabel: next ? 'Leave it off' : 'Leave it on',
       confirmLabel: next ? 'Turn on' : 'Turn off',
@@ -229,26 +256,17 @@ export default function ControlDesk({
   }
 
   const askReset = (tool: ToolControl) => {
-    setResetEmail('')
     setAsk({
       eyebrow: 'Clear recorded calls',
       title: `Clear recorded ${tool.label} calls?`,
-      body: 'The cap stays exactly as it is. Whoever the tally is cleared for gets the full cap back immediately.',
-      extra: (
-        <div className={styles.field}>
-          <label className={styles.fieldLabel} htmlFor="reset-scope">Limit to one person</label>
-          <input
-            id="reset-scope"
-            className={styles.input}
-            type="email"
-            autoComplete="off"
-            placeholder="Leave empty to clear everyone"
-            value={resetEmail}
-            onChange={(event) => setResetEmail(event.target.value)}
-          />
-          <p className={styles.fieldHint}>Leave it empty to clear the tally for every guest and every account.</p>
-        </div>
-      ),
+      body: legacyCaps
+        ? 'The legacy cap stays as it is. Clearing its tally returns that cap immediately. This never refunds wallet credits or releases credit reservations.'
+        : 'This clears recorded-call analytics only. It never refunds wallet credits, deletes credit ledger entries or releases reservations. An audited credit adjustment is a separate action.',
+      input: {
+        label: 'Limit to one account email (optional)',
+        placeholder: 'Leave empty to clear every guest and account',
+        secret: false,
+      },
       cancelLabel: 'Keep the tally',
       confirmLabel: 'Clear calls',
       tone: 'danger',
@@ -261,7 +279,7 @@ export default function ControlDesk({
     setPending(null)
   }
 
-  const runAsk = async () => {
+  const runAsk = async (scope: string) => {
     if (!pending) return
     const tool = tools[pending.toolId]
     if (!tool) return
@@ -301,7 +319,8 @@ export default function ControlDesk({
             : `${tool.label} is off. It leaves the homepage and refuses new calls.`,
         )
       } else {
-        const email = resetEmail.trim()
+        const email = scope.trim()
+        if (email && !/^[^\s@]+@[^\s@]+$/.test(email)) throw new Error('Enter an account email or leave the scope empty.')
         const response = await fetch('/api/admin/tools', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -324,7 +343,7 @@ export default function ControlDesk({
           }
           return next
         })
-        push('ok', `Cleared ${removed} recorded ${tool.label} call${removed === 1 ? '' : 's'}${email ? ` for ${email}` : ''}.`)
+        push('ok', `Cleared ${removed} recorded ${tool.label} call${removed === 1 ? '' : 's'}${email ? ` for ${email}` : ''}. Wallet credits and reservations are unchanged.`)
       }
       setAsk(null)
       setPending(null)
@@ -332,6 +351,7 @@ export default function ControlDesk({
       push('bad', error instanceof Error ? error.message : 'That did not go through.')
     } finally {
       setBusyId('')
+      setAsk((current) => current ? { ...current, busy: false } : null)
     }
   }
 
@@ -344,7 +364,7 @@ export default function ControlDesk({
   }
 
   const degraded = loadError || usageDegraded
-  const nearCap = visible.flatMap((tool) => {
+  const nearCap = legacyCaps ? visible.flatMap((tool) => {
     const summary = usage[tool.tool_id]
     const { guest, member } = pick(summary, tool.period)
     return [
@@ -352,7 +372,7 @@ export default function ControlDesk({
       { key: 'member', label: 'Signed-in', used: member, cap: tool.member_limit },
     ].filter((reading) => reading.cap > 0 && reading.used / reading.cap >= 0.8)
       .map((reading) => ({ tool, ...reading, percent: Math.min(100, Math.floor((reading.used / reading.cap) * 100)) }))
-  })
+  }) : []
 
   return (
     <div className={`${styles.page} ${view.toolsPage}`}>
@@ -361,7 +381,7 @@ export default function ControlDesk({
           <p className={`${styles.pageEyebrow} ${view.eyebrow}`}>Control desk <span>·</span> Tools</p>
           <h1 className={`${styles.pageTitle} ${view.pageTitle}`}>Tool controls</h1>
           <p className={`${styles.pageLead} ${view.pageLead}`}>
-            Availability, rolling caps, and recorded usage for every instrument.
+            Availability, credit policy, and recorded usage for every instrument.
           </p>
         </div>
         <div className={`${styles.pageActions} ${view.pageActions}`}>
@@ -369,19 +389,26 @@ export default function ControlDesk({
         </div>
       </header>
 
+      <CreditDesk canEdit={!loadError} onPolicyChange={onPolicyChange} onReadStateChange={setCreditStatus} />
+
       <p className={view.quotaNote}>
-        Usage counts completed calls across everyone. Lowering a cap does not refund calls already recorded in the current window.
+        {legacyCaps
+          ? 'Usage counts completed calls across everyone. Lowering a cap does not refund calls already recorded in the current window.'
+          : pooledCredits
+            ? 'Pooled credits replace independent tool caps. Call counts below are analytics, not individual wallet balances; clearing them never refunds credits.'
+            : 'Credit policy is not confirmed. Cap editors and capacity gauges are paused to avoid misleading readings; availability switches remain independent.'}
       </p>
 
       {degraded ? (
         <div className={`${styles.degraded} ${view.degraded}`} role="status">
           <BenchIcon className={styles.toastIcon} name="alert" />
           <div>
-            <p className={styles.degradedTitle}>Some of this page is not being enforced.</p>
+            <p className={styles.degradedTitle}>Some bench data could not be read.</p>
             <p className={styles.degradedBody}>
-              {loadError || usageError} Quota fails open when its store is missing, so conversions keep running
-              unthrottled. Set <code>DATABASE_URL</code>, run <code>npx prisma migrate deploy</code> in
-              nextjs-frontend, then reload.
+              {loadError || usageError} {legacyCaps
+                ? 'Legacy quota fails open when its store is missing. '
+                : 'These analytics do not establish whether a wallet is available or enforced. '}
+              Check <code>DATABASE_URL</code> and the reviewed migrations, then reload.
             </p>
           </div>
         </div>
@@ -417,7 +444,7 @@ export default function ControlDesk({
           />
         </div>
         <div className={styles.segmented} role="group" aria-label="Filter instruments">
-          {FILTER_ORDER.map((key) => (
+          {FILTER_ORDER.filter((key) => key !== 'draft' || legacyCaps).map((key) => (
             <button
               key={key}
               type="button"
@@ -478,6 +505,7 @@ export default function ControlDesk({
                 const dirty = dirtyIds.has(tool.tool_id)
                 const guestTone = gaugeTone(guest, Number(draft.guest_limit))
                 const memberTone = gaugeTone(member, Number(draft.member_limit))
+                const price = creditPolicy?.prices.find((entry) => entry.tool_id === tool.tool_id)
                 return (
                   <article
                     id={`tool-${tool.tool_id}`}
@@ -530,7 +558,7 @@ export default function ControlDesk({
                       </div>
                     </div>
 
-                    <div className={`${styles.gauges} ${view.gauges}`}>
+                    {legacyCaps ? <div className={`${styles.gauges} ${view.gauges}`}>
                       {([
                         { name: 'Guest', key: 'guest_limit', used: guest, limit: Number(draft.guest_limit), tone: guestTone },
                         { name: 'Signed in', key: 'member_limit', used: member, limit: Number(draft.member_limit), tone: memberTone },
@@ -580,10 +608,21 @@ export default function ControlDesk({
                           </div>
                         )
                       })}
-                    </div>
+                    </div> : <div className={credit.creditNotice}>
+                      <p className={credit.creditNote}>
+                        {creditStatus === 'ready' && pooledCredits
+                          ? price ? `Saved price: ${price.cost} credits per action. Price changes are in Credit policy above.` : 'No confirmed action price. Missing pricing is not treated as free.'
+                          : 'Capacity is unconfirmed. Independent cap gauges are hidden until the policy can be read.'}
+                      </p>
+                      <p className={credit.creditHint}>
+                        {usageDegraded || !summary
+                          ? 'Recorded-call analytics unavailable.'
+                          : `Recorded calls / 24h: ${summary.guest_used_24h} guest, ${summary.member_used_24h} signed in. Not credits spent or wallet capacity.`}
+                      </p>
+                    </div>}
 
                     <div className={`${styles.cardFoot} ${view.cardFoot}`}>
-                      <select
+                      {legacyCaps ? <select
                         className={styles.select}
                         value={draft.period}
                         aria-label={`${tool.label} window`}
@@ -593,27 +632,27 @@ export default function ControlDesk({
                       >
                         <option value="day">Per day</option>
                         <option value="week">Per week</option>
-                      </select>
+                      </select> : <span className={credit.creditHint}>Availability only</span>}
                       <div className={styles.cardActions}>
                         {dirty ? <span className={styles.dirtyNote}>Unsaved</span> : null}
                         <button
                           type="button"
                           className={styles.btnIcon}
                           aria-label={`Clear recorded ${tool.label} calls`}
-                          title="Clear recorded calls"
+                          title="Clear analytics only; never refund wallet credits"
                           disabled={busy}
                           onClick={() => askReset(tool)}
                         >
                           <BenchIcon className={styles.navIcon} name="trash" />
                         </button>
-                        <button
+                        {legacyCaps ? <button
                           type="button"
                           className={`${styles.btn} ${styles.btnPrimary}`}
                           disabled={busy || !dirty}
                           onClick={() => void saveCaps(tool)}
                         >
                           {busy ? 'Saving…' : 'Save'}
-                        </button>
+                        </button> : null}
                       </div>
                     </div>
                   </article>
@@ -624,7 +663,7 @@ export default function ControlDesk({
         ))
       )}
 
-      <ConfirmDialog spec={ask} onCancel={dismissAsk} onConfirm={() => void runAsk()} />
+      <ConfirmDialog spec={ask} onCancel={dismissAsk} onConfirm={(value) => void runAsk(value)} />
       <BenchToasts toasts={toasts} onDismiss={dismiss} />
     </div>
   )

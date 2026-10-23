@@ -1,11 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import type { CreditBalanceState } from '@/lib/usage/credit-types'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import ActivitySection from './ActivitySection'
 import AvatarSection from './AvatarSection'
 import ChangePasswordSection from './ChangePasswordSection'
+import CreditBadge from './CreditBadge'
 import ProfileInfoSection from './ProfileInfoSection'
 import ThemeSection from './ThemeSection'
 import { fetchProfile, type Profile } from './profileApi'
@@ -47,16 +49,36 @@ export default function SettingsModal({
   open,
   onClose,
   email,
+  accountId = null,
+  accountActive = null,
+  name = null,
+  avatarUrl = null,
+  creditState,
+  showCredits = true,
   onSignOut,
+  signingOut = false,
+  signOutError = '',
+  onProfileChange,
+  onRestoreFocus,
   initialTab,
 }: {
   open: boolean
   onClose: () => void
   email: string | null
+  accountId?: string | null
+  accountActive?: boolean | null
+  name?: string | null
+  avatarUrl?: string | null
+  creditState?: CreditBalanceState
+  showCredits?: boolean
   onSignOut: () => void
+  signingOut?: boolean
+  signOutError?: string
+  onProfileChange?: () => void
+  onRestoreFocus?: () => void
   initialTab?: SettingsTab
 }) {
-  const signedIn = Boolean(email)
+  const signedIn = Boolean(accountId || email)
   const tabs: SettingsTab[] = signedIn ? ['profile', 'avatar', 'password', 'activity', 'theme'] : ['theme']
 
   const [tab, setTab] = useState<SettingsTab>(
@@ -66,6 +88,10 @@ export default function SettingsModal({
   const [error, setError] = useState('')
   const modalRef = useRef<HTMLDivElement>(null)
   const restoreRef = useRef<HTMLElement | null>(null)
+  const id = useId()
+  // A response from another auth epoch is never shown, even before a new read
+  // completes. ProfileMenu also keys the modal by the verified account ID.
+  const currentProfile = profile && (accountId ? profile.id === accountId : profile.email === email) ? profile : null
 
   // Derive the active tab rather than resetting state in an effect: if the auth
   // state changes while open, the active tab simply falls back to the first
@@ -82,19 +108,29 @@ export default function SettingsModal({
     // body (React's set-state-in-effect rule).
     if (signedIn) {
       fetchProfile()
-        .then((value) => { if (alive) { setProfile(value); setError('') } })
+        .then((value) => {
+          if (alive) {
+            const matchesActor = value && (accountId ? value.id === accountId : value.email === email)
+            setProfile(matchesActor ? value : null)
+            setError(matchesActor ? '' : 'Could not confirm your profile. Try opening settings again.')
+          }
+        })
         .catch(() => { if (alive) setError('Could not load your profile.') })
     }
     const focusTimer = window.setTimeout(() => {
-      if (!modalRef.current?.contains(document.activeElement)) modalRef.current?.focus()
+      if (!modalRef.current?.contains(document.activeElement)) {
+        const first = modalRef.current?.querySelector<HTMLElement>('[data-autofocus]')
+        ;(first ?? modalRef.current)?.focus()
+      }
     }, 0)
     return () => {
       alive = false
       window.clearTimeout(focusTimer)
       document.body.style.overflow = previousOverflow
-      restoreRef.current?.focus?.()
+      if (onRestoreFocus) onRestoreFocus()
+      else restoreRef.current?.focus?.()
     }
-  }, [open, signedIn])
+  }, [open, signedIn, accountId, email, onRestoreFocus])
 
   useEffect(() => {
     if (!open) return
@@ -112,10 +148,10 @@ export default function SettingsModal({
       const list = Array.from(focusables)
       const first = list[0]
       const last = list[list.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === modalRef.current)) {
         event.preventDefault()
         last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === modalRef.current)) {
         event.preventDefault()
         first.focus()
       }
@@ -126,7 +162,13 @@ export default function SettingsModal({
 
   if (!open || typeof document === 'undefined') return null
 
-  const displayName = profile?.name?.trim() || (email ? email.split('@')[0] : 'Guest')
+  const displayName = signedIn ? currentProfile?.name?.trim() || name?.trim() || email?.split('@')[0] || 'Your account' : 'Guest'
+  const photoUrl = currentProfile ? currentProfile.avatar_url : avatarUrl
+  const profileChanged = (value: Profile) => {
+    if (accountId ? value.id !== accountId : value.email !== email) return
+    setProfile(value)
+    onProfileChange?.()
+  }
 
   // Portalled to <body>: the tool and home topbars set `backdrop-filter`, which
   // makes them the containing block for a `position: fixed` descendant — the
@@ -140,15 +182,16 @@ export default function SettingsModal({
         role="dialog"
         aria-modal="true"
         aria-label="Settings"
+        data-account-surface
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <nav className={styles.modalNav} aria-label="Settings categories">
           <div className={styles.navIdentity}>
             {signedIn ? (
-              profile?.avatar_url ? (
+              photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- owner-scoped avatar; a plain <img> avoids coupling next/image to the storage host
-                <img className={`${styles.navAvatar} ${styles.navAvatarPhoto}`} src={profile.avatar_url} alt="" />
+                <img className={`${styles.navAvatar} ${styles.navAvatarPhoto}`} src={photoUrl} alt="" />
               ) : (
                 <span className={styles.navAvatar} aria-hidden="true">{(displayName[0] ?? '?').toUpperCase()}</span>
               )
@@ -162,8 +205,14 @@ export default function SettingsModal({
             )}
             <span className={styles.navIdText}>
               <span className={styles.navName}>{displayName}</span>
-              <span className={styles.navEmail}>{email ?? 'Not signed in'}</span>
+              <span className={styles.navEmail}>{email || (signedIn ? 'Signed in' : 'Not signed in')}</span>
+              {signedIn && accountActive === false ? <span className={styles.navEmail}>Inactive account</span> : null}
             </span>
+            {showCredits ? <div className={styles.settingsCredit}>
+              <CreditBadge snapshot={creditState?.snapshot ?? null} status={creditState?.status ?? 'loading'} refreshing={creditState?.refreshing ?? false} variant="pill" />
+              {creditState?.status === 'error' && creditState.snapshot ? <span className={styles.settingsCreditStatus}>Last confirmed</span>
+                : creditState?.refreshing ? <span className={styles.settingsCreditStatus}>Updating</span> : null}
+            </div> : null}
           </div>
 
           <div className={styles.navList} role="tablist" aria-label="Settings categories" aria-orientation="vertical">
@@ -172,9 +221,9 @@ export default function SettingsModal({
                 key={entry}
                 type="button"
                 role="tab"
-                id={`settings-tab-${entry}`}
+                id={`${id}-tab-${entry}`}
                 aria-selected={activeTab === entry}
-                aria-controls="settings-pane"
+                aria-controls={`${id}-pane`}
                 className={`${styles.navItem} ${activeTab === entry ? styles.navItemActive : ''}`}
                 onClick={() => setTab(entry)}
               >
@@ -188,14 +237,15 @@ export default function SettingsModal({
 
           <div className={styles.navFooter}>
             {signedIn ? (
-              <button type="button" className={styles.navAction} onClick={onSignOut}>
-                Sign out
+              <button type="button" className={styles.navAction} onClick={onSignOut} disabled={signingOut}>
+                {signingOut ? 'Signing out...' : 'Sign out'}
               </button>
             ) : (
               <Link href="/login" className={styles.navActionPrimary} onClick={onClose}>
                 Sign in
               </Link>
             )}
+            {signOutError ? <p className={styles.accountError} role="alert">{signOutError}</p> : null}
           </div>
         </nav>
 
@@ -206,21 +256,21 @@ export default function SettingsModal({
             </svg>
           </button>
 
-          <div className={`${styles.modalPane} ${activeTab === 'activity' ? styles.modalPaneFixed : ''}`} role="tabpanel" id="settings-pane" aria-labelledby={`settings-tab-${activeTab}`}>
+          <div className={`${styles.modalPane} ${activeTab === 'activity' ? styles.modalPaneFixed : ''}`} role="tabpanel" id={`${id}-pane`} aria-labelledby={`${id}-tab-${activeTab}`}>
             {activeTab === 'theme' ? (
               <ThemeSection />
             ) : activeTab === 'activity' ? (
               <ActivitySection />
-            ) : !profile && error ? (
+            ) : !currentProfile && error ? (
               <p className={styles.error} role="alert">{error}</p>
-            ) : !profile ? (
+            ) : !currentProfile ? (
               <p className={styles.muted} role="status">Loading…</p>
             ) : activeTab === 'avatar' ? (
-              <AvatarSection profile={profile} onProfileChange={setProfile} />
+              <AvatarSection profile={currentProfile} onProfileChange={profileChanged} />
             ) : activeTab === 'profile' ? (
-              <ProfileInfoSection profile={profile} onProfileChange={setProfile} initialFocus />
+              <ProfileInfoSection profile={currentProfile} onProfileChange={profileChanged} initialFocus />
             ) : (
-              <ChangePasswordSection email={profile.email} />
+              <ChangePasswordSection email={currentProfile.email} />
             )}
           </div>
         </div>

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const quota = await beginToolQuota(request, 'pdf-to-word')
+  const quota = await beginToolQuota(request, 'pdf-to-word', formData)
   if (!quota.ok) return quota.response
 
   try {

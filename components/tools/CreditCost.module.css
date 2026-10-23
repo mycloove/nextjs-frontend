@@ -1,0 +1,5 @@
+.readout { align-items: center; color: var(--text-secondary); display: flex; flex-wrap: wrap; font-size: 12px; font-variant-numeric: tabular-nums; gap: 8px 16px; line-height: 1.5; margin: 0 0 16px; }
+.readout b { color: var(--text-primary); font-weight: 600; }
+.readout button { background: transparent; border: 0; border-bottom: 1px solid currentColor; color: inherit; cursor: pointer; font: inherit; min-height: 32px; padding: 0 4px; }
+.readout button:focus-visible { outline: 2px solid var(--accent-start, currentColor); outline-offset: 4px; }
+.insufficient { color: var(--brand-red); }

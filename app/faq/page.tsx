@@ -23,7 +23,7 @@ const FAQ: Faq[] = [
       "Yes. Every tool is free within a fair-use limit, and no credit card is required. A Pro plan is planned but is not available yet.",
     body: (
       <>
-        <p>Yes. Every tool is free within a fair-use limit, and no credit card is required. Usage is counted per tool so the service stays available to everyone.</p>
+        <p>Yes. Tools are free within a fair-use allowance, and no credit card is required. When credit mode is enabled, billable actions share your account balance and show their cost before work starts. Open your avatar to see the current allowance.</p>
         <p>See the <Link href="/pricing">pricing page</Link> for what is planned next.</p>
       </>
     ),
@@ -31,10 +31,10 @@ const FAQ: Faq[] = [
   {
     q: "Do I need an account?",
     plain:
-      "No. Most tools work without an account. Creating one keeps a record of your conversions and gives you a higher usage limit.",
+      "No. Most tools work without an account. Creating one links guest activity, keeps a record of conversions, and uses the configured account allowance.",
     body: (
       <>
-        <p>No — most tools work without an account. Creating one keeps a record of your recent conversions under your profile and gives you a higher usage limit. Either way, your files are handled the same way.</p>
+        <p>No. Most tools work without an account. Creating one links your guest activity once and keeps recent conversions under your profile. Guest and account allowances are configured separately; the avatar menu shows what is available now. Either way, your files are handled the same way.</p>
       </>
     ),
   },

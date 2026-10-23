@@ -50,7 +50,11 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3
 export function getPrisma() {
   const connectionString = process.env.DATABASE_URL
   if (!connectionString) return null
-  if (!globalForPrisma.prisma) {
+  if (!globalForPrisma.prisma || !Reflect.has(globalForPrisma.prisma, 'creditPolicy')) {
+    // A dev server may outlive `prisma generate`. A pre-credit cached client
+    // has no new model delegates; refresh it instead of failing every tool's
+    // additive policy probe until the whole app process is manually restarted.
+    const previous = globalForPrisma.prisma
     // Supabase's pooler cert is not in Node's trust store. pg verifies it
     // unless this is set, and then every query fails before it reaches SQL.
     const supabase = /supabase\.(co|com)/.test(connectionString)
@@ -59,6 +63,7 @@ export function getPrisma() {
       ...(supabase ? { ssl: { rejectUnauthorized: false } } : {}),
     })
     globalForPrisma.prisma = new PrismaClient({ adapter })
+    if (previous) void previous.$disconnect().catch(() => {})
   }
   return globalForPrisma.prisma
 }
@@ -1381,7 +1386,9 @@ export async function consumeToolUsage(input: {
       const after = await tally(tx, input.userId, input.anonId, tool.toolId, tool.periodHours)
       // The one branch that created a row: this call holds a reserved slot that
       // a failed conversion must release.
-      return { ...recordForTool(tool, input.userId, after.used, after.oldest, now), reserved: true }
+      // This accepted reservation may use the last slot. The post-insert
+      // remaining describes the next request, not authorization for this one.
+      return { ...recordForTool(tool, input.userId, after.used, after.oldest, now), allowed: true, reserved: true }
     })
   } catch (error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002' && requestId) {

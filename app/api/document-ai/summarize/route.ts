@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { beginToolQuota } from "@/lib/usage/quota";
+import { documentCreditSucceeded } from "@/lib/usage/credit-success";
 import { brokerAiCall } from "@/lib/ai/broker.ts";
 
 /**
@@ -10,11 +11,21 @@ import { brokerAiCall } from "@/lib/ai/broker.ts";
  */
 
 export async function POST(req: Request) {
-  const quota = await beginToolQuota(req, "document-ai");
+  let body: Record<string, unknown>;
+  try {
+    const parsed: unknown = await req.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid object");
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "A valid JSON request is required.", code: "invalid_request" }, { status: 400 });
+  }
+  if (typeof body.text === "string" && body.text.length > 400_000) {
+    return NextResponse.json({ error: "Text exceeds the 400,000-character limit.", code: "text_too_large" }, { status: 413 });
+  }
+  const quota = await beginToolQuota(req, "document-ai", body);
   if (!quota.ok) return quota.response;
 
   try {
-    const body = await req.json();
 
     const text: string = typeof body?.text === "string" ? body.text : "";
     const mode: string = typeof body?.mode === "string" ? body.mode : "summary";
@@ -22,8 +33,8 @@ export async function POST(req: Request) {
       typeof body?.instruction === "string" && body.instruction.trim()
         ? body.instruction.trim()
         : undefined;
-    const documentId: string | undefined = body?.documentId;
-    const sessionId: string | undefined = body?.sessionId;
+    const documentId = typeof body.documentId === "string" ? body.documentId : undefined;
+    const sessionId = typeof body.sessionId === "string" ? body.sessionId : undefined;
 
     let message: string;
     if (instruction) {
@@ -58,7 +69,7 @@ export async function POST(req: Request) {
       type: mode === "rewrite" ? "rewrite" : "summary",
       result: summary,
       answer: summary,
-    }));
+    }), { successful: documentCreditSucceeded(data) });
   } catch {
     return quota.apply(NextResponse.json(
       { error: "Summary generation failed." },

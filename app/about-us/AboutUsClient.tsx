@@ -1,489 +1,339 @@
 'use client'
 
 /*
-  About — "The Workshop Atlas".
+  About: "The next chapter".
 
-  Instrument concept: the front hall of the workshop — an atlas of the real
-  instruments you can walk through. The keeper's Armature Dial is the page's
-  one signature moment, upgraded into a guided tour: it walks the real tools
-  by itself (an auto-tour tick every 2.2s), stops the instant the visitor
-  takes over (hover, focus, click or arrow keys), and every selection is
-  real data — the same ledger the section below reads. The tour label says
-  which mode you are in, because honesty is the house standard.
+  Concept: a living document folio, showing why a file is a beginning rather
+  than an endpoint. Editorial minimalism is the base; the folio is the one
+  tactile accent. The category's globe, vanity counters, autoplay carousel,
+  and interchangeable feature cards do not explain this product's work.
 
-  Interaction contract: roving tabindex across the 18 instrument arcs
-  (arrow keys move, Enter opens), each readout crossfades on change, and
-  under prefers-reduced-motion the tour never starts and nothing moves.
+  The exhibit changes only when the visitor chooses a direction. It is an
+  explicitly illustrative specimen, never a simulated conversion result.
+  Tabs support roving focus and arrow/Home/End keys; reduced motion keeps the
+  same content without the page-settle animation. No timers or scroll handlers.
 
-  Palette: the marketing surface (app/home.css, both themes) plus the
-  mycloove blue accent shared with Pricing/Contact (#0b5ca8 light /
-  #5b8def dark). Blue is identity/action only. The octopus mark is the
-  canonical AnimatedBrandLogo, reused unchanged; its "gaze" is a transform
-  on this page's wrapper. Console readouts use IBM Plex Mono, loaded
-  module-locally in page.tsx.
-  Blueprint floor: the family's shared ground (About/Pricing/Contact).
+  Ownership: this route's JSX and CSS Module only. Marketing chrome, brand
+  artwork, tool availability, storage keys, and all tool contracts stay intact.
 */
 
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import Link from 'next/link'
 
-import AnimatedBrandLogo from '@/components/animated-brand-logo/AnimatedBrandLogo'
+import MyclooveWordmark from '@/components/brand/mycloove/MyclooveWordmark'
 import HomeFooter from '@/components/HomeFooter'
 import Topbar2 from '@/components/Topbar2'
-import LayeredIcon, { type LayeredIconVariant } from '@/components/tools/layered-icons/LayeredIcon'
 import { toolIdForHref } from '@/lib/usage/catalog'
 import { useToolAvailability } from '@/lib/usage/useToolAvailability'
 
 import styles from './AboutUs.module.css'
-
 import '../home.css'
 
 type ToolGroup = 'Convert' | 'Extract' | 'Edit' | 'Ask AI' | 'Advanced'
+type ToolFilter = 'All' | ToolGroup
+type ChapterId = 'convert' | 'extract' | 'edit' | 'understand'
 
 type AboutTool = {
   href: string
-  /* Sixteen of the eighteen tools wear the shared layered icon; the two
-     newest workspaces have no variant yet, so they carry a plain stroke
-     glyph and share the same slot instead (see `glyphSlot` in the CSS). */
-  variant?: LayeredIconVariant
-  glyph?: ReactNode
   label: string
   desc: string
   group: ToolGroup
 }
 
-//── Stroke glyphs (1.8 stroke, currentColor — no emoji) ───────────────────────
-const arrow = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <line x1="4" y1="12" x2="20" y2="12" />
-    <polyline points="13 5 20 12 13 19" />
-  </svg>
-)
-const glyph = {
-  gauge: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M4 16a8 8 0 1 1 16 0" />
-      <path d="M12 16l3.6-4.4" />
-      <circle cx="12" cy="16" r="1.2" fill="currentColor" stroke="none" />
-    </svg>
-  ),
-  /* The first Bengali letter — the same mark the Bijoy tool's tile wears. */
-  bangla: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="13" r="5.5" />
-      <line x1="6.5" y1="13" x2="17.5" y2="13" />
-      <line x1="9" y1="4" x2="15" y2="4" />
-    </svg>
-  ),
-  lock: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="11" width="18" height="11" rx="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  ),
-  check: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="16 8.5 10.2 14.5 8 12.2" />
-    </svg>
-  ),
-  shield: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-  ),
-  star: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2L12 3z" />
-    </svg>
-  ),
-  /* For the two tools without a layered variant (Document AI, the Image Editor). */
-  sparkles: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="m12 3 1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5zM18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z" />
-    </svg>
-  ),
-  crop: (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M6 2v14a2 2 0 0 0 2 2h14" />
-      <path d="M18 22V8a2 2 0 0 0-2-2H2" />
-    </svg>
-  ),
-}
-
-//── The instruments (routes + labels mirror the home page's tool set) ─────────
 const tools: AboutTool[] = [
-  { href: '/image-to-pdf', variant: 'image-to-pdf', label: 'Images to PDF', desc: 'Combine multiple images into one clean, shareable PDF.', group: 'Convert' },
-  { href: '/pdf-to-images', variant: 'pdf-to-images', label: 'PDF to Images', desc: 'Export every PDF page as a crisp, high-quality image.', group: 'Convert' },
-  { href: '/pdf-to-word', variant: 'pdf-to-word', label: 'PDF to Word', desc: 'Turn a PDF into an editable DOCX while keeping it readable.', group: 'Convert' },
-  { href: '/word-to-pdf', variant: 'word-to-pdf', label: 'Word to PDF', desc: 'Create a polished PDF from a Word document in seconds.', group: 'Convert' },
-  { href: '/mr-markdown', variant: 'pdf-to-markdown', label: 'Mr. Markdown', desc: 'Convert PDFs to Markdown, then edit and export in one workspace.', group: 'Convert' },
-  { href: '/markdown-to-pdf', variant: 'markdown-to-pdf', label: 'Markdown to PDF', desc: 'Publish readable PDFs with native Bangla font support.', group: 'Convert' },
-  { href: '/merge-pdf', variant: 'merge-pdf', label: 'Merge PDF', desc: 'Combine multiple PDFs into one clean document.', group: 'Convert' },
-  { href: '/split-pdf', variant: 'split-pdf', label: 'Split PDF', desc: 'Cut one PDF into parts by page ranges.', group: 'Convert' },
-  { href: '/rotate-pdf', variant: 'rotate-pdf', label: 'Rotate PDF', desc: 'Turn every page — or a range — by 90°, 180°, or 270°.', group: 'Convert' },
-  { href: '/compress-pdf', variant: 'compress-pdf', label: 'Compress PDF', desc: 'Shrink PDF file size structurally, text stays selectable.', group: 'Convert' },
-  { href: '/image-to-text', variant: 'image-to-text', label: 'Image to Text', desc: 'Extract reusable text from photos, screenshots, and scans.', group: 'Extract' },
-  { href: '/bijoy-converter', variant: 'bijoy-converter', label: 'Bijoy to Unicode', desc: 'Convert legacy Bijoy-encoded Bangla into clean, searchable Unicode.', group: 'Extract' },
-  { href: '/pdf-editor', variant: 'pdf-editor', label: 'PDF Editor', desc: 'Change the text that is actually in the file, then export those bytes.', group: 'Edit' },
-  { href: '/image-editor', glyph: glyph.crop, label: 'Image Editor', desc: 'Crop, resize, and compress an image on the canvas before you export it.', group: 'Edit' },
-  { href: '/ai-analyzer', variant: 'ai-analyzer', label: 'AI Analyzer', desc: 'Ask questions, summarize documents, and uncover key insights.', group: 'Ask AI' },
-  { href: '/document-ai', glyph: glyph.sparkles, label: 'Document AI', desc: 'Ask a document questions and keep the answers beside the pages.', group: 'Ask AI' },
-  { href: '/batch-process', variant: 'batch', label: 'Batch Process', desc: 'Run one repeatable workflow across multiple files at once.', group: 'Advanced' },
-  { href: '/fasta-tools', variant: 'fasta-tool', label: 'FASTA Tools', desc: 'Inspect and work with biological sequences in one workspace.', group: 'Advanced' },
+  { href: '/image-to-pdf', label: 'Images to PDF', desc: 'Bring a collection of images into one document.', group: 'Convert' },
+  { href: '/pdf-to-images', label: 'PDF to Images', desc: 'Take individual pages out into the visual world.', group: 'Convert' },
+  { href: '/pdf-to-word', label: 'PDF to Word', desc: 'Give a fixed document an editable next chapter.', group: 'Convert' },
+  { href: '/word-to-pdf', label: 'Word to PDF', desc: 'Turn a working draft into a document ready to share.', group: 'Convert' },
+  { href: '/mr-markdown', label: 'Mr. Markdown', desc: 'From PDF to Markdown, with a workspace to keep writing.', group: 'Convert' },
+  { href: '/markdown-to-pdf', label: 'Markdown to PDF', desc: 'Publish your writing as a PDF, with Bangla font support.', group: 'Convert' },
+  { href: '/merge-pdf', label: 'Merge PDF', desc: 'Bring separate documents together in the right order.', group: 'Convert' },
+  { href: '/split-pdf', label: 'Split PDF', desc: 'Keep the pages you need. Give them a file of their own.', group: 'Convert' },
+  { href: '/rotate-pdf', label: 'Rotate PDF', desc: 'Put the whole document, or selected pages, the right way up.', group: 'Convert' },
+  { href: '/compress-pdf', label: 'Compress PDF', desc: 'Reduce a PDF structurally without rasterizing its text.', group: 'Convert' },
+  { href: '/image-to-text', label: 'Image to Text', desc: 'Recover usable words from photographs and scans.', group: 'Extract' },
+  { href: '/bijoy-converter', label: 'Bijoy to Unicode', desc: 'Bring legacy Bangla text into a modern, searchable script.', group: 'Extract' },
+  { href: '/pdf-editor', label: 'PDF Editor', desc: 'Work on the document itself, then preview your export.', group: 'Edit' },
+  { href: '/image-editor', label: 'Image Editor', desc: 'Crop, resize, and compress on a focused editing canvas.', group: 'Edit' },
+  { href: '/ai-analyzer', label: 'AI Analyzer', desc: 'Find summaries, answers, and useful threads in a document.', group: 'Ask AI' },
+  { href: '/document-ai', label: 'Document AI', desc: 'A reading space for questions, with your document beside you.', group: 'Ask AI' },
+  { href: '/batch-process', label: 'Batch Process', desc: 'Repeat a useful workflow across a collection of files.', group: 'Advanced' },
+  { href: '/fasta-tools', label: 'FASTA Tools', desc: 'Inspect and work with biological sequences.', group: 'Advanced' },
 ]
 
-const GROUP_ORDER: ToolGroup[] = ['Convert', 'Extract', 'Edit', 'Ask AI', 'Advanced']
+const groups: ToolFilter[] = ['All', 'Convert', 'Extract', 'Edit', 'Ask AI', 'Advanced']
 
-const principles = [
-  { icon: glyph.gauge, title: 'The meter stays on the wall', desc: 'Every tool shows its live count before you start — the same number it enforces. No surprises at the end.' },
-  { icon: glyph.bangla, title: 'Bangla is first-class', desc: 'Bangla documents and legacy Bijoy text run through purpose-built tools with native fonts — built in from the start.' },
-  { icon: glyph.lock, title: 'Private by default', desc: 'Files are never stored — processed then deleted.' },
-  { icon: glyph.shield, title: 'No account needed', desc: 'SSL encrypted. Use every tool without signing up.' },
-  { icon: glyph.check, title: 'Free to use', desc: 'Every tool is free within a fair-use limit. No card required.' },
+const chapters: {
+  id: ChapterId
+  label: string
+  group: ToolGroup
+  input: string
+  output: string
+  title: string
+  desc: string
+}[] = [
+  { id: 'convert', label: 'Convert', group: 'Convert', input: 'PDF', output: 'DOCX', title: 'A new format. The same idea.', desc: 'Because the format you receive is not always the one you need.' },
+  { id: 'extract', label: 'Extract', group: 'Extract', input: 'SCAN', output: 'TEXT', title: 'Words, no longer trapped.', desc: 'Bring the writing inside an image back into the work you can do.' },
+  { id: 'edit', label: 'Edit', group: 'Edit', input: 'DRAFT', output: 'REVISED', title: 'Small changes. A better document.', desc: 'A page turned, a detail corrected, an image made ready to share.' },
+  { id: 'understand', label: 'Ask AI', group: 'Ask AI', input: 'PAGES', output: 'IDEAS', title: 'Find the thread in the pages.', desc: 'Read with questions. Make room for the parts that matter.' },
 ]
 
-//── Armature Dial — the page's signature: a guided tour of the real tools ─────
-// Geometry (viewBox 300×300): ring radius 132, tick radius 126. Tick positions
-// are emitted as percentages so the whole instrument scales with its container.
-const DIAL = 300
-const DIAL_C = DIAL / 2
-const RING_R = 132
-const TICK_R = 126
-const RING_C = 2 * Math.PI * RING_R
-const ARC_GAP = 12
-const TOUR_MS = 2200
-
-function ArmatureDial({ items, reduced }: { items: AboutTool[]; reduced: boolean }) {
-  const [active, setActive] = useState<number | null>(null)
-  const [pinned, setPinned] = useState(false)
-  const tickRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const count = items.length
-  // Guard an all-disabled catalog so the ring never computes NaN dash metrics.
-  const seg = count ? RING_C / count : 0
-  const dash = Math.max(0, seg - ARC_GAP)
-
-  /* The guided tour: the dial walks the floor by itself until the visitor
-     takes the wheel. Reduced motion: it never starts. Hidden tab: the
-     interval is throttled by the browser, and the tour is honest data
-     anyway — no feedback is fabricated. */
-  useEffect(() => {
-    if (pinned || reduced || count < 2) return
-    const t = window.setInterval(() => {
-      setActive((a) => (a === null ? 0 : (a + 1) % count))
-    }, TOUR_MS)
-    return () => window.clearInterval(t)
-  }, [pinned, reduced, count])
-
-  const takeOver = () => {
-    if (!pinned) setPinned(true)
-  }
-
-  /* The mark turns a few pixels toward whichever arc is active (its own gaze,
-     driven here rather than by editing the shared AnimatedBrandLogo). */
-  let gazeX = 0
-  let gazeY = 0
-  let rotation = -90
-  if (active !== null && count) {
-    const deg = -90 + active * (360 / count)
-    rotation = deg
-    const rad = (deg * Math.PI) / 180
-    gazeX = Math.cos(rad) * 7
-    gazeY = Math.sin(rad) * 7
-  }
-
-  // Roving tabindex + arrow keys: the dial is one composite instrument.
-  const move = (dir: 1 | -1) => {
-    if (!count) return
-    takeOver()
-    const from = active === null ? 0 : active
-    const next = (from + dir + count) % count
-    setActive(next)
-    tickRefs.current[next]?.focus()
-  }
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); move(1) }
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); move(-1) }
-    else if (e.key === 'Home') { e.preventDefault(); takeOver(); setActive(0); tickRefs.current[0]?.focus() }
-    else if (e.key === 'End') { e.preventDefault(); takeOver(); setActive(count - 1); tickRefs.current[count - 1]?.focus() }
-  }
-
-  const activeTool = active === null ? null : items[active]
-
+function Arrow({ diagonal = false }: { diagonal?: boolean }) {
   return (
-    <>
-      <div className={styles.dialHead}>
-        <span className={styles.monoLabel}>Instrument index</span>
-        <span className={`${styles.monoLabel} ${styles.tourLabel}`} aria-hidden="true">
-          {pinned ? 'MANUAL' : 'AUTO TOUR'}
-        </span>
-      </div>
-
-      <div className={styles.dial}>
-        <svg className={styles.dialRing} viewBox={`0 0 ${DIAL} ${DIAL}`} aria-hidden="true">
-          <circle className={styles.ringTrack} cx={DIAL_C} cy={DIAL_C} r={RING_R} />
-          <circle
-            className={styles.ringActive}
-            cx={DIAL_C}
-            cy={DIAL_C}
-            r={RING_R}
-            strokeDasharray={`${dash} ${RING_C - dash}`}
-            style={{ opacity: active === null ? 0 : 1, transform: `rotate(${rotation}deg)` }}
-          />
-        </svg>
-
-        <span
-          className={styles.dialMark}
-          style={{ transform: `translate(-50%, -50%) translate(${gazeX}px, ${gazeY}px)` }}
-        >
-          <AnimatedBrandLogo className={styles.dialLogo} />
-        </span>
-
-        {items.map((tool, i) => {
-          const deg = -90 + i * (360 / count)
-          const rad = (deg * Math.PI) / 180
-          const x = ((DIAL_C + Math.cos(rad) * TICK_R) / DIAL) * 100
-          const y = ((DIAL_C + Math.sin(rad) * TICK_R) / DIAL) * 100
-          const isActive = i === active
-          return (
-            <button
-              key={tool.href}
-              ref={(el) => { tickRefs.current[i] = el }}
-              type="button"
-              className={`${styles.tick}${isActive ? ` ${styles.tickActive}` : ''}`}
-              style={{ left: `${x}%`, top: `${y}%` }}
-              onMouseEnter={() => { takeOver(); setActive(i) }}
-              onFocus={() => { takeOver(); setActive(i) }}
-              onClick={() => { takeOver(); setActive(i) }}
-              onKeyDown={onKeyDown}
-              aria-label={`${String(i + 1).padStart(2, '0')} — ${tool.label}`}
-              aria-pressed={isActive}
-              tabIndex={active === i ? 0 : active === null ? (i === 0 ? 0 : -1) : -1}
-            >
-              <span className={styles.tickNum}>{String(i + 1).padStart(2, '0')}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* the readout — crossfades as the tour moves between real entries */}
-      <div className={styles.readout} key={activeTool?.href ?? 'atlas'}>
-        {activeTool ? (
-          <>
-            <span className={styles.glyphSlot}>
-              {activeTool.variant ? (
-                <LayeredIcon variant={activeTool.variant} />
-              ) : (
-                <span className={styles.glyphTile}>{activeTool.glyph}</span>
-              )}
-            </span>
-            <span className={styles.readoutText}>
-              <span className={styles.readoutLabel}>{activeTool.label}</span>
-              <span className={styles.readoutDesc}>{activeTool.desc}</span>
-            </span>
-            <Link href={activeTool.href} className={styles.readoutLink}>
-              Open tool
-              <span className={styles.readoutArrow}>{arrow}</span>
-            </Link>
-          </>
-        ) : (
-          <span className={styles.readoutText}>
-            <span className={styles.readoutLabel}>{count} instruments, one workshop</span>
-            <span className={styles.readoutDesc}>
-              The dial is walking the floor — touch it any time to steer.
-            </span>
-          </span>
-        )}
-      </div>
-    </>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {diagonal ? <path d="M6 18 18 6M6 6h12v12" /> : <path d="M4 12h16m-6-6 6 6-6 6" />}
+    </svg>
   )
 }
 
-//── Reduced motion as a real state, not an effect-side setState ───────────────
-const subscribeReduced = (onChange: () => void) => {
-  const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-  mq.addEventListener('change', onChange)
-  return () => mq.removeEventListener('change', onChange)
-}
-const getReduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
-const getReducedServer = () => false
+function DocumentFolio({ onExplore }: { onExplore: (group: ToolGroup) => void }) {
+  const [active, setActive] = useState<ChapterId>('convert')
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const activeIndex = chapters.findIndex((chapter) => chapter.id === active)
+  const chapter = chapters[activeIndex]
 
-export default function AboutUsClient({ monoClass = '' }: { monoClass?: string }) {
-  const { enabled } = useToolAvailability()
+  const moveTab = (event: KeyboardEvent<HTMLButtonElement>) => {
+    let next = activeIndex
+    if (event.key === 'ArrowRight') next = (activeIndex + 1) % chapters.length
+    else if (event.key === 'ArrowLeft') next = (activeIndex - 1 + chapters.length) % chapters.length
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = chapters.length - 1
+    else return
+    event.preventDefault()
+    setActive(chapters[next].id)
+    tabRefs.current[next]?.focus()
+  }
+
+  return (
+    <div className={styles.folio}>
+      <div className={styles.folioHeading}>
+        <span className={styles.folioLabel}>The living folio</span>
+        <span className={styles.exhibitLabel}>An interactive exhibit</span>
+      </div>
+
+      <div className={styles.folioTabs} role="tablist" aria-label="What could your document become?">
+        {chapters.map((item, index) => (
+          <button
+            key={item.id}
+            ref={(node) => { tabRefs.current[index] = node }}
+            id={`folio-tab-${item.id}`}
+            type="button"
+            role="tab"
+            aria-selected={active === item.id}
+            aria-controls="folio-panel"
+            tabIndex={active === item.id ? 0 : -1}
+            onClick={() => setActive(item.id)}
+            onFocus={() => setActive(item.id)}
+            onKeyDown={moveTab}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div id="folio-panel" className={styles.folioPanel} role="tabpanel" aria-labelledby={`folio-tab-${active}`} tabIndex={0}>
+        <div className={styles.folioScene} data-mode={active} aria-hidden="true">
+          <span className={styles.sceneCross} />
+          <div className={styles.sourceLabel}><span>From</span><strong>{chapter.input}</strong></div>
+          <div className={styles.sheetStack}>
+            <div className={styles.sheetBack} />
+            <div className={styles.sheetMiddle} />
+            <div className={styles.specimen} key={active}>
+              <div className={styles.specimenTop}><span>mycloove / field notes</span><span>01</span></div>
+              <div className={styles.specimenTitle}>The next<br />chapter.</div>
+              <div className={styles.specimenRule} />
+              {active === 'understand' ? (
+                <div className={styles.sampleInsight}>
+                  <span className={styles.sampleKicker}>A question worth asking</span>
+                  <p>What can this document become?</p>
+                  <div className={styles.insightThread}><span /><span /><span /></div>
+                  <span className={styles.insightCaption}>Read. Connect. Understand.</span>
+                </div>
+              ) : (
+                <div className={styles.sampleWriting}>
+                  <p>Good ideas deserve<br />a useful {active === 'edit' ? <><s>file.</s> <mark>form.</mark></> : 'form.'}</p>
+                  <p>Something you can edit.<br />Something you can share.</p>
+                  <div className={styles.sampleLines}><span /><span /><span /></div>
+                  {active === 'extract' && <span className={styles.extractionMark}>Text, recovered</span>}
+                  {active === 'edit' && <span className={styles.editMark}>A considered revision <span /></span>}
+                </div>
+              )}
+              <div className={styles.specimenBottom}><span>Keep the idea moving.</span><span className={styles.pageClasp}><i /><i /></span></div>
+            </div>
+          </div>
+          <div className={styles.resultLabel}><span>To</span><strong>{chapter.output}</strong><Arrow /></div>
+        </div>
+
+        <div className={styles.folioReadout}>
+          <div className={styles.readoutCopy}>
+            <h3>{chapter.title}</h3>
+            <p>{chapter.desc}</p>
+          </div>
+          <a href="#tool-library" className={styles.explorePath} onClick={() => onExplore(chapter.group)}>
+            Explore {chapter.label === 'Ask AI' ? 'AI tools' : chapter.label.toLowerCase() + ' tools'}<Arrow />
+          </a>
+        </div>
+      </div>
+      <p className={styles.exhibitNote}>Illustrative preview. No file is processed here.</p>
+    </div>
+  )
+}
+
+export default function AboutUsClient({ fontClass = '' }: { fontClass?: string }) {
+  const { enabled, status } = useToolAvailability()
+  const [filter, setFilter] = useState<ToolFilter>('All')
   const openTools = tools.filter((tool) => {
     const toolId = toolIdForHref(tool.href)
     return !toolId || enabled(toolId)
   })
-  const toolCount = openTools.length
+  const shownTools = openTools.filter((tool) => filter === 'All' || tool.group === filter)
 
-  const rootRef = useRef<HTMLElement>(null)
-  const reduced = useSyncExternalStore(subscribeReduced, getReduced, getReducedServer)
-
-  // One reveal observer for the whole page; the reveal class is applied in
-  // JSX now, so the choreography is actually wired (no dead data-reveal).
-  useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
-    const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'))
-    if (!nodes.length) return
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      nodes.forEach((n) => (n.dataset.shown = 'true'))
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
-          ;(entry.target as HTMLElement).dataset.shown = 'true'
-          observer.unobserve(entry.target)
-        })
-      },
-      { rootMargin: '0px 0px -12% 0px' },
-    )
-    nodes.forEach((n) => observer.observe(n))
-    return () => observer.disconnect()
-  }, [])
+  const handleSectionLink = (event: MouseEvent<HTMLElement>) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href^="#"]') : null
+    if (!link) return
+    const target = event.currentTarget.querySelector<HTMLElement>(link.hash)
+    if (!target) return
+    event.preventDefault()
+    if (window.location.hash !== link.hash) window.history.pushState(null, '', link.hash)
+    // The root has smooth scrolling; honor reduced motion locally, without
+    // changing the shared root rule or stealing focus from another route.
+    target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+    target.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true })
+  }
 
   return (
     <div className="home-page">
       <Topbar2 openFileHref="/#heroFile" />
 
-      <main id="main-content" className={`${styles.page} ${monoClass}`} ref={rootRef}>
+      <main id="main-content" className={`${styles.page} ${fontClass}`} onClick={handleSectionLink}>
         <div className={styles.shell}>
+          <div className={styles.pageMasthead}>
+            <p>The mycloove story <span lang="bn">/ আমাদের কথা</span></p>
+            <span>Made for what comes next</span>
+          </div>
 
-          {/* ── HERO · the Armature Dial, walking the floor ─────────── */}
-          <section className={styles.hero}>
-            <div className={styles.dialWrap}>
-              <ArmatureDial items={openTools} reduced={reduced} />
-            </div>
+          <section className={styles.hero} aria-labelledby="about-title">
             <div className={styles.heroCopy}>
-              <p className={styles.eyebrow}>
-                About <span className={styles.eyebrowSpan} lang="bn">· আমাদের কথা</span>
-              </p>
-              <h1 className={styles.title}>
-                Documents, handled like
-                <span className={styles.titleAccent}> craftsmanship.</span>
-              </h1>
-              <p className={styles.lede}>
-                mycloove builds precise, private document tools — designed with
-                the care of a workshop, not the noise of a marketplace.
-              </p>
-              <div className={styles.specStrip} aria-hidden="true">
-                <span className={styles.specItem}>EST. 2026</span>
-                <span className={styles.specItem}>PRIVACY-FIRST</span>
-                <span className={`${styles.specItem} ${styles.specItemNum}`}>{toolCount} INSTRUMENTS</span>
+              <p className={styles.eyebrow}><span />Documents, with possibility.</p>
+              <h1 id="about-title" className={styles.title}>A file is only<br />the <span>beginning.</span></h1>
+              <p className={styles.lede}>The report you need to edit. The scan you need to read. The idea you need to share.</p>
+              <p className={styles.heroDescription}>mycloove gives your documents a useful next chapter. Thoughtful tools for the work on the other side of the file.</p>
+              <div className={styles.heroActions}>
+                <a href="#tool-library" className={styles.buttonPrimary} onClick={() => setFilter('All')}>Explore our tools<Arrow /></a>
+                <a href="#our-story" className={styles.textLink}>Why we build<Arrow diagonal /></a>
+              </div>
+              <div className={styles.heroFootnote}><span>PDFs / Images / Words / Ideas</span><span className={styles.footnoteRule} /></div>
+            </div>
+            <DocumentFolio onExplore={setFilter} />
+          </section>
+
+          <nav className={styles.chapterNav} aria-label="About page sections">
+            <span>Inside the story</span>
+            <a href="#our-story">The perspective</a>
+            <a href="#our-identity">The identity</a>
+            <a href="#tool-library">The instruments</a>
+            <a href="#our-standards">The care</a>
+          </nav>
+
+          <section id="our-story" className={styles.story} aria-labelledby="story-title">
+            <div className={styles.sectionRail}><span className={styles.sectionLabel}>Our perspective</span><span className={styles.railRule} /></div>
+            <div className={styles.storyGrid}>
+              <h2 id="story-title" className={styles.storyTitle} tabIndex={-1}>The important part<br />isn&apos;t the file.<br /><span>It&apos;s what you do with it.</span></h2>
+              <div className={styles.storyBody}>
+                <p>A document often arrives in the wrong form: an uneditable PDF, words trapped in a photograph, a file that needs one small change before you can send it.</p>
+                <p>We build for that moment. A focused place to convert, recover, refine, and understand the material already in your hands.</p>
+                <div className={styles.storyNote}><span className={styles.noteClasp} aria-hidden="true"><i /><i /></span><p>Less time working around the file.<br /><strong>More time working on what matters.</strong></p></div>
               </div>
             </div>
           </section>
 
-          {/* ── ORIGIN · the name (clove / cleave) ──────────────────── */}
-          <section className={`${styles.origin} ${styles.reveal}`} data-reveal>
-            <div>
-              <p className={styles.eyebrow}>The name</p>
-              <h2 className={styles.originTitle}>Clove and cleave.</h2>
-              <p className={styles.originBody}>
-                mycloove is named for the two ways a document moves. <em>Clove</em> is a
-                small bud; <em>cleave</em> means to join or to part. Merging pages,
-                splitting a file, lifting text out of a scan — it is all cleaving.
+          <section id="our-identity" className={styles.identity} aria-labelledby="identity-title">
+            <div className={styles.identityBrand}>
+              <span className={styles.sectionLabel}>A name with a point of view</span>
+              <MyclooveWordmark size="xl" className={styles.identityWordmark} />
+              <div className={styles.nameDefinitions}><p><strong>clove</strong><span>A small beginning.</span></p><p><strong>cleave</strong><span>To join. To part.</span></p></div>
+            </div>
+            <div className={styles.identityCopy}>
+              <h2 id="identity-title" tabIndex={-1}>Small name.<br />Open possibilities.</h2>
+              <p>A small bud. A word that means both joining and parting. Our name holds the same possibilities as a document: bring pages together, take them apart, let something new emerge.</p>
+              <p>The two O&apos;s form a clasp in our wordmark. Two small shapes, held together. A quiet signature for a collection of tools built with the same care.</p>
+            </div>
+          </section>
+
+          <section id="tool-library" className={styles.library} aria-labelledby="library-title">
+            <div className={styles.sectionRail}><span className={styles.sectionLabel}>The instruments</span><span className={styles.railRule} /></div>
+            <div className={styles.sectionHeading}>
+              <h2 id="library-title" tabIndex={-1}>Different jobs.<br /><span>The same attention to detail.</span></h2>
+              <p>Not one tool stretched to do everything. A considered collection, each with a clear job to do.</p>
+            </div>
+
+            <div className={styles.libraryToolbar}>
+              <div className={styles.filters} role="group" aria-label="Filter tools by purpose">
+                {groups.map((group) => (
+                  <button key={group} type="button" aria-pressed={filter === group} onClick={() => setFilter(group)}>
+                    {group === 'All' ? 'All tools' : group}
+                  </button>
+                ))}
+              </div>
+              <p className={styles.libraryStatus} role="status">
+                {status === 'loading' ? 'Checking availability...' : status === 'error' ? 'Availability not verified' : `${shownTools.length} ${shownTools.length === 1 ? 'tool' : 'tools'} in view`}
               </p>
-              <p className={styles.originBody}>
-                The doubled O in our wordmark is the clasp: two beads holding the name
-                together, in the same blue as the octopus who runs this workshop.
-              </p>
             </div>
-            <div className={styles.beadField} aria-hidden="true">
-              <span className={`${styles.bead} ${styles.beadA}`} />
-              <span className={`${styles.bead} ${styles.beadB}`} />
+            {status === 'error' && <p className={styles.availabilityNote}>The collection is shown below. Each tool confirms its current availability when you open it.</p>}
+
+            {shownTools.length ? (
+              <ul className={styles.toolList}>
+                {shownTools.map((tool) => (
+                  <li key={tool.href}>
+                    <Link href={tool.href} prefetch={false} className={styles.toolLink}>
+                      <span className={styles.toolNumber} aria-hidden="true">{String(tools.indexOf(tool) + 1).padStart(2, '0')}</span>
+                      <span className={styles.toolCopy}><span className={styles.toolCategory}>{tool.group}</span><span className={styles.toolTitle}>{tool.label}</span><span className={styles.toolDescription}>{tool.desc}</span></span>
+                      <span className={styles.toolArrow}><Arrow diagonal /></span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className={styles.emptyTools}><h3>No tools are currently available{filter !== 'All' ? ` in ${filter.toLowerCase()}` : ''}.</h3><p>Choose another category or <Link href="/contact-us">contact us</Link> for help.</p></div>
+            )}
+          </section>
+
+          <section id="our-standards" className={styles.standards} aria-labelledby="standards-title">
+            <div className={styles.standardsIntro}>
+              <span className={styles.sectionLabel}>The care behind the tools</span>
+              <h2 id="standards-title" tabIndex={-1}>Care is a way<br />of working.</h2>
+              <p>The small decisions are the product.<br />These are the ones we come back to.</p>
+              <div className={styles.languageNote}><span lang="bn">আপনার কাজ। আপনার ভাষা।</span><span>Your work. Your language.</span></div>
+            </div>
+            <div className={styles.principles}>
+              <details open>
+                <summary><h3>Useful before impressive.</h3><span className={styles.disclosure} aria-hidden="true" /></summary>
+                <div className={styles.principleBody}><p>A clear job, a considered workspace, a useful result. We would rather remove a distraction than add another feature you have to work around.</p></div>
+              </details>
+              <details>
+                <summary><h3>Bangla belongs from the beginning.</h3><span className={styles.disclosure} aria-hidden="true" /></summary>
+                <div className={styles.principleBody}><p>Dedicated Bijoy-to-Unicode conversion and Bangla font support are part of the collection. Working in your language should not mean working around your tools.</p></div>
+              </details>
+              <details>
+                <summary><h3>Clear limits. No hidden finish line.</h3><span className={styles.disclosure} aria-hidden="true" /></summary>
+                <div className={styles.principleBody}><p>Tools are free within the current fair-use allowance. The active limits belong in the workspace, not in a surprise at the end.</p><Link href="/pricing" className={styles.inlineLink}>How the allowance works<Arrow /></Link></div>
+              </details>
+              <details>
+                <summary><h3>Your files deserve a clear explanation.</h3><span className={styles.disclosure} aria-hidden="true" /></summary>
+                <div className={styles.principleBody}><p>Different features handle files differently. Our privacy policy explains document processing, retention, and account information so you can choose an appropriate workflow.</p><Link href="/privacy" className={styles.inlineLink}>Read our privacy policy<Arrow /></Link></div>
+              </details>
+              <details>
+                <summary><h3>No account to begin.</h3><span className={styles.disclosure} aria-hidden="true" /></summary>
+                <div className={styles.principleBody}><p>Start with core tools as a guest. Sign in when you need account features or connected publishing. No card is required to get started.</p></div>
+              </details>
             </div>
           </section>
 
-          {/* ── THE INSTRUMENTS · ledger grouped by capability ──────── */}
-          <section className={styles.section}>
-            <div className={`${styles.sectionHead} ${styles.reveal}`} data-reveal>
-              <span className={styles.sectionIndex}>01 · Instruments</span>
-              <h2 className={styles.sectionTitle}>
-                {toolCount} focused tools.{' '}
-                <span className={styles.sectionTitleMuted}>Zero clutter.</span>
-              </h2>
-            </div>
-            <div className={`${styles.ledger} ${styles.reveal}`} data-reveal>
-              {GROUP_ORDER.map((group) => {
-                const items = openTools.filter((tool) => tool.group === group)
-                if (!items.length) return null
-                return (
-                  <div className={styles.ledgerGroup} key={group}>
-                    <div className={styles.ledgerLabel}>
-                      <span className={styles.ledgerCount}>{String(items.length).padStart(2, '0')}</span>
-                      <span className={styles.ledgerName}>{group}</span>
-                    </div>
-                    <div className={styles.ledgerCells}>
-                      {items.map((t) => (
-                        <Link key={t.href} href={t.href} className={styles.cell}>
-                          <span className={styles.glyphSlot}>
-                            {t.variant ? <LayeredIcon variant={t.variant} /> : <span className={styles.glyphTile}>{t.glyph}</span>}
-                          </span>
-                          <span className={styles.cellBody}>
-                            <span className={styles.cellLabel}>{t.label}</span>
-                            <span className={styles.cellDesc}>{t.desc}</span>
-                          </span>
-                          <span className={styles.cellArrow} aria-hidden="true">{arrow}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+          <section className={styles.closing} aria-labelledby="closing-title">
+            <div><span className={styles.sectionLabel}>Still being written</span><h2 id="closing-title">Your work shapes<br />our next chapter.</h2></div>
+            <div className={styles.closingBody}><p>A missing tool. A difficult document. A small detail that could be better. Tell us what would make your work easier.</p><Link href="/contact-us" className={styles.buttonPrimary}>Talk to mycloove<Arrow diagonal /></Link></div>
           </section>
-
-          {/* ── WORKING RULES ───────────────────────────────────────── */}
-          <section className={styles.section}>
-            <div className={`${styles.sectionHead} ${styles.reveal}`} data-reveal>
-              <span className={styles.sectionIndex}>02 · Working rules</span>
-              <h2 className={styles.sectionTitle}>Principles over promises.</h2>
-            </div>
-            <div className={`${styles.principles} ${styles.reveal}`} data-reveal>
-              {principles.map((p, i) => (
-                <div className={styles.principle} key={p.title}>
-                  <span className={styles.principleNum} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                  <span className={styles.principleIcon}>{p.icon}</span>
-                  <div>
-                    <div className={styles.principleTitle}>{p.title}</div>
-                    <div className={styles.principleDesc}>{p.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ── PROMISE ─────────────────────────────────────────────── */}
-          <section className={`${styles.promise} ${styles.reveal}`} data-reveal>
-            <span className={styles.promiseSeal} aria-hidden="true">
-              <span className={styles.promiseRing} />
-              <span className={styles.promiseStar}>{glyph.star}</span>
-            </span>
-            <h2 className={styles.promiseTitle}>Private by design.</h2>
-            <p className={styles.promiseBody}>
-              Files are processed and deleted — never stored, never profiled. No
-              account required.
-            </p>
-          </section>
-
-          {/* ── CTA ─────────────────────────────────────────────────── */}
-          <section className={`${styles.cta} ${styles.reveal}`} data-reveal>
-            <h2 className={styles.ctaTitle}>Begin with a file.</h2>
-            <div className={styles.ctaActions}>
-              <Link href="/#heroFile" className={styles.btnPrimary}>Open a file</Link>
-              <Link href="/#tools" className={styles.btnQuiet}>Explore the tools</Link>
-            </div>
-            <p className={styles.ctaNote}>
-              Free within a fair allowance — <Link href="/pricing">see pricing</Link>. Or{' '}
-              <Link href="/contact-us">talk to the workshop</Link> directly.
-            </p>
-          </section>
-
         </div>
       </main>
 

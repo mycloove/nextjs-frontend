@@ -2,12 +2,14 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import BenchIcon from './BenchIcon'
 import { BenchToasts, useBenchToasts } from './BenchToast'
 import { ConfirmDialog, type ConfirmSpec } from './ConfirmDialog'
+import CreditAccountEditor from './CreditAccountEditor'
 import { count } from './format'
 import styles from './bench.module.css'
+import credit from './credit.module.css'
 
 export type UsersTab = 'accounts' | 'browsers'
 
@@ -29,11 +31,9 @@ type PendingAction = { row: Row; action: 'clear' | 'delete' }
 const PAGE_SIZE = 25
 
 /**
- * The bench's people desk. Its question is never "what did this person convert"
- * — no table records that — but "how hard is this identity leaning on its cap".
- * The counters are therefore per identity across every tool, shown as raw counts
- * rather than a percentage, because there is no single cap to divide by: each
- * instrument has its own, and the honest reading is the number itself.
+ * Call counters remain identity-level analytics, never inferred wallet spend.
+ * The actor-keyed credit editor reads the server snapshot separately and cannot
+ * change entitlement from an email, a role label or these recorded counts.
  */
 export default function UsersDesk({
   tab,
@@ -62,8 +62,20 @@ export default function UsersDesk({
   const [pending, setPending] = useState<PendingAction | null>(null)
   const [busyId, setBusyId] = useState('')
   const [statusOverride, setStatusOverride] = useState<Record<string, boolean>>({})
+  const [creditRow, setCreditRow] = useState<Row | null>(null)
+  const [creditLocked, setCreditLocked] = useState(false)
+  const [creditRefreshToken, setCreditRefreshToken] = useState(0)
+  const creditOpener = useRef<HTMLButtonElement | null>(null)
   const { toasts, push, dismiss } = useBenchToasts()
   const router = useRouter()
+
+  const scope = `${tab}:${query}:${page}`
+  const [seenScope, setSeenScope] = useState(scope)
+  if (seenScope !== scope) {
+    setSeenScope(scope)
+    setCreditRow(null)
+    setCreditLocked(false)
+  }
 
   const rows = tab === 'accounts' ? accounts : browsers
   const total = tab === 'accounts' ? accountTotal : browserTotal
@@ -75,8 +87,8 @@ export default function UsersDesk({
       title: `Clear every recorded call for ${row.primary}?`,
       body:
         row.kind === 'browser'
-          ? 'This browser only exists as a cookie id, so nothing else is kept about it. Clearing the tally returns its caps immediately, across every tool.'
-          : 'Their caps return immediately, across every tool, and their conversion history stops counting. The account, its sign-in and its role are untouched.',
+          ? 'This clears the browser\'s recorded-call analytics across every tool. Wallet credits, ledger entries and reservations are untouched. In legacy mode, clearing counted usage also returns its per-tool caps.'
+          : 'This clears recorded-call analytics across every tool, not the credit wallet or reservations. In legacy mode its counted per-tool usage is reset. The account, sign-in, role and owner activity history are untouched.',
       facts: [
         { label: 'Recorded · 24h', value: count(row.calls_24h) },
         { label: 'Recorded · all time', value: count(row.calls_total) },
@@ -118,7 +130,7 @@ export default function UsersDesk({
   }
 
   const runAsk = async () => {
-    if (!pending) return
+    if (!pending || creditLocked) return
     const { row, action } = pending
     setAsk((current) => (current ? { ...current, busy: true } : current))
     setBusyId(row.id)
@@ -149,6 +161,7 @@ export default function UsersDesk({
           throw new Error(payload.error || 'Could not delete that account')
         }
         push('ok', `${row.primary} and every record attached to it were deleted.`)
+        if (creditRow?.kind === 'account' && creditRow.id === row.id) setCreditRow(null)
         // The list is server-rendered; refresh so the deleted row and the
         // account total both come from the database rather than local state.
         router.refresh()
@@ -159,10 +172,12 @@ export default function UsersDesk({
       push('bad', error instanceof Error ? error.message : 'Could not complete that')
     } finally {
       setBusyId('')
+      setAsk((current) => current ? { ...current, busy: false } : null)
     }
   }
 
   const toggleActive = async (row: Row) => {
+    if (creditLocked) return
     const nextActive = !(statusOverride[row.id] ?? row.active)
     setBusyId(row.id)
     try {
@@ -175,6 +190,7 @@ export default function UsersDesk({
       if (!response.ok) throw new Error(payload.error || 'Could not change that account')
       const applied = payload.active ?? nextActive
       setStatusOverride((prev) => ({ ...prev, [row.id]: applied }))
+      if (creditRow?.kind === 'account' && creditRow.id === row.id) setCreditRefreshToken((value) => value + 1)
       push('ok', `${row.primary} is now ${applied ? 'active' : 'turned off'}.`)
     } catch (error) {
       push('bad', error instanceof Error ? error.message : 'Could not change that account')
@@ -192,9 +208,8 @@ export default function UsersDesk({
           <p className={styles.pageEyebrow}>Users</p>
           <h1 className={styles.pageTitle}>Who is using the tools, and how hard.</h1>
           <p className={styles.pageLead}>
-            Counters are per identity across every instrument. There is no per-person conversion history in this
-            deployment — only calls counted against a rolling window, which is what decides whether the next one
-            is allowed.
+            Recorded calls are analytics across every instrument, not credits spent or available capacity.
+            Open Credits for a confirmed account or browser balance, allowance override and audited adjustment.
           </p>
         </div>
         <div className={styles.pageActions}>
@@ -224,9 +239,10 @@ export default function UsersDesk({
             defaultValue={query}
             placeholder="Search by email, or paste a full account id…"
             aria-label="Search accounts"
+            disabled={creditLocked}
           />
           <input type="hidden" name="tab" value={tab} />
-          <button type="submit" className={styles.btnIcon} aria-label="Search">
+          <button type="submit" className={styles.btnIcon} aria-label="Search" disabled={creditLocked}>
             <BenchIcon className={styles.navIcon} name="next" />
           </button>
         </form>
@@ -235,6 +251,7 @@ export default function UsersDesk({
             type="button"
             className={`${styles.segment} ${tab === 'accounts' ? styles.segmentOn : ''}`}
             aria-pressed={tab === 'accounts'}
+            disabled={creditLocked}
             onClick={() => router.push(hrefFor('accounts', query))}
           >
             Accounts<span className={styles.segmentCount}>{count(accountTotal)}</span>
@@ -243,6 +260,7 @@ export default function UsersDesk({
             type="button"
             className={`${styles.segment} ${tab === 'browsers' ? styles.segmentOn : ''}`}
             aria-pressed={tab === 'browsers'}
+            disabled={creditLocked}
             onClick={() => router.push(hrefFor('browsers', query))}
           >
             Browsers<span className={styles.segmentCount}>{count(browserTotal)}</span>
@@ -253,6 +271,17 @@ export default function UsersDesk({
           {total === 0 ? 'Nothing recorded' : `${count(total)} ${tab === 'accounts' ? 'accounts' : 'browsers'}`}
         </span>
       </div>
+
+      {creditRow ? <CreditAccountEditor
+        key={`${creditRow.kind}:${creditRow.id}`}
+        id={creditRow.id}
+        kind={creditRow.kind}
+        label={creditRow.primary}
+        canEdit={canEditUsers}
+        onLockChange={setCreditLocked}
+        refreshToken={creditRefreshToken}
+        onClose={() => { setCreditRow(null); creditOpener.current?.focus() }}
+      /> : null}
 
       <div className={styles.panel}>
         <div className={styles.panelHead}>
@@ -282,12 +311,13 @@ export default function UsersDesk({
                   <th className={styles.th}>{tab === 'accounts' ? 'Status' : 'Type'}</th>
                   <th className={styles.th}>Recorded · 24h</th>
                   <th className={styles.th}>Recorded · total</th>
+                  <th className={styles.th}>Credit account</th>
                   {canEditUsers ? <th className={styles.th} style={{ textAlign: 'right' }}>Actions</th> : null}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => {
-                  const busy = busyId === row.id
+                  const busy = busyId === row.id || creditLocked
                   return (
                     <tr key={row.id} className={styles.tr}>
                       <td className={styles.td}>
@@ -322,6 +352,17 @@ export default function UsersDesk({
                       </td>
                       <td className={`${styles.td} ${styles.cellNum}`}>{count(row.calls_24h)}</td>
                       <td className={`${styles.td} ${styles.cellNum}`}>{count(row.calls_total)}</td>
+                      <td className={styles.td}>
+                        <button
+                          type="button"
+                          className={`${styles.btn} ${credit.creditButton}`}
+                          aria-label={`View credits for ${row.primary}${row.kind === 'browser' ? ` (${row.id})` : ''}`}
+                          aria-expanded={creditRow?.kind === row.kind && creditRow.id === row.id}
+                          aria-controls={creditRow?.kind === row.kind && creditRow.id === row.id ? 'credit-account-editor' : undefined}
+                          disabled={busy}
+                          onClick={(event) => { creditOpener.current = event.currentTarget; setCreditRow(row) }}
+                        >Credits</button>
+                      </td>
                       {canEditUsers ? <td className={`${styles.td} ${styles.cellRight}`}>
                         <span className={styles.rowActions}>
                           {row.kind === 'account' ? (
@@ -340,7 +381,7 @@ export default function UsersDesk({
                             className={`${styles.btn} ${styles.btnDanger}`}
                             onClick={() => askClear(row)}
                             disabled={busy}
-                            title="Clear this identity's recorded calls on every tool"
+                            title="Clear recorded analytics on every tool; never refund wallet credits"
                           >
                             Clear calls
                           </button>
@@ -375,9 +416,9 @@ export default function UsersDesk({
               <Link
                 className={`${styles.btn} ${styles.pagerControl} ${page <= 1 ? styles.pagerControlDisabled : ''}`}
                 href={pageHref(page - 1)}
-                aria-disabled={page <= 1}
-                tabIndex={page <= 1 ? -1 : undefined}
-                onClick={(event) => { if (page <= 1) event.preventDefault() }}
+                aria-disabled={page <= 1 || creditLocked}
+                tabIndex={page <= 1 || creditLocked ? -1 : undefined}
+                onClick={(event) => { if (page <= 1 || creditLocked) event.preventDefault() }}
               >
                 <BenchIcon className={styles.navIcon} name="prev" />
                 Previous
@@ -385,9 +426,9 @@ export default function UsersDesk({
               <Link
                 className={`${styles.btn} ${styles.pagerControl} ${page >= totalPages ? styles.pagerControlDisabled : ''}`}
                 href={pageHref(page + 1)}
-                aria-disabled={page >= totalPages}
-                tabIndex={page >= totalPages ? -1 : undefined}
-                onClick={(event) => { if (page >= totalPages) event.preventDefault() }}
+                aria-disabled={page >= totalPages || creditLocked}
+                tabIndex={page >= totalPages || creditLocked ? -1 : undefined}
+                onClick={(event) => { if (page >= totalPages || creditLocked) event.preventDefault() }}
               >
                 Next
                 <BenchIcon className={styles.navIcon} name="next" />

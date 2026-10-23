@@ -23,7 +23,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { getApiErrorMessage, toolRequest } from '@/lib/api/client'
 import 'katex/dist/katex.min.css'
-import { useUsageSnapshot } from '@/lib/usage/useUsageSnapshot'
+import AuthNavButton from '@/components/AuthNavButton'
+import CreditCost from '@/components/tools/CreditCost'
+import ToolSwitcher from '@/components/tools/ToolSwitcher'
+import { useToolAvailability } from '@/lib/usage/useToolAvailability'
+import { useAccountViewer } from '@/lib/account/useAccountViewer'
+import { useCreditBalance } from '@/lib/usage/useCreditBalance'
 import './premium.css'
 import './math.css'
 import { Ic } from './icons'
@@ -111,7 +116,10 @@ const applyPresetOptions = (
    ═══════════════════════════════════════════════════════════════════════ */
 
 export default function PDFToMarkdown() {
-  const { snapshot } = useUsageSnapshot()
+  // Both MR views share one resolved actor and one authoritative balance.
+  const accountState = useAccountViewer()
+  const creditState = useCreditBalance(accountState.status === 'loading' ? null : accountState.viewer?.id ?? 'guest')
+  const navigationAvailability = useToolAvailability()
   const converterRef = useRef<HTMLDivElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)
   const pulseTimer = useRef<number | null>(null)
@@ -999,14 +1007,6 @@ export default function PDFToMarkdown() {
   const queuedCount = jobs.filter((j) => j.status === 'idle').length
   const canRun      = queuedCount + errorCount > 0 && !converting
 
-  const toggleTheme = useCallback(() => {
-    const root = document.documentElement
-    const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
-    root.dataset.theme = next
-    root.style.colorScheme = next
-    localStorage.setItem('smilepdf-theme', next)
-  }, [])
-
   const scrollToConverter = useCallback(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     converterRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' })
@@ -1071,6 +1071,9 @@ export default function PDFToMarkdown() {
     return (
       <div className={cx('pm-root', focusMode && 'pm-focus-mode')}>
         <Workspace
+          accountState={accountState}
+          creditState={creditState}
+          navigationAvailability={navigationAvailability}
           jobs={jobs.filter((j) => j.status === 'done')}
           activeId={activeJobId}
           focusMode={focusMode}
@@ -1095,7 +1098,7 @@ export default function PDFToMarkdown() {
           onResetSourcedDocument={resetSourcedDocument}
           aiBusy={aiBusy}
         />
-        <CommandPalette open={cmdkOpen} actions={cmdActions} onClose={() => setCmdkOpen(false)} />
+        <CommandPalette open={cmdkOpen} actions={cmdActions} creditState={creditState} onClose={() => setCmdkOpen(false)} />
         <ShortcutsModal open={helpOpen} onClose={() => setHelpOpen(false)} />
         <ToastStack toasts={toasts} />
       </div>
@@ -1104,29 +1107,23 @@ export default function PDFToMarkdown() {
 
   return (
     <div className="pm-root mr-markdown-upload">
-      <header className="pm-studio-topbar">
+      <header className="pm-studio-topbar" data-tool-navbar="pdf-to-markdown">
         <div className="pm-studio-topbar-inner">
           <Link className="pm-studio-brand" href="/" aria-label="mycloove home">
             <MrMarkdownBrandLogo className="mr-nav-brand-logo" />
             <span>Mr. Markdown</span>
             <small>Studio</small>
           </Link>
-          <div className="pm-studio-workspace">
-            <span className="pm-workspace-avatar">{snapshot ? snapshot.remaining : '—'}</span>
-            <span>
-              <strong>{snapshot ? `${snapshot.remaining} left ${snapshot.plan?.period === 'week' ? 'this week' : 'today'}` : 'Allotment'}</strong>
-              <small>{snapshot?.plan?.name ?? 'Conversions reset on a rolling window'}</small>
-            </span>
-          </div>
           <nav className="pm-studio-nav" aria-label="Workspace navigation">
             <a href="#converter">Converter</a>
             <a href="#options">Options</a>
             <button type="button" onClick={() => setHelpOpen(true)}>Shortcuts</button>
           </nav>
-          <button className="pm-theme-button" type="button" onClick={toggleTheme} title="Toggle theme" aria-label="Toggle theme">
-            <span className="pm-theme-moon" aria-hidden="true">☾</span>
-            <span className="pm-theme-sun" aria-hidden="true">☀</span>
-          </button>
+          <div className="pm-studio-account">
+            <ToolSwitcher toolId="pdf-to-markdown" availability={navigationAvailability} />
+            <AuthNavButton chrome="tool" accountState={accountState} creditState={creditState} creditDisplayToolId="pdf-to-markdown" />
+            {creditState.snapshot?.prices['pdf-to-markdown']?.enabled !== false && <div className="pm-conversion-cost"><CreditCost toolId="pdf-to-markdown" creditState={creditState} /></div>}
+          </div>
         </div>
       </header>
       <div className="pm-shell">
@@ -1254,6 +1251,9 @@ export default function PDFToMarkdown() {
                 </button>
               </div>
             </div>
+            {creditState.snapshot?.prices['pdf-to-markdown']?.enabled !== false ? <div className="pm-conversion-cost pm-queue-credit-cost">
+              <span>Per PDF</span><CreditCost toolId="pdf-to-markdown" creditState={creditState} />
+            </div> : null}
             <div className="pm-queue">
               {jobs.map((j) => (
                 <JobItem
@@ -1316,7 +1316,7 @@ export default function PDFToMarkdown() {
         </footer>
       </div>
 
-      <CommandPalette open={cmdkOpen} actions={cmdActions} onClose={() => setCmdkOpen(false)} />
+      <CommandPalette open={cmdkOpen} actions={cmdActions} creditState={creditState} onClose={() => setCmdkOpen(false)} />
       <ShortcutsModal open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       {translateTarget !== null && (

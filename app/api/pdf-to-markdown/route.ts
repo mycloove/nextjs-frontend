@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     const pageRange = readString(formData, 'page_range', '')
     const password = readRawString(formData, 'password', '')
 
-    quota = await beginToolQuota(request, 'pdf-to-markdown')
+    quota = await beginToolQuota(request, 'pdf-to-markdown', formData)
     if (!quota.ok) return quota.response
 
     const forwardFormData = new FormData()

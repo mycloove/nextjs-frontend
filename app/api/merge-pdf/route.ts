@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const formData = await readFormData(request)
     const { maxFiles, maxFileBytes, maxTotalBytes } = pdfOpsLimits()
     const files = await collectPdfFiles(formData, { min: 2, max: maxFiles, maxFileBytes, maxTotalBytes })
-    quota = await beginToolQuota(request, 'merge-pdf')
+    quota = await beginToolQuota(request, 'merge-pdf', formData)
     if (!quota.ok) return quota.response
 
     const { bytes, sourceCount } = await mergePdfs(files)

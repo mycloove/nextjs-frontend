@@ -127,6 +127,7 @@ model User {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   featureUsageEvents FeatureUsageEvent[]
+  creditAccount CreditAccount?
 
   @@map("users")
 }
@@ -159,6 +160,97 @@ model Usage {
   @@index([userId, createdAt(sort: Desc)])
   @@index([anonId, createdAt(sort: Desc)])
   @@map("usages")
+}
+
+// Credits are additive to legacy call history. An operation captures its price
+// and window before work starts; only a settled operation is permanent spend.
+enum CreditOperationState {
+  reserved
+  settled
+  released
+
+  @@map("credit_operation_state")
+}
+
+model CreditPolicy {
+  id              String   @id @default("default")
+  enabled         Boolean  @default(false)
+  guestAllowance  Int      @default(20) @map("guest_allowance")
+  memberAllowance Int      @default(100) @map("member_allowance")
+  periodHours     Int      @default(24) @map("period_hours")
+  version         Int      @default(1)
+  activatedAt     DateTime? @map("activated_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("credit_policies")
+}
+
+model CreditPrice {
+  toolId    String   @id @map("tool_id")
+  cost      Int      @default(1)
+  enabled   Boolean  @default(true)
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("credit_prices")
+}
+
+model CreditAccount {
+  id                String   @id @default(uuid()) @db.Uuid
+  ownerKey          String   @unique @map("owner_key")
+  userId            String?  @unique @map("user_id") @db.Uuid
+  allowanceOverride Int?     @map("allowance_override")
+  overrideExpiresAt DateTime? @map("override_expires_at") @db.Timestamptz(6)
+  claimedToId       String?  @map("claimed_to_id") @db.Uuid
+  revision          Int      @default(1)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user              User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  operations        CreditOperation[]
+  entries           CreditLedgerEntry[]
+
+  @@map("credit_accounts")
+}
+
+model CreditOperation {
+  id            String   @id @default(uuid()) @db.Uuid
+  accountId     String   @map("account_id") @db.Uuid
+  actorKey      String   @map("actor_key")
+  toolId        String   @map("tool_id")
+  actionKey     String   @map("action_key")
+  operationKey  String   @map("operation_key")
+  fingerprint   String
+  cost          Int
+  periodHours   Int      @map("period_hours")
+  priceVersion  Int      @map("price_version")
+  policyVersion Int      @map("policy_version")
+  state         CreditOperationState @default(reserved)
+  reservedAt    DateTime @default(now()) @map("reserved_at") @db.Timestamptz(6)
+  settledAt     DateTime? @map("settled_at") @db.Timestamptz(6)
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(6)
+  account       CreditAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  entries       CreditLedgerEntry[]
+
+  @@unique([actorKey, actionKey, operationKey])
+  @@index([accountId, state, expiresAt])
+  @@map("credit_operations")
+}
+
+model CreditLedgerEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  accountId   String   @map("account_id") @db.Uuid
+  operationId String?  @unique @map("operation_id") @db.Uuid
+  dedupeKey   String?  @unique @map("dedupe_key")
+  kind        String
+  amount      Int
+  reason      String?
+  actorId     String?  @map("actor_id") @db.Uuid
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  account     CreditAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  operation   CreditOperation? @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, expiresAt])
+  @@map("credit_ledger_entries")
 }
 
 model FeatureUsageEvent {

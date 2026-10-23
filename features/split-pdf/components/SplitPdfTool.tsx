@@ -4,6 +4,12 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import Link from 'next/link'
 import { useDropzone } from 'react-dropzone'
 import AnimatedBrandLogo from '@/components/animated-brand-logo/AnimatedBrandLogo'
+import AuthNavButton from '@/components/AuthNavButton'
+import CreditCost from '@/components/tools/CreditCost'
+import { useAccountViewer } from '@/lib/account/useAccountViewer'
+import { useCreditBalance } from '@/lib/usage/useCreditBalance'
+import { useToolAvailability } from '@/lib/usage/useToolAvailability'
+import ToolSwitcher from '@/components/tools/ToolSwitcher'
 import { uploadWithProgress, getApiErrorMessage } from '@/lib/upload/uploadWithProgress'
 import { usePasteFiles } from '@/lib/upload/usePasteFiles'
 import { downloadBlob } from '@/lib/download/downloadOutputs'
@@ -116,6 +122,9 @@ const Icon = {
 }
 
 export default function SplitPdfTool() {
+  const accountState = useAccountViewer()
+  const creditState = useCreditBalance(accountState.status === 'loading' ? null : accountState.viewer?.id ?? 'guest')
+  const availability = useToolAvailability()
   const [file, setFile] = useState<StackFile | null>(null)
   const [pageCount, setPageCount] = useState(0)
   const [phase, setPhase] = useState<Phase>('edit')
@@ -415,7 +424,7 @@ export default function SplitPdfTool() {
 
   return (
     <div className="spl-page">
-      <header className="spl-sitebar">
+      <header className="spl-sitebar" data-tool-navbar="split-pdf">
         <div className="spl-sitebar-inner">
           <div className="spl-breadcrumb">
             <Link href="/" className="spl-logo-link" aria-label="mycloove home">
@@ -426,15 +435,10 @@ export default function SplitPdfTool() {
             <span className="spl-site-separator" aria-hidden="true">/</span>
             <b>Split PDF</b>
           </div>
-          <Link className="spl-all-tools" href="/">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
-            <span>All tools</span>
-          </Link>
+          <div className="spl-site-actions">
+            <ToolSwitcher toolId="split-pdf" availability={availability} />
+            <AuthNavButton chrome="tool" accountState={accountState} creditState={creditState} creditDisplayToolId="split-pdf" />
+          </div>
         </div>
       </header>
 
@@ -676,6 +680,7 @@ export default function SplitPdfTool() {
               {error && (
                 <div className="spl-err" role="alert">{Icon.alert}<span>{error}</span></div>
               )}
+              {phase !== 'running' && creditState.snapshot?.prices['split-pdf']?.enabled !== false && <div className="spl-credit-cost"><CreditCost toolId="split-pdf" creditState={creditState} /></div>}
               <div className="spl-actions">
                 <button type="button" className="spl-ghost" onClick={downloadAll} disabled={phase !== 'done' || !tickets?.length}>
                   Download all (.zip)

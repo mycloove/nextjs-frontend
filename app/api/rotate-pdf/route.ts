@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const pagePlanRaw = formText(formData, 'pagePlan')
     const angle = Number.parseInt(formText(formData, 'angle', '90'), 10)
     const ranges = formText(formData, 'ranges')
-    quota = await beginToolQuota(request, 'rotate-pdf')
+    quota = await beginToolQuota(request, 'rotate-pdf', formData)
     if (!quota.ok) return quota.response
 
     // pagePlan is additive: existing API callers can continue to use angle/ranges.

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import type { UsageSnapshot } from './types'
+import { notifyCreditChange } from './credit-client'
 
 export function useUsageSnapshot(toolId?: string) {
   const [snapshot, setSnapshot] = useState<UsageSnapshot | null>(null)
@@ -29,7 +30,11 @@ export function useUsageSnapshot(toolId?: string) {
 }
 
 export async function claimUsageAfterLogin() {
+  await fetch('/api/credits/claim', { method: 'POST', credentials: 'include', cache: 'no-store' }).catch(() => {
+    // The authoritative credit hook and next server action retry the claim.
+  })
   await fetch('/api/usage', { method: 'POST', credentials: 'include', cache: 'no-store' }).catch(() => {
     // Mapping is retried on the next conversion.
   })
+  notifyCreditChange()
 }

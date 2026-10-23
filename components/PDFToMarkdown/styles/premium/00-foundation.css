@@ -79,6 +79,13 @@
   --pm-font-sans:    'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --pm-font-display: 'Syne', var(--pm-font-sans);
   --pm-font-mono:    'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+
+  /* The shared tool index inherits the entry's material, never a global palette. */
+  --tool-nav-surface: var(--pm-bg-surface);
+  --tool-nav-text: var(--pm-text-primary);
+  --tool-nav-secondary: var(--pm-text-secondary);
+  --tool-nav-divider: var(--pm-border-base);
+  --tool-nav-signal: var(--pm-brand-500);
 }
 
 /* ── Mr. Markdown workspace skin (scoped to this route) ─────────────── */

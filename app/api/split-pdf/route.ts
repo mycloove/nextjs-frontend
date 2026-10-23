@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const { maxFileBytes, maxTotalBytes } = pdfOpsLimits()
     const files = await collectPdfFiles(formData, { min: 1, max: 1, maxFileBytes, maxTotalBytes })
     const ranges = formText(formData, 'ranges')
-    quota = await beginToolQuota(request, 'split-pdf')
+    quota = await beginToolQuota(request, 'split-pdf', formData)
     if (!quota.ok) return quota.response
 
     const { parts, pageCount } = await splitPdf(files[0], ranges)

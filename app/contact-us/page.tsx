@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { IBM_Plex_Mono } from 'next/font/google'
+import { IBM_Plex_Mono, Space_Grotesk } from 'next/font/google'
 import ContactUsClient from './ContactUsClient'
 
 const plexMono = IBM_Plex_Mono({
@@ -9,18 +9,22 @@ const plexMono = IBM_Plex_Mono({
   display: 'swap',
 })
 
+// Keep the marketing family's joined, geometric display voice reliable without
+// activating shared chrome's Syne rules. Only this page consumes the variable.
+const display = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  variable: '--cu-font-display',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
-  // `absolute` bypasses the root layout's "%s | mycloove" title template,
-  // matching the About page's `About — mycloove` pattern.
-  title: { absolute: 'Contact — mycloove' },
+  title: { absolute: 'Contact | mycloove' },
   description:
-    'Talk to the mycloove team. Questions, feedback, or ideas — a real person reads every message.',
+    'A stuck file, a new idea, or a useful observation. Write to mycloove with a considered space for your message, in English or Bangla.',
 }
 
 export default function ContactUsPage() {
-  // IBM Plex Mono is a register decision for this page's console readouts
-  // (it is not loaded anywhere else in the repo — Document AI loads its own
-  // fonts separately). The variable mounts on the contact root only, so the
-  // font stays module-local.
-  return <ContactUsClient monoClass={plexMono.variable} />
+  // Both faces are self-hosted and applied only inside the contact root.
+  return <ContactUsClient fontClass={`${plexMono.variable} ${display.variable}`} />
 }

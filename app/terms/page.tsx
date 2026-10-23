@@ -62,9 +62,12 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          Free usage is metered per tool to keep the service available to
-          everyone. We may adjust these limits, and we may suspend accounts that
-          abuse the service.
+          Free usage is governed by the active fair-use policy. When credits are
+          enabled, billable actions draw from a shared allowance at the displayed
+          cost. Credits are not money, cannot be transferred, and return according
+          to the configured rolling window. Guest activity may be linked to your
+          account when you sign in. We may adjust allowances and action costs,
+          and we may suspend accounts that abuse the service.
         </p>
       </>
     ),

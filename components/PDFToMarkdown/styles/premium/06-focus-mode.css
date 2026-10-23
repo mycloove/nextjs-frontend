@@ -321,6 +321,12 @@
 @media (max-width:560px) {
   .mr-markdown-workspace.pm-focus-mode { grid-template-rows:46px minmax(0,1fr); }
 }
+/* The account seal stays reachable; optional copy/shortcut chrome yields first. */
+@media (max-width:380px) {
+  .mr-markdown-workspace.pm-focus-mode .mr-focus-actions { gap:4px; }
+  .mr-markdown-workspace.pm-focus-mode .mr-focus-actions > .mr-focus-icon-btn,
+  .mr-markdown-workspace.pm-focus-mode .mr-focus-exit kbd { display:none; }
+}
 /* ── Focus-mode cheat sheet popover ──────────────────────────────
    Icon trigger in the focus header's right action group; the panel
    itself reuses the rail's .mr-cheatsheet styles. Anchored under the

@@ -3,8 +3,12 @@ import { after, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { applyAnonCookie, readOrCreateAnonId } from './cookie'
 import { parseUsageSnapshot, quotaExceededBody } from './parse'
-import { claimAnonUsage, consumeToolUsage, ensureProfileRecord, readAccountStatus, readToolSnapshot, recordSuccessfulFeatureUsage, releaseReservedUsage, UsageStoreMissing } from './store'
+import { claimAnonUsage, consumeToolUsage, ensureProfileRecord, getPrisma, readAccountStatus, readToolSnapshot, recordSuccessfulFeatureUsage, releaseReservedUsage, UsageStoreMissing } from './store'
 import type { UsageSnapshot } from './types'
+import { creditDatabase, creditRequestFingerprint, creditRequestId, creditStoreError, loadCreditSnapshot, resolveCreditActor, validateCreditOrigin } from './credits'
+import { claimGuestCredits, finishCreditOperation, reserveCredits, type CreditActor } from './credit-store'
+import { creditInteger, CreditError } from './credit-policy'
+import type { CreditSnapshot } from './credit-types'
 
 export type QuotaApplyOptions = {
   /**
@@ -52,6 +56,77 @@ function withUsageHeaders(response: NextResponse, snapshot: UsageSnapshot) {
   response.headers.set('X-Usage-Used', String(snapshot.used))
   if (snapshot.resets_at) response.headers.set('X-Usage-Resets-At', snapshot.resets_at)
   return response
+}
+
+function withCreditHeaders(response: NextResponse, snapshot: CreditSnapshot, cost: number) {
+  response.headers.set('X-Credit-Mode', snapshot.mode)
+  response.headers.set('X-Credit-Cost', String(cost))
+  response.headers.set('Cache-Control', 'private, no-store')
+  if (snapshot.available !== null) response.headers.set('X-Credit-Available', String(snapshot.available))
+  if (snapshot.reserved !== null) response.headers.set('X-Credit-Reserved', String(snapshot.reserved))
+  response.headers.set('X-Credit-Revision', String(snapshot.revision))
+  return response
+}
+
+async function beginCreditQuota(request: Request, toolId: string, anonId: string, isNew: boolean, parsedBody?: unknown): Promise<QuotaOk | QuotaDenied> {
+  let actor: CreditActor | undefined
+  let requestId: string = randomUUID()
+  try {
+    validateCreditOrigin(request)
+    requestId = creditRequestId(request)
+    actor = await resolveCreditActor(anonId)
+    if (actor.userId && actor.active) await claimGuestCredits(creditDatabase(), actor)
+    const parseQuote = (value: string | null, label: string, min = 0) => {
+      if (value === null) return undefined
+      if (!/^\d{1,7}$/.test(value)) throw new CreditError(`Invalid ${label}.`)
+      return creditInteger(Number(value), label, min)
+    }
+    const reservation = await reserveCredits(creditDatabase(), {
+      actor, toolId, actionKey: `${request.method}:${new URL(request.url).pathname}`,
+      operationKey: request.headers.get('idempotency-key')?.trim() || requestId,
+      fingerprint: await creditRequestFingerprint(request, parsedBody),
+      quotedCost: parseQuote(request.headers.get('x-credit-cost'), 'credit quote'),
+      quotedVersion: parseQuote(request.headers.get('x-credit-price-version'), 'price version', 1),
+    })
+    let outcome: boolean | null = null
+    let finalized = false
+    let logged = false
+    const operationId = reservation.operationId
+    try {
+      after(async () => {
+        if (finalized || !operationId) return
+        try { await finishCreditOperation(creditDatabase(), operationId, outcome ?? false) }
+        catch { console.error('Credit reservation needs reconciliation', { operationId }) }
+      })
+    } catch { /* Unit transports have no Next lifecycle. apply() still settles synchronously. */ }
+    const trackedUserId = actor.userId
+    const apply = async (response: NextResponse, options?: QuotaApplyOptions) => {
+      outcome = options?.successful ?? response.ok
+      if (!finalized && operationId) {
+        try { await finishCreditOperation(creditDatabase(), operationId, outcome); finalized = true }
+        catch { response.headers.set('X-Credit-Pending', '1') }
+      }
+      if (outcome && trackedUserId && !logged) {
+        logged = true
+        try { await recordSuccessfulFeatureUsage(trackedUserId, toolId, randomUUID(), options?.fileName ?? null) }
+        catch { console.error('Credit action analytics could not be recorded', { toolId, requestId }) }
+      }
+      let snapshot = reservation.snapshot
+      try { snapshot = await loadCreditSnapshot(actor!) } catch { response.headers.set('X-Credit-Pending', '1') }
+      return applyAnonCookie(withCreditHeaders(asNextResponse(response), snapshot, reservation.cost), anonId, isNew)
+    }
+    // Preserve the legacy wrapper shape for callers; credit values never enter
+    // X-Usage-* headers or the public per-tool usage contract.
+    return { ok: true, snapshot: parseUsageSnapshot({ allowed: true, authenticated: !!actor.userId }), apply }
+  } catch (error) {
+    const failure = creditStoreError(error)
+    const response = NextResponse.json({ error: failure.message, code: failure.code, request_id: requestId }, { status: failure.status,
+      headers: { 'X-Request-Id': requestId, 'Cache-Control': 'private, no-store', 'X-Credit-Mode': 'unavailable' } })
+    if (actor) {
+      try { withCreditHeaders(response, await loadCreditSnapshot(actor), 0) } catch { /* Preserve the error, never invent a balance. */ }
+    }
+    return { ok: false, response: applyAnonCookie(response, anonId, isNew) }
+  }
 }
 
 async function currentUser() {
@@ -124,9 +199,41 @@ export async function claimGuestUsage(): Promise<{
 export async function beginToolQuota(
   request: Request,
   toolId: string,
+  parsedBody?: unknown,
 ): Promise<QuotaOk | QuotaDenied> {
   const requestId = request.headers.get('x-request-id')?.trim() || randomUUID()
   const { anonId, isNew } = await readOrCreateAnonId()
+
+  const creditDb = getPrisma()
+  if (creditDb) {
+    try {
+      const [tool, feature] = await Promise.all([
+        creditDb.tool.findUnique({ where: { toolId }, select: { enabled: true, label: true } }),
+        creditDb.creditPrice.findUnique({ where: { toolId }, select: { enabled: true } }),
+      ])
+      if (tool && !tool.enabled) {
+        return { ok: false, response: applyAnonCookie(NextResponse.json({ error: `${tool.label} is turned off.`, code: 'tool_disabled', request_id: requestId }, {
+          status: 403, headers: { 'Cache-Control': 'private, no-store', 'X-Request-Id': requestId },
+        }), anonId, isNew) }
+      }
+      if (tool && feature?.enabled === false) {
+        // A feature-level opt-out means genuinely unlimited use. Keep the
+        // independent availability gate above, but bypass both pooled credits
+        // and legacy usage caps for this tool only.
+        return { ok: true, snapshot: parseUsageSnapshot({ allowed: true }), apply: passthrough(anonId, isNew) }
+      }
+      const policy = await creditDb.creditPolicy.findUnique({ where: { id: 'default' }, select: { enabled: true } })
+      if (policy?.enabled) return beginCreditQuota(request, toolId, anonId, isNew, parsedBody)
+    } catch (error) {
+      const failure = creditStoreError(error)
+      if (failure.code !== 'credit_schema_missing') {
+        return { ok: false, response: applyAnonCookie(NextResponse.json({ error: failure.message, code: failure.code, request_id: requestId }, {
+          status: failure.status, headers: { 'Cache-Control': 'private, no-store', 'X-Request-Id': requestId },
+        }), anonId, isNew) }
+      }
+      // Additive schema deployment never turns off the existing legacy tools.
+    }
+  }
 
   let data
   let userId: string | null = null

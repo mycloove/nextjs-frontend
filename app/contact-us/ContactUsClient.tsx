@@ -1,29 +1,24 @@
 'use client'
 
 /*
-  Contact — "The Signal Room".
+  Contact / The correspondence desk
 
-  Instrument concept: contact is a live transmission channel between the
-  visitor's desk and the workshop. The composer is an instrument input;
-  the message is real mass loaded onto the wire; the right pane is the
-  channel's readout — four lamps driven by real field validation, packets
-  sized by the real message length, a real clock, an honestly computed
-  reply window, and a session log that records only real events.
+  Motive: turn a stuck workflow, a useful observation, or an idea into a note
+  the team can act on. Material: the visitor's own words, not a support console.
+  Editorial minimalism carries the page; a live letter is its tactile accent.
+  The category's map, three contact cards, fake availability clock, and ticket
+  dashboard add nothing to that task. The draft, not ornament, is the signature.
 
-  Honesty laws (house standard): lamps light only when the requirement is
-  really satisfied; in-flight shows an indeterminate sweep, never a fake
-  percent; if the mail transport is not configured the link refuses and
-  points at the direct email rather than failing silently.
+  Guides change suggestions only. They never overwrite a message or add fields
+  to the EmailJS contract. Validation, pending, accepted, and failed are distinct;
+  an accepted send is not a human read receipt or a promise of a reply time.
+  Failed sends keep the draft. Only a resolved EmailJS send resets the form.
 
-  The form's EmailJS contract is unchanged: every credential and the
-  destination address come from the environment (NEXT_PUBLIC_EMAILJS_*,
-  NEXT_PUBLIC_CONTACT_EMAIL).
-
-  Console register note: IBM Plex Mono is loaded on this page only
-  (page.tsx, next/font) — a regional typographic decision.
+  Ownership: this route's component, CSS Module, and font variables. No shared
+  chrome, theme keys, API, credentials, destination, or tool behavior is changed.
 */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import Link from 'next/link'
 import emailjs from '@emailjs/browser'
 
@@ -31,221 +26,122 @@ import HomeFooter from '@/components/HomeFooter'
 import Topbar2 from '@/components/Topbar2'
 
 import styles from './ContactUs.module.css'
-
 import '../home.css'
 
-//── Stroke glyphs (1.8 stroke, currentColor — no emoji anywhere) ─────────────
-const glyphMail = (
-  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3" y="5" width="18" height="14" rx="2" />
-    <path d="m3 7 9 6 9-6" />
-  </svg>
-)
-const glyphClock = (
-  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="9" />
-    <polyline points="12 7 12 12 15.5 14" />
-  </svg>
-)
-const glyphShield = (
-  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-  </svg>
-)
-const glyphSend = (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <line x1="22" y1="2" x2="11" y2="13" />
-    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-  </svg>
-)
-const glyphStatusOk = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="16 8.5 10.2 14.5 8 12.2" />
-  </svg>
-)
-const glyphStatusWarn = (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-    <line x1="12" y1="9" x2="12" y2="13" />
-    <line x1="12" y1="17" x2="12.01" y2="17" />
-  </svg>
-)
+const MESSAGE_LIMIT = 1000
+const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const SERVICE_ID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID ?? ''
+const TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID ?? ''
+const PUBLIC_KEY = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY ?? ''
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'hello@mycloove.com'
+const emailJsReady = Boolean(SERVICE_ID && TEMPLATE_ID && PUBLIC_KEY)
 
-//── Real mass: packets on the wire derive from the actual message length ─────
-const MAX_PACKETS = 10
-const PACKET_PER = 90 // chars per packet — both constants are copy-honest limits
+type FieldKey = 'name' | 'email' | 'message' | 'terms'
+type GuideId = 'question' | 'idea' | 'collaboration' | 'note'
+type SubmitStatus = { type: 'success' | 'error'; title: string; message: string } | null
 
-//── Lamps: one per real requirement, labelled by the state that satisfies it ─
-type LampKey = 'name' | 'email' | 'message' | 'terms'
-const LAMPS: Array<{ key: LampKey; label: string }> = [
-  { key: 'name', label: 'NAME' },
-  { key: 'email', label: 'EMAIL' },
-  { key: 'message', label: 'MESSAGE' },
-  { key: 'terms', label: 'TERMS' },
+const guides: {
+  id: GuideId
+  label: string
+  title: string
+  hint: string
+  subject: string
+  placeholder: string
+}[] = [
+  { id: 'question', label: 'A tool question', title: 'A little context helps.', hint: 'Which tool? Which file type? What did you expect, and what happened instead? A short description is enough to begin.', subject: 'For example, a question about PDF to Word', placeholder: 'I was using [tool] with a [file type]. I expected... What happened was...' },
+  { id: 'idea', label: 'An idea', title: 'Tell us about the work.', hint: 'What are you trying to do? What gets in the way? The workflow behind an idea helps us understand what would make a difference.', subject: 'For example, a tool you wish existed', placeholder: 'It would make my work easier if I could...' },
+  { id: 'collaboration', label: 'A collaboration', title: 'Give us the bigger picture.', hint: 'Tell us about your project, who it serves, and how you imagine working with mycloove. A little context is a good introduction.', subject: 'For example, a project or API enquiry', placeholder: 'Here is a little about our project, and where mycloove might fit...' },
+  { id: 'note', label: 'Just a note', title: 'Start wherever you like.', hint: 'A small observation, some feedback, or a simple hello. You do not need a polished pitch to start a useful conversation.', subject: 'A short subject, if you would like one', placeholder: 'Here is what is on my mind...' },
 ]
 
-//── Session log: only real events, newest at the bottom, visible tail ────────
-type LogLine = { kind: '' | 'ok' | 'fault'; time: string; key: string; text: string }
+function Arrow({ diagonal = false }: { diagonal?: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {diagonal ? <path d="M6 18 18 6M6 6h12v12" /> : <path d="M4 12h16m-6-6 6 6-6 6" />}
+    </svg>
+  )
+}
 
-const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+function StatusMark({ success }: { success: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      {success ? <path d="m8 12 3 3 5-6" /> : <path d="M12 7v6m0 4h.01" />}
+    </svg>
+  )
+}
 
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
-const pad2 = (n: number) => String(n).padStart(2, '0')
-
-export default function ContactUsClient({ monoClass = '' }: { monoClass?: string }) {
+export default function ContactUsClient({ fontClass = '' }: { fontClass?: string }) {
   const formRef = useRef<HTMLFormElement>(null)
-  const rootRef = useRef<HTMLElement>(null)
-  const loggedKeys = useRef(new Set<string>())
-
-  const [formData, setFormData] = useState({
-    name: '', email: '', subject: '', message: '',
-  })
+  const feedbackRef = useRef<HTMLDivElement>(null)
+  const sendingRef = useRef(false)
+  const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' })
   const [acceptTerms, setAcceptTerms] = useState(false)
+  const [guideId, setGuideId] = useState<GuideId>('note')
+  const [touched, setTouched] = useState<Partial<Record<FieldKey, boolean>>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [wireMoment, setWireMoment] = useState<'idle' | 'sent' | 'fault'>('idle')
-  const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-  const [logLines, setLogLines] = useState<LogLine[]>([])
-  const [clock, setClock] = useState('--:--:--')
-  const [responseWindow, setResponseWindow] = useState<{ open: boolean; label: string } | null>(null)
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>(null)
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle')
+  const guide = guides.find((item) => item.id === guideId)!
 
-  const SERVICE_ID  = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID ?? ''
-  const TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID ?? ''
-  const PUBLIC_KEY  = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY ?? ''
-  const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'hello@mycloove.com'
-  const emailJsReady = Boolean(SERVICE_ID && TEMPLATE_ID && PUBLIC_KEY)
-
-  // Real completion, not a fabricated progress bar: the four requirements.
-  const ready: Record<LampKey, boolean> = {
-    name: formData.name.trim().length > 0,
-    email: emailRe.test(formData.email.trim()),
-    message: formData.message.trim().length > 0,
-    terms: acceptTerms,
+  const errors: Record<FieldKey, string> = {
+    name: formData.name.trim() ? '' : 'Please add your name.',
+    email: emailRe.test(formData.email.trim()) ? '' : 'Enter an email address we can reply to.',
+    message: !formData.message.trim() ? 'Please write a little about what is on your mind.' : formData.message.length > MESSAGE_LIMIT ? `Keep your note within ${MESSAGE_LIMIT} characters.` : '',
+    terms: acceptTerms ? '' : 'Please accept the terms and privacy policy before sending.',
   }
-  const readyCount = Number(ready.name) + Number(ready.email) + Number(ready.message) + Number(ready.terms)
-  const allReady = readyCount === 4
+  const allReady = Object.values(errors).every((error) => !error)
+  const sent = submitStatus?.type === 'success'
+  const draftState = isSubmitting ? 'Sending' : sent ? 'Accepted' : allReady && emailJsReady ? 'Ready to send' : 'Not sent'
 
-  // Packet mass on the wire = the visitor's actual message length.
-  const packetCount = Math.min(MAX_PACKETS, Math.ceil(formData.message.trim().length / PACKET_PER))
-
-  const pushLog = useCallback((kind: LogLine['kind'], key: string, text: string) => {
-    const now = new Date()
-    setLogLines((prev) => [
-      ...prev.slice(-5),
-      { kind, time: `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`, key, text },
-    ])
-  }, [])
-  // One line per changed fact — never per keystroke.
-  const logOnce = useCallback((on: boolean, key: string, okText: string, offText: string) => {
-    if (on && !loggedKeys.current.has(key)) {
-      loggedKeys.current.add(key)
-      pushLog('ok', key, okText)
-    } else if (!on && loggedKeys.current.has(key)) {
-      loggedKeys.current.delete(key)
-      pushLog('', key, offText)
-    }
-  }, [pushLog])
-
-  // ── scroll reveal — this page actually applies the reveal class ──
   useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
-    const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'))
-    if (!nodes.length) return
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      nodes.forEach((n) => (n.dataset.shown = 'true'))
-      return
+    // Validation focuses the first missing field; transport feedback gets its
+    // own focus target after rendering, without moving the visitor's scroll.
+    if (submitStatus && (submitStatus.type === 'success' || allReady)) {
+      feedbackRef.current?.focus({ preventScroll: true })
     }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
-          ;(entry.target as HTMLElement).dataset.shown = 'true'
-          observer.unobserve(entry.target)
-        })
-      },
-      { rootMargin: '0px 0px -12% 0px' },
-    )
-    nodes.forEach((n) => observer.observe(n))
-    return () => observer.disconnect()
-  }, [])
+  }, [submitStatus, allReady])
 
-  // ── lamp log: logs fire as the requirements really change state ──
-  useEffect(() => {
-    if (ready.name) logOnce(true, 'lamp-name', 'name recorded ✓', 'name released')
-    if (ready.email) logOnce(true, 'lamp-email', 'email recorded ✓', 'email released')
-    if (ready.message) logOnce(true, 'lamp-message', 'message loaded ✓', 'message released')
-    if (ready.terms) logOnce(true, 'lamp-terms', 'terms accepted ✓', 'terms released')
-  }, [logOnce, ready.name, ready.email, ready.message, ready.terms])
-
-  // ── the real clock + an honestly computed reply window ──
-  useEffect(() => {
-    // SSR renders the placeholders; the drift-free hydration contract is
-    // that this interval owns the surface from the first tick onward.
-    const tick = () => {
-      const d = new Date()
-      setClock(`${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`)
-      const day = d.getDay() // 0 Sun … 6 Sat
-      const h = d.getHours()
-      if (day >= 1 && day <= 5 && h >= 9 && h < 18) {
-        setResponseWindow({ open: true, label: 'replies within 24–48 h' })
-      } else {
-        const next = new Date(d)
-        if (h >= 9) next.setDate(next.getDate() + 1) // before 09:00 today → opens today
-        while (next.getDay() === 0 || next.getDay() === 6) next.setDate(next.getDate() + 1)
-        const label = next.toDateString() === d.toDateString() ? 'today 09:00' : `${DAY_NAMES[next.getDay()]} 09:00`
-        setResponseWindow({ open: false, label })
-      }
-    }
-    tick()
-    const t = window.setInterval(tick, 1000)
-    return () => window.clearInterval(t)
-  }, [])
-
-  // ── wire failure/success flash ──
-  const flashWire = (state: 'sent' | 'fault', line: LogLine['key'], text: string, kind: LogLine['kind']) => {
-    setWireMoment(state)
-    pushLog(kind, line, text)
-    const t = window.setTimeout(() => setWireMoment('idle'), 2600)
-    return t
+  const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = event.target
+    setFormData((previous) => ({ ...previous, [name]: value }))
+    setSubmitStatus(null)
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((p) => ({ ...p, [name]: value }))
+  const markTouched = (field: FieldKey) => setTouched((previous) => ({ ...previous, [field]: true }))
+
+  const copyEmail = async () => {
+    setCopyStatus('copying')
+    try {
+      if (!navigator.clipboard) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(CONTACT_EMAIL)
+      setCopyStatus('copied')
+    } catch {
+      setCopyStatus('error')
+    }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (isSubmitting) return
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (sendingRef.current) return
 
-    const missing = [
-      !formData.name && 'name',
-      !(emailRe.test(formData.email.trim()) && formData.email) && 'email',
-      !formData.message && 'message',
-      !acceptTerms && 'terms',
-    ].filter(Boolean) as string[]
-    if (missing.length > 0) {
-      flashWire('fault', 'LINK', `refused — incomplete: ${missing.join(', ')}`, 'fault')
-      setSubmitStatus({ type: 'error', message: 'Please fill in all required fields.' })
+    const invalid = (Object.keys(errors) as FieldKey[]).find((field) => errors[field])
+    if (invalid) {
+      setTouched({ name: true, email: true, message: true, terms: true })
+      setSubmitStatus({ type: 'error', title: 'A little more information, please.', message: 'Check the highlighted fields. Your draft has not been sent.' })
+      formRef.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${invalid}"]`)?.focus()
       return
     }
     if (!emailJsReady) {
-      // truth-telling beats silence: the transport is not configured yet
-      flashWire('fault', 'LINK', 'transport not configured — direct email given', 'fault')
-      setSubmitStatus({
-        type: 'error',
-        message: `The contact form is not configured yet. Please email us directly at ${CONTACT_EMAIL}.`,
-      })
+      setSubmitStatus({ type: 'error', title: 'The web form is unavailable.', message: `Your draft has not been sent. Please write directly to ${CONTACT_EMAIL}.` })
       return
     }
 
+    sendingRef.current = true
     setIsSubmitting(true)
     setSubmitStatus(null)
-    pushLog('ok', 'CHANNEL', 'transmit initiated…')
     try {
+      // Keep the established template parameters and optional-subject fallback.
       await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
         from_name: formData.name,
         from_email: formData.email,
@@ -253,287 +149,149 @@ export default function ContactUsClient({ monoClass = '' }: { monoClass?: string
         message: formData.message,
         to_email: CONTACT_EMAIL,
       }, PUBLIC_KEY)
-      flashWire('sent', 'TRANSPORT', `delivered to the workshop desk — reply within 24–48 h`, 'ok')
-      setSubmitStatus({ type: 'success', message: "Message sent! We'll get back to you within 24–48 hours." })
+      setSubmitStatus({ type: 'success', title: 'Thank you for the note.', message: 'Our email service accepted your message. This confirms submission, not that it has been read.' })
       setFormData({ name: '', email: '', subject: '', message: '' })
       setAcceptTerms(false)
+      setTouched({})
       formRef.current?.reset()
     } catch {
-      flashWire('fault', 'TRANSPORT', 'failed — the message is still on your desk. try again or email us directly', 'fault')
-      setSubmitStatus({ type: 'error', message: 'Something went wrong. Please try again later.' })
+      setSubmitStatus({ type: 'error', title: 'That send did not go through.', message: `Your words are still here. Try again, or email ${CONTACT_EMAIL} directly.` })
     } finally {
+      sendingRef.current = false
       setIsSubmitting(false)
     }
   }
-
-  const linkState = isSubmitting ? 'TRANSMITTING' : allReady ? 'ARMED' : 'STANDBY'
-  const composeState = isSubmitting ? 'IN FLIGHT' : allReady ? 'READY' : 'DRAFT'
 
   return (
     <div className="home-page">
       <Topbar2 openFileHref="/#heroFile" />
 
-      <main id="main-content" className={`${styles.page} ${monoClass}`} ref={rootRef}>
+      <main id="main-content" className={`${styles.page} ${fontClass}`}>
         <div className={styles.shell}>
+          <div className={styles.masthead}><p>Correspondence <span lang="bn">/ যোগাযোগ</span></p><span>A note, not a ticket.</span></div>
 
-          {/* ── HERO ─────────────────────────────────────────────── */}
-          <section className={styles.hero}>
-            <p className={styles.eyebrow}>
-              Contact <span className={styles.eyebrowSpan} lang="bn">· যোগাযোগ</span>
-            </p>
-            <h1 className={styles.title}>
-              Open a channel to <span className={styles.titleAccent}>the workshop.</span>
-            </h1>
-            <p className={styles.lede}>
-              Behind this page are the people who build the instruments you use —
-              not a funnel, not a ticket queue. Write to us; a person reads it
-              and replies within one business day.
-            </p>
-            <p className={styles.ledeBn} lang="bn">
-              আপনার প্রতিটি বার্তা সোজা দলের ইনবক্সে পৌঁছায় — পড়বে <b>মানুষ</b>, বট নয়।
-            </p>
-            <div className={styles.heroMeta}>
-              <span><span className={styles.heroMetaLabel}>ONE INBOX</span>{CONTACT_EMAIL}</span>
-              <span><span className={styles.heroMetaLabel}>REPLY WINDOW</span>24–48 hours</span>
-              <span><span className={styles.heroMetaLabel}>HOURS</span>Mon–Fri · 09:00–18:00</span>
+          <section className={styles.hero} aria-labelledby="contact-title">
+            <div className={styles.heroCopy}>
+              <p className={styles.eyebrow}><span />The mycloove correspondence desk</p>
+              <h1 id="contact-title" className={styles.title}>A stuck file.<br />A new idea.<br /><span>Let&apos;s talk.</span></h1>
+              <p className={styles.lede}>A question about a tool. An idea worth building. A detail we could do better. Write to the people building mycloove.</p>
+              <p className={styles.banglaIntro} lang="bn">আপনার কথাই পরের পরিবর্তনের শুরু।</p>
             </div>
-          </section>
 
-          {/* ── THE CONSOLE: composer + channel readout ─────────── */}
-          <div className={`${styles.console} ${styles.reveal}`} data-reveal>
-
-            {/* composer — the page's single focal surface */}
-            <section className={styles.composer} aria-label="Composer">
-              <div className={styles.consoleHead}>
-                <span className={styles.monoLabel}>Composer — dispatch</span>
-                <span className={`${styles.monoLabel} ${styles.stateLabel}${allReady || isSubmitting ? ` ${styles.stateLabelArmed}` : ''}`}>
-                  {composeState}
-                </span>
-              </div>
-
-              <form ref={formRef} onSubmit={handleSubmit} noValidate>
-                <div className={styles.formRow}>
-                  {/* name */}
-                  <div className={`${styles.field}${formData.name ? ` ${styles.fieldFilled}` : ''}`}>
-                    <input id="name" name="name" type="text" value={formData.name}
-                      onChange={handleChange} required autoComplete="name" className={styles.inputBase} />
-                    <span className={styles.rail}><i className={styles.railFill} /></span>
-                    <i className={`${styles.tick} ${styles.tickA}`} /><i className={`${styles.tick} ${styles.tickB}`} /><i className={`${styles.tick} ${styles.tickC}`} />
-                    <label htmlFor="name">Full name<span className={styles.req}>*</span></label>
-                  </div>
-                  {/* email */}
-                  <div className={`${styles.field}${formData.email ? ` ${styles.fieldFilled}` : ''}`}>
-                    <input id="email" name="email" type="email" value={formData.email}
-                      onChange={handleChange} required autoComplete="email" className={styles.inputBase} />
-                    <span className={styles.rail}><i className={styles.railFill} /></span>
-                    <i className={`${styles.tick} ${styles.tickA}`} /><i className={`${styles.tick} ${styles.tickB}`} /><i className={`${styles.tick} ${styles.tickC}`} />
-                    <label htmlFor="email">Email address<span className={styles.req}>*</span></label>
-                  </div>
-                </div>
-
-                {/* subject */}
-                <div className={`${styles.field}${formData.subject ? ` ${styles.fieldFilled}` : ''}`}>
-                  <input id="subject" name="subject" type="text" value={formData.subject}
-                    onChange={handleChange} className={styles.inputBase} />
-                  <span className={styles.rail}><i className={styles.railFill} /></span>
-                  <i className={`${styles.tick} ${styles.tickA}`} /><i className={`${styles.tick} ${styles.tickFull1}`} /><i className={`${styles.tick} ${styles.tickFull2}`} /><i className={`${styles.tick} ${styles.tickC}`} />
-                  <label htmlFor="subject">Subject — feedback, question, idea</label>
-                </div>
-
-                {/* message */}
-                <div className={`${styles.field}${formData.message ? ` ${styles.fieldFilled}` : ''}`}>
-                  <textarea id="message" name="message" rows={5} value={formData.message}
-                    onChange={handleChange} required maxLength={1000} aria-describedby="cuCharcount"
-                    className={styles.inputBase} />
-                  <span className={styles.rail}><i className={styles.railFill} /></span>
-                  <i className={`${styles.tick} ${styles.tickA}`} /><i className={`${styles.tick} ${styles.tickFull1}`} /><i className={`${styles.tick} ${styles.tickFull2}`} /><i className={`${styles.tick} ${styles.tickC}`} />
-                  <label htmlFor="message">Message<span className={styles.req}>*</span></label>
-                  <span
-                    id="cuCharcount"
-                    className={`${styles.charcount}${formData.message.length >= 1000 ? ` ${styles.charcountOver}` : ''}`}
-                  >
-                    {formData.message.length} / 1000
-                  </span>
-                </div>
-
-                {/* terms */}
-                <label className={styles.terms}>
-                  <span className={styles.checkboxWrap}>
-                    <input
-                      type="checkbox"
-                      checked={acceptTerms}
-                      onChange={(e) => setAcceptTerms(e.target.checked)}
-                      className={styles.checkboxInput}
-                    />
-                    <span className={styles.checkboxBox}>
-                      {acceptTerms && (
-                        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor"
-                          strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <polyline points="2,6 5,9 10,3" />
-                        </svg>
-                      )}
-                    </span>
-                  </span>
-                  <span className={styles.termsText}>
-                    I accept the{' '}
-                    <Link href="/terms" className={styles.link} onClick={(e) => e.stopPropagation()}>
-                      Terms &amp; Conditions
-                    </Link>{' '}
-                    and the{' '}
-                    <Link href="/privacy" className={styles.link} onClick={(e) => e.stopPropagation()}>
-                      Privacy Policy
-                    </Link>
-                    .
-                  </span>
-                </label>
-
-                {submitStatus && (
-                  <div className={`${styles.status} ${submitStatus.type === 'success' ? styles.success : styles.error}`} role="alert">
-                    <span className={styles.statusIcon}>
-                      {submitStatus.type === 'success' ? glyphStatusOk : glyphStatusWarn}
-                    </span>
-                    {submitStatus.message}
-                  </div>
-                )}
-
-                <button type="submit" disabled={isSubmitting} className={styles.submitBtn}>
-                  {isSubmitting ? (
-                    <><span className={styles.spinner} />Transmitting…</>
-                  ) : (
-                    <>Transmit message{glyphSend}</>
-                  )}
+            <aside className={styles.directLine} aria-labelledby="direct-title">
+              <span className={styles.sectionLabel}>Same desk. Your own inbox.</span>
+              <h2 id="direct-title">Prefer to email?</h2>
+              <a href={`mailto:${CONTACT_EMAIL}`} className={styles.emailAddress}>{CONTACT_EMAIL}<Arrow diagonal /></a>
+              <div className={styles.copyRow}>
+                <button type="button" className={styles.copyButton} onClick={copyEmail} disabled={copyStatus === 'copying'}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2" /><path d="M16 8V3H4v13h4" /></svg>
+                  {copyStatus === 'copying' ? 'Copying...' : copyStatus === 'copied' ? 'Address copied' : 'Copy address'}
                 </button>
-              </form>
-            </section>
-
-            {/* the channel — the page's readout */}
-            <section className={styles.channel} aria-label="Channel readout">
-              <div className={styles.consoleHead}>
-                <span className={styles.monoLabel}>Channel — link state</span>
-                <span className={`${styles.monoLabel} ${styles.stateLabel}${allReady ? ` ${styles.stateLabelArmed}` : ''}`}>
-                  {linkState}
-                </span>
+                <span className={styles.copyFeedback} role="status">{copyStatus === 'copied' ? 'Copied to your clipboard.' : copyStatus === 'error' ? 'Could not copy. Use the email link or select the address.' : ''}</span>
               </div>
+              <p className={styles.directNote}>The link opens your mail app.<br />No account needed to write to us.</p>
+            </aside>
+          </section>
 
-              {/* lamps: real requirements, real state */}
-              <div className={styles.lamps}>
-                {LAMPS.map((lamp) => (
-                  <span key={lamp.key} className={[
-                    styles.lamp,
-                    ready[lamp.key] ? styles.lampOn : '',
-                    !ready[lamp.key] && (
-                      (lamp.key === 'name' && formData.name.length > 0) ||
-                      (lamp.key === 'email' && formData.email.length > 0) ||
-                      (lamp.key === 'message' && formData.message.length > 0) ||
-                      lamp.key === 'terms'
-                    ) ? styles.lampTarget : '',
-                  ].join(' ')}>
-                    <i className={styles.lampDot} />
-                    {lamp.label}
-                    <small className={styles.lampState}>{ready[lamp.key] ? 'recorded' : 'waiting'}</small>
-                  </span>
+          <section className={styles.desk} aria-labelledby="composer-title">
+            <div className={styles.deskHeading}><span className={styles.sectionLabel}>A little space for your words</span><span className={styles.deskCaption}>English or <span lang="bn">বাংলা</span>. Both belong here.</span></div>
+
+            <fieldset className={styles.guidePicker} disabled={isSubmitting}>
+              <legend>Choose a starting point<span>Optional. It changes the guide, not your words.</span></legend>
+              <div className={styles.guideOptions}>
+                {guides.map((item) => (
+                  <label key={item.id} className={styles.guideOption}>
+                    <input type="radio" name="writing-guide" value={item.id} checked={guideId === item.id} onChange={() => setGuideId(item.id)} />
+                    <span className={styles.guideChoice}><span className={styles.radioMark} aria-hidden="true" /><span>{item.label}</span><Arrow diagonal /></span>
+                  </label>
                 ))}
               </div>
+            </fieldset>
 
-              {/* the wire */}
-              <div className={[
-                styles.wireRow,
-                allReady && !isSubmitting ? styles.wireArmed : '',
-                isSubmitting ? styles.wireFlight : '',
-                wireMoment === 'sent' ? styles.wireSent : '',
-                wireMoment === 'fault' ? styles.wireFault : '',
-              ].join(' ')}>
-                <div className={`${styles.wireSide} ${styles.wireYour}`}>
-                  <div className={styles.wireTerm}>
-                    <span className={styles.monoLabel}><b>YOUR DESK</b></span>
-                    <small>mass {packetCount} pkt</small>
+            <div className={styles.deskGrid}>
+              <div className={styles.composer}>
+                <div className={styles.composerHeading}><h2 id="composer-title">Leave us a note.</h2><span>Required fields <span aria-hidden="true">*</span></span></div>
+                {!emailJsReady && <div className={styles.transportNotice}><StatusMark success={false} /><p>The web form is not configured right now. Your draft preview still works. Please <a href={`mailto:${CONTACT_EMAIL}`}>email us directly</a> to send your note.</p></div>}
+
+                <form ref={formRef} onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
+                  <fieldset className={styles.formFields} disabled={isSubmitting}>
+                    <legend className={styles.srOnly}>Your contact information and message</legend>
+                    <div className={styles.formRow}>
+                      <div className={styles.field}>
+                        <label htmlFor="contact-name">Your name <span aria-hidden="true">*</span></label>
+                        <input id="contact-name" name="name" type="text" value={formData.name} onChange={handleChange} onBlur={() => markTouched('name')} required autoComplete="name" placeholder="How should we address you?" aria-invalid={touched.name && !!errors.name} aria-describedby={touched.name && errors.name ? 'contact-name-error' : undefined} />
+                        {touched.name && errors.name && <p id="contact-name-error" className={styles.fieldError}>{errors.name}</p>}
+                      </div>
+                      <div className={styles.field}>
+                        <label htmlFor="contact-email">Your email <span aria-hidden="true">*</span></label>
+                        <input id="contact-email" name="email" type="email" value={formData.email} onChange={handleChange} onBlur={() => markTouched('email')} required autoComplete="email" placeholder="Where we can reply" aria-invalid={touched.email && !!errors.email} aria-describedby={touched.email && errors.email ? 'contact-email-error' : undefined} />
+                        {touched.email && errors.email && <p id="contact-email-error" className={styles.fieldError}>{errors.email}</p>}
+                      </div>
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor="contact-subject">Subject <span className={styles.optional}>Optional</span></label>
+                      <input id="contact-subject" name="subject" type="text" value={formData.subject} onChange={handleChange} placeholder={guide.subject} />
+                    </div>
+                    <div className={`${styles.field} ${styles.messageField}`}>
+                      <label htmlFor="contact-message">Your message <span aria-hidden="true">*</span></label>
+                      <textarea id="contact-message" name="message" rows={6} value={formData.message} onChange={handleChange} onBlur={() => markTouched('message')} required maxLength={MESSAGE_LIMIT} placeholder={guide.placeholder} aria-invalid={touched.message && !!errors.message} aria-describedby={`contact-message-help contact-charcount${touched.message && errors.message ? ' contact-message-error' : ''}`} />
+                      <div className={styles.messageMeta}><span id="contact-message-help">A description is enough. Please leave private file contents out.</span><span id="contact-charcount" className={styles.charcount}>{formData.message.length} / {MESSAGE_LIMIT}</span></div>
+                      {touched.message && errors.message && <p id="contact-message-error" className={styles.fieldError}>{errors.message}</p>}
+                    </div>
+
+                    <label className={styles.terms}>
+                      <input name="terms" type="checkbox" checked={acceptTerms} onChange={(event) => { setAcceptTerms(event.target.checked); setSubmitStatus(null) }} onBlur={() => markTouched('terms')} required aria-invalid={touched.terms && !!errors.terms} aria-describedby={touched.terms && errors.terms ? 'contact-terms-error' : undefined} />
+                      <span>I accept the <Link href="/terms" onClick={(event) => event.stopPropagation()}>Terms &amp; Conditions</Link> and the <Link href="/privacy" onClick={(event) => event.stopPropagation()}>Privacy Policy</Link>.</span>
+                    </label>
+                    {touched.terms && errors.terms && <p id="contact-terms-error" className={styles.fieldError}>{errors.terms}</p>}
+                  </fieldset>
+
+                  {submitStatus && (
+                    <div ref={feedbackRef} tabIndex={-1} className={`${styles.feedback} ${submitStatus.type === 'success' ? styles.feedbackSuccess : styles.feedbackError}`} role={submitStatus.type === 'success' ? 'status' : 'alert'}>
+                      <StatusMark success={submitStatus.type === 'success'} /><div><h3>{submitStatus.title}</h3><p>{submitStatus.message}</p>{submitStatus.type === 'error' && <a href={`mailto:${CONTACT_EMAIL}`}>Use direct email<Arrow diagonal /></a>}</div>
+                    </div>
+                  )}
+
+                  <div className={styles.sendRow}>
+                    <button type="submit" className={styles.sendButton} disabled={isSubmitting}>
+                      {isSubmitting ? <><span className={styles.spinner} aria-hidden="true" />Sending your note...</> : <>Send message<Arrow /></>}
+                    </button>
+                    <p role="status">{isSubmitting ? 'Waiting for the email service to confirm.' : 'Uses our email service.'}<br />{isSubmitting ? 'Your draft is kept until it accepts the send.' : 'Not a live chat. No rush to get the words right.'}</p>
                   </div>
-                  <p className={styles.wireNote}>
-                    packets = your message&apos;s<br />real length. nothing invented.
-                  </p>
-                </div>
-
-                <div className={styles.wireRail} aria-hidden="true">
-                  <i className={styles.wireCore} />
-                  <i className={`${styles.wireCap} ${styles.capTop}`} />
-                  <span className={styles.packets}>
-                    {Array.from({ length: packetCount }, (_, i) => (
-                      <i key={i} className={styles.pkt} style={{ animationDelay: `${i * 30}ms` }} />
-                    ))}
-                  </span>
-                  <span className={styles.sparkTrack} aria-hidden="true"><i className={styles.spark} /></span>
-                  <i className={`${styles.wireCap} ${styles.capBottom}`} />
-                </div>
-
-                <div className={styles.wireSide}>
-                  <div className={styles.wireTerm}>
-                    <span className={styles.monoLabel}><b>THE WORKSHOP</b></span>
-                    <small>mycloove · team inbox</small>
-                  </div>
-                  <p className={styles.wireNote}>
-                    arrives inside the reply<br />window — never queued dark.
-                  </p>
-                </div>
+                </form>
               </div>
 
-              {/* session log — aria-live so screen readers hear the honest state */}
-              <div className={styles.log} role="log" aria-live="polite">
-                {logLines.length === 0 && (
-                  <div className={styles.logEmpty}>session begins with your first keystroke — every line here is real</div>
-                )}
-                {logLines.map((line, i) => (
-                  <div key={`${line.time}-${line.key}-${i}`} className={[
-                    styles.logLine,
-                    line.kind === 'ok' ? styles.logOk : '',
-                    line.kind === 'fault' ? styles.logFault : '',
-                  ].join(' ')}>
-                    <b className={styles.logTime}>{line.time}</b>
-                    <span><span className={styles.logKey}>{line.key}</span> {line.text}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* clock — real local time, honest reply window */}
-              <div className={styles.clockRow}>
-                <div>
-                  <span className={styles.monoLabel}>Desk time (your local)</span>
-                  <div className={styles.clock}>{clock}</div>
+              <aside className={styles.deskAside} aria-label="Your draft and writing guide">
+                <div className={styles.previewHeading}><span className={styles.sectionLabel}>Your note, as you write</span><span className={styles.draftState} data-state={isSubmitting ? 'sending' : sent ? 'sent' : 'draft'}><i aria-hidden="true" />{draftState}</span></div>
+                <div className={styles.letter} data-state={sent ? 'sent' : 'draft'}>
+                  <div className={styles.letterRouting}><div><span className={styles.letterLabel}>To</span><strong>mycloove</strong><span className={styles.letterEmail}>{CONTACT_EMAIL}</span></div><div className={styles.postage} aria-hidden="true"><svg width="32" height="28" viewBox="0 0 40 32" fill="none" stroke="currentColor" strokeWidth="1.2"><rect x="3" y="5" width="34" height="23" rx="1" /><path d="m3 6 17 12L37 6M3 28l12-11m22 11L25 17" /></svg><span>{sent ? 'ACCEPTED' : 'DRAFT'}</span></div></div>
+                  {sent ? (
+                    <div className={styles.receipt}>
+                      <span className={styles.receiptMark}><StatusMark success /></span><h3>A note, on its way.</h3><p>Our email service accepted your message. Thank you for taking the time to write.</p><span className={styles.receiptNote}>Submission confirmed. Not a read receipt.</span><button type="button" onClick={() => { setSubmitStatus(null); formRef.current?.querySelector<HTMLInputElement>('[name="name"]')?.focus() }}>Write another note<Arrow /></button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={styles.letterFrom}><span className={styles.letterLabel}>From</span><strong className={!formData.name.trim() ? styles.placeholderText : undefined}>{formData.name.trim() || 'Your name'}</strong><span className={!formData.email.trim() ? styles.placeholderText : undefined}>{formData.email.trim() || 'Your email address'}</span></div>
+                      <div className={styles.letterContent}><span className={styles.letterSubject}>{formData.subject.trim() || 'No subject added'}</span><p tabIndex={formData.message.trim() ? 0 : undefined} aria-label={formData.message.trim() ? 'Message draft preview' : undefined} className={!formData.message.trim() ? styles.placeholderText : undefined}>{formData.message.trim() ? formData.message : 'The words you write will appear here.\n\nNo perfect pitch required.'}</p></div>
+                      <div className={styles.letterFooter}><span>{isSubmitting ? 'Sending. Awaiting confirmation.' : 'A draft, not a delivered message.'}</span><span className={styles.clasp} aria-hidden="true"><i /><i /></span></div>
+                    </>
+                  )}
                 </div>
-                {responseWindow && (
-                  <div className={`${styles.window}${responseWindow.open ? ` ${styles.windowOk}` : ` ${styles.windowClosed}`}`}>
-                    {responseWindow.open ? 'WINDOW OPEN' : 'WINDOW CLOSED'}
-                    <br />
-                    <b>{responseWindow.label}</b>
-                  </div>
-                )}
-              </div>
-            </section>
-          </div>
-
-          {/* ── FACTS ────────────────────────────────────────────── */}
-          <section className={`${styles.facts} ${styles.reveal}`} data-reveal>
-            <div className={styles.fact}>
-              <span className={styles.factIcon}>{glyphMail}</span>
-              <b className={styles.factTitle}>Direct line</b>
-              <p className={styles.factBody}>
-                One address, the whole team:{' '}
-                <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-              </p>
-            </div>
-            <div className={styles.fact}>
-              <span className={styles.factIcon}>{glyphClock}</span>
-              <b className={styles.factTitle}>A day to reply</b>
-              <p className={styles.factBody}>Within 24–48 hours on weekdays — usually sooner.</p>
-            </div>
-            <div className={styles.fact}>
-              <span className={styles.factIcon}>{glyphShield}</span>
-              <b className={styles.factTitle}>Private by default</b>
-              <p className={styles.factBody}>
-                Straight to the team inbox. No trackers, no mailing lists, nothing stored.
-              </p>
+                <div className={styles.writingGuide} key={guideId}><span className={styles.guideLabel}>Writing guide / {guide.label}</span><h3>{guide.title}</h3><p>{guide.hint}</p></div>
+              </aside>
             </div>
           </section>
 
+          <section className={styles.detailsSection} aria-labelledby="details-title">
+            <div><span className={styles.sectionLabel}>Before you send</span><h2 id="details-title">A little clarity.<br />Less back-and-forth.</h2><p>Just the useful details.<br />No small print disguised as a promise.</p></div>
+            <div className={styles.answers}>
+              <details><summary><h3>Can I attach a document?</h3><span className={styles.disclosure} aria-hidden="true" /></summary><p>This form is text-only. Start with the tool name, file type, and a short description of what happened. Please do not paste confidential document contents into your note.</p></details>
+              <details><summary><h3>When will I hear back?</h3><span className={styles.disclosure} aria-hidden="true" /></summary><p>You can write whenever it suits you. This is not live chat, and we cannot promise an exact reply time. Include an email address where you can receive a response.</p></details>
+              <details><summary><h3>How is my message handled?</h3><span className={styles.disclosure} aria-hidden="true" /></summary><p>The web form sends your name, email, subject, and message through our email service. Direct email uses your own mail app. Our <Link href="/privacy">privacy policy</Link> explains how contact information is handled.</p></details>
+            </div>
+          </section>
+
+          <div className={styles.signoff}><p>Better tools begin with the work you do.</p><Link href="/about-us">Meet mycloove<Arrow diagonal /></Link></div>
         </div>
       </main>
 

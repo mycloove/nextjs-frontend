@@ -3,6 +3,8 @@
 import AnimatedBrandLogo from "@/components/animated-brand-logo/AnimatedBrandLogo";
 import AuthNavButton from "@/components/AuthNavButton";
 import MyclooveWordmark from "@/components/brand/mycloove/MyclooveWordmark";
+import { useAccountViewer } from "@/lib/account/useAccountViewer";
+import { useCreditBalance } from "@/lib/usage/useCreditBalance";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -54,6 +56,8 @@ export default function Topbar2({
   openFileHref,
   onOpenFile,
 }: Topbar2Props) {
+  const accountState = useAccountViewer();
+  const creditState = useCreditBalance(accountState.status === "loading" ? null : accountState.viewer?.id ?? "guest");
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -172,6 +176,9 @@ export default function Topbar2({
     if (!menuOpen) return;
 
     const closeMenu = (event: KeyboardEvent | PointerEvent) => {
+      // Account dialogs portal outside the blurred header. Their interaction is
+      // still inside this navigation layer, not an outside click/Escape.
+      if (event.defaultPrevented || (event.target instanceof Element && event.target.closest('[data-account-surface]'))) return;
       if (event instanceof KeyboardEvent) {
         if (event.key === "Escape") {
           setMenuOpen(false);
@@ -373,7 +380,7 @@ export default function Topbar2({
           ) : null}
 
           <div className="home-nav-utility">
-            <AuthNavButton />
+            <AuthNavButton accountState={accountState} creditState={creditState} />
           </div>
 
           <button
@@ -457,7 +464,7 @@ export default function Topbar2({
             Open a file
           </Link>
         ) : null}
-        <AuthNavButton variant="mobile" onNavigate={() => setMenuOpen(false)} />
+        {menuOpen ? <AuthNavButton variant="mobile" accountState={accountState} creditState={creditState} onNavigate={() => setMenuOpen(false)} /> : null}
         <p>Private by design. Files are processed securely.</p>
       </div>
     </header>

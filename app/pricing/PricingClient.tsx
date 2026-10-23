@@ -8,22 +8,17 @@
   viewer states — not signed in, or a free account — and one sealed strip that
   refuses to invent a price.
 
-  Doctrine change (2026-10-20): the page never QUOTES the allowance. The
-  per-tool caps live in exactly one place — the meter above every tool's drop
-  zone — and they are retunable from the admin bench at any moment. Quoting a
-  ceiling on a marketing page would publish a frozen second copy of a live
-  number that can drift out of date. So this page sells the plan's SHAPE (fair
-  allowance → raised allowance, all instruments, zero storage, no card) and
-  points the count at the meter that is always current.
+  The marketing page never quotes a frozen allowance. Admin policies are live;
+  the account control owns the authoritative balance and each billable action
+  discloses its cost. Until credit activation, legacy fair-use limits remain.
 
   Category default (two mirrored pricing cards, "$0" vs "coming soon", two
   tick lists, a fake countdown, a hero "10 calls" figure) is rejected on
   purpose: nothing is on sale here, so the page draws one plate, one state
   toggle, and one refusal to invent a price.
 
-  The only derived data crossing from lib/usage/catalog.ts through page.tsx is
-  toolCount, plus the member-vs-guest comparison — used solely to PICK truthful
-  wording (raised vs same), never rendered as a number.
+  Only the tool inventory crosses from the catalog. A seed guest/member cap
+  cannot promise that the deployed account allowance is higher.
   Palette: the marketing surface (app/home.css, both themes) plus the mycloove
   blue accent shared with About/Contact. The one commit action stays the ink
   stamp (ink on canvas ≥15:1 both themes — far above a white-on-blue label in
@@ -58,19 +53,12 @@ const lock = (
 
 export type PricingProps = {
   toolCount: number
-  guestLimit: number
-  memberLimit: number
   monoClass?: string
 }
 
-export default function PricingClient({ toolCount, guestLimit, memberLimit, monoClass = '' }: PricingProps) {
+export default function PricingClient({ toolCount, monoClass = '' }: PricingProps) {
   const rootRef = useRef<HTMLElement>(null)
   const [viewer, setViewer] = useState<Viewer>('guest')
-
-  /* Only ever COMPARED, never rendered: it decides between "raised" and
-     "same" wording so the page stays truthful even if the bench retunes a
-     cap so that signing in no longer helps. */
-  const raised = memberLimit > guestLimit
 
   /* The two real states, phrased without a quota figure. The headline is the
      readout that rolls on flip; the note does the explaining. */
@@ -80,29 +68,20 @@ export default function PricingClient({ toolCount, guestLimit, memberLimit, mono
           headline: 'Fair-use allowance',
           note:
             'Work within a fair allowance, straight away — no sign-up, no card. ' +
-            'The exact count is the meter above each tool’s drop zone: live, ' +
-            'and enforced by the tool itself.',
+           'Open your avatar to see the current allowance. When credits are enabled, ' +
+           'one balance covers billable tools and the action shows its cost.',
         }
-      : raised
-        ? {
-            headline: 'Raised allowance',
+      : {
+            headline: 'Account allowance',
             note:
-              'Signing in lifts the meter above the guest level and keeps your ' +
-              'recent conversions on record. No card, no subscription — the ' +
-              'account exists so the meter can go further.',
-          }
-        : {
-            headline: 'Same fair allowance',
-            note:
-              'Signing in keeps your allowance and keeps your recent conversions ' +
-              'on record. No card, no subscription — the account exists so the ' +
-              'workshop remembers your work.',
+              'Signing in links your guest activity and keeps recent conversions on record. ' +
+              'Your current account allowance appears in the avatar menu. No card or subscription is required.',
           }
 
   /* Included with every way in — the plan's shape, no quotas quoted. */
   const included = [
     { b: `All ${toolCount} instruments`, s: 'the full bench — converters, editors, Document AI' },
-    { b: 'The live meter', s: 'every tool shows its count before you upload, and enforces exactly that' },
+    { b: 'A clear allowance', s: 'the account menu shows your balance; billable actions show their credit cost' },
     { b: 'Zero storage', s: 'files are processed, then removed' },
     { b: 'Bangla native', s: 'Unicode and Bijoy handled as first-class scripts' },
   ]
@@ -110,27 +89,22 @@ export default function PricingClient({ toolCount, guestLimit, memberLimit, mono
   /* The allowance, explained — derived wording only, no cap figures. */
   const rules = [
     {
-      title: 'The count is live.',
+      title: 'The balance is live.',
       desc:
-        'Every tool shows a meter above its drop zone: calls left right now. ' +
-        'That is the same count the tool enforces — there is no separate hidden quota.',
+        'Your avatar opens the account balance. Once credit mode is enabled, ' +
+        'billable tools share that pool and show their cost before work starts. Legacy deployments keep their existing fair-use limits.',
     },
     {
-      title: 'Signing in raises it.',
+      title: 'Signing in links your work.',
       desc:
-        raised
-          ? 'A free account lifts the meter above the guest level and keeps your ' +
-            'recent conversions on record. Either way your files are handled the ' +
-            'same, and no card is involved.'
-          : 'A free account keeps your allowance and keeps your recent conversions ' +
-            'on record. Either way your files are handled the same, and no card ' +
-            'is involved.',
+        'Guest and account allowances are configured separately. Signing in links guest spend once, ' +
+        'rather than adding an unused guest balance to your account. Your files are handled the same way.',
     },
     {
       title: 'It refills on its own.',
       desc:
-        'Calls roll off as they age, so the allowance reopens by itself. ' +
-        'There is no invoice, no trial clock, and nothing to cancel.',
+        'Settled spend returns as its rolling window expires; the account menu shows the next actual return. ' +
+        'Credits held for failed or refused work are released. Credits are a free-use allowance, not money.',
     },
   ]
 
@@ -253,16 +227,16 @@ export default function PricingClient({ toolCount, guestLimit, memberLimit, mono
               <Link href="/#heroFile" className={styles.btnPrimary}>Start with a file</Link>
             </div>
             <p className={styles.finePrint}>
-              Allowances are measured per tool and reopen as calls age out. The
-              exact count — and when it refreshes — is the meter inside each
-              tool: the one number that is always current.
+              The account control shows the current credit policy and balance.
+              Tool costs and allowances can change; the server validates each action.
+              No paid credit purchase or subscription is offered here.
             </p>
           </section>
 
           {/* ── 01 · The meter, explained ────────────────────────────── */}
           <section className={styles.section} aria-labelledby="meter-title">
             <div className={`${styles.sectionHead} ${styles.reveal}`} data-reveal>
-              <span className={styles.sectionIndex}>01 · The meter</span>
+              <span className={styles.sectionIndex}>01 · Credits</span>
               <h2 id="meter-title" className={styles.sectionTitle}>The allowance, explained.</h2>
             </div>
             <div className={styles.rules}>

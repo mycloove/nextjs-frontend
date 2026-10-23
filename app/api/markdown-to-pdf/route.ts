@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     const syntaxHighlight = formData.get('syntax_highlight') || 'true'
     const lang = formData.get('lang') || 'auto'
 
-    quota = await beginToolQuota(request, 'markdown-to-pdf')
+    quota = await beginToolQuota(request, 'markdown-to-pdf', formData)
     if (!quota.ok) return quota.response
 
     const createForwardFormData = () => {

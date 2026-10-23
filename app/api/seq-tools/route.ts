@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   }
 
-  const quota = await beginToolQuota(request, 'fasta-tools')
+  const quota = await beginToolQuota(request, 'fasta-tools', formData)
   if (!quota.ok) return quota.response
 
   try {

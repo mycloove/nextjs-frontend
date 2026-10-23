@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const quota = await beginToolQuota(request, "pdf-editor");
+  const quota = await beginToolQuota(request, "pdf-editor", incoming);
   if (!quota.ok) return quota.response;
 
   const forwarded = new FormData();

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { beginToolQuota } from "@/lib/usage/quota";
+import { documentCreditSucceeded } from "@/lib/usage/credit-success";
 import { brokerAiCall } from "@/lib/ai/broker.ts";
 
 /**
@@ -10,11 +11,21 @@ import { brokerAiCall } from "@/lib/ai/broker.ts";
  * configured or every provider refuses.
  */
 export async function POST(req: Request) {
-  const quota = await beginToolQuota(req, "document-ai");
+  let body: Record<string, unknown>;
+  try {
+    const parsed: unknown = await req.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid object");
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "A valid JSON request is required.", code: "invalid_request" }, { status: 400 });
+  }
+  if (typeof body.message !== "string" || !body.message.trim() || body.message.length > 400_000) {
+    return NextResponse.json({ error: "A nonempty message of at most 400,000 characters is required.", code: "invalid_message" }, { status: 400 });
+  }
+  const quota = await beginToolQuota(req, "document-ai", body);
   if (!quota.ok) return quota.response;
 
   try {
-    const body = await req.json() as Record<string, unknown>;
     const result = await brokerAiCall("document_ai_chat", "/api/document-ai/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -34,7 +45,7 @@ export async function POST(req: Request) {
       ));
     }
 
-    return quota.apply(NextResponse.json(data));
+    return quota.apply(NextResponse.json(data), { successful: documentCreditSucceeded(data) });
   } catch {
     return quota.apply(NextResponse.json(
       { error: "Failed to connect to the document AI service." },

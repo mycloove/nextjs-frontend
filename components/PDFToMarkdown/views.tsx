@@ -19,7 +19,10 @@ import GithubCommitPopover from './settings/connections/GithubCommitPopover'
 import { buildGithubSourceId, parseGithubSourceId } from './settings/connections/githubSourceId'
 import type { OpenDocument, SettingsSectionId, SourcedDocument } from './settings/settingsContext'
 import type { GithubWriteResponse } from '@/lib/integrations/types'
-import { useAccountViewer } from '@/lib/account/useAccountViewer'
+import type { AccountViewerState } from '@/lib/account/useAccountViewer'
+import type { CreditBalanceState } from '@/lib/usage/credit-types'
+import CreditCost from '@/components/tools/CreditCost'
+import type { NavigationAvailability } from '@/components/tools/toolNavigation'
 import { DiagramPreview } from './diagrams/DiagramPreview'
 import { DiagramInsertMenu } from './diagrams/DiagramInsertMenu'
 import type { DiagramTemplate } from './diagrams/types'
@@ -525,6 +528,9 @@ export function HistoryPanel({
 type FocusView = 'write' | 'split' | 'preview'
 
 export function Workspace({
+  accountState: account,
+  creditState,
+  navigationAvailability,
   jobs,
   activeId,
   focusMode,
@@ -549,6 +555,9 @@ export function Workspace({
   onResetSourcedDocument,
   aiBusy,
 }: {
+  accountState: AccountViewerState
+  creditState: CreditBalanceState
+  navigationAvailability: NavigationAvailability
   jobs: Job[]
   activeId: string | null
   focusMode: boolean
@@ -610,10 +619,8 @@ export function Workspace({
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null)
   /* ── Identity + the calibration console ───────────────────────────────
-     One `useAccountViewer` for the whole workspace surface: the topbar seal and
-     the console's panes read the same instance, so an identity edit in a pane
-     lands on the seal without a reload. */
-  const account = useAccountViewer()
+     The MR parent supplies one identity/balance across upload and workspace;
+     the seal and console still read the same identity after a profile edit. */
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId>('identity')
   const openSettings = useCallback((section: SettingsSectionId) => {
@@ -1612,7 +1619,7 @@ export function Workspace({
       style={{ ['--pm-ws-split' as unknown as string]: `${splitRatio}fr` }}
     >
       {/* Workspace navigation */}
-      <header className="pm-ws-topbar">
+      <header className="pm-ws-topbar" data-tool-navbar="pdf-to-markdown">
         <div className="mr-nav-identity">
           <div className="pm-ws-brand">
             <Link className="mr-brand-link" href="/" aria-label="Mr. Markdown home">
@@ -1691,11 +1698,13 @@ export function Workspace({
           </div>
         </div>
 
-        <button className="mr-command-trigger" onClick={onOpenCmdk} aria-label="Search or run a command" title="Command palette (Ctrl+K)">
+        <div className="mr-navigation-tools">
+          <button className="mr-command-trigger" onClick={onOpenCmdk} aria-label="Search or run a command" title="Command palette (Ctrl+K)">
           <span className="mr-command-icon" aria-hidden="true">{Ic.search(15)}</span>
           <span className="mr-command-label">Search tools and commands</span>
           <span className="mr-command-hint"><span>Ctrl</span><span>K</span></span>
-        </button>
+          </button>
+        </div>
 
         <div className="pm-ws-actions" aria-label="Document actions">
           <div className="mr-nav-control-group">
@@ -1717,22 +1726,24 @@ export function Workspace({
                   ['md', 'Markdown', 'MD'], ['pdf', 'PDF document', 'PDF'], ['docx', 'Word document', 'DOCX'],
                   ['html', 'Web page', 'HTML'], ['json', 'Structured data', 'JSON'], ['chunks', 'AI-ready chunks', 'AI'],
                 ] as const).map(([fmt, label, ext]) => (
-                  <button key={fmt} role="menuitem" tabIndex={exportMenuOpen ? 0 : -1} className={cx('mr-export-option', fmt === 'json' && 'mr-export-group-start')} onClick={() => { onDownload(fmt); setExportMenuOpen(false) }}>
-                    <span className="mr-export-format">{ext}</span><span className="mr-export-label">{label}</span>
-                  </button>
+                  <div key={fmt} role="none">
+                    <button role="menuitem" tabIndex={exportMenuOpen ? 0 : -1} className={cx('mr-export-option', fmt === 'json' && 'mr-export-group-start')} aria-describedby={exportMenuOpen && (fmt === 'pdf' || fmt === 'docx') ? `mr-export-cost-${fmt}` : undefined} onClick={() => { onDownload(fmt); setExportMenuOpen(false) }}>
+                      <span className="mr-export-format">{ext}</span><span className="mr-export-label">{label}</span>
+                    </button>
+                    {exportMenuOpen && (fmt === 'pdf' || fmt === 'docx') && creditState.snapshot?.prices[fmt === 'pdf' ? 'markdown-to-pdf' : 'pdf-to-markdown']?.enabled !== false ? <div id={`mr-export-cost-${fmt}`} className="mr-credit-cost mr-export-credit-cost"><CreditCost toolId={fmt === 'pdf' ? 'markdown-to-pdf' : 'pdf-to-markdown'} creditState={creditState} /></div> : null}
+                  </div>
                 ))}
             </div>
           </div>
-          {/* The operator's real identity seal — reads the signed-in user
-              (avatar or initial) and opens the calibration console. Guests get
-              the placeholder seal, which opens the console at the workspace
-              pane they can set. (Workspace owns the shared identity instance.) */}
-          <MrMarkdownAccountMenu
+          {/* Only the visible header mounts a native account dialog. */}
+          {!focusMode && <MrMarkdownAccountMenu
+            key={account.status === 'loading' ? 'loading' : account.viewer?.id ?? 'guest'}
             status={account.status}
             viewer={account.viewer}
             signOut={account.signOut}
             onOpenSettings={openSettings}
-          />
+            creditState={creditState}
+          />}
         </div>
       </header>
 
@@ -1795,6 +1806,14 @@ export function Workspace({
               <span className="mr-focus-exit-label">Exit</span>
               <kbd>Esc</kbd>
             </button>
+            <MrMarkdownAccountMenu
+              key={account.status === 'loading' ? 'loading' : account.viewer?.id ?? 'guest'}
+              status={account.status}
+              viewer={account.viewer}
+              signOut={account.signOut}
+              onOpenSettings={openSettings}
+              creditState={creditState}
+            />
           </div>
         </header>
       )}
@@ -1937,6 +1956,9 @@ export function Workspace({
               </span>
               <span className="mr-ws-ai-cta-arrow" aria-hidden="true">{Ic.arrow(14)}</span>
             </button>
+            {creditState.snapshot?.prices['document-ai']?.enabled !== false ? <div className="mr-credit-cost mr-ai-credit-cost">
+              <span>AI refinement</span><CreditCost toolId="document-ai" creditState={creditState} />
+            </div> : null}
           </div>
 
           <div className="pm-ws-section mr-section-spaced">Document insights</div>
@@ -2470,10 +2492,11 @@ export interface CmdAction {
 }
 
 export function CommandPalette({
-  open, actions, onClose,
+  open, actions, creditState, onClose,
 }: {
   open: boolean
   actions: CmdAction[]
+  creditState: CreditBalanceState
   onClose: () => void
 }) {
   const [q, setQ] = useState('')
@@ -2539,15 +2562,17 @@ export function CommandPalette({
               {items.map((a) => {
                 const idx = filtered.indexOf(a)
                 return (
-                  <div
-                    key={a.id}
-                    className={cx('pm-cmdk-item', idx === sel && 'pm-cmdk-selected')}
-                    onMouseEnter={() => setSel(idx)}
-                    onClick={() => { a.fn(); onClose() }}
-                  >
-                    {a.icon}
-                    <span>{a.label}</span>
-                    {a.kbd && <span className="pm-kbd">{a.kbd}</span>}
+                  <div key={a.id}>
+                    <div
+                      className={cx('pm-cmdk-item', idx === sel && 'pm-cmdk-selected')}
+                      onMouseEnter={() => setSel(idx)}
+                      onClick={() => { a.fn(); onClose() }}
+                    >
+                      {a.icon}
+                      <span>{a.label}</span>
+                      {a.kbd && <span className="pm-kbd">{a.kbd}</span>}
+                    </div>
+                    {a.id === 'run' || a.id === 'dl-docx' ? creditState.snapshot?.prices['pdf-to-markdown']?.enabled !== false ? <div className="pm-credit-cost pm-cmdk-credit-cost"><CreditCost toolId="pdf-to-markdown" creditState={creditState} /></div> : null : ['ai-clean', 'ai-sum', 'ai-tr'].includes(a.id) ? creditState.snapshot?.prices['document-ai']?.enabled !== false ? <div className="pm-credit-cost pm-cmdk-credit-cost"><CreditCost toolId="document-ai" creditState={creditState} /></div> : null : null}
                   </div>
                 )
               })}

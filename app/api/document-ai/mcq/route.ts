@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
 import { beginToolQuota } from "@/lib/usage/quota";
+import { documentCreditSucceeded } from "@/lib/usage/credit-success";
 import { brokerAiCall } from "@/lib/ai/broker.ts";
 
 export async function POST(req: Request) {
-  const quota = await beginToolQuota(req, "document-ai");
+  let body: Record<string, unknown>;
+  try {
+    const parsed: unknown = await req.json();
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid object");
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: "A valid JSON request is required.", code: "invalid_request" }, { status: 400 });
+  }
+  if (typeof body.text === "string" && body.text.length > 400_000) return NextResponse.json({ error: "Text is too large.", code: "text_too_large" }, { status: 413 });
+  const quota = await beginToolQuota(req, "document-ai", body);
   if (!quota.ok) return quota.response;
 
   try {
-    const { documentId, sessionId, text } = await req.json();
+    const { documentId, sessionId, text } = body;
     const result = await brokerAiCall("document_ai_chat", "/api/document-ai/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -31,7 +41,7 @@ export async function POST(req: Request) {
       type: "mcq",
       answer,
       data: data?.answer ? [{ question: "Generated from document", options: ["A", "B", "C", "D"], answer }] : [],
-    }));
+    }), { successful: documentCreditSucceeded(data) });
   } catch {
     return quota.apply(NextResponse.json(
       { error: "MCQ generation failed." },

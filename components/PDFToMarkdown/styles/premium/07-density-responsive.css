@@ -436,12 +436,24 @@
 
 .mr-markdown-workspace .pm-ws-topbar {
   position: relative;
+  --tool-nav-surface: var(--surface);
+  --tool-nav-text: var(--text);
+  --tool-nav-secondary: var(--text-soft);
+  --tool-nav-divider: var(--line);
+  --tool-nav-signal: var(--accent);
   height: 52px;
   min-width: 0;
   padding: 0 13px;
   grid-template-columns: minmax(260px, 1fr) minmax(190px, 310px) minmax(290px, 1fr);
   gap: 12px;
   overflow: visible;
+}
+
+.mr-markdown-workspace .mr-navigation-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .mr-markdown-workspace .mr-nav-identity,
@@ -597,9 +609,12 @@
   .mr-markdown-workspace .pm-ws-topbar {
     height: 50px;
     padding: 0 8px;
-    grid-template-columns: auto 34px minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 6px;
   }
+
+  .mr-markdown-workspace .mr-navigation-tools { gap: 4px; }
+  .mr-markdown-workspace .mr-command-trigger { flex: 0 0 34px; }
 
   .mr-markdown-workspace .mr-export-menu {
     top: 56px;

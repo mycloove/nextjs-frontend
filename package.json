@@ -13,6 +13,7 @@
     "test:mr-markdown": "node --experimental-strip-types --test components/PDFToMarkdown/merge/*.test.ts components/PDFToMarkdown/utils.test.ts components/PDFToMarkdown/settings/connections/*.test.ts",
     "mr-markdown:unit": "npm run test:mr-markdown",
     "test:ai": "node --experimental-strip-types --test lib/ai/*.test.ts",
+    "test:credits": "node --experimental-sqlite --experimental-strip-types --test lib/usage/credit-policy.test.ts lib/usage/credit-success.test.ts lib/usage/remaining.test.ts lib/usage/credit-store.test.ts",
     "test:integrations": "node --experimental-strip-types --test lib/integrations/*.test.ts lib/integrations/github/*.test.ts",
     "pdf-editor:fixtures": "node --experimental-strip-types tests/pdf-editor/generate-golden-corpus.ts",
     "pdf-editor:e2e": "playwright test --config playwright.config.ts",
@@ -23,6 +24,8 @@
     "typecheck": "node scripts/prisma.mjs generate && tsc --noEmit",
     "db:generate": "node scripts/prisma.mjs generate",
     "db:migrate": "node scripts/prisma.mjs migrate dev",
+    "db:credits:status": "node scripts/credit-schema.mjs status",
+    "db:credits:deploy": "node scripts/credit-schema.mjs deploy",
     "db:studio": "node scripts/prisma.mjs studio"
   },
   "dependencies": {

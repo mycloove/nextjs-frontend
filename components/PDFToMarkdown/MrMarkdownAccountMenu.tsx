@@ -1,9 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { SettingsSectionId } from './settings/settingsContext'
 import type { AccountViewer } from '@/lib/account/useAccountViewer'
+import type { CreditBalanceState } from '@/lib/usage/credit-types'
+import CreditBadge, { creditBalanceLabel } from '@/components/profile/CreditBadge'
+import CreditPanel from '@/components/profile/CreditPanel'
 
 /**
  * Mr. Markdown's account control for the workspace topbar.
@@ -14,117 +17,217 @@ import type { AccountViewer } from '@/lib/account/useAccountViewer'
  * initial of their display name (falling back to their email) — and is the entry
  * point to the calibration console.
  *
- * Identity is resolved once by `Workspace` (the surface) and passed in, so this
+ * Identity and credits are resolved once by the MR surface and passed in, so this
  * seal and the console read the *same* `useAccountViewer` instance: a name or
  * avatar change in a console pane lands here without a reload. This control owns
  * only the trigger and its small menu — the console itself is rendered by
  * `Workspace` (in-tree, so it keeps the workspace palette).
  *
- * Guests get the same affordance as the rest of the product: the placeholder
- * seal opens the console directly at the workspace pane they can actually set.
+ * Guests and members open the same small, non-modal account dialog. It stays
+ * in-tree to preserve the native palette, with viewport-clamped placement.
  */
 export default function MrMarkdownAccountMenu({
   status,
   viewer,
   signOut,
   onOpenSettings,
+  creditState,
 }: {
   status: 'loading' | 'ready'
   viewer: AccountViewer | null
   signOut: () => Promise<void>
   onOpenSettings: (section: SettingsSectionId) => void
+  creditState: CreditBalanceState
 }) {
   const signedIn = Boolean(viewer)
   const [menuOpen, setMenuOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const menuId = useId()
+  const { snapshot, status: creditStatus, refreshing, refresh } = creditState
+  const showCredits = Boolean(snapshot && snapshot.prices['pdf-to-markdown']?.enabled !== false && creditStatus !== 'loading')
+  const balanceLabel = creditBalanceLabel(snapshot, creditStatus, refreshing)
 
   useEffect(() => {
     if (!menuOpen) return
+    refresh()
+    const placePanel = () => {
+      const anchor = wrapRef.current?.getBoundingClientRect()
+      const panel = panelRef.current
+      if (!anchor || !panel) return
+      const viewport = window.visualViewport
+      const leftEdge = viewport?.offsetLeft ?? 0
+      const topEdge = viewport?.offsetTop ?? 0
+      const width = viewport?.width ?? window.innerWidth
+      const height = viewport?.height ?? window.innerHeight
+      const panelWidth = Math.min(320, Math.max(0, width - 24))
+      panel.style.width = `${panelWidth}px`
+      const panelHeight = Math.min(panel.scrollHeight + 2, Math.max(0, height - 24))
+      const below = topEdge + height - anchor.bottom - 20
+      const above = anchor.top - topEdge - 20
+      const openAbove = below < Math.min(panelHeight, 240) && above > below
+      const maxHeight = Math.max(0, Math.min(panelHeight, openAbove ? above : below))
+      const left = Math.max(leftEdge + 12, Math.min(anchor.right - panelWidth, leftEdge + width - panelWidth - 12))
+      const top = openAbove ? anchor.top - maxHeight - 8 : anchor.bottom + 8
+      panel.style.left = `${left - anchor.left}px`
+      panel.style.top = `${Math.max(topEdge + 12, Math.min(top, topEdge + height - maxHeight - 12)) - anchor.top}px`
+      panel.style.maxHeight = `${maxHeight}px`
+      panel.style.transformOrigin = openAbove ? 'bottom right' : 'top right'
+    }
+    const frame = requestAnimationFrame(() => {
+      placePanel()
+      panelRef.current?.focus({ preventScroll: true })
+    })
     const onPointerDown = (event: PointerEvent) => {
       if (!wrapRef.current?.contains(event.target as Node)) setMenuOpen(false)
     }
+    const onFocusIn = (event: FocusEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setMenuOpen(false)
+    }
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false)
+      if (event.key !== 'Escape') return
+      // Consume Escape before the workspace's focus-mode exit shortcut.
+      event.preventDefault()
+      event.stopPropagation()
+      setMenuOpen(false)
+      triggerRef.current?.focus({ preventScroll: true })
     }
+    const observer = new ResizeObserver(placePanel)
+    if (panelRef.current) observer.observe(panelRef.current)
     document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('resize', placePanel)
+    window.addEventListener('scroll', placePanel, true)
+    window.visualViewport?.addEventListener('resize', placePanel)
+    window.visualViewport?.addEventListener('scroll', placePanel)
     return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
       document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('resize', placePanel)
+      window.removeEventListener('scroll', placePanel, true)
+      window.visualViewport?.removeEventListener('resize', placePanel)
+      window.visualViewport?.removeEventListener('scroll', placePanel)
     }
-  }, [menuOpen])
+  }, [menuOpen, refresh])
 
   const openConsole = (section: SettingsSectionId) => {
     setMenuOpen(false)
+    triggerRef.current?.focus({ preventScroll: true })
     onOpenSettings(section)
   }
 
   const handleSignOut = async () => {
     setSigningOut(true)
-    setMenuOpen(false)
-    await signOut()
-    setSigningOut(false)
+    setSignOutError(null)
+    try {
+      await signOut()
+      setMenuOpen(false)
+    } catch {
+      setSignOutError('Sign out failed. Try again.')
+    } finally {
+      setSigningOut(false)
+    }
   }
 
   // While the session resolves, keep the seal's footprint with a quiet
   // placeholder so the topbar row never reflows (no "JS" flash).
   if (status === 'loading') {
-    return <span className="mr-avatar mr-avatar-pending" aria-hidden="true" />
+    return (
+      <span className="mr-account-wrap" role="status" aria-label="Loading account">
+        <span className="mr-avatar mr-account-trigger mr-avatar-pending" aria-hidden="true"><span className="mr-account-avatar" /></span>
+      </span>
+    )
   }
 
   return (
     <div className="mr-account-wrap" ref={wrapRef}>
       <button
         type="button"
-        className="mr-avatar"
-        onClick={() => (signedIn ? setMenuOpen((open) => !open) : openConsole('appearance'))}
-        aria-label="Account and settings"
-        aria-haspopup={signedIn ? 'menu' : 'dialog'}
-        aria-expanded={signedIn ? menuOpen : undefined}
+        ref={triggerRef}
+        className="mr-avatar mr-account-trigger"
+        onClick={() => setMenuOpen((open) => !open)}
+        aria-label={showCredits ? `Account and settings. ${balanceLabel}` : 'Account and settings'}
+        aria-haspopup="dialog"
+        aria-expanded={menuOpen}
+        aria-controls={menuId}
         // Suppress the hover tooltip while the menu is open so it never overlaps it.
         // The `data-tooltip` rule is the single visible label; a native `title`
         // here would render the browser's own tooltip on top of it (two labels).
-        data-tooltip={menuOpen ? undefined : 'Account & settings'}
+        data-tooltip={menuOpen || !showCredits ? undefined : balanceLabel}
       >
-        {signedIn && viewer?.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- small owner-scoped avatar; a plain <img> avoids coupling next/image to the storage host
-          <img className="mr-avatar-img" src={viewer.avatarUrl} alt="" loading="lazy" />
-        ) : signedIn && viewer ? (
-          initialOf(viewer)
-        ) : (
-          <GuestGlyph />
-        )}
+        <span className="mr-account-avatar">
+          {signedIn && viewer?.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- small owner-scoped avatar; a plain <img> avoids coupling next/image to the storage host
+            <img className="mr-avatar-img" src={viewer.avatarUrl} alt="" loading="lazy" />
+          ) : signedIn && viewer ? (
+            initialOf(viewer)
+          ) : (
+            <GuestGlyph />
+          )}
+        </span>
+        {showCredits ? <CreditBadge snapshot={snapshot} status={creditStatus} refreshing={refreshing} variant="docked" /> : null}
       </button>
 
-      {signedIn && menuOpen ? (
-        <div className="mr-account-menu" role="menu">
+      {menuOpen ? (
+        <div id={menuId} ref={panelRef} className="mr-account-menu" role="dialog" aria-modal="false" aria-label="Account and credits" tabIndex={-1}>
           <div className="mr-account-identity">
-            <span className="mr-account-name">{viewer?.name?.trim() || viewer?.email?.split('@')[0] || 'Account'}</span>
-            <span className="mr-account-email">{viewer?.email}</span>
+            <div className="mr-account-identity-row">
+              <div className="mr-account-identity-copy">
+                <span className="mr-account-name">{signedIn ? viewer?.name?.trim() || viewer?.email?.split('@')[0] || 'Account' : 'Guest'}</span>
+                <span className="mr-account-email">{signedIn ? viewer?.email : 'Not signed in'}</span>
+              </div>
+              {showCredits ? <CreditBadge snapshot={snapshot} status={creditStatus} refreshing={refreshing} variant="pill" /> : null}
+            </div>
             {viewer?.role ? <span className="mr-account-role">{viewer.role}</span> : null}
           </div>
 
-          <button type="button" role="menuitem" className="mr-account-item" onClick={() => openConsole('identity')}>
-            <span className="mr-account-item-icon" aria-hidden="true"><GearIcon /></span>Settings
-          </button>
-          <button type="button" role="menuitem" className="mr-account-item" onClick={() => openConsole('appearance')}>
+          {showCredits ? <div className="mr-account-credit-panel">
+            <CreditPanel snapshot={snapshot} status={creditStatus} refreshing={refreshing} onRefresh={refresh} />
+          </div> : null}
+
+          {signedIn ? (
+            <>
+              <button type="button" className="mr-account-item" onClick={() => openConsole('identity')}>
+                <span className="mr-account-item-icon" aria-hidden="true"><GearIcon /></span>Settings
+              </button>
+              <button type="button" className="mr-account-item" onClick={() => openConsole('activity')}>
+                <span className="mr-account-item-icon" aria-hidden="true"><ConsoleIcon /></span>Activity
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="mr-account-item" onClick={() => setMenuOpen(false)}>
+                <span className="mr-account-item-icon" aria-hidden="true"><SignOutIcon /></span>Sign in
+              </Link>
+              <Link href="/register" className="mr-account-item" onClick={() => setMenuOpen(false)}>
+                <span className="mr-account-item-icon" aria-hidden="true"><GuestGlyph /></span>Create account
+              </Link>
+            </>
+          )}
+          <button type="button" className="mr-account-item" onClick={() => openConsole('appearance')}>
             <span className="mr-account-item-icon" aria-hidden="true"><MoonIcon /></span>Appearance
           </button>
           {viewer?.role && viewer.role !== 'User' ? (
-            <Link href="/admin" role="menuitem" className="mr-account-item" onClick={() => setMenuOpen(false)}>
+            <Link href="/admin" className="mr-account-item" onClick={() => setMenuOpen(false)}>
               <span className="mr-account-item-icon" aria-hidden="true"><ConsoleIcon /></span>{viewer.role} console
             </Link>
           ) : null}
-          <button
+          {signOutError ? <p className="mr-account-error" role="alert">{signOutError}</p> : null}
+          {signedIn ? <button
             type="button"
-            role="menuitem"
             className="mr-account-item mr-account-item-signout"
             onClick={handleSignOut}
             disabled={signingOut}
           >
             <span className="mr-account-item-icon" aria-hidden="true"><SignOutIcon /></span>{signingOut ? 'Signing out…' : 'Sign out'}
-          </button>
+          </button> : null}
         </div>
       ) : null}
     </div>
