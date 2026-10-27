@@ -1,13 +1,15 @@
 'use client'
 
 /*
-  Contact / The correspondence desk
+  Contact / The open line
 
   Motive: turn a stuck workflow, a useful observation, or an idea into a note
   the team can act on. Material: the visitor's own words, not a support console.
-  Editorial minimalism carries the page; a live letter is its tactile accent.
+  Editorial minimalism carries the page; the composer is the letter itself.
   The category's map, three contact cards, fake availability clock, and ticket
-  dashboard add nothing to that task. The draft, not ornament, is the signature.
+  dashboard add nothing to that task. The form comes first, with an optional
+  draft preview instead of a second, competing workspace. A recipient line and
+  quiet correspondence marks carry the identity without simulating an inbox.
 
   Guides change suggestions only. They never overwrite a message or add fields
   to the EmailJS contract. Validation, pending, accepted, and failed are distinct;
@@ -166,56 +168,56 @@ export default function ContactUsClient({ fontClass = '' }: { fontClass?: string
     <div className="home-page">
       <Topbar2 openFileHref="/#heroFile" />
 
-      <main id="main-content" className={`${styles.page} ${fontClass}`}>
+      {/* The root layout owns the main landmark; this is the skip-link target. */}
+      <div id="main-content" className={`${styles.page} ${fontClass}`} tabIndex={-1}>
         <div className={styles.shell}>
-          <div className={styles.masthead}><p>Correspondence <span lang="bn">/ যোগাযোগ</span></p><span>A note, not a ticket.</span></div>
+          <div className={styles.masthead}>
+            <p>Contact us <span lang="bn">/ যোগাযোগ</span></p>
+            <span>Good conversations make better tools.</span>
+          </div>
 
-          <section className={styles.hero} aria-labelledby="contact-title">
-            <div className={styles.heroCopy}>
-              <p className={styles.eyebrow}><span />The mycloove correspondence desk</p>
-              <h1 id="contact-title" className={styles.title}>A stuck file.<br />A new idea.<br /><span>Let&apos;s talk.</span></h1>
-              <p className={styles.lede}>A question about a tool. An idea worth building. A detail we could do better. Write to the people building mycloove.</p>
+          <div className={styles.contactLayout}>
+            <section className={styles.introduction} aria-labelledby="contact-title">
+              <p className={styles.eyebrow}><span aria-hidden="true" />An open line to mycloove</p>
+              <h1 id="contact-title" className={styles.title}>A small note.<br />A big <span>difference.</span></h1>
+              <p className={styles.lede}>The best part of building tools is hearing from the people who use them.</p>
+              <p className={styles.introNote}>A stuck file, a useful idea, or something we could do better. There&apos;s room for all of it here.</p>
+              <a href="#contact-composer" className={styles.startLink}>Start a conversation <Arrow /></a>
+
+              <div className={styles.correspondenceMark} aria-hidden="true">
+                <svg width="104" height="72" viewBox="0 0 104 72" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+                  <path className={styles.markBack} d="M12 22h62v40H12z" />
+                  <path d="M30 10h62v42H30zM30 11l31 23 31-23M30 52l22-24m40 24L70 28" />
+                  <path d="M4 34h18M4 42h12" />
+                </svg>
+                <p>Your words.<br /><span>A better way forward.</span></p>
+              </div>
               <p className={styles.banglaIntro} lang="bn">আপনার কথাই পরের পরিবর্তনের শুরু।</p>
-            </div>
 
-            <aside className={styles.directLine} aria-labelledby="direct-title">
-              <span className={styles.sectionLabel}>Same desk. Your own inbox.</span>
-              <h2 id="direct-title">Prefer to email?</h2>
-              <a href={`mailto:${CONTACT_EMAIL}`} className={styles.emailAddress}>{CONTACT_EMAIL}<Arrow diagonal /></a>
-              <div className={styles.copyRow}>
-                <button type="button" className={styles.copyButton} onClick={copyEmail} disabled={copyStatus === 'copying'}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2" /><path d="M16 8V3H4v13h4" /></svg>
-                  {copyStatus === 'copying' ? 'Copying...' : copyStatus === 'copied' ? 'Address copied' : 'Copy address'}
-                </button>
-                <span className={styles.copyFeedback} role="status">{copyStatus === 'copied' ? 'Copied to your clipboard.' : copyStatus === 'error' ? 'Could not copy. Use the email link or select the address.' : ''}</span>
+              <div className={styles.introFootnote}>
+                <span className={styles.footnoteLine} aria-hidden="true" />
+                <p>No account needed.<br /> English or <span lang="bn">বাংলা</span>. Write in your own words.</p>
               </div>
-              <p className={styles.directNote}>The link opens your mail app.<br />No account needed to write to us.</p>
-            </aside>
-          </section>
+            </section>
 
-          <section className={styles.desk} aria-labelledby="composer-title">
-            <div className={styles.deskHeading}><span className={styles.sectionLabel}>A little space for your words</span><span className={styles.deskCaption}>English or <span lang="bn">বাংলা</span>. Both belong here.</span></div>
-
-            <fieldset className={styles.guidePicker} disabled={isSubmitting}>
-              <legend>Choose a starting point<span>Optional. It changes the guide, not your words.</span></legend>
-              <div className={styles.guideOptions}>
-                {guides.map((item) => (
-                  <label key={item.id} className={styles.guideOption}>
-                    <input type="radio" name="writing-guide" value={item.id} checked={guideId === item.id} onChange={() => setGuideId(item.id)} />
-                    <span className={styles.guideChoice}><span className={styles.radioMark} aria-hidden="true" /><span>{item.label}</span><Arrow diagonal /></span>
-                  </label>
-                ))}
+            <section id="contact-composer" className={styles.composer} aria-labelledby="composer-title">
+              <div className={styles.letterhead}>
+                <div><span className={styles.sectionLabel}>A direct line</span><span className={styles.recipient}>To the mycloove team <Arrow diagonal /></span></div>
+                <span className={styles.draftState} data-state={isSubmitting ? 'sending' : sent ? 'sent' : 'draft'} role="status"><i aria-hidden="true" />{draftState}</span>
               </div>
-            </fieldset>
 
-            <div className={styles.deskGrid}>
-              <div className={styles.composer}>
-                <div className={styles.composerHeading}><h2 id="composer-title">Leave us a note.</h2><span>Required fields <span aria-hidden="true">*</span></span></div>
-                {!emailJsReady && <div className={styles.transportNotice}><StatusMark success={false} /><p>The web form is not configured right now. Your draft preview still works. Please <a href={`mailto:${CONTACT_EMAIL}`}>email us directly</a> to send your note.</p></div>}
+              <div className={styles.composerBody}>
+                <div className={styles.composerHeading}>
+                  <h2 id="composer-title">What&apos;s on your mind?</h2>
+                  <p>A few words are a good place to start.</p>
+                </div>
+
+                {!emailJsReady && <div id="contact-delivery-note" className={styles.transportNotice}><StatusMark success={false} /><p>The web form is unavailable right now. You can still prepare a draft, or <a href={`mailto:${CONTACT_EMAIL}`}>email us directly</a> to send your note.</p></div>}
+                <noscript><p className={styles.transportNotice}>This form needs JavaScript to send. You can <a href={`mailto:${CONTACT_EMAIL}`}>email us directly</a> instead.</p></noscript>
 
                 <form ref={formRef} onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
                   <fieldset className={styles.formFields} disabled={isSubmitting}>
-                    <legend className={styles.srOnly}>Your contact information and message</legend>
+                    <legend className={styles.srOnly}>Your contact information and message. Name, email, message, and consent are required.</legend>
                     <div className={styles.formRow}>
                       <div className={styles.field}>
                         <label htmlFor="contact-name">Your name <span aria-hidden="true">*</span></label>
@@ -223,11 +225,23 @@ export default function ContactUsClient({ fontClass = '' }: { fontClass?: string
                         {touched.name && errors.name && <p id="contact-name-error" className={styles.fieldError}>{errors.name}</p>}
                       </div>
                       <div className={styles.field}>
-                        <label htmlFor="contact-email">Your email <span aria-hidden="true">*</span></label>
-                        <input id="contact-email" name="email" type="email" value={formData.email} onChange={handleChange} onBlur={() => markTouched('email')} required autoComplete="email" placeholder="Where we can reply" aria-invalid={touched.email && !!errors.email} aria-describedby={touched.email && errors.email ? 'contact-email-error' : undefined} />
+                        <label htmlFor="contact-email">Email address <span aria-hidden="true">*</span></label>
+                        <input id="contact-email" name="email" type="email" value={formData.email} onChange={handleChange} onBlur={() => markTouched('email')} required autoComplete="email" placeholder="you@example.com" aria-invalid={touched.email && !!errors.email} aria-describedby={touched.email && errors.email ? 'contact-email-error' : undefined} />
                         {touched.email && errors.email && <p id="contact-email-error" className={styles.fieldError}>{errors.email}</p>}
                       </div>
                     </div>
+                    <fieldset className={styles.guidePicker} aria-describedby="contact-guide-help">
+                      <legend>What brings you here? <span>Optional</span></legend>
+                      <div className={styles.guideOptions}>
+                        {guides.map((item) => (
+                          <label key={item.id} className={styles.guideOption}>
+                            <input type="radio" name="writing-guide" value={item.id} checked={guideId === item.id} onChange={() => setGuideId(item.id)} />
+                            <span className={styles.guideChoice}><span className={styles.radioMark} aria-hidden="true" />{item.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <p id="contact-guide-help" className={styles.guideHelp}>Optional guidance. Switching won&apos;t change your words.</p>
+                    </fieldset>
                     <div className={styles.field}>
                       <label htmlFor="contact-subject">Subject <span className={styles.optional}>Optional</span></label>
                       <input id="contact-subject" name="subject" type="text" value={formData.subject} onChange={handleChange} placeholder={guide.subject} />
@@ -235,7 +249,7 @@ export default function ContactUsClient({ fontClass = '' }: { fontClass?: string
                     <div className={`${styles.field} ${styles.messageField}`}>
                       <label htmlFor="contact-message">Your message <span aria-hidden="true">*</span></label>
                       <textarea id="contact-message" name="message" rows={6} value={formData.message} onChange={handleChange} onBlur={() => markTouched('message')} required maxLength={MESSAGE_LIMIT} placeholder={guide.placeholder} aria-invalid={touched.message && !!errors.message} aria-describedby={`contact-message-help contact-charcount${touched.message && errors.message ? ' contact-message-error' : ''}`} />
-                      <div className={styles.messageMeta}><span id="contact-message-help">A description is enough. Please leave private file contents out.</span><span id="contact-charcount" className={styles.charcount}>{formData.message.length} / {MESSAGE_LIMIT}</span></div>
+                      <div className={styles.messageMeta}><span id="contact-message-help">Please leave private document contents out.</span><span id="contact-charcount" className={styles.charcount}>{formData.message.length} / {MESSAGE_LIMIT}</span></div>
                       {touched.message && errors.message && <p id="contact-message-error" className={styles.fieldError}>{errors.message}</p>}
                     </div>
 
@@ -253,37 +267,54 @@ export default function ContactUsClient({ fontClass = '' }: { fontClass?: string
                   )}
 
                   <div className={styles.sendRow}>
-                    <button type="submit" className={styles.sendButton} disabled={isSubmitting}>
-                      {isSubmitting ? <><span className={styles.spinner} aria-hidden="true" />Sending your note...</> : <>Send message<Arrow /></>}
+                    <button type="submit" className={styles.sendButton} disabled={isSubmitting || !emailJsReady} aria-describedby={!emailJsReady ? 'contact-delivery-note' : undefined}>
+                      {isSubmitting ? <><span className={styles.spinner} aria-hidden="true" />Sending your note...</> : !emailJsReady ? 'Web form unavailable' : <>Send message<Arrow /></>}
                     </button>
-                    <p role="status">{isSubmitting ? 'Waiting for the email service to confirm.' : 'Uses our email service.'}<br />{isSubmitting ? 'Your draft is kept until it accepts the send.' : 'Not a live chat. No rush to get the words right.'}</p>
+                    {!emailJsReady ? <a className={styles.fallbackLink} href={`mailto:${CONTACT_EMAIL}`}>Use direct email <Arrow diagonal /></a> : <p role="status">{isSubmitting ? 'Waiting for the email service to confirm.' : 'A note, not a live chat.'}<br />{isSubmitting ? 'Your draft stays until the send is accepted.' : 'No need to get every word perfect.'}</p>}
                   </div>
                 </form>
-              </div>
 
-              <aside className={styles.deskAside} aria-label="Your draft and writing guide">
-                <div className={styles.previewHeading}><span className={styles.sectionLabel}>Your note, as you write</span><span className={styles.draftState} data-state={isSubmitting ? 'sending' : sent ? 'sent' : 'draft'}><i aria-hidden="true" />{draftState}</span></div>
-                <div className={styles.letter} data-state={sent ? 'sent' : 'draft'}>
-                  <div className={styles.letterRouting}><div><span className={styles.letterLabel}>To</span><strong>mycloove</strong><span className={styles.letterEmail}>{CONTACT_EMAIL}</span></div><div className={styles.postage} aria-hidden="true"><svg width="32" height="28" viewBox="0 0 40 32" fill="none" stroke="currentColor" strokeWidth="1.2"><rect x="3" y="5" width="34" height="23" rx="1" /><path d="m3 6 17 12L37 6M3 28l12-11m22 11L25 17" /></svg><span>{sent ? 'ACCEPTED' : 'DRAFT'}</span></div></div>
-                  {sent ? (
-                    <div className={styles.receipt}>
-                      <span className={styles.receiptMark}><StatusMark success /></span><h3>A note, on its way.</h3><p>Our email service accepted your message. Thank you for taking the time to write.</p><span className={styles.receiptNote}>Submission confirmed. Not a read receipt.</span><button type="button" onClick={() => { setSubmitStatus(null); formRef.current?.querySelector<HTMLInputElement>('[name="name"]')?.focus() }}>Write another note<Arrow /></button>
+                <details className={styles.preview}>
+                  <summary><span>{sent ? 'View submission confirmation' : 'Preview your note'}</span><span className={styles.disclosure} aria-hidden="true" /></summary>
+                  <div className={styles.letter} data-state={sent ? 'sent' : 'draft'}>
+                    <div className={styles.letterRouting}>
+                      <div><span className={styles.letterLabel}>To</span><strong>mycloove</strong><span className={styles.letterEmail}>{CONTACT_EMAIL}</span></div>
+                      <span className={styles.letterTag}>{sent ? 'ACCEPTED' : 'DRAFT'}</span>
                     </div>
-                  ) : (
-                    <>
-                      <div className={styles.letterFrom}><span className={styles.letterLabel}>From</span><strong className={!formData.name.trim() ? styles.placeholderText : undefined}>{formData.name.trim() || 'Your name'}</strong><span className={!formData.email.trim() ? styles.placeholderText : undefined}>{formData.email.trim() || 'Your email address'}</span></div>
-                      <div className={styles.letterContent}><span className={styles.letterSubject}>{formData.subject.trim() || 'No subject added'}</span><p tabIndex={formData.message.trim() ? 0 : undefined} aria-label={formData.message.trim() ? 'Message draft preview' : undefined} className={!formData.message.trim() ? styles.placeholderText : undefined}>{formData.message.trim() ? formData.message : 'The words you write will appear here.\n\nNo perfect pitch required.'}</p></div>
-                      <div className={styles.letterFooter}><span>{isSubmitting ? 'Sending. Awaiting confirmation.' : 'A draft, not a delivered message.'}</span><span className={styles.clasp} aria-hidden="true"><i /><i /></span></div>
-                    </>
-                  )}
-                </div>
-                <div className={styles.writingGuide} key={guideId}><span className={styles.guideLabel}>Writing guide / {guide.label}</span><h3>{guide.title}</h3><p>{guide.hint}</p></div>
-              </aside>
-            </div>
-          </section>
+                    {sent ? (
+                      <div className={styles.receipt}>
+                        <StatusMark success /><h3>Thank you for writing.</h3><p>Our email service accepted your message. This confirms submission, not that it has been read.</p><button type="button" onClick={() => { setSubmitStatus(null); formRef.current?.querySelector<HTMLInputElement>('[name="name"]')?.focus() }}>Write another note<Arrow /></button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className={styles.letterFrom}><span className={styles.letterLabel}>From</span><strong className={!formData.name.trim() ? styles.placeholderText : undefined}>{formData.name.trim() || 'Your name'}</strong><span className={!formData.email.trim() ? styles.placeholderText : undefined}>{formData.email.trim() || 'Your email address'}</span></div>
+                        <div className={styles.letterContent}><span className={styles.letterSubject}>{formData.subject.trim() || 'No subject added'}</span><p tabIndex={formData.message.trim() ? 0 : undefined} aria-label={formData.message.trim() ? 'Message draft preview' : undefined} className={!formData.message.trim() ? styles.placeholderText : undefined}>{formData.message.trim() ? formData.message : 'The words you write will appear here.\n\nNo perfect pitch required.'}</p></div>
+                        <p className={styles.letterFooter}>{isSubmitting ? 'Sending. Awaiting confirmation.' : 'A draft, not a delivered message.'}</p>
+                      </>
+                    )}
+                  </div>
+                </details>
+              </div>
+            </section>
+
+            <aside className={styles.directLine} aria-labelledby="direct-title">
+              <p className={styles.sectionLabel}>Your inbox works, too</p>
+              <h2 id="direct-title">Prefer a direct hello?</h2>
+              <a href={`mailto:${CONTACT_EMAIL}`} className={styles.emailAddress}><span>{CONTACT_EMAIL}</span><Arrow diagonal /></a>
+              <div className={styles.copyRow}>
+                <button type="button" className={styles.copyButton} onClick={copyEmail} disabled={copyStatus === 'copying'}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2" /><path d="M16 8V3H4v13h4" /></svg>
+                  {copyStatus === 'copying' ? 'Copying...' : copyStatus === 'copied' ? 'Address copied' : 'Copy email address'}
+                </button>
+                <span className={styles.copyFeedback} role="status">{copyStatus === 'copied' ? 'Copied to your clipboard.' : copyStatus === 'error' ? 'Could not copy. Use the email link or select the address.' : ''}</span>
+              </div>
+              <p className={styles.directNote}>Opens your mail app. Send when you&apos;re ready.</p>
+              <div className={styles.writingGuide} key={guideId} aria-live="polite" aria-atomic="true"><span className={styles.guideLabel}>A thought to get you started</span><h3>{guide.title}</h3><p>{guide.hint}</p></div>
+            </aside>
+          </div>
 
           <section className={styles.detailsSection} aria-labelledby="details-title">
-            <div><span className={styles.sectionLabel}>Before you send</span><h2 id="details-title">A little clarity.<br />Less back-and-forth.</h2><p>Just the useful details.<br />No small print disguised as a promise.</p></div>
+            <div><span className={styles.sectionLabel}>A little clarity</span><h2 id="details-title">Before you<br /> press send.</h2><p>Simple answers, so you know what to expect.</p><Link href="/faq" className={styles.helpLink}>More questions? Visit the FAQ <Arrow diagonal /></Link></div>
             <div className={styles.answers}>
               <details><summary><h3>Can I attach a document?</h3><span className={styles.disclosure} aria-hidden="true" /></summary><p>This form is text-only. Start with the tool name, file type, and a short description of what happened. Please do not paste confidential document contents into your note.</p></details>
               <details><summary><h3>When will I hear back?</h3><span className={styles.disclosure} aria-hidden="true" /></summary><p>You can write whenever it suits you. This is not live chat, and we cannot promise an exact reply time. Include an email address where you can receive a response.</p></details>
@@ -293,7 +324,7 @@ export default function ContactUsClient({ fontClass = '' }: { fontClass?: string
 
           <div className={styles.signoff}><p>Better tools begin with the work you do.</p><Link href="/about-us">Meet mycloove<Arrow diagonal /></Link></div>
         </div>
-      </main>
+      </div>
 
       <HomeFooter />
     </div>
