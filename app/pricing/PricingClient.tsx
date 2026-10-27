@@ -1,288 +1,246 @@
 'use client'
 
 /*
-  Pricing — "The Calibration Bench".
+  Pricing - The Open Folio: a document-shaped access sheet that puts the real
+  price beside the work it makes possible. Editorial minimalism, with one
+  folded-paper detail; not a grid of invented subscription tiers or glass cards.
 
-  Instrument concept: the plate a workshop pins beside its bench, redrawn as a
-  bench you can operate. One honest plan plate, one toggle between the two real
-  viewer states — not signed in, or a free account — and one sealed strip that
-  refuses to invent a price.
-
-  The marketing page never quotes a frozen allowance. Admin policies are live;
-  the account control owns the authoritative balance and each billable action
-  discloses its cost. Until credit activation, legacy fair-use limits remain.
-
-  Category default (two mirrored pricing cards, "$0" vs "coming soon", two
-  tick lists, a fake countdown, a hero "10 calls" figure) is rejected on
-  purpose: nothing is on sale here, so the page draws one plate, one state
-  toggle, and one refusal to invent a price.
-
-  Only the tool inventory crosses from the catalog. A seed guest/member cap
-  cannot promise that the deployed account allowance is higher.
-  Palette: the marketing surface (app/home.css, both themes) plus the mycloove
-  blue accent shared with About/Contact. The one commit action stays the ink
-  stamp (ink on canvas ≥15:1 both themes — far above a white-on-blue label in
-  dark). State phrases use IBM Plex Mono, loaded module-locally in page.tsx.
+  The access comparison is explanatory, never authentication or plan selection.
+  Only the catalogue count crosses the server boundary. Allowances and action
+  costs remain live policy, owned by the account control and each workspace.
+  No seed quotas, paid checkout, or automatic account upgrade are promised here.
 */
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 
 import HomeFooter from '@/components/HomeFooter'
 import Topbar2 from '@/components/Topbar2'
 
 import styles from './Pricing.module.css'
-
 import '../home.css'
 
 type Viewer = 'guest' | 'account'
 
-const arrow = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <line x1="4" y1="12" x2="20" y2="12" />
-    <polyline points="13 5 20 12 13 19" />
-  </svg>
-)
+const access = {
+  guest: {
+    label: 'Guest access',
+    title: 'Start with a file, not a form.',
+    description: 'Try guest-ready tools straight away. Some tools and actions need a free account; the workspace will let you know.',
+    rows: [
+      ['Getting started', 'No sign-up for guest-ready tools'],
+      ['Your allowance', 'The current guest allowance'],
+      ['When you sign in', 'Your guest activity links to your account'],
+    ],
+  },
+  account: {
+    label: 'Free account',
+    title: 'Keep your work connected.',
+    description: 'Sign in to use account-required actions and keep recent conversions on record. No card or subscription is needed.',
+    rows: [
+      ['Getting started', 'Sign in with a free account'],
+      ['Your allowance', 'The current account allowance'],
+      ['When you sign in', 'Guest spend is linked, not added as bonus credits'],
+    ],
+  },
+} as const
 
-const lock = (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3" y="11" width="18" height="11" rx="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-)
+const questions = [
+  {
+    question: 'Is this a free trial?',
+    answer: 'No. Free is the current plan, not a trial that turns into a paid subscription. Use the tools within the current allowance. There is no card to enter and no paid subscription or credit purchase offered here.',
+  },
+  {
+    question: 'How much can I use for free?',
+    answer: 'Open your avatar in the account menu to see your current allowance. When credits are enabled, billable tools share one balance and show the action cost before work starts. Allowances and costs can change, so the workspace and account menu are the source of truth. Where credits are not yet enabled, existing fair-use limits apply.',
+  },
+  {
+    question: 'What happens when my allowance runs out?',
+    answer: 'In credit mode, used credits return as their rolling usage window expires; the account menu shows the next actual return. They do not necessarily reset at midnight. Credits reserved for failed or refused work are released. Credits are a free-use allowance, not money.',
+  },
+  {
+    question: 'Does signing in give me extra credits?',
+    answer: 'Not necessarily. Guest and account allowances are configured separately. Signing in links your guest spend once; it does not add unused guest credits to your account. Check the account menu for your current balance.',
+  },
+  {
+    question: 'What happens to my files?',
+    answer: 'File handling and retention depend on the tool. Some editors may save work in your browser. Creating an account does not change those file-handling rules. Read the privacy policy for the details.',
+  },
+]
+
+function Arrow({ down = false }: { down?: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={down ? 'M12 4v16m-6-6 6 6 6-6' : 'M4 12h16m-6-6 6 6-6 6'} />
+    </svg>
+  )
+}
+
+function Check() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m5 12 4 4L19 6" />
+    </svg>
+  )
+}
 
 export type PricingProps = {
   toolCount: number
-  monoClass?: string
+  fontClass?: string
 }
 
-export default function PricingClient({ toolCount, monoClass = '' }: PricingProps) {
-  const rootRef = useRef<HTMLElement>(null)
+export default function PricingClient({ toolCount, fontClass = '' }: PricingProps) {
   const [viewer, setViewer] = useState<Viewer>('guest')
-
-  /* The two real states, phrased without a quota figure. The headline is the
-     readout that rolls on flip; the note does the explaining. */
-  const planFor = (v: Viewer) =>
-    v === 'guest'
-      ? {
-          headline: 'Fair-use allowance',
-          note:
-            'Work within a fair allowance, straight away — no sign-up, no card. ' +
-           'Open your avatar to see the current allowance. When credits are enabled, ' +
-           'one balance covers billable tools and the action shows its cost.',
-        }
-      : {
-            headline: 'Account allowance',
-            note:
-              'Signing in links your guest activity and keeps recent conversions on record. ' +
-              'Your current account allowance appears in the avatar menu. No card or subscription is required.',
-          }
-
-  /* Included with every way in — the plan's shape, no quotas quoted. */
-  const included = [
-    { b: `${toolCount}-tool catalogue`, s: 'converters, editors, and Document AI; availability is shown in each workspace' },
-    { b: 'A clear allowance', s: 'the account menu shows your balance; billable actions show their credit cost' },
-    { b: 'Clear file handling', s: 'retention varies by tool; editors may save work in your browser' },
-    { b: 'Bangla native', s: 'Unicode and Bijoy handled as first-class scripts' },
-  ]
-
-  /* The allowance, explained — derived wording only, no cap figures. */
-  const rules = [
-    {
-      title: 'The balance is live.',
-      desc:
-        'Your avatar opens the account balance. Once credit mode is enabled, ' +
-        'billable tools share that pool and show their cost before work starts. Legacy deployments keep their existing fair-use limits.',
-    },
-    {
-      title: 'Signing in links your work.',
-      desc:
-        'Guest and account allowances are configured separately. Signing in links guest spend once, ' +
-        'rather than adding an unused guest balance to your account. Your files are handled the same way.',
-    },
-    {
-      title: 'It refills on its own.',
-      desc:
-        'Settled spend returns as its rolling window expires; the account menu shows the next actual return. ' +
-        'Credits held for failed or refused work are released. Credits are a free-use allowance, not money.',
-    },
-  ]
-
-  // Reveal choreography: this page applies the reveal class properly.
-  useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
-    const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'))
-    if (!nodes.length) return
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      nodes.forEach((n) => (n.dataset.shown = 'true'))
-      return
-    }
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return
-          ;(entry.target as HTMLElement).dataset.shown = 'true'
-          observer.unobserve(entry.target)
-        })
-      },
-      { rootMargin: '0px 0px -12% 0px' },
-    )
-    nodes.forEach((n) => observer.observe(n))
-    return () => observer.disconnect()
-  }, [])
-
-  const plan = planFor(viewer)
+  const preview = access[viewer]
 
   return (
     <div className="home-page">
       <Topbar2 openFileHref="/" />
 
-      <main id="main-content" className={`${styles.page} ${monoClass}`} ref={rootRef}>
+      {/* The root layout owns the main landmark; this remains the skip-link target. */}
+      <div id="main-content" className={`${styles.page} ${fontClass}`} tabIndex={-1}>
         <div className={styles.shell}>
-
-          {/* ── HERO ─────────────────────────────────────────────────── */}
-          <section className={styles.hero}>
-            <p className={styles.eyebrow}>
-              Pricing <span className={styles.eyebrowSpan} lang="bn">· মূল্য</span>
-            </p>
-            <h1 className={styles.title}>
-              Free to use.
-              <span className={styles.titleAccent}>Fair by design.</span>
-            </h1>
-            <p className={styles.lede}>
-               Tools are free within the current allowance. Many support guest
-               use; some actions require an account. A higher-limit Pro plan is planned,
-              and it is not for sale.
-            </p>
-            <div className={styles.specStrip} aria-hidden="true">
-              <span className={styles.specItem}>{toolCount} INSTRUMENTS</span>
-              <span className={styles.specItem}>TOOL-SPECIFIC RETENTION</span>
-              <span className={styles.specItem}>NO CARD</span>
-            </div>
-          </section>
-
-          {/* ── THE PLATE · the one plan actually on offer ───────────── */}
-          <section className={`${styles.plate} ${styles.reveal}`} data-reveal aria-labelledby="plate-free-title">
-            <div className={styles.plateHead}>
-              <div>
-                <p className={styles.plateTag}>Plan · the only one today</p>
-                <h2 id="plate-free-title" className={styles.planName}>Free</h2>
-                <p className={styles.planNote}>The whole workshop, within a fair allowance.</p>
-              </div>
-              <div className={styles.priceBlock}>
-                <span className={styles.priceValue}>$0</span>
-                <span className={styles.priceMeta}>No card. Account needs vary by action.</span>
-              </div>
-            </div>
-
-            <div className={styles.plateRule} aria-hidden="true" />
-
-            {/* the plan readout — flip the state and the phrase rolls */}
-            <div className={styles.meterBlock}>
-              <div className={styles.meterHead}>
-                <span className={styles.meterLabel}>Show the plan for</span>
-                <div className={styles.seg} role="group" aria-label="Show the plan for">
-                  <button
-                    type="button"
-                    onClick={() => setViewer('guest')}
-                    aria-pressed={viewer === 'guest'}
-                    className={`${styles.segBtn}${viewer === 'guest' ? ` ${styles.segOn}` : ''}`}
-                  >
-                    Not signed in
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewer('account')}
-                    aria-pressed={viewer === 'account'}
-                    className={`${styles.segBtn}${viewer === 'account' ? ` ${styles.segOn}` : ''}`}
-                  >
-                    Free account
-                  </button>
-                </div>
-              </div>
-
-              <div className={styles.meterRow} aria-live="polite">
-                {/* keyed so each flip rolls the readout */}
-                <b key={viewer} className={styles.readoutPhrase}>{plan.headline}</b>
-                <p key={`${viewer}-note`} className={styles.stateNote}>{plan.note}</p>
-              </div>
-            </div>
-
-            <div className={styles.plateRule} aria-hidden="true" />
-
-            {/* the ledger — what the plan includes, however you walk in */}
-            <p className={styles.meterLabel}>Included, however you walk in</p>
-            <div className={styles.facts}>
-              {included.map((item) => (
-                <div className={styles.fact} key={item.b}>
-                  <b>{item.b}</b>
-                  <span>{item.s}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className={styles.plateCta}>
-              <Link href="/#heroFile" className={styles.btnPrimary}>Start with a file</Link>
-            </div>
-            <p className={styles.finePrint}>
-              The account control shows the current credit policy and balance.
-              Tool costs and allowances can change; the server validates each action.
-              No paid credit purchase or subscription is offered here.
-            </p>
-          </section>
-
-          {/* ── 01 · The meter, explained ────────────────────────────── */}
-          <section className={styles.section} aria-labelledby="meter-title">
-            <div className={`${styles.sectionHead} ${styles.reveal}`} data-reveal>
-              <span className={styles.sectionIndex}>01 · Credits</span>
-              <h2 id="meter-title" className={styles.sectionTitle}>The allowance, explained.</h2>
-            </div>
-            <div className={styles.rules}>
-              {rules.map((rule, i) => (
-                <div className={`${styles.rule} ${styles.reveal}`} data-reveal key={rule.title}>
-                  <span className={styles.ruleNum} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                  <div>
-                    <div className={styles.ruleTitle}>{rule.title}</div>
-                    <p className={styles.ruleDesc}>{rule.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ── 02 · The sealed plan ─────────────────────────────────── */}
-          <section className={styles.section} aria-labelledby="pro-title">
-            <div className={`${styles.sectionHead} ${styles.reveal}`} data-reveal>
-              <span className={styles.sectionIndex}>02 · On the bench</span>
-              <h2 id="pro-title" className={styles.sectionTitle}>Pro is planned. It is not for sale.</h2>
-            </div>
-            <div className={`${styles.sealed} ${styles.reveal}`} data-reveal>
-              <span className={styles.sealedTag}>
-                {lock}
-                Planned — no price set
-              </span>
-              <p className={styles.sealedBody}>
-                A higher-limit plan is being built. When it is real, its terms
-                will be written here first — until then, this page is the whole
-                story: free within the allowance, nothing else on sale.
+          <section className={styles.hero} aria-labelledby="pricing-title">
+            <div className={styles.intro}>
+              <p className={styles.eyebrow}><span className={styles.shortRule} aria-hidden="true" /> Pricing, with nothing to hide</p>
+              <h1 id="pricing-title" className={styles.title}>
+                Good work.
+                <span>Simply free.</span>
+              </h1>
+              <p className={styles.lede}>
+                Convert, edit, and make sense of your documents.
+                A thoughtful workspace, free within your allowance.
               </p>
-              <Link href="/contact-us" className={styles.sealedLink}>
-                Tell us what you would need from it
-                <span aria-hidden="true">{arrow}</span>
-              </Link>
+              <a href="#free-access" className={styles.textLink}>
+                Find your way in <Arrow down />
+              </a>
+
+              <div className={styles.catalogueNote}>
+                <div className={styles.documentMark} aria-hidden="true">
+                  <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+                    <path className={styles.documentBack} d="M10 13h28l10 10v33H10z" />
+                    <path d="M20 5h25l11 11v34H20zM44 5v12h12M28 27h20M28 34h20M28 41h12" />
+                  </svg>
+                </div>
+                <div>
+                  <p><strong>{toolCount} tools.</strong> One place to begin.</p>
+                  <span>For PDFs, images, text, and the ideas inside.</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.folio}>
+              <section className={styles.plan} aria-labelledby="free-plan-title">
+                <div className={styles.planHeading}>
+                  <div>
+                    <p className={styles.label}>Your everyday workspace</p>
+                    <h2 id="free-plan-title">Free</h2>
+                  </div>
+                  <span className={styles.available}><span aria-hidden="true" /> Available now</span>
+                </div>
+
+                <div className={styles.priceRow}>
+                  <p className={styles.price}><span>$</span>0</p>
+                  <p className={styles.priceNote}>No subscription.<br />No card required.</p>
+                </div>
+
+                <p className={styles.planDescription}>Everything starts with a little room to work.</p>
+                <ul className={styles.included}>
+                  <li><Check /><span>A catalogue of {toolCount} document tools</span></li>
+                  <li><Check /><span>Guest access on supported tools</span></li>
+                  <li><Check /><span>A clear, current free-use allowance</span></li>
+                </ul>
+                <p className={styles.planCaveat}>Availability and account requirements vary by tool.</p>
+
+                <Link href="/#heroFile" className={styles.primary}>
+                  Start with a file <Arrow />
+                </Link>
+                <p className={styles.planFooter}>No checkout. Just your next document.</p>
+              </section>
+              <p className={styles.folioCaption}><span aria-hidden="true" /> The free plan. Not a free trial.</p>
             </div>
           </section>
 
-          <p className={styles.closing}>
-            Questions about how limits work? See the <Link href="/faq">FAQ</Link>,
-            or read how we handle your files in the{' '}
-            <Link href="/privacy">privacy policy</Link>.
-          </p>
+          <section className={styles.toolIndex} aria-labelledby="tool-index-title">
+            <div className={styles.indexHeading}>
+              <h2 id="tool-index-title" className={styles.label}>Inside the catalogue</h2>
+              <Link href="/#tools" className={styles.textLink}>Explore the tools <Arrow /></Link>
+            </div>
+            <ul className={styles.toolList}>
+              <li><span className={styles.format} aria-hidden="true">PDF <span>↔</span> DOCX</span><h3>Convert &amp; organise</h3><p>Change formats. Merge, split, and compress.</p></li>
+              <li><span className={styles.format} aria-hidden="true">Aa <span>/</span> <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 4h16v16H4zM4 16l5-6 4 4 3-3 4 5" /><circle cx="16" cy="8" r="1.5" /></svg></span><h3>Edit &amp; refine</h3><p>Work with your PDFs and images.</p></li>
+              <li><span className={styles.format} aria-hidden="true">DOC <span>→</span> AI</span><h3>Read &amp; understand</h3><p>Extract text. Ask more of your documents.</p></li>
+              <li><span className={styles.format} aria-hidden="true">A <span>/</span> <span lang="bn">অ</span></span><h3>Work across scripts</h3><p>Bangla Unicode and Bijoy tools, too.</p></li>
+            </ul>
+            <p className={styles.indexNote}>Check each workspace for current availability, action costs, and account requirements.</p>
+          </section>
 
+          <section id="free-access" className={styles.accessSection} aria-labelledby="access-title">
+            <div className={styles.sectionIntro}>
+              <p className={styles.eyebrow}>Same free plan. Different starting points.</p>
+              <h2 id="access-title" className={styles.sectionTitle}>Come as you are.<br />Make yourself at home.</h2>
+              <p>Start as a guest or use a free account. Compare how access works, without changing your account.</p>
+              <a href="#pricing-questions" className={styles.textLink}>How the allowance works <Arrow down /></a>
+            </div>
+
+            <div className={styles.accessPanel}>
+              <div className={styles.segment} role="group" aria-label="Compare free access">
+                {(['guest', 'account'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={styles.segmentButton}
+                    aria-pressed={viewer === mode}
+                    aria-controls="access-preview"
+                    onClick={() => setViewer(mode)}
+                  >
+                    {access[mode].label}
+                  </button>
+                ))}
+              </div>
+              <div id="access-preview" className={styles.accessPreview} aria-live="polite" aria-atomic="true">
+                <div key={viewer} className={styles.accessCopy}>
+                  <p className={styles.label}>{preview.label}</p>
+                  <h3>{preview.title}</h3>
+                  <p className={styles.accessDescription}>{preview.description}</p>
+                  <dl className={styles.accessDetails}>
+                    {preview.rows.map(([label, value]) => (
+                      <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+                    ))}
+                  </dl>
+                </div>
+              </div>
+              <p className={styles.accessNote}>Your avatar menu shows your current allowance. Signing in does not guarantee a larger one.</p>
+            </div>
+          </section>
+
+          <div className={styles.detailsGrid}>
+            <section className={styles.pro} aria-labelledby="pro-title">
+              <p className={styles.eyebrow}>Looking ahead</p>
+              <div className={styles.proHeading}><h2 id="pro-title">Pro</h2><span className={styles.planned}>Planned</span></div>
+              <p className={styles.proStatement}>A little more<br /> room to grow.</p>
+              <p className={styles.proDescription}>A higher-limit plan is planned for bigger workflows. It is not for sale, and no price or launch date has been set.</p>
+              <div className={styles.proRule} aria-hidden="true" />
+              <p className={styles.proPrompt}>Help shape what comes next.</p>
+              <Link href="/contact-us" className={styles.textLink}>Tell us what you need <Arrow /></Link>
+            </section>
+
+            <section id="pricing-questions" className={styles.faq} aria-labelledby="questions-title">
+              <p className={styles.eyebrow}>Good questions. Clear answers.</p>
+              <h2 id="questions-title" className={styles.sectionTitle}>Know where you stand.</h2>
+              <div className={styles.questions}>
+                {questions.map(({ question, answer }) => (
+                  <details className={styles.question} key={question}>
+                    <summary>{question}<span className={styles.plus} aria-hidden="true" /></summary>
+                    <div className={styles.answer}><p>{answer}</p>{question === 'What happens to my files?' && <Link href="/privacy" className={styles.inlineLink}>Read the privacy policy <Arrow /></Link>}</div>
+                  </details>
+                ))}
+              </div>
+              <p className={styles.faqFooter}>A question we haven&apos;t covered? <Link href="/faq">Visit the FAQ</Link> or <Link href="/contact-us">talk to us</Link>.</p>
+            </section>
+          </div>
         </div>
-      </main>
+      </div>
 
       <HomeFooter />
     </div>

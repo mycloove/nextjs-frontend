@@ -1,4 +1,4 @@
-import { IBM_Plex_Mono } from "next/font/google";
+import { IBM_Plex_Mono, Syne } from "next/font/google";
 import { pageMetadata } from "@/lib/metadata";
 
 import { TOOL_CATALOG } from "@/lib/usage/catalog";
@@ -12,6 +12,12 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+const displayFont = Syne({
+  subsets: ["latin"],
+  variable: "--pr-font-display",
+  display: "swap",
+});
+
 export const metadata = pageMetadata(
   "/pricing",
   "Pricing",
@@ -19,12 +25,11 @@ export const metadata = pageMetadata(
 );
 
 export default function PricingPage() {
-  // IBM Plex Mono is a register decision for this page's console readouts
-  // (module-local: the variable mounts on the pricing root only).
+  // Self-host the house display face and readout font on this route only.
   return (
     <PricingClient
       toolCount={TOOL_CATALOG.length}
-      monoClass={plexMono.variable}
+      fontClass={`${plexMono.variable} ${displayFont.variable}`}
     />
   );
 }
