@@ -12,6 +12,7 @@
     "test:pdf-tools": "node --experimental-strip-types --test lib/pdf/*.test.ts features/merge-pdf/server/*.test.ts features/merge-pdf/components/parts/*.test.ts features/split-pdf/server/*.test.ts features/rotate-pdf/server/*.test.ts features/compress-pdf/server/*.test.ts",
     "test:mr-markdown": "node --experimental-strip-types --test components/PDFToMarkdown/merge/*.test.ts components/PDFToMarkdown/utils.test.ts components/PDFToMarkdown/settings/connections/*.test.ts",
     "mr-markdown:unit": "npm run test:mr-markdown",
+    "test:mr-resume": "node --experimental-strip-types --test --test-reporter=spec features/mr-resume/components/*.test.ts",
     "test:ai": "node --experimental-strip-types --test lib/ai/*.test.ts",
     "test:credits": "node --experimental-sqlite --experimental-strip-types --test lib/usage/credit-policy.test.ts lib/usage/credit-success.test.ts lib/usage/remaining.test.ts lib/usage/credit-store.test.ts",
     "test:integrations": "node --experimental-strip-types --test lib/integrations/*.test.ts lib/integrations/github/*.test.ts",

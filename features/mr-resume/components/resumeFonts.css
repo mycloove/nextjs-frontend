@@ -1,0 +1,96 @@
+/* Unmodified, complete Bengali/Latin fonts. CSS-only aliases isolate these faces
+   from every other module. Sources and OFL notices are in resumeFonts.ts/fonts. */
+@font-face {
+  font-family: 'Mr Resume Hind Siliguri';
+  src: url('./fonts/hind-siliguri/HindSiliguri-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mr Resume Hind Siliguri';
+  src: url('./fonts/hind-siliguri/HindSiliguri-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mr Resume Noto Serif Bengali';
+  src: url('./fonts/noto-serif-bengali/NotoSerifBengali-Variable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-stretch: 62.5% 100%;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Tiro ships only genuine 400 normal/italic cuts; there is no bold face. */
+@font-face {
+  font-family: 'Mr Resume Tiro Bangla';
+  src: url('./fonts/tiro-bangla/TiroBangla-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mr Resume Tiro Bangla';
+  src: url('./fonts/tiro-bangla/TiroBangla-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mr Resume Baloo Da 2';
+  src: url('./fonts/baloo-da-2/BalooDa2-Variable.ttf') format('truetype');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mr Resume Anek Bangla';
+  src: url('./fonts/anek-bangla/AnekBangla-Variable.ttf') format('truetype');
+  font-weight: 100 800;
+  font-stretch: 75% 125%;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Latin Modern carries the LaTeX-look template: four complete text cuts
+   (Regular/Bold/Italic/BoldItalic) under the GUST Font License in
+   fonts/latin-modern/LICENSE.txt. Bengali writing falls through to Noto Sans
+   Bengali without ever swapping the face. */
+@font-face {
+  font-family: 'Mr Resume Latin Modern';
+  src: url('./fonts/latin-modern/LatinModern-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mr Resume Latin Modern';
+  src: url('./fonts/latin-modern/LatinModern-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mr Resume Latin Modern';
+  src: url('./fonts/latin-modern/LatinModern-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mr Resume Latin Modern';
+  src: url('./fonts/latin-modern/LatinModern-BoldItalic.ttf') format('truetype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}

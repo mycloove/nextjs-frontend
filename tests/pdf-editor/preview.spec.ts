@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import path from 'node:path';
+import { allowServerProcessing } from './processing-consent';
 
 /**
  * The export preview must rebuild on a committed edit.
@@ -65,6 +66,7 @@ test('a text edit rebuilds the rendered preview', async ({ page }, testInfo) => 
   const before = await previewSignature(page);
   expect(before).not.toBeNull();
   expect(before!.width).toBeGreaterThan(300);
+  await allowServerProcessing(page);
 
   await page.getByTestId('pdf-tool-editText').click();
   const textarea = page.getByTestId('pdf-original-text-1-0');

@@ -56,8 +56,8 @@ export type PdfEditorExportFingerprint = string;
  * preview presented as truth.
  */
 export type PdfEditorExportFingerprintInput = {
-  /** Identity of the open file. `null` only when no document is loaded. */
-  file: { name: string; size: number; lastModified: number } | null;
+  /** Metadata is not identity: every opened document needs its own session id. */
+  file: { name: string; size: number; lastModified: number; sessionId: number } | null;
   /** Target page size key — changes page boxes and the fit scale. */
   pageSize: string;
   /**
@@ -163,6 +163,26 @@ export function createPdfEditorExportBuildCache<T>(
       return entries.size;
     },
   };
+}
+
+/** Share in-flight/successful work, but never turn a failed attempt into a permanent failure. */
+export async function getOrBuildPdfEditorExport<T extends { ok: boolean }>(
+  cache: PdfEditorExportBuildCache<Promise<T>>,
+  fingerprint: PdfEditorExportFingerprint,
+  build: () => Promise<T>,
+): Promise<T> {
+  const cached = cache.get(fingerprint);
+  if (cached) return cached;
+  const pending = Promise.resolve().then(build);
+  cache.set(fingerprint, pending);
+  try {
+    const result = await pending;
+    if (!result.ok && cache.get(fingerprint) === pending) cache.delete(fingerprint);
+    return result;
+  } catch (error) {
+    if (cache.get(fingerprint) === pending) cache.delete(fingerprint);
+    throw error;
+  }
 }
 
 /**

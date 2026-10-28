@@ -57,7 +57,7 @@ test('leaving Edit text returns the rail to the document, so Page Size stays rea
   await upload(page);
   await expect(page.getByTestId('pdf-page-size')).toHaveValue('original');
   await selectFirstTextBlock(page);
-  await expect(railLabel(page)).toHaveText('Text');
+  await expect(railLabel(page)).toHaveText('Original text');
   await expect(page.getByTestId('pdf-page-size')).toHaveCount(0);
   await expect(page.getByTestId('pdf-status-bar')).toContainText('Text selected');
 
@@ -76,7 +76,7 @@ test('a held tool with its own panel is never shadowed by an earlier text select
 
   await upload(page);
   await selectFirstTextBlock(page);
-  await expect(railLabel(page)).toHaveText('Text');
+  await expect(railLabel(page)).toHaveText('Original text');
 
   // Sign opened its own panel before this fix only when no block had ever
   // been selected — the stale key used to swallow it.
@@ -102,7 +102,7 @@ test('an object selection is released by clicking the page, bringing the documen
   // Inserting returns to Select and the new object stays selected. An emoji is
   // a text object in this engine, so its panel is the text styles plus the
   // position & size section — and the document panel is gone while it is held.
-  await expect(railLabel(page)).toHaveText('Text');
+  await expect(railLabel(page)).toHaveText('Added text');
   await expect(page.getByTestId('pdf-object-geometry')).toBeVisible();
   await expect(page.getByTestId('pdf-page-size')).toHaveCount(0);
 
@@ -121,7 +121,7 @@ test('a text block on another page is not claimed as selected', async ({ page },
 
   await upload(page, 'phase-1e-complex.pdf');
   await selectFirstTextBlock(page);
-  await expect(railLabel(page)).toHaveText('Text');
+  await expect(railLabel(page)).toHaveText('Original text');
 
   // Changing the page takes the block off screen. The rail must fall back to
   // the page the user is actually on rather than keep styling the block the

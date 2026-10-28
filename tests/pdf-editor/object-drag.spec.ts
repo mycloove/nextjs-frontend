@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { PDFDocument } from 'pdf-lib';
 
 /**
  * Canvas-object coordinates are page points, not screen pixels.
@@ -93,6 +95,183 @@ async function emojiBounds(page: Page, selector: string) {
     };
   }, base64);
 }
+
+async function addText(page: Page, value: string) {
+  await expect(page.getByTestId('pdf-tool-text')).toBeEnabled({ timeout: 30_000 });
+  await page.getByTestId('pdf-tool-text').click();
+  await page.keyboard.insertText(value);
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('pdf-object-geometry')).toBeVisible();
+}
+
+async function downloadedText(page: Page, output: string) {
+  const pending = page.waitForEvent('download');
+  await page.getByTestId('pdf-export-button').click();
+  await (await pending).saveAs(output);
+  const bytes = new Uint8Array(await readFile(output));
+  expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const task = pdfjs.getDocument({ data: bytes, useSystemFonts: true });
+  const doc = await task.promise;
+  try {
+    const content = await (await doc.getPage(1)).getTextContent();
+    return content.items.map(item => 'str' in item ? item.str : '').join(' ');
+  } finally {
+    await task.destroy();
+  }
+}
+
+test('copy, duplicate, undo, and locked hidden recovery preserve added text', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Canvas command integration.');
+  await uploadPlain(page);
+  await addText(page, 'COPIED EDITOR TEXT');
+  const rows = page.getByTestId('pdf-page-layers').getByRole('listitem');
+  const controls = page.getByTestId('pdf-object-geometry');
+  await controls.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  await expect(rows).toHaveCount(2);
+  await controls.getByRole('button', { name: 'Copy', exact: true }).click();
+  await page.getByRole('button', { name: 'Paste object on this page', exact: true }).click();
+  await expect(rows).toHaveCount(3);
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(rows).toHaveCount(2);
+  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  await expect(rows).toHaveCount(3);
+  await rows.first().locator('.pe-layer-name').click();
+  await controls.getByRole('button', { name: 'Lock', exact: true }).click();
+  await controls.getByRole('button', { name: 'Hide', exact: true }).click();
+  await expect(rows.getByRole('button', { name: /^Show / })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Close editor', exact: true }).click();
+  await expect(page.getByTestId('pdf-upload-input')).toHaveAttribute('data-editor-ready', 'true');
+  await page.reload();
+  await expect(page.getByTestId('pdf-upload-input')).toHaveAttribute('data-editor-ready', 'true', { timeout: 30_000 });
+  await page.getByTestId('pdf-recovery-resume').click();
+  await expect(rows).toHaveCount(3, { timeout: 30_000 });
+  await expect(rows.getByRole('button', { name: /^Unlock / })).toHaveCount(1);
+  await expect(rows.getByRole('button', { name: /^Show / })).toHaveCount(1);
+  const text = await downloadedText(page, testInfo.outputPath('restored-objects.pdf'));
+  expect(text.match(/COPIED EDITOR TEXT/g)).toHaveLength(2);
+});
+
+test('a completed clipboard copy can be pasted into a different PDF', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Clipboard ownership integration.');
+  await uploadPlain(page);
+  await addText(page, 'CROSS DOCUMENT COPY');
+  await page.getByTestId('pdf-object-geometry').getByRole('button', { name: 'Copy', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Paste object on this page', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Close editor', exact: true }).click();
+  const target = await PDFDocument.create();
+  target.addPage([612, 792]).drawText('TARGET DOCUMENT', { x: 72, y: 700 });
+  await page.getByTestId('pdf-upload-input').setInputFiles({
+    name: 'clipboard-target.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await target.save()),
+  });
+  await expect(page.getByTestId('pdf-tool-text')).toBeEnabled({ timeout: 30_000 });
+  await expect(page.getByTestId('pdf-page-layers').getByRole('listitem')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Paste object on this page', exact: true }).click();
+  await expect(page.getByTestId('pdf-page-layers').getByRole('listitem')).toHaveCount(1);
+  const text = await downloadedText(page, testInfo.outputPath('clipboard-target.pdf'));
+  expect(text).toContain('TARGET DOCUMENT');
+  expect(text.match(/CROSS DOCUMENT COPY/g)).toHaveLength(1);
+});
+
+async function pageColor(page: Page, selector: string) {
+  const png = (await page.locator(selector).screenshot()).toString('base64');
+  return page.evaluate(async encoded => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${encoded}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(image, 0, 0);
+    const [r, , b] = ctx.getImageData(Math.round(image.width * 210 / 612), Math.round(image.height * 250 / 792), 1, 1).data;
+    return r > 200 && b < 70 ? 'red' : b > 200 && r < 70 ? 'blue' : 'other';
+  }, png);
+}
+
+test('copied groups ungroup into independently selectable text objects', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Group identity and history integration.');
+  await uploadPlain(page);
+  await addText(page, 'GROUP COPY TEXT');
+  const controls = page.getByTestId('pdf-object-geometry');
+  const rows = page.getByTestId('pdf-page-layers').getByRole('listitem');
+  const geometry = await page.locator('.pe-geometry-grid input').evaluateAll(inputs => inputs.map(input => Number((input as HTMLInputElement).value)));
+  await controls.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  await expect(rows).toHaveCount(2);
+  await page.getByTestId('pdf-tool-select').click();
+  const frame = await page.locator('.pe-page-frame').boundingBox();
+  expect(frame).not.toBeNull();
+  const point = (y: number) => ({ x: frame!.x + frame!.width * (geometry[0] + 50) / 612, y: frame!.y + frame!.height * y / 792 });
+  const first = point(geometry[1] + Math.min(4, geometry[3] / 4));
+  const second = point(geometry[1] + 12 + geometry[3] - 3);
+  await page.mouse.click(first.x, first.y);
+  await page.keyboard.down('Shift');
+  await page.mouse.click(second.x, second.y);
+  await page.keyboard.up('Shift');
+  await expect(controls.getByRole('button', { name: 'Group', exact: true })).toBeEnabled();
+  await controls.getByRole('button', { name: 'Group', exact: true }).click();
+  await expect(rows).toHaveCount(1);
+  await controls.getByRole('button', { name: 'Duplicate', exact: true }).click();
+  await expect(rows).toHaveCount(2);
+  await controls.getByRole('button', { name: 'Ungroup', exact: true }).click();
+  await expect(rows).toHaveCount(3);
+  await rows.last().locator('.pe-layer-name').click();
+  await controls.getByRole('button', { name: 'Ungroup', exact: true }).click();
+  await expect(rows).toHaveCount(4);
+  const positions: number[] = [];
+  for (let index = 0; index < 4; index += 1) {
+    await rows.nth(index).locator('.pe-layer-name').click();
+    positions.push(Math.round(Number(await page.locator('.pe-geometry-grid input').first().inputValue())));
+  }
+  expect(new Set(positions).size).toBeGreaterThanOrEqual(3);
+  const text = await downloadedText(page, testInfo.outputPath('grouped-copy.pdf'));
+  expect(text.match(/GROUP COPY TEXT/g)).toHaveLength(4);
+});
+
+test('image layer order survives V5 undo, redo, and actual export preview', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Image restoration and stacking integration.');
+  await uploadPlain(page);
+  const images = await page.evaluate(() => ['#ff0000', '#0000ff'].map(color => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 60;
+    canvas.height = 40;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 60, 40);
+    return canvas.toDataURL('image/png').split(',')[1];
+  }));
+  await page.getByRole('button', { name: 'Insert', exact: true }).click();
+  await page.getByTestId('pdf-tool-image').click();
+  for (const [index, image] of images.entries()) {
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Upload Image', exact: true }).click();
+    await (await chooser).setFiles({ name: `image-${index}.png`, mimeType: 'image/png', buffer: Buffer.from(image, 'base64') });
+    await expect(page.getByTestId('pdf-page-layers').getByRole('listitem')).toHaveCount(index + 1);
+    const fields = page.locator('.pe-geometry-grid input');
+    await expect(fields).toHaveCount(4);
+    for (const [field, value] of [140, 200, 140, 100].entries()) {
+      await fields.nth(field).fill(String(value));
+      await fields.nth(field).press('Enter');
+    }
+  }
+  const rows = page.getByTestId('pdf-page-layers').getByRole('listitem');
+  await expect(rows).toHaveCount(2);
+  const order = await rows.locator('.pe-layer-name').allTextContents();
+  await expect.poll(() => pageColor(page, '.pe-page-frame')).toBe('blue');
+  await rows.first().getByRole('button', { name: / backward$/ }).click();
+  await expect(rows.locator('.pe-layer-name')).toHaveText([...order].reverse());
+  await expect.poll(() => pageColor(page, '.pe-page-frame')).toBe('red');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect.poll(() => pageColor(page, '.pe-page-frame')).toBe('blue');
+  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  await expect.poll(() => pageColor(page, '.pe-page-frame')).toBe('red');
+  await page.getByRole('button', { name: 'Preview final PDF', exact: true }).click();
+  await expect(page.locator('.pe-preview-status')).toHaveCount(1, { timeout: 10_000 });
+  await expect(page.locator('.pe-preview-status')).toHaveCount(0, { timeout: 60_000 });
+  await expect(page.locator('.pe-preview-blocked')).toHaveCount(0);
+  expect(await pageColor(page, '.pe-preview-canvas')).toBe('red');
+  await downloadedText(page, testInfo.outputPath('ordered-images.pdf'));
+});
 
 test('an inserted object drags to the bottom-right at Fit page', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'Pointer-driven canvas test.');

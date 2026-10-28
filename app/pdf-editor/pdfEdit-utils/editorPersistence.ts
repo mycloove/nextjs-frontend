@@ -49,7 +49,7 @@ export type PdfEditorDraftV3 = PdfEditorDraft & { version: 3 };
 
 export type DraftSaveResult =
   | { ok: true; savedAt: number }
-  | { ok: false; reason: 'unavailable' | 'quota' | 'invalid'; message: string };
+  | { ok: false; reason: 'unavailable' | 'quota' | 'invalid' | 'cancelled'; message: string };
 
 export interface PdfEditorDraftRecord {
   key: string;
@@ -339,9 +339,14 @@ async function runTransaction<T>(database: IDBDatabase, storeNames: string[], mo
 export async function savePdfEditorDraftAsync(
   draft: PdfEditorDraft,
   sourceFile?: File,
+  isCurrent: () => boolean = () => true,
 ): Promise<DraftSaveResult> {
   try {
     const database = await openDraftDatabase();
+    if (!isCurrent()) {
+      database?.close();
+      return { ok: false, reason: 'cancelled', message: 'This recovery save was cancelled.' };
+    }
     if (database) {
       const record: PdfEditorDraftRecord = {
         key: draft.documentId,
@@ -385,6 +390,70 @@ export async function savePdfEditorDraftAsync(
     reason: 'unavailable',
     message: 'This browser could not save the local draft.',
   };
+}
+
+/** One queue survives document replacement; clearing invalidates even delayed opens. */
+export function createPdfEditorRecoveryQueue() {
+  let tail: Promise<unknown> = Promise.resolve();
+  let generation = 0;
+  let enabled = true;
+  return {
+    reset() { generation += 1; enabled = true; },
+    isEnabled() { return enabled; },
+    save(run: (isCurrent: () => boolean) => Promise<boolean>) {
+      const owner = generation;
+      const isCurrent = () => enabled && owner === generation;
+      const pending = tail.catch(() => undefined).then(() => isCurrent() ? run(isCurrent) : false);
+      tail = pending;
+      return pending;
+    },
+    clear<T>(remove: () => Promise<T>) {
+      enabled = false;
+      generation += 1;
+      const pending = tail.catch(() => undefined).then(remove);
+      tail = pending;
+      return pending;
+    },
+  };
+}
+
+/** Called within one readwrite transaction, including the conditional latest delete. */
+export async function removePdfEditorRecoveryRecords(documentId: string, stores: {
+  readLatest: () => Promise<PdfEditorDraftRecord | undefined>;
+  deleteDraft: (key: string) => Promise<unknown>;
+  deleteSource: (key: string) => Promise<unknown>;
+}) {
+  const latest = await stores.readLatest();
+  await stores.deleteDraft(documentId);
+  await stores.deleteSource(documentId);
+  if (latest?.draft.documentId === documentId) await stores.deleteDraft(LATEST_DRAFT_KEY);
+}
+
+export async function deletePdfEditorRecovery(documentId: string, storage?: Storage | (() => Storage)): Promise<
+  { ok: true } | { ok: false; message: string }
+> {
+  let failed = false;
+  try {
+    const database = await openDraftDatabase();
+    if (database) {
+      await runTransaction(database, [DRAFT_STORE_NAME, SOURCE_STORE_NAME], 'readwrite', async transaction => {
+        const drafts = transaction.objectStore(DRAFT_STORE_NAME);
+        const sources = transaction.objectStore(SOURCE_STORE_NAME);
+        await removePdfEditorRecoveryRecords(documentId, {
+          readLatest: () => requestToPromise(drafts.get(LATEST_DRAFT_KEY)),
+          deleteDraft: key => requestToPromise(drafts.delete(key)),
+          deleteSource: key => requestToPromise(sources.delete(key)),
+        });
+      });
+    }
+  } catch { failed = true; }
+  try {
+    // Filename-keyed legacy drafts may belong to another PDF. Never wipe them here.
+    (typeof storage === 'function' ? storage() : storage)?.removeItem(getDraftStorageKey(documentId));
+  } catch { failed = true; }
+  return failed
+    ? { ok: false, message: 'Recovery is disabled for this open PDF, but some stored data could not be removed. Retry clearing it. Your current work remains open.' }
+    : { ok: true };
 }
 
 export async function loadPdfEditorDraftAsync(documentId: string, storage?: Storage) {

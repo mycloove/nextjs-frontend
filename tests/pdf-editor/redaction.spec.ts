@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { expect, test, type Page } from '@playwright/test';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { allowServerProcessing } from './processing-consent';
 
 const fixtures = path.join(__dirname, 'fixtures');
 
@@ -31,6 +32,7 @@ async function uploadFixture(page: Page, name: string) {
   // layer can render one frame before the zoom changes, and a box measured in
   // the old zoom is not the box the click will use.
   await page.waitForTimeout(700);
+  await allowServerProcessing(page);
 }
 
 async function uploadPlain(page: Page) {

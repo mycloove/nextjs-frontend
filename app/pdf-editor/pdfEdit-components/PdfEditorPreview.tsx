@@ -65,6 +65,8 @@ interface Props {
    * moving.
    */
   resizeEpoch?: number;
+  onRequestProcessing: () => void;
+  onReviewExport: () => void;
   renderExportedPageToCanvas: (
     page: number,
     target: HTMLCanvasElement,
@@ -79,7 +81,7 @@ interface Props {
         disclosures: string[];
         pendingConfirmation: PdfExportImpact | null;
       }
-    | { ok: false; message: string; impact?: PdfExportImpact; consent?: ServerTextEditConsentRequest }
+    | { ok: false; message: string; impact?: PdfExportImpact; consent?: ServerTextEditConsentRequest; processingRequired?: boolean }
   >;
 }
 
@@ -119,7 +121,7 @@ function nextPreviewZoomStep(from: number, direction: 1 | -1): number {
 
 type PreviewOutcome =
   | { kind: 'ready'; width: number; height: number; disclosures: string[]; pendingConfirmation: PdfExportImpact | null }
-  | { kind: 'blocked'; message: string; impact?: PdfExportImpact; recoverable: boolean };
+  | { kind: 'blocked'; message: string; impact?: PdfExportImpact; recoverable: boolean; processingRequired?: boolean };
 
 export default function PdfEditorPreview({
   page,
@@ -129,12 +131,15 @@ export default function PdfEditorPreview({
   dprEpoch,
   resizeEpoch,
   renderExportedPageToCanvas,
+  onRequestProcessing,
+  onReviewExport,
 }: Props) {
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [outcome, setOutcome] = useState<PreviewOutcome | null>(null);
   const [zoom, setZoom] = useState<PreviewZoom>('fit');
+  const [retryEpoch, setRetryEpoch] = useState(0);
 
   /**
    * The page the panel shows.
@@ -291,6 +296,7 @@ export default function PdfEditorPreview({
             message: result.message,
             impact: result.impact,
             recoverable: Boolean(result.consent),
+            processingRequired: result.processingRequired,
           });
         })
         .catch((error: unknown) => {
@@ -317,7 +323,7 @@ export default function PdfEditorPreview({
       window.cancelAnimationFrame(clearStaleFrame);
       window.clearTimeout(timer);
     };
-  }, [editVersion, displayPage, outputScale, resizeEpoch, dprEpoch]);
+  }, [editVersion, displayPage, outputScale, resizeEpoch, dprEpoch, retryEpoch]);
 
   /**
    * Fit is a layout relationship, not a stop on the ladder, so a ± click from
@@ -570,14 +576,25 @@ export default function PdfEditorPreview({
 
           {outcome?.kind === 'blocked' && (
             <div className="pe-preview-blocked" role="status">
-              <strong>{outcome.impact?.title ?? 'This document cannot be exported yet'}</strong>
+              <strong>{outcome.processingRequired ? 'Server permission required' : outcome.impact?.title ?? 'This document cannot be exported yet'}</strong>
               <p>{outcome.message}</p>
+              {outcome.processingRequired
+                ? <button type="button" className="pe-preflight-action" data-testid="pdf-preview-processing" onClick={onRequestProcessing}>Review processing permission</button>
+                : outcome.recoverable
+                  ? <button type="button" className="pe-preflight-action" onClick={onReviewExport}>Review export consequences</button>
+                  : <button type="button" className="pe-preflight-action" disabled={isRendering} onClick={() => setRetryEpoch(epoch => epoch + 1)}>Retry preview</button>}
             </div>
           )}
         </div>
 
         {isRendering && <div className="pe-preview-status">Building export preview...</div>}
       </div>
+      {readyOutcome && !isRendering && (readyOutcome.disclosures.length > 0 || readyOutcome.pendingConfirmation) && (
+        <div className="pe-preview-notice" role="status" data-testid="pdf-preview-disclosures">
+          {readyOutcome.disclosures.map(note => <p key={note}>{note}</p>)}
+          {readyOutcome.pendingConfirmation && <p>Download still requires review: {readyOutcome.pendingConfirmation.summary}</p>}
+        </div>
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ interface Props {
   currentPage: number;
   totalPages: number;
   pagePlan: PdfEditorPagePlan | null;
+  annotationPages?: readonly number[];
   outline: PdfEditorOutlineEntry[];
   comments: PdfEditorCommentEntry[];
   onTabChange: (tab: PdfEditorNavigationTab) => void;
@@ -92,6 +93,7 @@ function OrganizerThumb({
   onSelect,
   onOperation,
   renderThumbnail,
+  hasAnnotations,
 }: {
   entry: PdfEditorPageEntry;
   position: number;
@@ -100,6 +102,7 @@ function OrganizerThumb({
   onSelect: () => void;
   onOperation: (operation: PdfEditorPageOperation) => void;
   renderThumbnail: Props['renderThumbnail'];
+  hasAnnotations: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -183,14 +186,16 @@ function OrganizerThumb({
           type="button"
           className="pe-organizer-action"
           aria-label={`Rotate output page ${position} left`}
-          title="Rotate left"
+          title={hasAnnotations ? 'Native annotations require unrotated output. Only a return to zero rotation is supported.' : 'Rotate left'}
+          disabled={hasAnnotations && (entry.rotation + 270) % 360 !== 0}
           onClick={() => onOperation({ type: 'rotate', pages: [position], delta: -90 })}
         >↺</button>
         <button
           type="button"
           className="pe-organizer-action"
           aria-label={`Rotate output page ${position} right`}
-          title="Rotate right"
+          title={hasAnnotations ? 'Native annotations require unrotated output. Only a return to zero rotation is supported.' : 'Rotate right'}
+          disabled={hasAnnotations && (entry.rotation + 90) % 360 !== 0}
           onClick={() => onOperation({ type: 'rotate', pages: [position], delta: 90 })}
         >↻</button>
         <button
@@ -517,6 +522,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
                   <OrganizerThumb
                     key={entry.id}
                     entry={entry}
+                    hasAnnotations={props.annotationPages?.includes(entry.sourcePage) ?? false}
                     position={position}
                     count={props.pagePlan?.entries.length ?? 0}
                     selected={props.currentPage === position}

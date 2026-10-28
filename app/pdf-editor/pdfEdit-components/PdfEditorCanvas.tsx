@@ -1131,7 +1131,7 @@ export default function PdfEditorCanvas({
             <div
               key={`${dragKey}:${axis}`}
               data-testid={`pdf-text-resize-${axis}-${block.page}-${block.index}`}
-              title={axis === 'x' ? 'Drag to widen this box' : axis === 'y' ? 'Drag to make this box taller' : 'Drag to resize this box'}
+              title="Resize the editing area only; this does not resize the PDF text layout"
               onPointerDown={(event) => beginTextControlResize(block, axis, layout, event)}
               onPointerMove={continueTextControlResize}
               onPointerUp={endTextControlResize}
@@ -1172,6 +1172,7 @@ export default function PdfEditorCanvas({
         <textarea
           ref={(el) => { textAreaRefs.current[key] = el; }}
           data-testid={`pdf-original-text-${block.page}-${block.index}`}
+          aria-label={`Original text editing area, page ${block.page}, block ${block.index + 1}`}
           data-pdf-text="true"
           data-page={block.page}
           data-index={block.index}

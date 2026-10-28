@@ -14,6 +14,7 @@ interface Props {
   isExporting: boolean;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
   saveMessage: string | null;
+  recoveryDisabled?: boolean;
   onPreviewToggle: () => void;
   onExport:    () => void;
   onClose:     () => void;
@@ -22,9 +23,9 @@ interface Props {
 
 export default function PdfEditorTopbar({
   fileName,
-  isExporting, saveStatus, saveMessage, onPreviewToggle, onExport, onClose, isPreviewOpen,
+  isExporting, saveStatus, saveMessage, recoveryDisabled, onPreviewToggle, onExport, onClose, isPreviewOpen,
 }: Props) {
-  const saveLabel = saveStatus === 'error'
+  const saveLabel = recoveryDisabled ? 'Recovery disabled' : saveStatus === 'error'
     ? 'Draft not saved'
     : saveStatus === 'saving'
       ? 'Saving…'
@@ -208,7 +209,7 @@ export default function PdfEditorTopbar({
             <span
               data-testid="pdf-save-status"
               className={`pe-save-state ${saveStatus}`}
-              title={saveMessage ?? 'Drafts stay in this browser'}
+              title={recoveryDisabled ? 'Recovery is disabled for this open PDF' : saveMessage ?? 'Local recovery status for this PDF'}
               role="status"
               aria-live="polite"
             >

@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   computePdfEditorExportFingerprint,
   createPdfEditorExportBuildCache,
+  getOrBuildPdfEditorExport,
   PDF_EDITOR_EXPORT_BUILD_CACHE_CAPACITY,
   PdfEditorExportFingerprintError,
   type PdfEditorExportFingerprintInput,
@@ -13,7 +14,7 @@ function input(
   overrides: Partial<PdfEditorExportFingerprintInput> = {},
 ): PdfEditorExportFingerprintInput {
   return {
-    file: { name: 'invoice.pdf', size: 12_345, lastModified: 1_700_000_000_000 },
+    file: { name: 'invoice.pdf', size: 12_345, lastModified: 1_700_000_000_000, sessionId: 1 },
     pageSize: 'original',
     confirmedMode: null,
     textEdits: [{
@@ -135,7 +136,7 @@ test('a different value of the same shape does not collide', () => {
   assert.notEqual(
     computePdfEditorExportFingerprint(base),
     computePdfEditorExportFingerprint(input({
-      file: { name: 'invoice.pdf', size: 12_345, lastModified: 1_700_000_000_001 },
+      file: { name: 'invoice.pdf', size: 12_345, lastModified: 1_700_000_000_001, sessionId: 1 },
     })),
   );
 });
@@ -249,4 +250,47 @@ test('a capacity below one still stores the current build', () => {
   const cache = createPdfEditorExportBuildCache<string>(0);
   cache.set('a', 'A');
   assert.equal(cache.get('a'), 'A');
+});
+
+test('identical file metadata cannot reuse a build from a different open session', () => {
+  const first = input();
+  const second = input({ file: { ...first.file!, sessionId: 2 } });
+  assert.notEqual(computePdfEditorExportFingerprint(first), computePdfEditorExportFingerprint(second));
+});
+
+test('overlapping preview and download builds share successful work', async () => {
+  const cache = createPdfEditorExportBuildCache<Promise<{ ok: boolean; bytes: Uint8Array }>>();
+  let calls = 0;
+  const result = { ok: true, bytes: new Uint8Array([1, 2, 3]) };
+  const build = async () => { calls += 1; return result; };
+  const [preview, download] = await Promise.all([
+    getOrBuildPdfEditorExport(cache, 'revision', build),
+    getOrBuildPdfEditorExport(cache, 'revision', build),
+  ]);
+  assert.equal(calls, 1);
+  assert.equal(preview, download);
+  assert.equal(await getOrBuildPdfEditorExport(cache, 'revision', build), result);
+  assert.equal(calls, 1);
+});
+
+test('an unchanged failed build can be retried after the service recovers', async () => {
+  const cache = createPdfEditorExportBuildCache<Promise<{ ok: boolean }>>();
+  let calls = 0;
+  const build = async () => ({ ok: ++calls > 1 });
+  assert.equal((await getOrBuildPdfEditorExport(cache, 'revision', build)).ok, false);
+  assert.equal(cache.size, 0);
+  assert.equal((await getOrBuildPdfEditorExport(cache, 'revision', build)).ok, true);
+  assert.equal(calls, 2);
+});
+
+test('a thrown build is evicted without deleting a replacement cache entry', async () => {
+  const cache = createPdfEditorExportBuildCache<Promise<{ ok: boolean }>>();
+  await assert.rejects(getOrBuildPdfEditorExport(cache, 'revision', async () => { throw new Error('offline'); }));
+  assert.equal(cache.size, 0);
+  const replacement = Promise.resolve({ ok: true });
+  await getOrBuildPdfEditorExport(cache, 'revision', async () => {
+    cache.set('revision', replacement);
+    return { ok: false };
+  });
+  assert.equal(cache.get('revision'), replacement);
 });

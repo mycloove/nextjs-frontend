@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { PAGE_SIZE_PRESETS, TextStyle, HeadingLevel, PageSizeKey } from '../pdfEdit-hooks/usePdfEditor';
+import { ORIGINAL_TEXT_STYLE_LIMITS } from '../pdfEdit-utils/editorCapabilities';
 
 const FONTS = [
   'Helvetica', 'Times New Roman', 'Courier New',
@@ -72,6 +73,8 @@ const ANNOTATION_KINDS: { kind: PdfEditorAnnotationKind; label: string }[] = [
 
 interface Props {
   textStyle:           TextStyle;
+  originalTextSelected?: boolean;
+  annotationBlocker?: string | null;
   pageSize:            PageSizeKey;
   onStyleChange:       (partial: Partial<TextStyle>) => void;
   onEmojiSelect:       (emoji: string) => void;
@@ -185,6 +188,7 @@ function GeometryField({
 
 export default function EditorRightPanel({
   textStyle, pageSize,
+  originalTextSelected = false, annotationBlocker = null,
   onStyleChange, onEmojiSelect, onImageInsert,
   onSignatureStart, onSignatureStop, onSignatureUpload, isSignatureMode, onPageSizeChange,
   contextLabel = 'Document',
@@ -270,6 +274,7 @@ export default function EditorRightPanel({
           color: var(--pe-text);
           transition: background-color .35s var(--pe-ease-in-out), border-color .35s var(--pe-ease-in-out);
         }
+        .pe-rp :disabled { opacity: .55; cursor: not-allowed; }
         .pe-rp-context {
           position: sticky; top: 0; z-index: 2;
           height: 44px; padding: 0 12px;
@@ -707,13 +712,13 @@ export default function EditorRightPanel({
                 onChange={e => onPageSizeChange(e.target.value as PageSizeKey)}
               >
                 {Object.entries(PAGE_SIZE_PRESETS).map(([key, preset]) => (
-                  <option key={key} value={key}>
+                  <option key={key} value={key} disabled={key !== 'original' && annotations.length > 0}>
                     {key === 'original' ? preset.label : `${preset.label} (${Math.round(preset.width)} x ${Math.round(preset.height)})`}
                   </option>
                 ))}
               </select>
               <div className="pe-rp-help">
-                Exported pages are resized to the selected format and all content is scaled to fit cleanly.
+                {annotations.length > 0 ? 'Native annotations require Original size. Remove them explicitly before resizing.' : 'The editing canvas uses source coordinates. Preview shows the actual resized export; resizing can change document structure.'}
               </div>
             </div>
 
@@ -757,8 +762,8 @@ export default function EditorRightPanel({
                   </div>
                   <p className="pe-health-note">
                     {preflightReport.status === 'complete'
-                      ? 'Read-only inspection. Export asks before a change would remove a listed structure.'
-                      : 'Inspection was partial; export still verifies the output before download.'}
+                      ? 'Read-only browser inspection, not a preservation guarantee. Export checks the result and asks about known critical consequences.'
+                      : 'Browser inspection was partial. Unknown structures may exist; export checks do not guarantee full preservation.'}
                   </p>
                   {preflightReport.features.annotations.count > 0 && onOpenAnnotations && (
                     <button
@@ -838,6 +843,7 @@ export default function EditorRightPanel({
           <div className="pe-rp-section" data-testid="pdf-annotation-review">
             <span className="pe-rp-title">Annotations</span>
             <p className="pe-redaction-summary">{annotationImpact.summary}</p>
+            {annotationBlocker && <p className="pe-rp-help" role="status" data-testid="pdf-annotation-capability">{annotationBlocker} Existing records are not deleted.</p>}
 
             <div className="pe-annotation-kinds" role="group" aria-label="Annotation type">
               {ANNOTATION_KINDS.map(({ kind, label }) => (
@@ -847,6 +853,8 @@ export default function EditorRightPanel({
                   className={`pe-arrange-btn ${annotationKind === kind ? 'is-on' : ''}`}
                   aria-pressed={annotationKind === kind}
                   data-testid={`pdf-annotation-kind-${kind}`}
+                  disabled={!!annotationBlocker}
+                  title={annotationBlocker ?? undefined}
                   onClick={() => onAnnotationKindChange?.(kind)}
                 >
                   {label}
@@ -1183,18 +1191,28 @@ export default function EditorRightPanel({
         {/* ── Text styling (text context only) ── */}
         {showText && (
           <>
+        <div className="pe-rp-section" data-testid="pdf-text-capability">
+          <span className="pe-rp-title">{originalTextSelected ? 'Original text draft' : 'Added text'}</span>
+          <p className="pe-rp-help">{originalTextSelected
+            ? 'Size, colour and alignment are requested from the structural engine. It may shrink text or substitute a font; review the final export preview. Dragging textarea edges resizes the editing area only, not the PDF layout.'
+            : 'These settings style the added text object. The export preview shows its final appearance.'}</p>
+        </div>
         {/* ── Heading ── */}
         <div className="pe-rp-section">
           <span className="pe-rp-title">Heading / Style</span>
           <select
             className="pe-select"
             value={textStyle.heading}
+            aria-label="Heading style"
+            disabled={originalTextSelected}
+            title={originalTextSelected ? ORIGINAL_TEXT_STYLE_LIMITS.heading : undefined}
             onChange={e => onStyleChange({ heading: e.target.value as HeadingLevel })}
           >
             {HEADINGS.map(h => (
               <option key={h.value} value={h.value}>{h.label}</option>
             ))}
           </select>
+          {originalTextSelected && <p className="pe-rp-help">{ORIGINAL_TEXT_STYLE_LIMITS.heading}</p>}
         </div>
 
         {/* ── Font ── */}
@@ -1203,18 +1221,24 @@ export default function EditorRightPanel({
           <select
             className="pe-select"
             value={textStyle.fontFamily}
+            aria-label="Font family"
+            disabled={originalTextSelected}
+            title={originalTextSelected ? ORIGINAL_TEXT_STYLE_LIMITS.fontFamily : undefined}
             onChange={e => onStyleChange({ fontFamily: e.target.value })}
             style={{ marginBottom: 7 }}
           >
+            {originalTextSelected && !FONTS.includes(textStyle.fontFamily) && <option value={textStyle.fontFamily}>{textStyle.fontFamily}</option>}
             {FONTS.map(f => (
               <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
             ))}
           </select>
+          {originalTextSelected && <p className="pe-rp-help">{ORIGINAL_TEXT_STYLE_LIMITS.fontFamily}</p>}
 
           <div className="pe-rp-row">
             <select
               className="pe-select"
               value={textStyle.fontSize}
+              aria-label="Font size preset"
               onChange={e => onStyleChange({ fontSize: Number(e.target.value) })}
             >
               {FONT_SIZES.map(s => (
@@ -1225,6 +1249,7 @@ export default function EditorRightPanel({
               type="number" min="6" max="200"
               className="pe-num-input"
               value={textStyle.fontSize}
+              aria-label="Font size"
               onChange={e => onStyleChange({ fontSize: Math.max(6, Number(e.target.value)) })}
             />
           </div>
@@ -1235,18 +1260,24 @@ export default function EditorRightPanel({
               <button
                 className={`pe-toggle-btn ${textStyle.bold ? 'on' : ''}`}
                 onClick={() => onStyleChange({ bold: !textStyle.bold })}
-                title="Bold"
+                title={originalTextSelected ? ORIGINAL_TEXT_STYLE_LIMITS.bold : 'Bold'}
+                aria-label="Bold"
+                disabled={originalTextSelected}
               >B</button>
               <button
                 className={`pe-toggle-btn ${textStyle.italic ? 'on' : ''}`}
                 onClick={() => onStyleChange({ italic: !textStyle.italic })}
-                title="Italic"
+                title={originalTextSelected ? ORIGINAL_TEXT_STYLE_LIMITS.italic : 'Italic'}
+                aria-label="Italic"
+                disabled={originalTextSelected}
                 style={{ fontStyle: 'italic' }}
               >I</button>
               <button
                 className={`pe-toggle-btn ${textStyle.underline ? 'on' : ''}`}
                 onClick={() => onStyleChange({ underline: !textStyle.underline })}
-                title="Underline"
+                title={originalTextSelected ? ORIGINAL_TEXT_STYLE_LIMITS.underline : 'Underline'}
+                aria-label="Underline"
+                disabled={originalTextSelected}
                 style={{ textDecoration: 'underline' }}
               >U</button>
             </div>
@@ -1285,6 +1316,7 @@ export default function EditorRightPanel({
               ))}
             </div>
           </div>
+          {originalTextSelected && <p className="pe-rp-help">Inherited bold and italic cannot reliably be changed. Underline is available as a separate annotation on supported pages.</p>}
         </div>
 
         {/* ── Text Color ── */}
@@ -1314,7 +1346,7 @@ export default function EditorRightPanel({
         <div className="pe-rp-section">
           <span className="pe-rp-title">Fill / Highlight</span>
           <div className="pe-color-row">
-            <div
+            <button type="button" disabled={originalTextSelected}
               className={`pe-color-swatch ${textStyle.bgColor === 'transparent' ? 'active' : ''}`}
               style={{
                 background: 'transparent',
@@ -1327,9 +1359,9 @@ export default function EditorRightPanel({
               <svg width="10" height="10" viewBox="0 0 10 10" style={{ position:'absolute',top:3,left:3 }}>
                 <line x1="1" y1="9" x2="9" y2="1" stroke="rgba(255,80,80,.7)" strokeWidth="1.5"/>
               </svg>
-            </div>
+            </button>
             {['#fef08a','#bbf7d0','#bfdbfe','#fecaca','#e9d5ff','#fed7aa'].map(c => (
-              <div
+              <button type="button" disabled={originalTextSelected}
                 key={c}
                 className={`pe-color-swatch ${textStyle.bgColor === c ? 'active' : ''}`}
                 style={{ background: c }}
@@ -1340,11 +1372,14 @@ export default function EditorRightPanel({
             <div className="pe-color-custom" title="Custom fill">
               <input
                 type="color"
+                aria-label="Text fill"
+                disabled={originalTextSelected}
                 value={textStyle.bgColor === 'transparent' ? '#ffffff' : textStyle.bgColor}
                 onChange={e => onStyleChange({ bgColor: e.target.value })}
               />
             </div>
           </div>
+          {originalTextSelected && <p className="pe-rp-help">{ORIGINAL_TEXT_STYLE_LIMITS.bgColor}</p>}
         </div>
 
         {/* ── Line Spacing ── */}
@@ -1355,10 +1390,14 @@ export default function EditorRightPanel({
               type="range" min="1" max="3" step="0.1"
               className="pe-slider"
               value={textStyle.lineHeight}
+              aria-label="Line spacing"
+              disabled={originalTextSelected}
+              title={originalTextSelected ? ORIGINAL_TEXT_STYLE_LIMITS.lineHeight : undefined}
               onChange={e => onStyleChange({ lineHeight: Number(e.target.value) })}
             />
             <span className="pe-slider-val">{textStyle.lineHeight.toFixed(1)}×</span>
           </div>
+          {originalTextSelected && <p className="pe-rp-help">{ORIGINAL_TEXT_STYLE_LIMITS.lineHeight}</p>}
         </div>
           </>
         )}

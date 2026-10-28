@@ -18,6 +18,9 @@ import PdfEditorPreview  from './pdfEdit-components/PdfEditorPreview';
 import EditorRightPanel from './pdfEdit-components/EditorRightPanel';
 import { PdfEditorCommandPalette, PdfEditorShortcutsDialog } from './pdfEdit-components/PdfEditorCommandPalette';
 import PdfExportImpactDialog from './pdfEdit-components/PdfExportImpactDialog';
+import PdfEditorDocumentDialog from './pdfEdit-components/PdfEditorDocumentDialog';
+import type { PdfEditorOcrCopyRequest } from './pdfEdit-hooks/usePdfEditor';
+import { pdfEditorAnnotationBlocker } from './pdfEdit-utils/editorCapabilities';
 import PdfEditorNavigationPanel from './pdfEdit-components/PdfEditorNavigationPanel';
 import PdfEditorCommandBar from './pdfEdit-components/PdfEditorCommandBar';
 import PdfEditorStatusBar from './pdfEdit-components/PdfEditorStatusBar';
@@ -44,7 +47,9 @@ export default function PdfEditorPage() {
       addTextbox, addEmoji, addImage, addShape, addShapeFromDrag,
       startSignature, stopSignature, renderExportedPageToCanvas,
       applyStyleToSelection, undo, redo, deleteSelected, isFabricTextEditing,
-      exportPdf, grantTextEditConsent, flushAutosave, getRecoverableSession, restoreRecoverableSession,
+       exportPdf, grantTextEditConsent, flushAutosave, getRecoverableSession, restoreRecoverableSession,
+       requestProcessingConsent, confirmProcessingConsent, cancelProcessingConsent, clearCurrentRecovery,
+       prepareOcrCopy, runOcrCopy, getExportRevision,
       commitAllEdits, setPageSize, getPageBaseDimensions, renderThumbnail,
       searchDocument, getDocumentOutline, getDocumentComments, applyPageOperation, positionForSourcePage,
       toggleRedactionMark, unmarkRedaction, clearRedactions,
@@ -64,16 +69,16 @@ export default function PdfEditorPage() {
   const isSignatureMode = state.activeTool === 'signature';
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [toast, setToast] = useState<{ msg: string; visible: boolean }>({ msg: '', visible: false });
-  const [textPreflight, setTextPreflight] = useState<{
-    scannedPages: number;
-    nativeTextPages: number;
-    pageCount: number;
+  const [pendingDocumentDialog, setPendingDocumentDialog] = useState<{
+    kind: 'recovery' | 'ocr' | 'close'; session: number; revision: string; ocrRequest?: PdfEditorOcrCopyRequest;
   } | null>(null);
+  const approvedOcrRequestRef = useRef<PdfEditorOcrCopyRequest | null>(null);
   const [recoverableDraft, setRecoverableDraft] = useState<{ fileName: string; savedAt: number } | null>(null);
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const [isRecovering, setIsRecovering] = useState(false);
   const [pendingFileName, setPendingFileName] = useState<string | null>(null);
   const [pendingExportImpact, setPendingExportImpact] = useState<PdfExportImpact | null>(null);
+  const [pendingExportRevision, setPendingExportRevision] = useState<string | null>(null);
   /**
    * The page plan's own impact, kept beside the dialog record because its
    * approval token — not the dialog's export mode — is what authorises the
@@ -130,7 +135,7 @@ export default function PdfEditorPage() {
     : inspectorContext === 'annotation'
       ? 'Annotation'
       : inspectorContext === 'text'
-      ? 'Text'
+      ? textSelectionVisible ? 'Original text' : 'Added text'
       : inspectorContext === 'signature'
         ? 'Signature'
         : inspectorContext === 'image'
@@ -245,14 +250,15 @@ export default function PdfEditorPage() {
    * lands somewhere.
    */
   const [fabricLivePages, setFabricLivePages] = useState<ReadonlySet<number>>(() => new Set<number>());
-  const handleFabricReady: typeof registerFabricCanvas = useCallback((page, fc) => {
-    registerFabricCanvas(page, fc);
+  const handleFabricReady: typeof registerFabricCanvas = useCallback(async (page, fc) => {
+    if (!await registerFabricCanvas(page, fc)) return false;
     setFabricLivePages(prev => {
       if (prev.has(page)) return prev;
       const next = new Set(prev);
       next.add(page);
       return next;
     });
+    return true;
   }, [registerFabricCanvas]);
   const handleFabricDispose: typeof unregisterFabricCanvas = useCallback((page) => {
     unregisterFabricCanvas(page);
@@ -264,7 +270,20 @@ export default function PdfEditorPage() {
     });
   }, [unregisterFabricCanvas]);
   /** The page the user is on has an editing layer that can accept work. */
-  const editingLayerReady = fabricLivePages.has(activeSourcePage);
+  const editingLayerReady = fabricLivePages.has(activeSourcePage) && !state.isRestoringCanvas;
+  const annotationBlocker = pdfEditorAnnotationBlocker({
+    page: activeSourcePage, pageSize: state.pageSize,
+    sourceRotation: state.sourcePageRotations[activeSourcePage], entries: planEntries,
+  });
+
+  useEffect(() => {
+    setPendingDocumentDialog(null);
+    approvedOcrRequestRef.current = null;
+    setPendingExportImpact(null);
+    setPendingExportRevision(null);
+    setPendingPageImpact(null);
+    setPendingExportConsent(null);
+  }, [state.documentSession]);
 
   useEffect(() => {
     editorSetRef.current = set;
@@ -279,61 +298,24 @@ export default function PdfEditorPage() {
     setTimeout(() => setToast({ msg: '', visible: false }), ms);
   };
 
-  const preflightTextEditing = useCallback(async (pdf: File) => {
-    const form = new FormData();
-    form.append('file', pdf, pdf.name || 'document.pdf');
-    try {
-      const response = await fetch('/api/pdf-editor/text-preflight', {
-        method: 'POST',
-        body: form,
-        cache: 'no-store',
-      });
-      if (!response.ok) return;
-      const report = await response.json() as {
-        scannedPages?: number;
-        nativeTextPages?: number;
-        pageCount?: number;
-      };
-      const scannedPages = Number(report.scannedPages) || 0;
-      const nativeTextPages = Number(report.nativeTextPages) || 0;
-      const pageCount = Number(report.pageCount) || 0;
-      setTextPreflight({ scannedPages, nativeTextPages, pageCount });
-      if (scannedPages > 0) {
-        showToast(
-          `${scannedPages} of ${pageCount} page(s) contain no native text. Run OCR before using Edit Text on those pages.`,
-          7000,
-        );
-      }
-    } catch {
-      // Preflight is advisory. The structural export guard remains authoritative.
-    }
+  const runObjectCommand = useCallback((command: () => unknown) => {
+    void Promise.resolve().then(command).catch(error => {
+      setToast({ msg: error instanceof Error ? error.message : 'The object command failed. Please retry.', visible: true });
+      window.setTimeout(() => setToast({ msg: '', visible: false }), 6000);
+    });
   }, []);
 
+  useEffect(() => {
+    if (state.saveStatus !== 'error' || !state.saveMessage) return;
+    setToast({ msg: state.saveMessage, visible: true });
+    const timer = window.setTimeout(() => setToast({ msg: '', visible: false }), 7000);
+    return () => window.clearTimeout(timer);
+  }, [state.saveStatus, state.saveMessage]);
+
   const handleRunOcr = useCallback(async () => {
-    const source = state.pdfFile;
-    if (!source || state.isLoading || state.isExporting) return;
-    const form = new FormData();
-    form.append('file', source, source.name || 'document.pdf');
-    form.append('language', 'eng');
-    try {
-      showToast('Preparing a searchable OCR copy…', 4000);
-      const response = await fetch('/api/pdf-editor/ocr', { method: 'POST', body: form, cache: 'no-store' });
-      const body = await response.json() as { pdf?: string; error?: string };
-      if (!response.ok || !body.pdf) {
-        showToast(body.error || 'OCR could not prepare this PDF.', 6000);
-        return;
-      }
-      const binary = atob(body.pdf);
-      const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
-      const ocrFile = new File([bytes], source.name.replace(/\.pdf$/i, '-ocr.pdf'), { type: 'application/pdf' });
-      setTextPreflight(null);
-      await loadPdf(ocrFile);
-      await preflightTextEditing(ocrFile);
-      showToast('OCR copy is ready. Review the text before exporting.', 5000);
-    } catch {
-      showToast('OCR could not prepare this PDF. No changes were made to the original.', 6000);
-    }
-  }, [loadPdf, preflightTextEditing, state.isExporting, state.isLoading, state.pdfFile]);
+    const request = await prepareOcrCopy();
+    if (request) setPendingDocumentDialog({ kind: 'ocr', session: request.session, revision: request.revision, ocrRequest: request });
+  }, [prepareOcrCopy]);
 
   // The upload control is present in server-rendered HTML before React has
   // attached react-dropzone's change handler. Expose a deterministic readiness
@@ -534,11 +516,9 @@ export default function PdfEditorPage() {
     if (pdf) {
       setPendingFileName(pdf.name);
       setIsPreviewOpen(false);
-      setTextPreflight(null);
       void loadPdf(pdf);
-      void preflightTextEditing(pdf);
     }
-  }, [loadPdf, preflightTextEditing]);
+  }, [loadPdf]);
 
   const onDropRejected = useCallback((rejections: { file: File }[]) => {
     const rejectedFile = rejections[0]?.file;
@@ -562,6 +542,7 @@ export default function PdfEditorPage() {
   // ── Keyboard shortcuts ──────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (document.querySelector('[aria-modal="true"]')) return;
       const key = e.key.toLowerCase();
       const modifier = e.ctrlKey || e.metaKey;
       if (modifier && !e.altKey && key === 'k') {
@@ -585,12 +566,12 @@ export default function PdfEditorPage() {
       }
       if ((e.ctrlKey || e.metaKey) && !e.altKey && key === 'c') {
         e.preventDefault();
-        void copySelectedObject();
+        runObjectCommand(copySelectedObject);
         return;
       }
       if ((e.ctrlKey || e.metaKey) && !e.altKey && key === 'v') {
         e.preventDefault();
-        void pasteObjectToCurrentPage();
+        runObjectCommand(pasteObjectToCurrentPage);
         return;
       }
       if ((e.ctrlKey || e.metaKey) && !e.altKey && key === 'z') {
@@ -611,7 +592,7 @@ export default function PdfEditorPage() {
         const step = e.shiftKey ? 10 : 1;
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-        nudgeSelectedObject(dx, dy);
+        runObjectCommand(() => nudgeSelectedObject(dx, dy));
         return;
       }
       if (isDeleteShortcut(e)) {
@@ -621,7 +602,7 @@ export default function PdfEditorPage() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [undo, redo, deleteSelected, isFabricTextEditing, nudgeSelectedObject, state.selectedObjectGeometry, copySelectedObject, pasteObjectToCurrentPage]);
+  }, [undo, redo, deleteSelected, isFabricTextEditing, nudgeSelectedObject, state.selectedObjectGeometry, copySelectedObject, pasteObjectToCurrentPage, runObjectCommand]);
 
   /**
    * Presentation adapter for the shared impact dialog. The page plan remains
@@ -682,7 +663,12 @@ export default function PdfEditorPage() {
   });
 
   const finishExport = async (result: Awaited<ReturnType<typeof exportPdf>>) => {
+    if (!result.ok && result.processingRequired) {
+      requestProcessingConsent('export');
+      return;
+    }
     if (!result.ok && result.impact) {
+      setPendingExportRevision(result.approvalRevision ?? null);
       // Only a real, material loss — signed or encrypted documents, or a text
       // edit the engine cannot do without permission — still asks.
       setPendingExportConsent(result.consent ?? null);
@@ -690,6 +676,7 @@ export default function PdfEditorPage() {
       return;
     }
     if (!result.ok && result.pageImpact) {
+      setPendingExportRevision(result.approvalRevision ?? null);
       setPendingExportConsent(null);
       setPendingPageImpact(result.pageImpact);
       setPendingExportImpact(pageImpactToExportImpact(result.pageImpact));
@@ -718,18 +705,53 @@ export default function PdfEditorPage() {
     await finishExport(await exportPdf());
   };
 
+  const handleProcessingConfirm = async () => {
+    const request = state.processingRequest;
+    if (!request || !confirmProcessingConsent(request)) return;
+    if (request.purpose === 'export') await handleExport();
+    if (request.purpose === 'ocr' && approvedOcrRequestRef.current?.session === request.session) {
+      const ocrRequest = approvedOcrRequestRef.current;
+      approvedOcrRequestRef.current = null;
+      await runOcrCopy(ocrRequest);
+    }
+  };
+
+  const handleDocumentConfirm = async () => {
+    const request = pendingDocumentDialog;
+    setPendingDocumentDialog(null);
+    if (!request || request.session !== state.documentSession) return;
+    if (request.kind === 'recovery') {
+      await clearCurrentRecovery(request.session);
+      setRecoverableDraft(null);
+    } else if (request.revision !== getExportRevision()) {
+      showToast('The document changed after this review. Review the current document before continuing.', 5000);
+    } else if (request.kind === 'close') {
+      setIsPreviewOpen(false);
+      set({ pdfFile: null, totalPages: 0, sourcePageCount: 0, pagePlan: null, currentPage: 1 });
+    } else if (request.ocrRequest) {
+      if (state.processingAllowed) await runOcrCopy(request.ocrRequest);
+      else {
+        approvedOcrRequestRef.current = request.ocrRequest;
+        requestProcessingConsent('ocr');
+      }
+    }
+  };
+
   const handleConfirmedExport = async () => {
     const impact = pendingExportImpact;
     const pageImpact = pendingPageImpact;
     if (!impact) return;
     const requestedConsent = pendingExportConsent;
+    const approvalRevision = pendingExportRevision;
     setPendingExportImpact(null);
+    setPendingExportRevision(null);
     setPendingPageImpact(null);
     setPendingExportConsent(null);
     if (pageImpact) {
       // Page approval is bound to the exact plan/strategy that was shown.
       await finishExport(await exportPdf({
         pageApprovalToken: pageImpact.approvalToken,
+        approvalRevision: approvalRevision ?? undefined,
         // The page-change dialog carries the redaction consequence when marks
         // exist, so confirming it is also the redaction acknowledgement.
         redactionApproved: state.redactionMarks.length > 0,
@@ -739,9 +761,10 @@ export default function PdfEditorPage() {
     // The grant has to be passed explicitly as well as recorded: the state it
     // writes is not visible to this same tick, so relying on it would refuse the
     // retry for the loss the user just accepted.
-    const consent = requestedConsent ? grantTextEditConsent(requestedConsent) : undefined;
+    const consent = requestedConsent ? grantTextEditConsent(requestedConsent, approvalRevision) : undefined;
     await finishExport(await exportPdf({
       confirmedMode: impact.decision.mode,
+      approvalRevision: approvalRevision ?? undefined,
       consent,
       redactionApproved: state.redactionMarks.length > 0,
     }));
@@ -749,6 +772,7 @@ export default function PdfEditorPage() {
 
   const closePendingExportDialog = () => {
     setPendingExportImpact(null);
+    setPendingExportRevision(null);
     setPendingPageImpact(null);
     setPendingExportConsent(null);
     window.setTimeout(() => {
@@ -846,6 +870,10 @@ export default function PdfEditorPage() {
   const handleClose = async () => {
     commitAllEdits();
     snapshotAllFabricPages();
+    if (state.recoveryStatus !== 'enabled') {
+      setPendingDocumentDialog({ kind: 'close', session: state.documentSession, revision: getExportRevision() });
+      return;
+    }
     const saved = await flushAutosave();
     if (!saved) {
       showToast(state.saveMessage ?? 'Draft could not be saved. Export before closing.', 5000);
@@ -898,7 +926,7 @@ export default function PdfEditorPage() {
         'empty-page-selection': 'Select at least one page.',
         'would-delete-every-page': 'A PDF must keep at least one page.',
       };
-      showToast(messages[result.reason] ?? 'That page change could not be applied.', 4000);
+      showToast(('message' in result ? result.message : undefined) ?? messages[result.reason] ?? 'That page change could not be applied.', 4000);
       return;
     }
     if (result.changed && operation.type === 'duplicate') {
@@ -1096,6 +1124,7 @@ export default function PdfEditorPage() {
   // through a ref so the listener is registered once and never churns.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
+      if (document.querySelector('[aria-modal="true"]') || event.defaultPrevented) return;
       const actions = shortcutActionsRef.current;
       if (isEditableShortcutTarget(event.target) || actions.isFabricTextEditing()) return;
       const modifier = event.ctrlKey || event.metaKey;
@@ -1781,7 +1810,8 @@ export default function PdfEditorPage() {
            Component CSS consumes these names and never a bare UI hex.
            ───────────────────────────────────────────────────────────── */
         .pe-editor-page,
-        .pe-impact-backdrop {
+        .pe-impact-backdrop,
+        .pe-document-backdrop {
           --pe-bg: #0d0c11;
           --pe-panel: #131219;
           --pe-panel-2: #16151c;
@@ -1823,7 +1853,8 @@ export default function PdfEditorPage() {
           --pe-dur-slow: 360ms;
         }
         [data-theme="light"] .pe-editor-page,
-        [data-theme="light"] .pe-impact-backdrop {
+        [data-theme="light"] .pe-impact-backdrop,
+        [data-theme="light"] .pe-document-backdrop {
           --pe-bg: #ededea;
           --pe-panel: #fcfcfa;
           --pe-panel-2: #f6f5f1;
@@ -2251,6 +2282,11 @@ export default function PdfEditorPage() {
         }
         .pe-preflight-action:hover:not(:disabled) { border-color: var(--pe-signal); color: var(--pe-signal-ink); }
         .pe-preflight-action:disabled { opacity: .55; cursor: wait; }
+        .pe-document-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--pe-line); background: var(--pe-panel); color: var(--pe-text-2); font-size: 11.5px; line-height: 1.5; }
+        .pe-processing-state { flex: 1 1 210px; }
+        .pe-document-controls .pe-preflight-action { margin: 0; }
+        .pe-document-message { flex-basis: 100%; margin: 0; color: var(--pe-text-2); }
+        .pe-document-message.error { color: var(--pe-danger); }
 
         :where(.pe-editor-page) :where(button, input, select, textarea, a):focus-visible {
           outline: 2px solid var(--pe-focus);
@@ -2278,6 +2314,16 @@ export default function PdfEditorPage() {
           />
         )}
 
+        {state.processingRequest && (
+          <PdfEditorDocumentDialog key={`processing-${state.processingRequest.sequence}`} kind="processing" fileName={state.processingRequest.fileName}
+            onCancel={() => { if (state.processingRequest) cancelProcessingConsent(state.processingRequest); approvedOcrRequestRef.current = null; }}
+            onConfirm={() => { void handleProcessingConfirm(); }} />
+        )}
+        {pendingDocumentDialog && !state.processingRequest && (
+          <PdfEditorDocumentDialog key={pendingDocumentDialog.kind} kind={pendingDocumentDialog.kind} fileName={state.pdfFile.name}
+            onCancel={() => setPendingDocumentDialog(null)} onConfirm={() => { void handleDocumentConfirm(); }} />
+        )}
+
         {/* Loading overlay — solid scrim, one honest status card. */}
         {(state.isLoading || state.isExporting) && (
           <div className="pe-loading-overlay">
@@ -2298,6 +2344,7 @@ export default function PdfEditorPage() {
           isPreviewOpen={isPreviewOpen}
           saveStatus={state.saveStatus}
           saveMessage={state.saveMessage}
+          recoveryDisabled={state.recoveryStatus !== 'enabled'}
           onExport={handleExport}
           onClose={handleClose}
         />
@@ -2369,6 +2416,7 @@ export default function PdfEditorPage() {
             currentPage={state.currentPage}
             totalPages={state.totalPages}
             pagePlan={state.pagePlan}
+            annotationPages={state.annotations.map(annotation => annotation.page)}
             outline={outline}
             comments={comments}
             onTabChange={setNavigationTab}
@@ -2380,21 +2428,20 @@ export default function PdfEditorPage() {
           />
 
           <div ref={workspaceMainRef} className="pe-workspace-main">
-            {textPreflight && textPreflight.scannedPages > 0 && (
-              <div className="pe-preflight" role="status">
-                <span className="pe-preflight-copy">
-                  {textPreflight.scannedPages} page(s) have no native text layer. Run OCR before using Edit Text on those pages; the original PDF is unchanged.
-                </span>
-                <button
-                  type="button"
-                  className="pe-preflight-action"
-                  onClick={() => { void handleRunOcr(); }}
-                  disabled={state.isLoading || state.isExporting}
-                >
-                  Run OCR
-                </button>
-              </div>
-            )}
+            <div className="pe-document-controls">
+              <span className="pe-processing-state" data-testid="pdf-processing-status" role="status">
+                {state.isServerProcessing ? 'Server processing now' : state.processingAllowed ? 'Local editing. Server permitted, idle.' : 'Local editing. Server processing not allowed.'}
+              </span>
+              {!state.processingAllowed && <button type="button" className="pe-preflight-action" data-testid="pdf-processing-review" onClick={() => requestProcessingConsent('preview')} disabled={!documentReady}>Review processing</button>}
+              <button type="button" className="pe-preflight-action" data-testid="pdf-ocr-copy" onClick={() => { void handleRunOcr(); }} disabled={!documentReady || state.isExporting || state.isOcrProcessing || state.isServerProcessing}>
+                {state.isOcrProcessing ? 'Creating OCR copy...' : 'English OCR copy'}
+              </button>
+              <button type="button" className="pe-preflight-action" data-testid="pdf-recovery-clear" disabled={!documentReady || state.recoveryStatus === 'clearing' || state.recoveryStatus === 'disabled'} onClick={() => setPendingDocumentDialog({ kind: 'recovery', session: state.documentSession, revision: getExportRevision() })}>
+                {state.recoveryStatus === 'clearing' ? 'Removing recovery...' : state.recoveryStatus === 'disabled' ? 'Recovery disabled' : 'Clear this PDF\'s recovery'}
+              </button>
+              {state.ocrMessage && <p className={`pe-document-message${state.ocrFailed ? ' error' : ''}`} role={state.ocrFailed ? 'alert' : 'status'} data-testid="pdf-ocr-status">{state.ocrMessage}</p>}
+              {(state.recoveryMessage || (state.saveStatus === 'saved' && !state.recoverySourceStored && state.saveMessage)) && <p className="pe-document-message" role="status" data-testid="pdf-recovery-status">{state.recoveryMessage ?? state.saveMessage}</p>}
+            </div>
             <div
               ref={canvasAreaRef}
               data-testid="pdf-editor-workspace"
@@ -2515,6 +2562,8 @@ export default function PdfEditorPage() {
                       dprEpoch={dprEpoch}
                       resizeEpoch={previewLayoutEpoch}
                       renderExportedPageToCanvas={renderExportedPageToCanvas}
+                      onRequestProcessing={() => requestProcessingConsent('preview')}
+                      onReviewExport={() => { void handleExport(); }}
                     />
                   </div>
                 </div>
@@ -2525,6 +2574,8 @@ export default function PdfEditorPage() {
           <div className={`pe-inspector-shell ${inspectorOpen ? '' : 'closed'}`} data-testid="pdf-inspector-panel">
             <EditorRightPanel
               textStyle={state.textStyle}
+              originalTextSelected={textSelectionVisible}
+              annotationBlocker={annotationBlocker}
               pageSize={state.pageSize}
               onStyleChange={applyStyleToSelection}
               onEmojiSelect={handleEmojiSelect}
@@ -2556,18 +2607,18 @@ export default function PdfEditorPage() {
               onObjectStyleChange={updateSelectedObjectStyle}
               onToggleObjectLock={toggleSelectedObjectLock}
               onToggleObjectHidden={toggleSelectedObjectHidden}
-              onDuplicateObject={() => void duplicateSelectedObject()}
-              onCopyObject={() => void copySelectedObject()}
-              onPasteObject={() => void pasteObjectToCurrentPage()}
+              onDuplicateObject={() => runObjectCommand(duplicateSelectedObject)}
+              onCopyObject={() => runObjectCommand(copySelectedObject)}
+              onPasteObject={() => runObjectCommand(pasteObjectToCurrentPage)}
               onDeleteObject={deleteSelected}
               onAlignObjects={alignSelectedObjects}
               onDistributeObjects={distributeSelectedObjects}
-              onGroupObjects={groupSelectedObjects}
-              onUngroupObjects={ungroupSelectedObject}
+              onGroupObjects={() => runObjectCommand(groupSelectedObjects)}
+              onUngroupObjects={() => runObjectCommand(ungroupSelectedObject)}
               onSelectLayer={selectPageLayer}
               onToggleLayerLock={togglePageLayerLock}
               onToggleLayerHidden={togglePageLayerHidden}
-              onMoveLayer={movePageLayer}
+              onMoveLayer={(id, direction) => runObjectCommand(() => movePageLayer(id, direction))}
               annotations={state.annotations}
               annotationPage={activeSourcePage}
               annotationKind={state.annotationKind}
@@ -2592,6 +2643,7 @@ export default function PdfEditorPage() {
           fitMode={fitMode}
           selectionLabel={textSelectionVisible ? 'Text selected' : null}
           saveStatus={state.saveStatus}
+          recoveryDisabled={state.recoveryStatus !== 'enabled'}
           lastExportVerification={state.lastExportVerification}
           lastExportDisclosures={state.lastExportDisclosures}
         />

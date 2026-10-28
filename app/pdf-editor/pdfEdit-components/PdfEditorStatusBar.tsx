@@ -14,6 +14,7 @@ interface Props {
   /** Null means nothing is selected; the bar must not announce noise. */
   selectionLabel: string | null;
   saveStatus: 'idle' | 'saving' | 'saved' | 'error';
+  recoveryDisabled?: boolean;
   lastExportVerification: PdfPostExportVerification | null;
   /**
    * Fidelity downgrades the last export performed — a font shrink, a typeface
@@ -25,7 +26,7 @@ interface Props {
 }
 
 export default function PdfEditorStatusBar(props: Props) {
-  const saveLabel = props.saveStatus === 'saved'
+  const saveLabel = props.recoveryDisabled ? 'Recovery disabled' : props.saveStatus === 'saved'
     ? 'Saved locally'
     : props.saveStatus === 'saving'
       ? 'Saving'

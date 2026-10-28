@@ -1,3 +1,5 @@
+@import './resumeFonts.css';
+
 /* Bangla canvas typeface. Self-hosted PDF-editor assets, shared path-wise
    with the PDF Editor's font bundle; format('truetype') matches the .ttf files. */
 @font-face {
@@ -239,6 +241,7 @@
 .pageCaption span:first-child { font-size: 8px; letter-spacing: .12em; }
 .paperFrame { position: relative; flex: 0 0 auto; overflow: clip; box-shadow: var(--rs-paper-shadow); }
 .paper { position: relative; display: flex; flex-direction: column; border: 1px solid var(--rs-paper-border); color: var(--rs-paper-ink); background: var(--rs-paper); font-family: var(--resume-font); font-size: var(--resume-font-size); line-height: var(--resume-leading); transform-origin: top left; color-scheme: light; }
+.paper[data-font="Tiro Bangla"] { font-synthesis: none; }
 .paperHeader { position: relative; padding-bottom: 24px; border-bottom: 2px solid var(--resume-accent); }
 .paperKicker { color: var(--resume-accent); font-size: .68em; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; }
 .paperHeader h2 { margin: 10px 0 12px; font-size: 2.25em; font-weight: 650; letter-spacing: -.04em; line-height: 1.18; overflow-wrap: anywhere; }
@@ -277,7 +280,11 @@
 .paperSection h3 .paperHeadingIcon { display: inline-flex; width: var(--heading-icon-size, 1em); height: var(--heading-icon-size, 1em); flex: 0 0 auto; align-items: center; justify-content: center; color: var(--heading-icon-color, var(--resume-accent)); }
 .paperSection h3 .paperHeadingIcon svg { display: block; width: 100%; height: 100%; }
 .sectionText p { white-space: pre-wrap; overflow-wrap: anywhere; }
-.sectionText a { color: var(--rs-accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--rs-accent) 45%, transparent); text-underline-offset: 2px; }
+/* Paper links follow the document accent (was --rs-accent, the module chrome
+   color): the accent picker stays the one accent source on the sheet. The
+   module's default preset (accents[0] = #405444 = --rs-accent) keeps every
+   existing draft visually identical. */
+.sectionText a { color: var(--resume-accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--resume-accent) 45%, transparent); text-underline-offset: 2px; }
 .sectionText a:focus-visible { border-radius: 2px; outline: 2px solid var(--rs-focus); outline-offset: 2px; }
 .sectionText ul, .sectionText ol { padding-left: 20px; margin: 0; }
 .sectionText ul { list-style: disc; }
@@ -286,6 +293,39 @@
 .sectionText :where(p, ul, ol) + :where(p, ul, ol) { margin-top: 10px; }
 .sectionText li + li { margin-top: 4px; }
 .emptySection { color: var(--rs-paper-muted); font-style: italic; }
+
+/* Entry register (resumeEntries.ts): the "left | right" paragraph convention.
+   The lead keeps its inline shapes on the breathing left; the right side is the
+   italic edge-aligned metadata this template's dates, credentials and links
+   live in. A line without a separator is untouched, so the convention can never
+   reshape plain writing. */
+.entryHead { display: flex; align-items: baseline; gap: 12px; }
+.entryHead + :where(p, ul, ol) { margin-top: 10px; }
+.entryLead { min-width: 0; flex: 1 1 auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.entryMeta { flex: 0 0 auto; max-width: 55%; white-space: pre-wrap; overflow-wrap: anywhere; font-style: italic; text-align: right; }
+.entryMeta a { color: var(--resume-accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--resume-accent) 45%, transparent); text-underline-offset: 2px; }
+.entryMeta a:focus-visible { border-radius: 2px; outline: 2px solid var(--rs-focus); outline-offset: 2px; }
+.entryExternalMark { width: .58em; height: .58em; margin-left: .34em; vertical-align: -.04em; color: var(--resume-accent); }
+/* The metadata mark rides text, so it must not inherit the svg drawing reset. */
+.entryExternalMark { display: inline-block; }
+
+/* Contact glyphs: the scheme decides the mark (email, phone, linked…); the
+   glyph rides ahead of the line it belongs to at muted ink, never fighting the
+   typed text for attention. */
+.paperContactIcon { display: inline-block; width: .82em; height: .82em; margin-right: .42em; vertical-align: -.06em; color: var(--resume-accent); }
+
+/* Heading rules — the template's thin structure under every section heading.
+   A rule that belongs to the heading sits tight beneath it, never breathing
+   like a between-section divider. */
+.paperDivider_underHeading { margin: 6px 0 12px; opacity: 1; }
+
+/* Contact rows: icon and line share one baseline; lines break cleanly. */
+.paperContactLine { display: block; min-height: 1.2em; }
+
+/* Latin Modern register: the template's serif reads machine-set, so the
+   nameplate sheds Inter-style display tracking and letters set as TeX would. */
+.paper[data-font="Latin Modern"] .paperHeader h2 { letter-spacing: 0; }
+.paper[data-font="Latin Modern"] .paperKicker { letter-spacing: .1em; }
 
 /* Bangla typography on the paper. Bangla letters hang from one matra line, so
    squeezed tracking and uppercase transforms that read Latin-engineered are
@@ -303,13 +343,112 @@
 .banglishToggleOn:hover { color: var(--rs-on-primary); }
 .banglishToggle:focus-visible { outline: 2px solid var(--rs-focus); outline-offset: 2px; }
 
-/* Alternative readings for a freshly converted word. Hairline chip row,
-   one click to swap; it sits between the textarea and its helper text. */
-.typeSuggest { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; font-size: 11px; }
-.typeSuggestLabel { color: var(--rs-muted); font-size: 10px; font-weight: 550; letter-spacing: .08em; text-transform: uppercase; }
-.typeSuggestButton { min-height: 24px; padding: 2px 9px; border: 1px solid var(--rs-line); border-radius: 999px; color: var(--rs-ink); background: var(--rs-raised); font-family: 'Noto Sans Bengali', sans-serif; font-size: 12px; cursor: pointer; transition: border-color 160ms var(--rs-ease), color 160ms var(--rs-ease); }
+/* The word is the unit of work: source, proposed spelling, then explicit choice.
+   A preview never masquerades as text already applied to the document. */
+.banglishField { min-width: 0; }
+.banglishField :where(input, textarea) { font-family: Inter, 'Noto Sans Bengali', system-ui, sans-serif; }
+.typingTitleHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.typingTitleHeading .contentLabel { margin: 0; }
+.typingModeHint { color: var(--rs-accent); font-size: 10px; font-weight: 600; }
+.typeSuggest { display: grid; min-width: 0; gap: 8px; padding-top: 8px; margin-top: 8px; border-top: 1px solid var(--rs-line); }
+.typeSuggestHeading { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; }
+.typeSuggestHeading code { max-width: 45%; overflow: hidden; color: var(--rs-ink); font: 11px ui-monospace, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.typeSuggestLabel { color: var(--rs-muted); font-size: 10px; font-weight: 550; }
+.typeSuggestOptions { display: flex; flex-wrap: wrap; gap: 6px; }
+.typeSuggestButton { display: inline-flex; min-width: 0; min-height: 32px; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--rs-control-line); border-radius: 6px; color: var(--rs-ink); background: var(--rs-raised); font-family: 'Noto Sans Bengali', sans-serif; font-size: 13px; line-height: 1.6; cursor: pointer; transition: border-color 120ms var(--rs-ease), color 120ms var(--rs-ease); }
+.typeSuggestButton span { overflow-wrap: anywhere; }
+.typeSuggestButton kbd { min-width: 12px; color: inherit; font: 10px ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 .typeSuggestButton:hover { border-color: var(--rs-accent); color: var(--rs-accent); }
+.typeSuggestSelected { border-color: var(--rs-accent); color: var(--rs-accent); background: var(--rs-accent-soft); font-weight: 600; }
 .typeSuggestButton:focus-visible { outline: 2px solid var(--rs-focus); outline-offset: 2px; }
+.typeSuggestFoot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; color: var(--rs-muted); font-size: 10px; }
+.typeSuggestFoot button { min-height: 28px; padding: 0 4px; border: 0; color: var(--rs-accent); background: transparent; text-decoration: underline; text-underline-offset: 3px; }
+
+.correctableWord { display: inline; padding: 0; margin: 0; border: 0; color: inherit; background: transparent; font: inherit; letter-spacing: inherit; line-height: inherit; text-align: inherit; vertical-align: baseline; text-decoration: underline dotted transparent; text-underline-offset: .18em; }
+.correctableWord:hover { text-decoration-color: currentColor; }
+.wordCorrection { width: min(360px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 20px; margin: 0; overflow-y: auto; border: 1px solid var(--rs-control-line); border-radius: 10px; color: var(--rs-ink); background: var(--rs-panel); box-shadow: var(--rs-dropdown-shadow); font: inherit; }
+.wordCorrection::backdrop { background: color-mix(in srgb, var(--rs-bg) 70%, transparent); }
+.wordCorrectionHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.wordCorrectionHeading h2 { font-size: 16px; font-weight: 650; }
+.wordCorrectionHeading code { color: var(--rs-muted); font: 12px ui-monospace, monospace; }
+.wordCorrectionOptions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.wordCorrection .textInput { font-family: 'Noto Sans Bengali', sans-serif; font-size: 16px; line-height: 1.65; }
+.rememberCorrection { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; font-size: 12px; }
+.rememberCorrection input { width: 16px; height: 16px; flex: 0 0 auto; margin-top: 2px; accent-color: var(--rs-accent); }
+.wordCorrectionActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; }
+.correctionError { margin-top: 8px; color: var(--rs-danger); font-size: 12px; }
+
+.typingTools { margin-top: 16px; border-top: 1px solid var(--rs-line); }
+.typingModeSettings { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 12px 0; }
+.typingModeSettings .contentLabel { margin: 0; }
+.typingModeSettings .helperText { grid-column: 1 / -1; margin: 0; color: var(--rs-ink); }
+.typingToolsHeading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; padding-top: 8px; }
+.typingToolsHeading > span { color: var(--rs-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.guideLink { display: inline-flex; min-height: 32px; align-items: center; gap: 6px; padding: 0; border: 0; color: var(--rs-accent); background: transparent; font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+.guideLink svg { width: 14px; height: 14px; }
+.typingDemo { display: grid; gap: 8px; padding: 12px; margin-top: 12px; border-radius: 6px; background: var(--rs-soft); }
+.typingDemoHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.typingDemo h3 { font-size: 13px; font-weight: 650; }
+.typingDemo .contentLabel { margin: 0; font-size: 11px; }
+.typingDemo p, .typingGuide > p { color: var(--rs-ink); font-size: 12px; line-height: 1.75; }
+.typingDemoOutput { min-height: 40px; padding: 8px 0; color: var(--rs-ink); font-family: 'Noto Sans Bengali', sans-serif; font-size: 16px; line-height: 1.7; overflow-wrap: anywhere; }
+.typingGuide { display: grid; gap: 12px; padding: 12px 0; }
+.typingExamples { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.typingExamples > div { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 4px; padding: 8px; border-radius: 6px; background: var(--rs-soft); }
+.typingExamples dt { font-size: 11px; }
+.typingExamples kbd { font-family: ui-monospace, monospace; }
+.typingExamples dd { margin: 0; font-family: 'Noto Sans Bengali', sans-serif; font-size: 15px; }
+.spellingFeedback { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--rs-line); }
+.spellingFeedback h3, .spellingChoices h3 { font-size: 12px; font-weight: 600; }
+.spellingFeedback label { font-size: 11px; }
+.spellingFeedback .textInput { font-family: 'Noto Sans Bengali', system-ui, sans-serif; }
+.spellingFeedback > button { justify-self: start; margin-top: 4px; }
+.spellingChoices { display: grid; gap: 8px; }
+.spellingChoices > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.spellingChoices > div > button { grid-column: 2 / -1; justify-self: end; }
+.spellingSearch { display: grid; gap: 8px; font-size: 11px; }
+.spellingChoices code { overflow: hidden; font: 11px ui-monospace, monospace; text-overflow: ellipsis; }
+.spellingChoices span { font-family: 'Noto Sans Bengali', sans-serif; font-size: 13px; overflow-wrap: anywhere; }
+.spellingChoices small { color: var(--rs-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.spellingActions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+
+/* The template shelf belongs to Page settings; bilingual review needs a wider,
+   paired reading surface than the narrow inspector can honestly provide. */
+.templateLibrary { margin-bottom: 24px; padding-block: 8px 16px; border-block: 1px solid var(--rs-line); }
+.templateLibrary summary { display: flex; min-height: 44px; align-items: center; gap: 8px; color: var(--rs-accent); cursor: pointer; }
+.templateLibrary summary > span { flex: 1; font-weight: 600; }
+.templateLibrary summary > small { font-variant-numeric: tabular-nums; }
+.templateLibrary summary:focus-visible { outline: 2px solid var(--rs-focus); outline-offset: 2px; }
+.templateList { display: grid; margin-top: 12px; }
+.templateChoice { display: flex; width: 100%; min-height: 64px; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 8px; border: 0; border-bottom: 1px solid var(--rs-line); border-radius: 0; background: transparent; text-align: left; }
+.templateChoice > span { display: grid; min-width: 0; gap: 4px; }
+.templateChoice b { font-size: 12px; font-weight: 600; }
+.templateChoice small { color: var(--rs-muted); font-size: 11px; line-height: 1.7; overflow-wrap: anywhere; }
+.templateChoice:hover, .templateChoice[aria-pressed="true"] { color: var(--rs-accent); background: var(--rs-accent-soft); }
+.templateRestore { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+.languageSuggestions { padding-top: 12px; margin-top: 16px; border-top: 1px solid var(--rs-line); }
+.templateDialog, .languageReview { width: min(840px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 24px; margin: auto; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--rs-control-line); border-radius: 14px; color: var(--rs-ink); background: var(--rs-panel); box-shadow: var(--rs-dropdown-shadow); font: inherit; }
+.templateDialog[open], .languageReview[open] { animation: rs-panel-in 200ms var(--rs-ease) both; }
+.templateDialog::backdrop, .languageReview::backdrop { background: color-mix(in srgb, var(--rs-bg) 80%, transparent); }
+.templatePolicy, .suggestionPolicy { color: var(--rs-ink); font-size: 13px; line-height: 1.8; }
+.templatePreview { padding: 24px; margin-top: 20px; border-radius: 10px; color: var(--rs-ink); background: var(--rs-soft); font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
+.templatePreview[data-font="Tiro Bangla"] { font-synthesis: none; }
+.templatePreview h3 { padding-bottom: 12px; border-bottom: 1px solid var(--rs-control-line); font-size: 24px; }
+.templatePreview > div { margin-top: 20px; }
+.templatePreview h4 { margin: 0 0 8px; font-size: 16px; }
+.templatePreview p { white-space: pre-wrap; }
+.templateBackupWarning { padding: 16px; margin-top: 16px; border-left: 3px solid var(--rs-gold); border-radius: 0 6px 6px 0; background: var(--rs-soft); font-size: 12px; line-height: 1.8; }
+.languageReviewColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 20px; }
+.languageReviewColumns > div { min-width: 0; }
+.languageReviewColumns > div:first-child { padding: 16px; border-radius: 10px; background: var(--rs-soft); }
+.languageReviewColumns h3 { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; font-size: 13px; font-weight: 650; }
+.languageReviewColumns h3 > span { color: var(--rs-accent); font-weight: 500; }
+.languageReviewColumns label { display: block; margin-block: 12px 8px; font-size: 12px; }
+.languageReviewColumns :where(input, textarea), .originalHeading, .originalWriting { font-family: Inter, 'Noto Sans Bengali', system-ui, sans-serif; font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
+.originalHeading { margin-bottom: 12px !important; font-weight: 650; }
+.originalWriting { white-space: pre-wrap; }
+.languageReview .helperText { font-variant-numeric: tabular-nums; }
+.templateDialog :where(.bijoyConvert, .bijoyKeep), .languageReview :where(.bijoyConvert, .bijoyKeep) { min-height: 40px; white-space: normal; }
 
 /* Legacy Bijoy paste offer. An honest inline question, not a modal; failure
    keeps the pasted text untouched and says so. */
@@ -320,7 +459,8 @@
 .bijoyConvert svg { width: 12px; height: 12px; }
 .bijoyKeep { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; padding: 5px 9px; border: 0; color: var(--rs-muted); background: transparent; font-size: 11px; cursor: pointer; }
 .bijoyKeep svg { width: 11px; height: 11px; }
-.bijoyConvert:hover, .bijoyKeep:hover { color: var(--rs-control-line); }
+.bijoyConvert:hover:not(:disabled) { color: var(--rs-on-primary); filter: brightness(1.08); }
+.bijoyKeep:hover { color: var(--rs-ink); }
 .bijoyKeep:focus-visible, .bijoyConvert:focus-visible { outline: 2px solid var(--rs-focus); outline-offset: 2px; }
 .paperSelected::before { position: absolute; inset: -8px auto -8px -18px; width: 8px; border: 1px solid var(--rs-paper-guide); border-right: 0; border-left: 2px solid var(--rs-paper-control); content: ''; pointer-events: none; }
 .blockControls { position: absolute; z-index: 2; top: -20px; right: -12px; display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px solid var(--rs-paper-guide); border-radius: 6px; background: var(--rs-paper); opacity: 0; pointer-events: none; transition: opacity 120ms var(--rs-ease); }
@@ -677,6 +817,10 @@
 }
 
 @media (max-width: 600px) {
+  .templateDialog, .languageReview { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); padding: 16px; }
+  .languageReviewColumns { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .templatePreview { padding: 16px; }
+  .typingModeSettings .segmented button { min-height: 44px; }
   .topbar { min-height: 48px; gap: 8px; padding: 5px 12px; }
   .backLink { width: 28px; height: 32px; }
   .brand { min-width: 0; gap: 8px; font-size: 14px; }
@@ -720,6 +864,12 @@
   .sectionMoveControls button { min-height: 32px; padding-inline: 8px; font-size: 10px; }
   .textInput, .contentInput, .numberSetting input { min-height: 44px; font-size: 16px; }
   .helperText { font-size: 12px; }
+  .banglishToggle, .typeSuggestButton, .guideLink, .typeSuggestFoot button { min-height: 44px; }
+  .banglishToggle { min-width: 44px; }
+  .typingTitleHeading, .typeSuggestFoot, .typingToolsHeading { gap: 8px; }
+  .typeSuggestLabel, .typingToolsHeading > span, .typeSuggestFoot { font-size: 11px; }
+  .wordCorrection { padding: 16px; }
+  .wordCorrectionActions :where(button) { min-height: 44px; }
   .writingMeta { font-size: 11px; }
   .formatPanel { padding: 26px 10px 10px; }
   .formatToolbar { gap: 6px; }
@@ -784,15 +934,23 @@
    the inline width/minHeight/padding/transform styles on the paper. */
 @media print {
   .studio { display: block; height: auto; min-height: 0; overflow: visible; color-scheme: light; }
+  :global(html), :global(body) { height: auto !important; overflow: visible !important; }
   :global(body) { background: #fff !important; }
-  .topbar, .toolbar, .leftPanel, .rightPanel, .canvasStatus, .mobileNav, .notice, .dragPreview { display: none !important; }
+  .topbar, .toolbar, .leftPanel, .rightPanel, .canvasStatus, .mobileNav, .notice, .dragPreview, .wordCorrection, .templateDialog, .languageReview { display: none !important; }
+  .templateDialog::backdrop, .languageReview::backdrop, .wordCorrection::backdrop { display: none; }
   .workspace { display: block; min-height: 0; }
   .canvasPanel { display: block; min-height: 0; background: none; }
   .paperStage { overflow: visible; padding: 0; background: none; }
   .pageStack { width: auto; min-width: 0; gap: 0; }
   .pageCaption, .draftCaption { display: none; }
   .paperFrame { width: auto !important; height: auto !important; overflow: visible; box-shadow: none; }
-  .paper { width: auto !important; min-height: 0 !important; padding: 0 !important; transform: none !important; border: 0; box-shadow: none; background: #fff !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .paper { display: block; width: auto !important; min-height: 0 !important; padding: 0 !important; transform: none !important; border: 0; box-shadow: none; background: #fff !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .paperBody { display: block; }
+  .paperSection + .paperSection { margin-top: var(--resume-section-gap); }
+  .paperHeader { break-inside: avoid-page; page-break-inside: avoid; }
+  .paperSection h3 { break-after: avoid-page; page-break-after: avoid; }
+  .sectionText :where(p, li) { orphans: 2; widows: 2; }
+  .correctableWord { text-decoration: none !important; }
   .paperSelected::before { content: none; }
-  .blockControls, .dropMarker, .photoResize, .photoResizeTag { display: none !important; }
+  .blockControls, .dropMarker, .photoResize, .photoResizeTag, .registrationSettle { display: none !important; }
 }

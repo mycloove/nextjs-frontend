@@ -1,340 +1,259 @@
-/**
- * Banglish → Bangla transliteration — module-owned, zero dependencies.
- *
- * Job: a guest writes Banglish because no Bangla keyboard is at hand, and the
- * finished word lands on the canvas as real Unicode Bangla. Everything runs
- * on-device, like the rest of the draft.
- *
- * Pipeline per word:
- *   1. Protection — digits, emails, URLs, all-caps acronyms, already-Bangla
- *      text and common resume-domain English words pass through untouched.
- *      The input method never rewrites information the guest did not mean
- *      as Bangla.
- *   2. Lexicon — resume-domain and high-frequency words whose rules alone
- *      cannot resolve (স্বপ্ন, জন্য, দক্ষতা…).
- *   3. Rules — a deterministic phonetic walk: consonant runs become Bengali
- *      conjuncts (ক্র, ন্দ, ত্ত…), vowels place their signs, and an
- *      implicit-'o' rule mirrors how Banglish is actually written
- *      (dorkar → দরকার, hobe → হবে, koro → করো, shobdo → শব্দ).
- *   4. Suggestions — the most probable reading converts immediately; the
- *      ambiguous letters offer up to three candidate readings under the
- *      input, one click to swap back.
+/** On-device Banglish: protected data -> learned spelling -> word banks -> phonetics.
+ * A proposal is not a translation or an accuracy guarantee. Unknown glyphs survive.
  */
+import { addressLexicon, careerLexicon, commonLexicon, educationLexicon, nameLexicon, resumeLexicon } from './banglishLexicon.ts'
+import { isValidSpellingChoice } from './banglishLearn.ts'
+export { lexicon } from './banglishLexicon.ts'
 
-const HASANTA = '\u09CD'
-const BENGALI_SHAPE = /[\u0980-\u09FF]/
+export type BanglishContext = 'general' | 'name' | 'address' | 'education' | 'career'
+export type BanglishOptions = {
+  context?: BanglishContext
+  learned?: Readonly<Record<string, string>>
+  /** Explicit phonetics, bypassing vocabulary/English scoring, never contact guards. */
+  force?: boolean
+}
 
-/** English words a mixed resume keeps as Latin, even while Banglish typing is on. */
+const HASANTA = '\u09cd'
+const BENGALI = /[\u0980-\u09ff]/u
 const ENGLISH_KEEP = new Set([
   'the', 'and', 'of', 'to', 'in', 'on', 'for', 'with', 'from', 'by', 'at', 'is',
-  'are', 'as', 'an', 'or', 'be', 'it', 'my', 'we', 'team', 'work', 'tool',
-  'pdf', 'doc', 'docx', 'ms', 'excel', 'word', 'adobe', 'google', 'android',
-  'iphone', 'ios', 'web', 'app', 'site', 'blog', 'seo', 'html', 'css', 'sql',
-  'php', 'python', 'java', 'javascript', 'typescript', 'react', 'node',
-  'figma', 'canva', 'linkedin', 'ats', 'hr', 'crm', 'aws', 'ui', 'ux', 'ai',
-  'ml', 'saas', 'gpa', 'cgpa',
+  'are', 'as', 'an', 'or', 'be', 'it', 'my', 'we', 'team', 'work', 'tool', 'tools',
+  'pdf', 'doc', 'docx', 'ms', 'excel', 'word', 'adobe', 'google', 'microsoft', 'office',
+  'android', 'iphone', 'ios', 'web', 'app', 'site', 'blog', 'seo', 'html', 'css', 'sql',
+  'php', 'python', 'java', 'javascript', 'typescript', 'react', 'node', 'nodejs', 'js',
+  'figma', 'canva', 'linkedin', 'ats', 'hr', 'crm', 'aws', 'ui', 'ux', 'ai', 'ml',
+  'saas', 'gpa', 'cgpa', 'ssc', 'hsc', 'bsc', 'bba', 'mba', 'phd', 'buet', 'du',
+  'api', 'http', 'https', 'www', 'ftp', 'git', 'github', 'docker', 'linux', 'windows',
+  'ruby', 'rails', 'swift', 'kotlin', 'rust', 'golang', 'flutter', 'mysql', 'postgresql',
+  'mongodb', 'redis', 'nextjs', 'vue', 'angular', 'svelte', 'tailwind', 'bootstrap',
+  'photoshop', 'illustrator', 'indesign', 'powerpoint', 'outlook', 'gmail', 'zoom',
+  'slack', 'notion', 'jira', 'trello', 'autocad', 'solidworks', 'matlab', 'spss',
+  'data', 'row', 'user', 'users', 'design', 'designer', 'product', 'project', 'manager',
+  'senior', 'junior', 'lead', 'engineer', 'engineering', 'software', 'business',
+  'research', 'experience', 'skills', 'education', 'summary', 'profile', 'present',
+  'remote', 'hybrid', 'fulltime', 'parttime', 'intern', 'internship', 'freelance',
+  'developed', 'improved', 'managed', 'created', 'built', 'led', 'delivered', 'supported',
+  'responsible', 'successful', 'professional', 'digital', 'visual', 'communication',
+  'strategy', 'systems', 'system', 'prototyping', 'accessibility', 'testing', 'test',
+  'functional', 'technical', 'application', 'applications', 'platform', 'portfolio',
+  'email', 'phone', 'contact', 'address', 'location', 'name', 'date', 'year', 'years',
+  'month', 'months', 'day', 'days', 'current', 'previous', 'first', 'last', 'new',
 ])
 
-/** A word the engine may touch. */
-export function isBanglishTransliterable(word: string): boolean {
-  if (word.length === 0 || word.length > 40) return false
-  if (/[\p{Nd}]/u.test(word)) return false
-  if (BENGALI_SHAPE.test(word)) return false
-  if (word.includes('@') || word.includes('/') || word.toLowerCase().startsWith('www.')) return false
-  if (ENGLISH_KEEP.has(word.toLowerCase())) return false
-  const latin = word.replace(/[^\p{L}]/gu, '')
-  if (latin.length === 0 || latin === latin.toUpperCase()) return false
+function bankReading(word: string, options: BanglishOptions): string | undefined {
+  const key = word.toLowerCase()
+  const learned = options.learned && Object.hasOwn(options.learned, key) ? options.learned[key] : undefined
+  if (isValidSpellingChoice(key, learned)) return learned
+  const contextBank = options.context === 'name' ? nameLexicon : options.context === 'address' ? addressLexicon
+    : options.context === 'education' ? educationLexicon : options.context === 'career' ? careerLexicon : commonLexicon
+  // Vocabulary objects have prototypes. Only authored entries are readings, never
+  // inherited properties such as "constructor" or "toString".
+  for (const bank of [contextBank, nameLexicon, resumeLexicon, commonLexicon]) {
+    if (Object.hasOwn(bank, key) && typeof bank[key] === 'string') return bank[key]
+  }
+  return undefined
+}
+
+function protectsData(word: string): boolean {
+  return !word || word.length > 40 || /[\p{Nd}]/u.test(word) || BENGALI.test(word)
+    || /[@/\\:]/u.test(word) || /[a-z0-9]\.[a-z]{2,}/iu.test(word)
+    || /[\p{L}\p{M}]/u.test(word.replace(/[A-Za-z]/gu, ''))
+}
+
+export function isBanglishTransliterable(word: string, options: BanglishOptions = {}): boolean {
+  if (protectsData(word) || !/[a-z]/iu.test(word)) return false
+  if (options.force) return true
+  const key = word.toLowerCase()
+  if (ENGLISH_KEEP.has(key) && !(options.context === 'name' && Object.hasOwn(nameLexicon, key))) return false
+  const latin = word.replace(/[^a-z]/giu, '')
+  if (latin === latin.toUpperCase()) return false
+  const capitals = latin.match(/[A-Z]/gu) ?? []
+  if (capitals.length > 1 && !bankReading(word, options)) {
+    if (/^[A-Z]/u.test(latin) || capitals.some((letter) => !'TDNRSAEIUOY'.includes(letter))) return false
+  }
+  // Only unlisted words use this conservative English heuristic. It is deliberately
+  // not called a language detector: explicit phonetic choices remain available.
+  if (!bankReading(word, options) && /(?:tion|sion|ment|ness|ing|ware|script|able|ible|ous|ness)$/iu.test(word)
+      && !/(?:bh|kh|gh|dh|th|sh|chh|rri|Sh|Rh|[TDNR])/u.test(word)) return false
   return true
 }
 
-// Legacy Bijoy documents print Bangla through Latin-1 punctuation glyphs
-// (‡Kv¤új-style paths). Two signatories with no Bengali codepoint anywhere is
-// enough to raise the offer; ordinary Latin prose never carries these.
-const BIJOY_SIGNS = /[\u2021\u00A4\u00AB\u00BB\u00AC\u00B5\u00B7\u00CD\u00CE\u00CF\u00D1\u00D2\u00D3\u00D4\u00D5\u00F0\u00F1]/g
-
+const BIJOY_SIGNS = /[\u2021\u00a4\u00ab\u00bb\u00ac\u00b5\u00b7\u00cd\u00ce\u00cf\u00d1\u00d2\u00d3\u00d4\u00d5\u00f0\u00f1]/gu
 export function isBijoyLikely(text: string): boolean {
-  if (BENGALI_SHAPE.test(text)) return false
-  return (text.match(BIJOY_SIGNS) ?? []).length >= 2
+  return !BENGALI.test(text) && (text.match(BIJOY_SIGNS) ?? []).length >= 2
 }
 
-/** Keys are lowercase; the input method is case-protective, never case-training. */
-const lexicon: Record<string, string> = {
-  // Function words & connectors
-  ami: 'আমি', amar: 'আমার', amader: 'আমাদের', apni: 'আপনি', apnar: 'আপনার',
-  tumi: 'তুমি', tomar: 'তোমার', tara: 'তারা', tarpor: 'তারপর',
-  ebang: 'এবং', ebong: 'এবং', othoba: 'অথবা', jehetu: 'যেহেতু', tai: 'তাই',
-  tobe: 'তবে', jemon: 'যেমন', temon: 'তেমন', mane: 'মানে', ar: 'আর',
-  na: 'না', abar: 'আবার', pore: 'পরে', ekhane: 'এখানে', eta: 'এটা', eti: 'এটি',
-  ei: 'এই', sei: 'সেই', je: 'যে', ja: 'যা', jar: 'যার', se: 'সে', she: 'সে',
-  theke: 'থেকে', hote: 'হতে', shesh: 'শেষ', sathe: 'সাথে', shathe: 'সাথে',
-  jonne: 'জন্য', jonno: 'জন্য', sejonne: 'সেজন্য', diye: 'দিয়ে',
-  moddhe: 'মধ্যে', maddhome: 'মাধ্যমে', nam: 'নাম', eto: 'এত',
-  obosshoi: 'অবশ্যই', onek: 'অনেক', thik: 'ঠিক', thikana: 'ঠিকানা',
-  kotha: 'কথা', somoy: 'সময়', shomoy: 'সময়', kono: 'কোন',
-  // Verbs & everyday states
-  hoy: 'হয়', hobe: 'হবে', holo: 'হলো', hole: 'হলে', hochche: 'হচ্ছে',
-  hoyeche: 'হয়েছে', kori: 'করি', kore: 'করে', korchi: 'করছি',
-  koreche: 'করেছে', korbo: 'করব', korte: 'করতে', korar: 'করার',
-  korechi: 'করেছি', kora: 'করা', kaj: 'কাজ', ache: 'আছে', thaki: 'থাকি',
-  thake: 'থাকে', thakbo: 'থাকব', chhilo: 'ছিল', bhalo: 'ভালো', valo: 'ভালো',
-  chai: 'চাই', pari: 'পারি', parbo: 'পারব', dekha: 'দেখা', lekha: 'লেখা',
-  pora: 'পড়া', bola: 'বলা', jani: 'জানি', purano: 'পুরনো', notun: 'নতুন',
-  dorkar: 'দরকার', shombob: 'সম্ভব', sombob: 'সম্ভব', subidha: 'সুবিধা',
-  shahajjo: 'সাহায্য', shohoj: 'সহজ', shuru: 'শুরু', dewa: 'দেওয়া',
-  // Numbers, time & place
-  ek: 'এক', dui: 'দুই', tin: 'তিন', prothom: 'প্রথম', sokol: 'সকল',
-  sobai: 'সবাই', bochor: 'বছর', bachor: 'বছর', din: 'দিন', rat: 'রাত',
-  mash: 'মাস', shokal: 'সকাল',
-  // Education & career vocabulary
-  obhiggota: 'অভিজ্ঞতা', obhiggoto: 'অভিজ্ঞতা', dokkhota: 'দক্ষতা',
-  dokkho: 'দক্ষ', chakri: 'চাকরি', chakrir: 'চাকরির', pesha: 'পেশা',
-  protisthan: 'প্রতিষ্ঠান', protisthito: 'প্রতিষ্ঠিত',
-  bishwabidyaloy: 'বিশ্ববিদ্যালয়', bishshobiddaloy: 'বিশ্ববিদ্যালয়',
-  bissobiddaloy: 'বিশ্ববিদ্যালয়', kolejo: 'কলেজ', koleje: 'কলেজে',
-  shikkha: 'শিক্ষা', shikkhito: 'শিক্ষিত', shikkhok: 'শিক্ষক',
-  shikkharthi: 'শিক্ষার্থী', chhatro: 'ছাত্র', chhatri: 'ছাত্রী',
-  porikkha: 'পরীক্ষা', porikhha: 'পরীক্ষা', britti: 'বৃত্তি',
-  folafol: 'ফলাফল', folaphol: 'ফলাফল', sreni: 'শ্রেণি',
-  proshikkhon: 'প্রশিক্ষণ', prodhikkhon: 'প্রশিক্ষণ',
-  proshikkhito: 'প্রশিক্ষিত', purushkar: 'পুরস্কার', poroshkar: 'পুরস্কার',
-  dayitto: 'দায়িত্ব', byabosthapona: 'ব্যবস্থাপনা', byobosthapona: 'ব্যবস্থাপনা',
-  niponno: 'নিপুণ', niyog: 'নিয়োগ', niyogito: 'নিয়োগিত', niyoker: 'নিয়োগের',
-  shongosto: 'সংস্থা', songosto: 'সংস্থা', udjesso: 'উদ্দেশ্য',
-  uddesso: 'উদ্দেশ্য', onuprerona: 'অনুপ্রেরণা', shafolota: 'সাফল্য',
-  shofolota: 'সাফল্য', otirikto: 'অতিরিক্ত', shomosshya: 'সমস্যা',
-  somosshya: 'সমস্যা', shomadhan: 'সমাধান', somadhan: 'সমাধান',
-  bhasha: 'ভাষা', joggo: 'যোগ্য', joggyota: 'যোগ্যতা', taththo: 'তথ্য',
-  bishleshon: 'বিশ্লেষণ', bishleson: 'বিশ্লেষণ', bishleshok: 'বিশ্লেষক',
-  projukti: 'প্রযুক্তি', unnoyon: 'উন্নয়ন', unnayan: 'উন্নয়ন',
-  gobeshona: 'গবেষণা', bhabishot: 'ভবিষ্যৎ', ongsho: 'অংশ', jonmo: 'জন্ম',
-  proshno: 'প্রশ্ন', uttor: 'উত্তর', bishoy: 'বিষয়', kormo: 'কর্ম',
-  kormi: 'কর্মী', shomporko: 'সম্পর্ক', shohojogita: 'সহযোগিতা',
-  // Words whose rules alone misread an inherent vowel or a rare conjunct
-  ekhon: 'এখন', ekhono: 'এখনো', ekhoni: 'এখনি', sorkar: 'সরকার',
-  hridoy: 'হৃদয়', shopno: 'স্বপ্ন', shongi: 'সঙ্গী', shonge: 'সঙ্গে',
-  shongho: 'সংঘ', borsha: 'বর্ষা', ghora: 'ঘোড়া', ghori: 'ঘড়ি',
-  sohag: 'সোহাগ', shohag: 'সোহাগ', prottoy: 'প্রত্তয়', shikkhokta: 'শিক্ষকতা',
-  yoggo: 'যোগ্য', bachchor: 'বছর', poriyksha: 'পরীক্ষা',
-  // ঋ-words rules cannot reach without breaking names like "Rida".
-  rishi: 'ঋষি', ritu: 'ঋতু', riddhi: 'ঋদ্ধি', riju: 'ঋজু',
-  // Avro-style dictionary: frequent words whose mid-word 'o' is a real
-  // ও-kar — the implicit-o rule alone cannot tell হবে from তোমাকে.
-  tomake: 'তোমাকে', apnake: 'আপনাকে', amake: 'আমাকে', amay: 'আমায়',
-  tomay: 'তোমায়', kothay: 'কোথায়', kothao: 'কোথাও', shudhu: 'শুধু',
-  khujchi: 'খুঁজছি', khujchhi: 'খুঁজছি', khujbo: 'খুঁজব', dekhchi: 'দেখছি',
-  dekche: 'দেখছে', dite: 'দিতে', dibe: 'দিবে', nite: 'নিতে', rakhbo: 'রাখব',
-  rakhchi: 'রাখছি', rakhche: 'রাখছে', keu: 'কেউ',
-}
-
-// ── Rule walk ────────────────────────────────────────────────────────────
-
-type Unit = { letter: string; key: string; upper: boolean; length: number }
-
-// Longest units first, so chh/sh/ss/kh never split mid-way.
-const CONSONANT_UNITS: [string, string][] = [
-  ['chh', 'ছ'], ['ss', 'ষ'], ['kh', 'খ'], ['gh', 'ঘ'], ['bh', 'ভ'], ['dh', 'ধ'],
-  ['th', 'থ'], ['ph', 'ফ'], ['sh', 'শ'], ['ch', 'চ'], ['jh', 'ঝ'],
+type Unit = { key: string; letter: string; length: number }
+const UNITS: readonly [string, string][] = [
+  ['shth', 'ষ্ঠ'], ['ksh', 'ক্ষ'], ['chh', 'ছ'], ['jn', 'জ্ঞ'], ['nj', 'ঞ্জ'],
+  ['ss', 'ষ'], ['kh', 'খ'], ['gh', 'ঘ'], ['bh', 'ভ'], ['dh', 'ধ'], ['th', 'থ'],
+  ['ph', 'ফ'], ['sh', 'শ'], ['ch', 'চ'], ['jh', 'ঝ'],
   ['k', 'ক'], ['g', 'গ'], ['j', 'জ'], ['t', 'ত'], ['d', 'দ'], ['n', 'ন'],
-  ['p', 'প'], ['b', 'ব'], ['m', 'ম'], ['y', 'য়'], ['r', 'র'], ['l', 'ল'],
+  ['p', 'প'], ['b', 'ব'], ['m', 'ম'], ['y', 'য'], ['r', 'র'], ['l', 'ল'],
   ['s', 'স'], ['h', 'হ'], ['f', 'ফ'], ['v', 'ভ'], ['w', 'ব'], ['z', 'জ'],
   ['x', 'ক্স'], ['q', 'ক'], ['c', 'ক'],
 ]
-
-const VOWEL_SIGN: Record<string, string> = { a: 'া', e: 'ে', i: 'ি', o: 'ো', u: 'ু' }
-const DIGRAPH_SIGN: Record<string, string> = {
-  aa: 'া', ee: 'ী', ii: 'ী', oo: 'ূ', uu: 'ূ',
-  oi: 'ৈ', ai: 'ৈ', ei: 'ৈ', ou: 'ৌ', au: 'ৌ',
+const CONJUNCTS: Readonly<Record<string, string>> = {
+  ক: 'কখটতথবমযরলষস', খ: 'যরল', গ: 'গধনবমযরল', ঘ: 'নযর', ঙ: 'কখগঘম',
+  চ: 'চছয', ছ: 'য', জ: 'জঝঞযর', ঝ: 'য', ঞ: 'চছজঝ',
+  ট: 'টঠবমযর', ঠ: 'যর', ড: 'ডঢবমযর', ঢ: 'যর', ণ: 'টঠডঢণনময',
+  ত: 'তথনবমযরলস', থ: 'বযর', দ: 'কগঘদধনবমযর', ধ: 'নবমযর',
+  ন: 'টঠডঢতথদধনবমসযর', প: 'টতনপলসযর', ফ: 'লযর', ব: 'জদধনবলযর',
+  ভ: 'যরল', ম: 'নপফবভমলযর', য: 'য', ল: 'কগটডপবমলয',
+  শ: 'চছনবমযরল', ষ: 'কটঠণপময', স: 'কখটতথনপফবমলযর', হ: 'নমলযর',
 }
-const FULL_VOWEL: Record<string, string> = {
-  a: 'আ', e: 'এ', i: 'ই', o: 'ও', u: 'উ',
-  aa: 'আ', ee: 'ঈ', ii: 'ঈ', oo: 'ঊ', uu: 'ঊ',
-  oi: 'ঐ', ai: 'ঐ', ei: 'ঐ', ou: 'ঔ', au: 'ঔ',
+const VOWELS: Readonly<Record<string, [string, string]>> = {
+  a: ['আ', 'া'], e: ['এ', 'ে'], i: ['ই', 'ি'], o: ['অ', 'ো'], u: ['উ', 'ু'],
+  aa: ['আ', 'া'], ee: ['ঈ', 'ী'], ii: ['ঈ', 'ী'], oo: ['ঊ', 'ূ'], uu: ['ঊ', 'ূ'],
+  oi: ['ঐ', 'ৈ'], ou: ['ঔ', 'ৌ'],
 }
+const isVowel = (value: string) => /^[aeiou]$/iu.test(value)
 
-// Where a hasanta is proven safe. r/y/l join any consonant (reph, ্য, ্ল);
-// b closes the common mb/nb/lb/sb/gb/kb sets; the pair table covers kt/nt/st/pt/nd.
-const PAIRS = new Set(['kt', 'nt', 'st', 'pt', 'nd', 'bd', 'sk', 'sp'])
-
-function pairAllowed(prev: Unit, unit: Unit): boolean {
-  if (prev.upper) return unit.key === 'r' || unit.key === 'y' || unit.key === 'l'
-  if (prev.key === unit.key && prev.key.length === 1) return true
-  if (unit.key === 'r' || unit.key === 'y' || unit.key === 'l') return true
-  if (unit.key === 'b' || unit.key === 'w' ? ['m', 'n', 'l', 's', 'g', 'k'].includes(prev.key) : false) return true
-  return PAIRS.has(prev.key + unit.key)
-}
-
-function matchConsonant(value: string, index: number): Unit | null {
-  const ch = value[index]
-  const lower = ch.toLowerCase()
-  for (const [match, letter] of CONSONANT_UNITS) {
-    if (value.slice(index, index + match.length).toLowerCase() !== match) continue
-    const upper = ch !== lower
-    let resolved = letter
-    // A mid-word capital T/D/N picks the retroflex row; word-initial capitals
-    // keep the dental letter so ordinary names and sentences lose nothing.
-    if (match === 'th') resolved = upper ? 'ঠ' : 'থ'
-    else if (match === 'dh') resolved = upper ? 'ঢ' : 'ধ'
-    else if (match === 't' && upper && index > 0) resolved = 'ট'
-    else if (match === 'd' && upper && index > 0) resolved = 'ড'
-    else if (match === 'n' && upper && index > 0) resolved = 'ণ'
-    return { letter: resolved, key: match, upper, length: match.length }
+function consonant(word: string, index: number): Unit | null {
+  if (word.slice(index, index + 2) === 'Rh') return { key: 'rh', letter: 'ঢ়', length: 2 }
+  for (const [key, original] of UNITS) {
+    if (word.slice(index, index + key.length).toLowerCase() !== key) continue
+    let letter = original
+    const upper = word[index] !== word[index].toLowerCase()
+    if (upper) {
+      if (key === 'sh' || key === 's') letter = 'ষ'
+      else if (key === 'th') letter = 'ঠ'
+      else if (key === 'dh') letter = 'ঢ'
+      else if (key === 't') letter = 'ট'
+      else if (key === 'd') letter = 'ড'
+      else if (key === 'n') letter = 'ণ'
+      else if (key === 'r') letter = 'ড়'
+    }
+    return { key, letter, length: key.length }
   }
   return null
 }
 
-const isVowelChar = (ch: string) => 'aeiou'.includes(ch.toLowerCase())
-
-const isConsonantChar = (ch: string | undefined) => {
-  if (!ch) return false
-  const lower = ch.toLowerCase()
-  return /[a-z]/.test(lower) && !isVowelChar(lower)
-}
-
-/** The rule-based reading. Returns null when nothing maps to Bengali. */
-function ruleConvert(word: string): string | null {
+function ruleConvert(word: string): string {
   let out = ''
   let cluster: Unit[] = []
-  let hasCluster = false
-
-  const flush = () => {
-    if (!hasCluster) return
-    out += cluster.map((unit) => unit.letter).join(HASANTA)
-    cluster = []
-    hasCluster = false
-  }
-
-  let i = 0
-  while (i < word.length) {
-    const ch = word[i]
+  const flush = () => { out += cluster.map((unit, index) => `${index && cluster[index - 1].letter !== 'ৎ' ? HASANTA : ''}${unit.letter}`).join(''); cluster = [] }
+  for (let index = 0; index < word.length;) {
+    const ch = String.fromCodePoint(word.codePointAt(index)!)
     const lower = ch.toLowerCase()
-
-    // 'n'+'g' assimilates: a following vowel reads ঙ্‌গ, a following
-    // consonant or the word end reads ং — bangla → বাংলা, shongi → শঙ্গী.
-    if (lower === 'n' && word[i + 1]?.toLowerCase() === 'g') {
-      const conjunct = isVowelChar(word[i + 2] ?? '')
-      if (conjunct) {
-        cluster = [
-          { letter: 'ঙ', key: 'ng', upper: false, length: 1 },
-          { letter: 'গ', key: 'g', upper: false, length: 1 },
-        ]
-        hasCluster = true
-      } else {
-        flush()
-        out += 'ং'
-      }
-      i += 2
-      continue
+    if (word.slice(index, index + 2) === ',,') { flush(); out += HASANTA; index += 2; continue }
+    if (ch === '^') { flush(); out += 'ঁ'; index++; continue }
+    if (word.slice(index, index + 3).toLowerCase() === 'rri') {
+      const attached = cluster.length > 0
+      flush(); out += attached ? 'ৃ' : 'ঋ'; index += 3; continue
     }
-
-    const unit = matchConsonant(word, i)
+    if (word.slice(index, index + 2).toLowerCase() === 'ng') {
+      flush()
+      if (isVowel(word[index + 2] ?? '')) cluster = [{ key: 'ng', letter: 'ঙ', length: 1 }, { key: 'g', letter: 'গ', length: 1 }]
+      else out += 'ং'
+      index += 2; continue
+    }
+    const unit = consonant(word, index)
     if (unit) {
-      if (hasCluster && pairAllowed(cluster[cluster.length - 1], unit)) {
-        cluster.push(unit)
-      } else {
+      if (unit.key === 'y' && !cluster.length && index > 0 && isVowel(word[index - 1])) unit.letter = 'য়'
+      const previous = cluster.at(-1)
+      const allowed = previous && (previous.letter === 'র' || unit.letter === 'য'
+        || (CONJUNCTS[previous.letter]?.includes(unit.letter) ?? false))
+      if (!allowed) flush()
+      // The conventional ত্+স spelling uses khanda-ta (উৎস), not an extra virama.
+      if (allowed && previous.letter === 'ত' && unit.letter === 'স') previous.letter = 'ৎ'
+      cluster.push(unit)
+      index += unit.length; continue
+    }
+    if (isVowel(ch)) {
+      const digraph = word.slice(index, index + 2).toLowerCase()
+      const key = VOWELS[digraph] ? digraph : lower
+      const vowel = ch === 'I' && key === 'i' ? ['ঈ', 'ী'] : ch === 'U' && key === 'u' ? ['ঊ', 'ূ'] : ch === 'O' && key === 'o' ? ['ও', 'ো'] : VOWELS[key]
+      if (!cluster.length) out += vowel[0]
+      else {
+        const joined = cluster.length > 1 || cluster.some((item) => item.letter.includes(HASANTA))
+        const next = word[index + 1] ?? ''
+        const implicit = ch === 'o' && key === 'o' && ((/^[b-df-hj-np-tv-z]$/iu.test(next) && (cluster.length === 1 || cluster.at(-1)?.key === 'r')) || (!next && joined))
         flush()
-        cluster = [unit]
-        hasCluster = true
+        if (!implicit) out += vowel[1]
       }
-      i += unit.length
-      continue
+      index += key.length; continue
     }
-
-    if (!isVowelChar(lower)) {
-      flush()
-      i += 1
-      continue
-    }
-
-    const two = word.slice(i, i + 2).toLowerCase()
-    const digraph = DIGRAPH_SIGN[two]
-
-    if (!hasCluster) {
-      // Standalone vowel, word-initial or after a finished syllable.
-      out += FULL_VOWEL[digraph !== undefined ? two : lower] ?? ch
-      i += digraph !== undefined ? 2 : 1
-      continue
-    }
-
-    if (lower === 'o' && !digraph) {
-      // Implicit-o rule: an unvoiced o silently closes the syllable
-      // (dorkar → দরকার, tokhon → তখন, hobe → হবে, shobdo → শব্দ);
-      // a pronounced o signs the last consonant (koro → করো, bhalo → ভালো).
-      const lastKey = cluster[cluster.length - 1].key
-      const nextConsonant = isConsonantChar(word[i + 1])
-      const implicit = nextConsonant && (cluster.length === 1 || lastKey === 'r')
-        || (word[i + 1] === undefined && cluster.length >= 2)
-      if (implicit) {
-        flush()
-        i += 1
-        continue
-      }
-      flush()
-      out += 'ো'
-      i += 1
-      continue
-    }
-
-    flush()
-    out += digraph ?? VOWEL_SIGN[lower] ?? ''
-    i += digraph !== undefined ? 2 : 1
+    flush(); out += ch; index += ch.length
   }
   flush()
-  return out.length > 0 ? out : null
+  return out
 }
 
-// ── Public surface ───────────────────────────────────────────────────────
-
-/** Bangla for one word, or null when the word must stay as typed. */
-export function convertWord(word: string): string | null {
-  if (!isBanglishTransliterable(word)) return null
-  const exact = lexicon[word.toLowerCase()]
-  if (exact) return exact
-  return ruleConvert(word)
-}
-
-/** Alternative readings for the suggestion chips, most likely first. */
-export function suggestReadings(word: string): string[] {
-  const candidates: string[] = []
-  const add = (candidate: string | null) => {
-    if (candidate && !candidates.includes(candidate)) candidates.push(candidate)
+/** One word, or null when the guest's Latin/data must remain untouched. */
+export function convertWord(word: string, options: BanglishOptions = {}): string | null {
+  if (!isBanglishTransliterable(word, options)) return null
+  if (!options.force) {
+    const exact = bankReading(word, options)
+    if (exact) return exact
   }
-  add(convertWord(word))
-  // Retroflex tilt: raise non-initial t/d/n one row (kotha → কথা vs কটা).
-  const retro = word.slice(0, 1) + word.slice(1).replace(/[tdn]/g, (m) => m.toUpperCase())
-  if (retro !== word) add(convertWord(retro))
-  // Dental reply for input that already carries a capital (tKhon → তখন).
-  const dental = word.replace(/[TN]/g, (m) => m.toLowerCase())
-  if (dental !== word) add(convertWord(dental))
-  // Affricate swap: chh ↔ ch (porichoy vs porikkhoy-style misreads).
-  const affricate = word.replace(/chh/g, '@').replace(/ch/g, 'chh').replace(/@/g, 'ch')
-  if (affricate !== word) add(convertWord(affricate))
+  const source = options.context === 'name' && !options.force ? word.replace(/^(Sh|[TDNR])/u, (first) => first.toLowerCase()) : word
+  return ruleConvert(source)
+}
+
+export function suggestReadings(word: string, options: BanglishOptions = {}): string[] {
+  if (!isBanglishTransliterable(word, options)) return []
+  const candidates: string[] = []
+  const add = (reading: string | null) => { if (reading && !candidates.includes(reading)) candidates.push(reading) }
+  add(convertWord(word, options))
+  if (!options.force && options.learned) add(bankReading(word, { context: options.context }) ?? null)
+  add(ruleConvert(word))
+  const retro = word.replace(/[tdn]/gu, (letter) => letter.toUpperCase())
+  if (retro !== word) add(ruleConvert(retro))
+  const dental = word.replace(/Rh/gu, 'rh').replace(/Sh/gu, 'sh').replace(/[TDNRS]/gu, (letter) => letter.toLowerCase())
+  if (dental !== word) add(ruleConvert(dental))
+  const affricate = word.replace(/chh|ch/gu, (value) => value === 'chh' ? 'ch' : 'chh')
+  if (affricate !== word) add(ruleConvert(affricate))
   return candidates.slice(0, 3)
 }
 
-const WORD_BREAK = /[\s.,!?;:()"'\[\]{}•→*–—·\/\\|%-]/
+const WORD_BREAK = /[\s.,!?;:()"'\[\]{}•→*–—·।॥/\\|%_\-]/u
+// These can still become part of an email local-part or an identifier. Show a
+// preview, but wait for a definitive separator before changing the field.
+const DEFERRED_DELIMITER = /[.!?'*%_{}|\-]/u
+function boundary(value: string, index: number): boolean {
+  return WORD_BREAK.test(value[index]) && !(value[index] === ',' && (value[index - 1] === ',' || value[index + 1] === ','))
+}
+function protectedContext(value: string, start: number, end: number): boolean {
+  let left = start
+  let right = end
+  while (left > 0 && !/\s/u.test(value[left - 1])) left--
+  while (right < value.length && !/\s/u.test(value[right])) right++
+  const token = value.slice(left, right)
+  return /[@/\\`\p{N}]/u.test(token) || /(?:[a-z][a-z+.-]*:|www\.)/iu.test(token)
+    || /[a-z0-9]\.[a-z]{2,}/iu.test(token) || /[\p{L}\p{M}\p{N}]_[\p{L}\p{M}\p{N}]/u.test(token)
+}
 
-/**
- * Panel-facing step: when the character just before the caret is a word
- * breaker, the finished word before it is converted in-place. Returns the
- * rewritten value, the replaced range, and the alternative readings.
- * Protected words (English, digits, URLs, caps, already-Bangla) → null.
- */
-export function convertTailForCaret(
-  value: string,
-  caret: number,
-): { next: string; start: number; end: number; candidates: string[] } | null {
-  if (caret <= 0 || caret > value.length) return null
-  const breakIndex = caret - 1
-  if (!WORD_BREAK.test(value[breakIndex])) return null
-  let start = breakIndex
-  while (start > 0 && !WORD_BREAK.test(value[start - 1])) start--
-  const word = value.slice(start, breakIndex)
-  const converted = convertWord(word)
-  if (!converted) return null
-  return {
-    next: value.slice(0, start) + converted + value.slice(breakIndex),
-    start,
-    end: breakIndex,
-    candidates: suggestReadings(word),
+export function previewForCaret(value: string, caret: number, options: BanglishOptions = {}): { source: string; start: number; end: number; candidates: string[] } | null {
+  if (!Number.isInteger(caret) || caret <= 0 || caret > value.length) return null
+  // An interior caret must not turn half an existing identifier/word into Bangla.
+  if (caret < value.length && !boundary(value, caret)) return null
+  let end = caret
+  while (end > 0 && (DEFERRED_DELIMITER.test(value[end - 1]) || value[end - 1] === ',' && value[end - 2] !== ',')) end--
+  let start = end
+  while (start > 0 && !boundary(value, start - 1)) start--
+  if (start === end || protectedContext(value, start, end)) return null
+  const source = value.slice(start, end)
+  const candidates = suggestReadings(source, options)
+  return candidates.length ? { source, start, end, candidates } : null
+}
+
+export function convertTailForCaret(value: string, caret: number, options: BanglishOptions = {}): {
+  next: string; start: number; end: number; candidates: string[]; source: string; converted: string; newEnd: number; caret: number
+} | null {
+  if (!Number.isInteger(caret) || caret <= 0 || caret > value.length) return null
+  let separator = caret - 1
+  if (value[separator] === ',' || DEFERRED_DELIMITER.test(value[separator])) return null
+  if (!boundary(value, separator)) {
+    if (value[separator - 1] !== ',' || value[separator - 2] === ',') return null
+    separator--
   }
+  let end = separator
+  while (end > 0 && (DEFERRED_DELIMITER.test(value[end - 1]) || value[end - 1] === ',' && value[end - 2] !== ',')) end--
+  const preview = previewForCaret(value, end, options)
+  if (!preview) return null
+  if (value[separator] === '_' && value[preview.start - 1] !== '_') return null
+  const converted = preview.candidates[0]
+  const next = value.slice(0, preview.start) + converted + value.slice(preview.end)
+  return { ...preview, next, converted, newEnd: preview.start + converted.length, caret: caret + converted.length - (preview.end - preview.start) }
 }

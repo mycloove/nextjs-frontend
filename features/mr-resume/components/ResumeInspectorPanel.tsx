@@ -1,11 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type CSSProperties, type Dispatch, MouseEvent as ReactMouseEvent, RefObject, SetStateAction } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type Dispatch, MouseEvent as ReactMouseEvent, type ReactNode, RefObject, SetStateAction } from 'react'
 import styles from './MrResumeStudio.module.css'
 import { Glyph, StudioDropdown, type GlyphName } from './MrResumeStudioControls'
 import type { PhotoBackground, PhotoBackgroundId } from './photoBackground'
 import { ResumeHeadingIcon, resumeHeadingIconOptions, type ResumeHeadingIconId } from './ResumeHeadingIcon'
-import { convertTailForCaret, isBijoyLikely } from './banglish'
+import { isBijoyLikely } from './banglish'
+import type { BanglishSource } from './banglishEditing'
+import type { SpellingChoice } from './banglishLearn'
+import BanglishInput from './BanglishInput'
+import BanglishTools from './BanglishTools'
 
 type InspectorMode = 'section' | 'page'
 type MobilePanel = 'sections' | 'write' | 'preview' | 'settings'
@@ -15,7 +19,7 @@ type BulletStyle = { prefix: string; label: string; example: string }
 type PaperSize = { width: number; height: number; dimensions: string; tex: string }
 type Accent = { name: string; color: string }
 type SpacingPreset = { name: string; leading: number; gap: number }
-export type SectionDividerConfig = { enabled: boolean; style: 'solid' | 'dashed' | 'dotted'; color: 'accent' | string; thickness: number }
+export type SectionDividerConfig = { enabled: boolean; style: 'solid' | 'dashed' | 'dotted'; color: 'accent' | string; thickness: number; underHeading?: boolean }
 export type ResumeHeadingIconSize = 'small' | 'medium' | 'large' | 'custom'
 
 export type ResumeInspectorPanelProps = {
@@ -51,8 +55,7 @@ export type ResumeInspectorPanelProps = {
   headingAccentColor: string
   titleRef: RefObject<HTMLInputElement | null>
   fullName: string
-  setFullName: Dispatch<SetStateAction<string>>
-  setTitles: Dispatch<SetStateAction<Record<string, string>>>
+  updateTitle: (value: string, kind: 'typing' | 'action') => void
   contentRef: RefObject<HTMLTextAreaElement | null>
   contentValue: string
   updateContent: (value: string, kind?: 'typing' | 'action') => void
@@ -104,6 +107,7 @@ export type ResumeInspectorPanelProps = {
   setFont: Dispatch<SetStateAction<string>>
   typefaces: { name: string; family: string }[]
   fontFamily: string
+  fontSample: string
   fontSize: number
   setFontSize: Dispatch<SetStateAction<number>>
   leading: number
@@ -122,6 +126,16 @@ export type ResumeInspectorPanelProps = {
   resetPageSettings: () => void
   banglishMode: boolean
   setBanglishMode: Dispatch<SetStateAction<boolean>>
+  banglishSources: { title: readonly BanglishSource[]; content: readonly BanglishSource[] }
+  recordBanglish: (field: 'title' | 'content', source: BanglishSource, value: string) => void
+  learnedWords: Readonly<Record<string, string>>
+  spellingChoices: SpellingChoice[]
+  onLearnReading: (source: string, reading: string) => void
+  onForgetSpelling: (source: string) => void
+  onClearSpellings: () => void
+  onExportSpellings: () => void
+  templateLibrary: ReactNode
+  languageSuggestions: ReactNode
 }
 
 export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
@@ -129,7 +143,7 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
     inspector, setInspector, setMobilePanel, sectionTabRef, pageTabRef, openPageSettings,
     active, activeIndex, enabled, title, resumeTitle, t, sectionDetail, moveSection, sectionDivider, canAddDivider, updateSectionDivider, dividerAccentColor,
     activeHeadingIcon, onHeadingIconChange, headingIconSize, setHeadingIconSize, headingIconCustomSize, headingIconCustomSizeDraft, onHeadingIconCustomSizeChange, onHeadingIconCustomSizeDraftChange, commitHeadingIconCustomSize, headingIconColor, setHeadingIconColor, headingAccentColor, titleRef, fullName,
-    setFullName, setTitles, contentRef, contentValue, updateContent,
+    updateTitle, contentRef, contentValue, updateContent,
     wrapSelection, insertLink, insertNumberedList, clearFormatting, undoAvailable, redoAvailable,
     moveHistory, bulletStyle, setBulletStyle, bulletMenuOpen, setBulletMenuOpen, bulletStyles,
     insertBullet, profileAligns, profileAlign, setProfileAlign, alignGlyph, photoInputRef,
@@ -137,108 +151,93 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
     photoShape, setPhotoShape, photoBackground, choosePhotoBackground, photoBackgrounds,
     photoCustomColor, setPhotoCustomColor, photoBlur, setPhotoBlur, accent, setAccent, accents,
     customAccentColor, setCustomAccentColor, customAccentIndex, removeSection, documentTitle,
-    setDocumentTitle, pageSize, setPageSize, paperSizes, font, setFont, typefaces, fontFamily,
+    setDocumentTitle, pageSize, setPageSize, paperSizes, font, setFont, typefaces, fontFamily, fontSample,
     fontSize, setFontSize, leading, setLeading, leadingDraft, setLeadingDraft, sectionGap,
     setSectionGap, sectionGapDraft, setSectionGapDraft, margin, setMargin, marginDraft,
     setMarginDraft, spacingPresets, resetPageSettings, banglishMode, setBanglishMode,
+    banglishSources, recordBanglish, learnedWords, spellingChoices, onLearnReading, onForgetSpelling, onClearSpellings, onExportSpellings, templateLibrary, languageSuggestions,
   } = props
 
-  // Banglish typing state — the আ toggle lives in the writing-heading row.
-  const [lastSuggest, setLastSuggest] = useState<{ start: number; end: number; options: string[] } | null>(null)
-  const [bijoyOffer, setBijoyOffer] = useState<{ start: number; end: number } | null>(null)
+  const [bijoyOffer, setBijoyOffer] = useState<{ start: number; end: number; source: string; snapshot: string; section: string } | null>(null)
   const [bijoyState, setBijoyState] = useState<'idle' | 'busy' | 'failed'>('idle')
-  const pendingCaret = useRef<number | null>(null)
-
-  // Switching sections invalidates every range the chips point at.
+  const bijoyAbort = useRef<AbortController | null>(null)
+  const activeRef = useRef(active)
+  activeRef.current = active
+  const [phonetic, setPhonetic] = useState(false)
   useEffect(() => {
-    setLastSuggest(null)
-    setBijoyOffer(null)
-    setBijoyState('idle')
-  }, [active])
-
-  // After an in-place replacement the caret is rebuilt where the word landed.
-  useEffect(() => {
-    const caret = pendingCaret.current
-    if (caret === null) return
-    pendingCaret.current = null
-    const input = contentRef.current
-    if (!input) return
-    requestAnimationFrame(() => {
-      input.focus()
-      const at = Math.min(caret, input.value.length)
-      input.setSelectionRange(at, at)
-    })
-  }, [contentValue, contentRef])
-
-  function handleType(event: ChangeEvent<HTMLTextAreaElement>) {
-    const value = event.target.value
-    if (banglishMode) {
-      const caret = event.target.selectionStart ?? value.length
-      const conversion = convertTailForCaret(value, caret)
-      if (conversion) {
-        updateContent(conversion.next, 'typing')
-        pendingCaret.current = conversion.start + (caret - conversion.end)
-        setLastSuggest({ start: conversion.start, end: conversion.end, options: conversion.candidates })
-        return
-      }
-      setLastSuggest(null)
-    }
-    updateContent(value, 'typing')
+    try { setPhonetic(window.localStorage.getItem('mr-resume:banglish-phonetic:v1') === 'on') } catch { /* Optional input preference. */ }
+  }, [])
+  function changePhonetic(value: boolean) {
+    setPhonetic(value)
+    try { window.localStorage.setItem('mr-resume:banglish-phonetic:v1', value ? 'on' : 'off') } catch { /* The current session still uses the chosen mode. */ }
   }
+
+  // A paste offer belongs to one exact field snapshot. Async results must never
+  // splice stale offsets into another section or overwrite edits made meanwhile.
+  useEffect(() => {
+    if (bijoyOffer && (bijoyOffer.section !== active || bijoyOffer.snapshot !== contentValue || inspector !== 'section')) {
+      const controller = bijoyAbort.current
+      bijoyAbort.current = null
+      controller?.abort()
+      setBijoyOffer(null)
+      setBijoyState('idle')
+    }
+  }, [active, contentValue, inspector, bijoyOffer])
+
+  useEffect(() => () => bijoyAbort.current?.abort(), [])
 
   // Paste lands raw first — the canvas and the input always match; the Bijoy
   // offer, when the paste reeks of legacy encoding, is explicitly ours to take.
-  function handlePaste(event: ClipboardEvent<HTMLTextAreaElement>) {
-    const pasted = event.clipboardData.getData('text')
-    if (!pasted) return
-    event.preventDefault()
-    const input = contentRef.current
-    const start = input?.selectionStart ?? contentValue.length
-    const end = input?.selectionEnd ?? start
-    updateContent(contentValue.slice(0, start) + pasted + contentValue.slice(end), 'typing')
+  function handlePastedText(pasted: string, start: number, end: number, snapshot: string) {
+    const controller = bijoyAbort.current
+    bijoyAbort.current = null
+    controller?.abort()
+    setBijoyState('idle')
     if (isBijoyLikely(pasted)) {
-      pendingCaret.current = null
-      setBijoyState('idle')
-      setBijoyOffer({ start, end: start + pasted.length })
-    } else {
-      pendingCaret.current = start + pasted.length
-    }
+      setBijoyOffer({ start, end, source: pasted, snapshot, section: active })
+    } else setBijoyOffer(null)
   }
 
   async function convertBijoy() {
     const offer = bijoyOffer
-    if (!offer || bijoyState === 'busy') return
+    if (!offer || bijoyState === 'busy' || offer.snapshot !== contentValue) return
+    const controller = new AbortController()
+    bijoyAbort.current = controller
+    const timeout = window.setTimeout(() => controller.abort(), 20000)
     setBijoyState('busy')
     try {
-      const source = contentValue.slice(offer.start, offer.end)
       const response = await fetch('/api/bijoy-convert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: source }),
+        body: JSON.stringify({ text: offer.source }),
+        signal: controller.signal,
+        cache: 'no-store',
       })
       const body: unknown = await response.json()
       const converted = (body as { text?: unknown }).text
       if (!response.ok || typeof converted !== 'string') throw new Error('bijoy-convert failed')
-      // Re-splice against the live value so edits made after pasting survive.
-      const current = contentRef.current?.value ?? contentValue
-      updateContent(current.slice(0, offer.start) + converted + current.slice(offer.end), 'action')
+      if (controller.signal.aborted || activeRef.current !== offer.section || contentRef.current?.value !== offer.snapshot) return
+      updateContent(offer.snapshot.slice(0, offer.start) + converted + offer.snapshot.slice(offer.end), 'action')
+      requestAnimationFrame(() => {
+        const input = contentRef.current
+        input?.focus({ preventScroll: true })
+        input?.setSelectionRange(offer.start + converted.length, offer.start + converted.length)
+      })
       setBijoyOffer(null)
       setBijoyState('idle')
     } catch {
-      setBijoyState('failed')
+      if (bijoyAbort.current === controller) setBijoyState('failed')
+    } finally {
+      window.clearTimeout(timeout)
+      if (bijoyAbort.current === controller) bijoyAbort.current = null
     }
   }
 
   function keepPastedText() {
+    bijoyAbort.current?.abort()
+    bijoyAbort.current = null
     setBijoyOffer(null)
     setBijoyState('idle')
-  }
-
-  function applyReading(option: string) {
-    if (!lastSuggest) return
-    updateContent(contentValue.slice(0, lastSuggest.start) + option + contentValue.slice(lastSuggest.end), 'action')
-    pendingCaret.current = lastSuggest.start + option.length
-    setLastSuggest(null)
   }
 
 
@@ -273,8 +272,8 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
                   <div className={styles.dividerPreview} aria-hidden="true"><span className={`${styles.dividerPreviewLine} ${styles[`dividerSample_${sectionDivider.style}`]}`} style={{ '--divider-color': sectionDivider.color === 'accent' ? dividerAccentColor : sectionDivider.color, '--divider-thickness': `${sectionDivider.thickness}px` } as CSSProperties} /></div>
                 </div>}
               </section>
-              <label className={styles.contentLabel} htmlFor="section-title">{active === 'profile' ? t('Full name') : t('Section heading')}</label>
-              <input ref={titleRef} id="section-title" className={styles.textInput} value={active === 'profile' ? fullName : resumeTitle(active)} onChange={(event) => active === 'profile' ? setFullName(event.target.value) : setTitles((current) => ({ ...current, [active]: event.target.value }))} placeholder={active === 'profile' ? t('Your full name') : t('e.g. Certifications')} />
+              <div className={styles.typingTitleHeading}><label className={styles.contentLabel} htmlFor="section-title">{active === 'profile' ? t('Full name') : t('Section heading')}</label><button type="button" className={`${styles.banglishToggle} ${banglishMode ? styles.banglishToggleOn : ''}`} aria-pressed={banglishMode} aria-keyshortcuts="Control+Alt+B" title={`${t(banglishMode ? 'Bangla typing: on' : 'Bangla typing: off')} (Ctrl+Alt+B)`} aria-label={t(banglishMode ? 'Bangla typing: on' : 'Bangla typing: off')} onClick={() => setBanglishMode((current) => !current)}>আ</button></div>
+              <BanglishInput key={`title:${active}`} id="section-title" className={styles.textInput} inputRef={titleRef} value={active === 'profile' ? fullName : resumeTitle(active)} onValueChange={updateTitle} enabled={banglishMode} phonetic={phonetic} context={active === 'profile' ? 'name' : 'career'} learned={learnedWords} sources={banglishSources.title} onConversion={(source, value) => recordBanglish('title', source, value)} onLearn={onLearnReading} placeholder={active === 'profile' ? t('Your full name') : t('e.g. Certifications')} t={t} />
               {active !== 'profile' && <details className={styles.headingIconSettings}>
                 <summary><span className={styles.headingIconSummaryTitle}><b>{t('Heading icon')}</b><small>{t('Optional')}</small></span><span className={styles.headingIconSummaryValue}>{activeHeadingIcon !== 'none' && <ResumeHeadingIcon name={activeHeadingIcon} />}<span>{activeHeadingIcon === 'none' ? t('None') : t(resumeHeadingIconOptions.find((item) => item.id === activeHeadingIcon)?.label ?? '')}</span><Glyph name="chevron" /></span></summary>
                 <p className={styles.headingIconHint}>{t('Choose a restrained mark for this section. Size and color apply to all section icons.')}</p>
@@ -298,7 +297,7 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
                   </div></div>
                 </div>
               </details>}
-              <div className={styles.writingHeading}><label className={styles.contentLabel} htmlFor="section-content">{active === 'profile' ? t('Role and contact details') : t('Section content')}</label><button type="button" className={`${styles.banglishToggle} ${banglishMode ? styles.banglishToggleOn : ''}`} aria-pressed={banglishMode} title={t(banglishMode ? 'Bangla typing: on' : 'Bangla typing: off')} aria-label={t(banglishMode ? 'Bangla typing: on' : 'Bangla typing: off')} onClick={() => setBanglishMode((current) => !current)}>আ</button></div>
+              <div className={styles.writingHeading}><label className={styles.contentLabel} htmlFor="section-content">{active === 'profile' ? t('Role and contact details') : t('Section content')}</label>{banglishMode && <span className={styles.typingModeHint}>{t('Banglish on')}</span>}</div>
               {active !== 'profile' && <div className={styles.formatPanel} role="group" aria-label={t('Section formatting tools')}>
                 <span className={styles.formatPanelLabel} aria-hidden="true"><span className={styles.formatPanelDot}></span>{t('FORMAT')}</span>
                 <div className={styles.formatToolbar}>
@@ -321,20 +320,7 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
                   </div>
                 </div>
               </div>}
-              <textarea ref={contentRef} id="section-content" className={styles.contentInput} value={contentValue} onChange={handleType} onPaste={handlePaste} onKeyDown={(event) => {
-                if (!(event.ctrlKey || event.metaKey)) return
-                const key = event.key.toLowerCase()
-                if (key === 'z') { event.preventDefault(); moveHistory(event.shiftKey ? 'redo' : 'undo') }
-                else if (key === 'y') { event.preventDefault(); moveHistory('redo') }
-              }} rows={active === 'profile' ? 7 : 13} placeholder={t('Write your content here...')} />
-              {lastSuggest && <div className={styles.typeSuggest} role="group" aria-label={t('Other readings')}>
-                {(() => {
-                  const current = contentValue.slice(lastSuggest.start, lastSuggest.end)
-                  const readings = lastSuggest.options.filter((option) => option !== current)
-                  if (readings.length === 0) return null
-                  return <><span className={styles.typeSuggestLabel}>{t('Other readings')}</span>{readings.map((option) => <button key={option} type="button" className={styles.typeSuggestButton} onClick={() => applyReading(option)}>{option}</button>)}</>
-                })()}
-              </div>}
+              <BanglishInput key={`content:${active}`} id="section-content" className={styles.contentInput} inputRef={contentRef} value={contentValue} onValueChange={updateContent} enabled={banglishMode} phonetic={phonetic} context={active === 'education' ? 'education' : active === 'personal' || active === 'profile' ? 'address' : 'career'} learned={learnedWords} sources={banglishSources.content} onConversion={(source, value) => recordBanglish('content', source, value)} onLearn={onLearnReading} onPasteText={handlePastedText} onHistory={moveHistory} rows={active === 'profile' ? 7 : 13} placeholder={t('Write your content here...')} t={t} />
               {bijoyOffer && <div className={styles.bijoyOffer} role="status">
                 {bijoyState === 'failed'
                   ? <>
@@ -347,8 +333,10 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
                     <button type="button" className={styles.bijoyKeep} onClick={keepPastedText}>{t('Keep as is')}</button>
                   </>}
               </div>}
-              <p className={styles.helperText}>{banglishMode ? t('Banglish typing is on. Write Banglish — the finished word becomes Bangla as soon as you space it. English words like Excel stay as typed.') : active === 'profile' ? t('Add your role, location, email, phone and links on separate lines.') : t('Blank lines separate entries. Select text for formatting, or choose a bullet style and add an item.')}</p>
+              <p className={styles.helperText}>{banglishMode ? t(phonetic ? 'Phonetic mode follows letter keys exactly, including T, Sh and R. Emails, links and numbers stay untouched.' : 'Banglish typing is on. Write Banglish — the finished word becomes Bangla as soon as you space it. English words like Excel stay as typed.') : active === 'profile' ? t('Add your role, location, email, phone and links on separate lines.') : t('Blank lines separate entries. Select text for formatting, or choose a bullet style and add an item.')}</p>
               <div className={styles.writingMeta}><span>{t('Live on the canvas')}</span><span>{contentValue.length} {t('characters')}</span></div>
+              <BanglishTools enabled={banglishMode} phonetic={phonetic} onPhoneticChange={changePhonetic} learned={learnedWords} choices={spellingChoices} onLearn={onLearnReading} onForget={onForgetSpelling} onClear={onClearSpellings} onExport={onExportSpellings} t={t} />
+              {languageSuggestions}
               {active === 'profile' && <div className={styles.identityFields}>
                 <section className={`${styles.identityCard} ${styles.alignField}`} aria-labelledby="header-align-label">
                   <div className={styles.identityHeading}>
@@ -409,6 +397,7 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
               <div className={styles.editorNote}><Glyph name="page" /><p>{t('Your words and layout are separate. Typography lives in')} <button type="button" onClick={openPageSettings}>{t('Page settings')}</button>.</p></div>
             </div> : <div id="page-inspector" role="tabpanel" aria-labelledby="page-tab">
               <div className={styles.pageSettingsHeading}><h2>{t('Page settings')}</h2><span className={styles.eyebrow}>{t('DOCUMENT-WIDE')}</span><p>{t('Set the rhythm. Give your words room.')}</p></div>
+              {templateLibrary}
               <div className={styles.mobileDocumentName}>
                 <label className={styles.contentLabel} htmlFor="mobile-document-name">{t('Document name')}</label>
                 <input id="mobile-document-name" className={styles.textInput} value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} />
@@ -426,7 +415,7 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
                 <legend><Glyph name="type" />{t('Typography')}</legend>
                 <div className={styles.typefaceRow}>
                   <div className={styles.typefaceControl}><span className={styles.contentLabel}>{t('Typeface')}</span><StudioDropdown value={font} options={typefaces.map((item) => item.name)} onChange={setFont} label={t('Typeface')} /></div>
-                  <div className={styles.fontPreview} style={{ fontFamily }} role="img" aria-label={`${font} ${t('type specimen')}: Aa. ${t('Your story, clearly set.')}`}><span>Aa</span><p>{t('Your story, clearly set.')}</p></div>
+                  <div className={styles.fontPreview} style={{ fontFamily }} role="img" aria-label={`${font} ${t('type specimen')}: ${fontSample}`}><span>{/[\u0980-\u09ff]/u.test(fontSample) ? '\u0985\u0986' : 'Aa'}</span><p>{fontSample}</p></div>
                 </div>
                 <div className={styles.numberSetting}>
                   <label htmlFor="body-size"><b>{t('Body text size')}</b><small>{t('Enter to apply. Not canvas zoom.')}</small></label>
