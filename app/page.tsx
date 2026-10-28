@@ -621,6 +621,22 @@ export default function Home() {
         <section className="home-tools" id="tools" aria-labelledby="tools-title">
           <div className="home-container">
             <div className="home-section-heading"><div><p>Tool library</p><h2 id="tools-title">Choose the tool.<br/>Keep the task in focus.</h2></div></div>
+            <article className="home-resume-feature" aria-labelledby="resume-feature-title">
+              <div className="home-resume-feature-art" aria-hidden="true">
+                <span className="home-resume-page"><i/><i/><i/><i/><b/><i/><i/><i/></span>
+                <span className="home-resume-page-back" />
+              </div>
+              <div className="home-resume-feature-copy">
+                <span className="home-resume-kicker">A new document studio</span>
+                <h3 id="resume-feature-title">Make your next chapter<br/>read like you.</h3>
+                <p>Build a resume, academic CV, biodata, or statement of purpose. Shape every section in a live, bilingual workspace.</p>
+                <div className="home-resume-tags"><span>Resume</span><span>বাংলা + English</span><span>LaTeX source</span></div>
+              </div>
+              <Link className="home-resume-action" href="/mr-resume">
+                Open Mr.Resume
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8h10M8 3l5 5-5 5" /></svg>
+              </Link>
+            </article>
             <div className="home-tool-controls">
               <div className="home-search"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input ref={searchInputRef} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder='Try “edit Word”, “OCR”, or “Bangla PDF”' aria-label="Search tools by task, format, or outcome" aria-controls="tool-results" />{query ? <button type="button" onClick={() => { setQuery(''); searchInputRef.current?.focus() }} aria-label="Clear search">×</button> : <kbd aria-hidden="true">Ctrl K</kbd>}</div>
               <div className="home-filter-strip">
