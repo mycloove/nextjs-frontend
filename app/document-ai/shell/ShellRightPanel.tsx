@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import type { UseShellStore } from "./useShellStore";
 import type { ShellCitation, SourceBlock, SourcePage } from "./types";
+import { sourceCitation } from "./sourceEvidence";
 
 interface Props {
   store: UseShellStore;
@@ -21,11 +22,10 @@ export function ShellRightPanel({ store }: Props) {
 
   return (
     <aside className="right-panel" data-mode={rightPanelMode}>
-      <div className="rp-mode-tabs" role="tablist" aria-label="Right panel view">
+      <div className="rp-mode-tabs" role="group" aria-label="Right panel view">
         <button
           type="button"
-          role="tab"
-          aria-selected={rightPanelMode === "insights"}
+          aria-pressed={rightPanelMode === "insights"}
           className={`rp-mode-tab${rightPanelMode === "insights" ? " active" : ""}`}
           onClick={showInsightsPanel}
         >
@@ -33,33 +33,28 @@ export function ShellRightPanel({ store }: Props) {
         </button>
         <button
           type="button"
-          role="tab"
-          aria-selected={rightPanelMode === "source"}
+          aria-pressed={rightPanelMode === "source"}
           className={`rp-mode-tab${rightPanelMode === "source" ? " active" : ""}`}
           onClick={() => {
-            if (activeCitation) jumpToCitation(activeCitation);
+            store.setRightPanelMode("source");
           }}
-          disabled={!activeCitation}
+          disabled={!store.sourcePages.length}
           title={
             activeCitation
-              ? "Show the exact source snippet"
-              : "Click a cited page in a chat answer to open the source"
+              ? "Show retrieved excerpts"
+              : "Open the excerpts returned with an answer"
           }
         >
-          Source
+          Excerpts
         </button>
+        <button type="button" className="rp-mode-tab" onClick={() => { store.setShowRightPanel(false); requestAnimationFrame(() => document.getElementById("panel-chat")?.focus()); }} aria-label="Close source panel">Close</button>
       </div>
 
       {rightPanelMode === "source" ? (
         <SourceViewerView
-          store={store}
           pages={store.sourcePages}
-          totalPages={store.totalPages}
-          activePage={
-            store.activeDocPage ?? activeCitation?.page ?? 1
-          }
+          activeSourcePageId={store.activeSourcePageId}
           activeCitationId={activeCitation?.id ?? null}
-          isGap={!!activeCitation?.isGap}
           crumbLabel={activeCitation?.label}
           onBack={showInsightsPanel}
           onStep={store.stepPage}
@@ -100,14 +95,6 @@ export function ShellRightPanel({ store }: Props) {
           <div className="rp-section">
             <div className="rp-section-label">Session</div>
             <div className="rp-meta-row">
-              <span>Model</span>
-              <span>Groq · llama-3.1</span>
-            </div>
-            <div className="rp-meta-row">
-              <span>Retrieval</span>
-              <span>RAG · pgvector</span>
-            </div>
-            <div className="rp-meta-row">
               <span>Turn</span>
               <span>
                 {activeMessages.filter((m) => m.role === "user").length}
@@ -131,18 +118,7 @@ function InsightsView({
   store: UseShellStore;
   onCitationClick: (c: ShellCitation) => void;
 }) {
-  const { activeMessages, activeDoc } = store;
-
-  const citedPages = useMemo(() => {
-    const set = new Set<number>();
-    for (const m of activeMessages) {
-      if (m.role !== "assistant") continue;
-      for (const s of m.sources || []) {
-        if (s.page) set.add(s.page);
-      }
-    }
-    return Array.from(set).sort((a, b) => a - b);
-  }, [activeMessages]);
+  const { activeMessages, sourcePages: citedPages } = store;
 
   const lastAssistant = useMemo(() => {
     for (let i = activeMessages.length - 1; i >= 0; i--) {
@@ -157,39 +133,30 @@ function InsightsView({
     <>
       <div className="rp-head">
         <h3 className="rp-title serif">Insights</h3>
-        <div className="rp-sub">Everything the answer stands on.</div>
+        <div className="rp-sub">Retrieved context, not verification of the answer.</div>
       </div>
 
       <div className="rp-section">
-        <div className="rp-section-label">Sources cited</div>
+        <div className="rp-section-label">Retrieved references</div>
         {(!lastAssistant ||
           !(lastAssistant.sources && lastAssistant.sources.length)) && (
           <div className="rp-empty">
-            Ask a question — cited pages and gaps will appear here.
+            No retrieved references are available for this answer.
           </div>
         )}
         {lastAssistant?.sources?.map((s, i) => (
           <button
             key={i}
-            className={`rp-source${lastAssistant.isGap ? " gap" : ""}`}
+            className="rp-source"
             title={s.text || s.label}
             onClick={() =>
-              onCitationClick({
-                id: `${lastAssistant.id}_src_${i}`,
-                page: s.page || 1,
-                label: s.label?.startsWith("p.")
-                  ? s.label
-                  : `p.${s.page || "?"}`,
-                text: s.text,
-                isGap: !!lastAssistant.isGap,
-                docId: s.doc_id || activeDoc?.docId,
-              })
+              onCitationClick(sourceCitation(lastAssistant, s, i))
             }
           >
             <span className="rp-source-dot" />
             <span style={{ minWidth: 0 }}>
               <b>
-                {s.label?.startsWith("p.") ? s.label : `p.${s.page || "?"}`}
+                {sourceCitation(lastAssistant, s, i).label}
               </b>
               {s.text && (
                 <span
@@ -209,26 +176,26 @@ function InsightsView({
       </div>
 
       <div className="rp-section">
-        <div className="rp-section-label">Cited pages</div>
+        <div className="rp-section-label">Source groups</div>
         {citedPages.length === 0 ? (
-          <div className="rp-empty">No pages cited yet.</div>
+          <div className="rp-empty">No source groups yet.</div>
         ) : (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {citedPages.map((p) => (
               <button
-                key={p}
+                key={p.id}
                 type="button"
                 className="cite-chip"
                 onClick={() =>
                   onCitationClick({
-                    id: `pageidx_${p}`,
-                    page: p,
-                    label: `p.${p}`,
-                    docId: activeDoc?.docId,
+                    id: p.citationIds[0],
+                    page: p.pageNum,
+                    label: p.pageLabel,
+                    docId: p.docId,
                   })
                 }
               >
-                p.{p}
+                {p.pageLabel}
               </button>
             ))}
           </div>
@@ -251,41 +218,35 @@ function InsightsView({
 /* ------------------------------------------------------------------ */
 
 function SourceViewerView({
-  store,
   pages,
-  totalPages,
-  activePage,
+  activeSourcePageId,
   activeCitationId,
-  isGap,
   crumbLabel,
   onBack,
   onStep,
   nonce,
 }: {
-  store: UseShellStore;
   pages: SourcePage[];
-  totalPages: number;
-  activePage: number;
+  activeSourcePageId: string | null;
   activeCitationId: string | null;
-  isGap: boolean;
   crumbLabel?: string;
   onBack: () => void;
   onStep: (dir: number) => void;
   nonce: number;
 }) {
-  const { activeDoc } = store;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const currentPage = useMemo(
-    () => pages.find((p) => p.pageNum === activePage) || null,
-    [pages, activePage]
+    () => pages.find((p) => p.id === activeSourcePageId) || (!activeCitationId && activeSourcePageId === null ? pages[0] : null) || null,
+    [pages, activeSourcePageId, activeCitationId]
   );
+  const currentIndex = pages.findIndex((page) => page.id === currentPage?.id);
 
   // Scroll + flash effect. Re-runs whenever activeCitationId / activePage
   // / nonce changes. The nonce guarantees a same-citation re-click also
   // replays the flash even though nothing else changed.
   useEffect(() => {
-    if (!activeCitationId) return;
+    if (!activeCitationId) { scrollRef.current?.scrollTo({ top: 0 }); return; }
     const raf = requestAnimationFrame(() => {
       const root = scrollRef.current;
       if (!root) return;
@@ -293,19 +254,19 @@ function SourceViewerView({
         `[data-cid="${cssEscape(activeCitationId)}"]`
       );
       if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? "auto" : "smooth", block: "center" });
+      el.focus({ preventScroll: true });
       // Force reflow so the animation replays on repeat clicks.
       el.classList.remove("flash");
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       void el.offsetWidth;
       el.classList.add("flash");
     });
     return () => cancelAnimationFrame(raf);
-  }, [activeCitationId, activePage, nonce]);
+  }, [activeCitationId, activeSourcePageId, nonce]);
 
-  const disablePrev = activePage <= 1;
-  const disableNext = activePage >= totalPages;
-  const crumb = crumbLabel || `p.${activePage}`;
+  const disablePrev = currentIndex <= 0;
+  const disableNext = currentIndex < 0 || currentIndex >= pages.length - 1;
+  const crumb = crumbLabel || currentPage?.pageLabel || "No reference selected";
 
   return (
     <div className="sv-wrap">
@@ -331,28 +292,20 @@ function SourceViewerView({
           <span>Insights</span>
         </button>
         <div className="sv-doc-meta">
-          <div className="sv-doc-name" title={activeDoc?.name}>
-            {activeDoc?.name || "Document"}
+          <div className="sv-doc-name" title={currentPage?.pageLabel}>
+            {currentPage?.pageLabel || "Retrieved excerpts"}
           </div>
           <div className="sv-crumb" aria-label="Location">
-            <span className="sv-crumb-key">Source</span>
+            <span className="sv-crumb-key">Excerpt</span>
             <span className="sv-crumb-sep">·</span>
             <span className="sv-crumb-val">{crumb}</span>
-            {isGap && (
-              <>
-                <span className="sv-crumb-sep">·</span>
-                <span className="sv-gap-tag" title="No matching clause found">
-                  gap
-                </span>
-              </>
-            )}
           </div>
         </div>
       </div>
 
       <PageBar
-        page={activePage}
-        total={totalPages}
+        page={currentIndex + 1}
+        total={pages.length}
         disablePrev={disablePrev}
         disableNext={disableNext}
         onStep={onStep}
@@ -362,7 +315,7 @@ function SourceViewerView({
         {currentPage ? (
           <article
             className="sv-page-doc"
-            id={`page-${currentPage.pageNum}`}
+            id={`source-group-${currentIndex}`}
             data-page={currentPage.pageNum}
           >
             <div className="sv-page-num">{currentPage.pageLabel}</div>
@@ -377,18 +330,15 @@ function SourceViewerView({
         ) : (
           <div className="sv-empty">
             <b style={{ display: "block", marginBottom: 4 }}>
-              Page {activePage} not loaded
+              No retrieved excerpt selected
             </b>
-            No cited snippet is available for this page yet. Ask something
-            grounded in this page to bring it in.
+            No excerpt is available for this reference. This does not establish that a clause or fact is absent from the original document.
           </div>
         )}
       </div>
 
       <div className="sv-footnote">
-        {isGap
-          ? "The model flagged this citation as missing — the highlight marks the absent clause."
-          : "Highlighted text is the exact passage the answer was grounded in."}
+        These are retrieved excerpts, not original PDF pages or verified claim evidence. Excerpts may be truncated. Check the original before relying on an answer.
       </div>
     </div>
   );
@@ -411,14 +361,14 @@ function PageBar({
   onStep: (dir: number) => void;
 }) {
   return (
-    <div className="sv-pagebar" role="navigation" aria-label="Page pager">
+    <div className="sv-pagebar" role="navigation" aria-label="Retrieved source groups">
       <button
         type="button"
         className="sv-pager-btn"
         onClick={() => onStep(-1)}
         disabled={disablePrev}
-        aria-label="Previous page"
-        title="Previous page"
+        aria-label="Previous source group"
+        title="Previous source group"
       >
         <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden>
           <path
@@ -432,15 +382,15 @@ function PageBar({
         </svg>
       </button>
       <span className="sv-pagebar-label">
-        Page <b>{page}</b> of {total}
+        Source group <b>{page}</b> of {total}
       </span>
       <button
         type="button"
         className="sv-pager-btn"
         onClick={() => onStep(1)}
         disabled={disableNext}
-        aria-label="Next page"
-        title="Next page"
+        aria-label="Next source group"
+        title="Next source group"
       >
         <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden>
           <path
@@ -489,6 +439,7 @@ function BlockRenderer({
             key={i}
             id={seg.citationId}
             data-cid={seg.citationId}
+            tabIndex={-1}
             className={`sv-hl${seg.isGap ? " gap" : ""}${
               isActive ? " is-target" : ""
             }`}

@@ -5,6 +5,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
+import { REVIEW_PILOT_ENABLED } from './review/model'
 
 import { useDropzone } from 'react-dropzone'
 import { Ic } from './icons'
@@ -43,6 +45,8 @@ import {
 } from './editor-widgets'
 import { githubGlyph } from './settings/icons'
 import { EmojiEntry } from './emoji'
+
+const ReviewDialog = dynamic(() => import('./review/ReviewDialog').then((module) => module.ReviewDialog), { ssr: false })
 
 
 import {
@@ -320,7 +324,7 @@ export function JobItem({
             <>
               <span>· {job.stats.words} words</span>
               <span>· ~{job.stats.tokens} tok</span>
-              <span>· conf {job.confidence}%</span>
+              <span title="Heuristic score, not measured accuracy">· text signal {job.confidence}/100</span>
             </>
           )}
           {job.status === 'error' && <span style={{ color: 'var(--pm-danger)' }}>· {job.error}</span>}
@@ -511,7 +515,7 @@ export function HistoryPanel({
           <button key={it.id} type="button" className="pm-history-item" onClick={() => onOpen(it)}>
             <span className="pm-history-file-icon" aria-hidden="true">{Ic.markdown(15)}</span>
             <span className="pm-history-name">{it.name}</span>
-            <span className="pm-history-meta">{it.words} words · {it.confidence}%</span>
+            <span className="pm-history-meta" title="Heuristic score, not measured accuracy">{it.words} words · {it.confidence}/100 text signal</span>
             <span className="pm-history-time">{timeAgo(it.ts)}</span>
             <span className="pm-history-open" aria-hidden="true">{Ic.chevron(13)}</span>
           </button>
@@ -538,6 +542,8 @@ export function Workspace({
   onRemove,
   onBack,
   onEdit,
+  onAcknowledgeExtraction,
+  onAttachReviewSource,
   onRename,
   onCopy,
   onDownload,
@@ -565,6 +571,8 @@ export function Workspace({
   onRemove: (id: string) => void
   onBack: () => void
   onEdit: (id: string, md: string) => void
+  onAcknowledgeExtraction: (id: string, issue: string, revision: number, checked: boolean) => void
+  onAttachReviewSource: (id: string, file: File) => Promise<void>
   onRename: (id: string, title: string) => void
   onCopy: () => void
   onDownload: (fmt: MrMarkdownExportFormat) => void
@@ -607,6 +615,7 @@ export function Workspace({
   const [splitRatio, setSplitRatio] = useState(1)
   const [mrTheme, setMrTheme] = useState<'light' | 'dark'>('light')
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const [reviewJobId, setReviewJobId] = useState<string | null>(null)
   const exportWrapRef = useRef<HTMLDivElement>(null)
   const [panelCollapsed, setPanelCollapsed] = useState(false)
   const [previewOnly, setPreviewOnly] = useState(false)
@@ -1223,9 +1232,7 @@ export function Workspace({
     setDiagramOpen(false)
   }
 
-  const confColor = active.confidence >= 85 ? 'var(--pm-success)'
-                  : active.confidence >= 65 ? 'var(--pm-warning)'
-                  : 'var(--pm-danger)'
+  const confColor = 'var(--pm-brand-500)'
 
   /* ═════════════════════════════════════════════════════════════════════
      TEXTAREA — insertion helpers + slash/emoji watchers + smart-paste
@@ -1707,6 +1714,7 @@ export function Workspace({
         </div>
 
         <div className="pm-ws-actions" aria-label="Document actions">
+          {REVIEW_PILOT_ENABLED && <button type="button" className="mr-new-btn mr-review-trigger" onClick={() => setReviewJobId(active.id)} aria-label="Review extraction against the original PDF" title="Review extraction against the original PDF">{Ic.file(14)} <span className="mr-review-trigger-label">Review</span></button>}
           <div className="mr-nav-control-group">
             <button type="button" className={cx('mr-icon-only', previewOnly && 'mr-icon-only-active')} onClick={() => setPreviewOnly((value) => !value)} aria-label={previewOnly ? 'Show editor' : 'Open preview only'} aria-pressed={previewOnly} data-tooltip={previewOnly ? 'Show editor' : 'Preview only'}>{Ic.eye(16)}</button>
             <button type="button" className="mr-icon-only mr-theme-toggle" onClick={toggleMrTheme} aria-label={`Switch to ${mrTheme === 'light' ? 'dark' : 'light'} theme`} data-tooltip={mrTheme === 'light' ? 'Dark theme' : 'Light theme'}>
@@ -1800,6 +1808,7 @@ export function Workspace({
                 </div>
               ) : null}
             </div>
+            {REVIEW_PILOT_ENABLED && <button type="button" className="mr-focus-icon-btn" onClick={() => setReviewJobId(active.id)} title="Review original PDF" aria-label="Review original PDF">{Ic.file(14)}</button>}
             <button type="button" className="mr-focus-icon-btn" onClick={onCopy} title="Copy markdown" aria-label="Copy markdown">{Ic.copy(14)}</button>
             <button type="button" className="mr-focus-exit" onClick={onToggleFocus} aria-label="Exit focus mode">
               <span className="mr-focus-exit-icon" aria-hidden="true">{Ic.focus(14)}</span>
@@ -1933,11 +1942,11 @@ export function Workspace({
             })}
           </div>
 
-          {/* AI actions live on the utility rail (single source of truth).
+          {/* Document actions live on the utility rail (single source of truth).
               The sidebar keeps a single entry point to avoid duplicating them. */}
           <div className="pm-ws-section mr-section-spaced">
-            <span>AI toolkit</span>
-            <span className="mr-beta-badge mr-beta-badge-premium">Beta</span>
+            <span>Document tools</span>
+            <span className="mr-beta-badge mr-beta-badge-premium">Local</span>
           </div>
           <div style={{ padding: '0 12px 12px' }}>
             <button
@@ -1945,20 +1954,17 @@ export function Workspace({
               className="mr-ws-ai-cta"
               onClick={onOpenCmdk}
               disabled={aiBusy !== null}
-              aria-label="Open AI actions"
+              aria-label="Open document tools"
             >
               <span className="mr-ws-ai-cta-icon" aria-hidden="true">
                 {aiBusy !== null ? Ic.spinner(15) : Ic.wand(15)}
               </span>
               <span className="mr-ws-ai-cta-copy">
-                <strong>{aiBusy !== null ? 'Working…' : 'Open AI actions'}</strong>
-                <small>Clean up · summarize · translate · split</small>
+                <strong>{aiBusy !== null ? 'Working…' : 'Open document tools'}</strong>
+                <small>Clean up · contents · metadata · chunks</small>
               </span>
               <span className="mr-ws-ai-cta-arrow" aria-hidden="true">{Ic.arrow(14)}</span>
             </button>
-            {creditState.snapshot?.prices['document-ai']?.enabled !== false ? <div className="mr-credit-cost mr-ai-credit-cost">
-              <span>AI refinement</span><CreditCost toolId="document-ai" creditState={creditState} showActionLabel={false} />
-            </div> : null}
           </div>
 
           <div className="pm-ws-section mr-section-spaced">Document insights</div>
@@ -1998,14 +2004,14 @@ export function Workspace({
                 <div className="pm-stat-cell-value">{active.stats.links}</div>
               </div>
             </div>
-            <div className="pm-stat-cell pm-stat-cell-premium pm-stat-cell-conf">
-              <div className="pm-conf-ring pm-conf-ring-premium" style={{ ['--conf-value' as unknown as string]: active.confidence, ['--conf-color' as unknown as string]: confColor }}>
-                <span>{active.confidence}</span>
+            <div className="pm-stat-cell pm-stat-cell-premium pm-stat-cell-conf" title="Heuristic text signal, not measured accuracy. Compare the content with the original.">
+              <div className="pm-conf-ring pm-conf-ring-premium" style={{ ['--conf-value' as unknown as string]: active.markdown.trim() ? active.confidence : 0, ['--conf-color' as unknown as string]: confColor }}>
+                <span>{active.markdown.trim() ? active.confidence : 'N/A'}</span>
               </div>
               <div className="pm-stat-cell-data">
-                <div className="pm-stat-cell-label">Confidence</div>
+                <div className="pm-stat-cell-label">Text signal</div>
                 <div className="pm-stat-cell-quality">
-                  {active.confidence >= 85 ? 'High' : active.confidence >= 65 ? 'Medium' : 'Low'}
+                  Heuristic /100
                 </div>
               </div>
             </div>
@@ -2366,7 +2372,7 @@ export function Workspace({
           </div>
           <span className="pm-ws-foot-sep pm-ws-foot-sep-conf" />
           <span className="pm-ws-foot-item pm-ws-foot-conf">
-            {Ic.check(10)} Conf {active.confidence}%
+            {Ic.info(10)} {active.markdown.trim() ? `Signal ${active.confidence}/100` : 'No text signal'}
           </span>
         </div>
         <div className="pm-ws-foot-right">
@@ -2416,6 +2422,8 @@ export function Workspace({
           onCreate={onCreateMerged}
         />
       )}
+
+      {REVIEW_PILOT_ENABLED && reviewJobId === active.id && <ReviewDialog key={active.id} job={active} onEdit={onEdit} onAcknowledge={onAcknowledgeExtraction} onAttach={onAttachReviewSource} onClose={() => setReviewJobId(null)} />}
 
       {/* The sidebar row's provenance plate. Rendered at the workspace root, not
           inside the sidebar, because the sidebar scrolls and would clip it; its

@@ -5,7 +5,7 @@ import "./styles/premium-shell.css";
 export const metadata = pageMetadata(
   "/document-ai",
   "Document AI: Chat with Your Documents",
-  "Ask questions about an uploaded document and review answers alongside its pages. AI answers can be wrong; check the source before relying on them.",
+  "Ask questions about an uploaded document and inspect retrieved excerpts. AI answers can be wrong; compare important details with the original document.",
 );
 
 /**
@@ -22,12 +22,10 @@ export default function DocumentAILayout({
 }) {
   return (
     <>
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link
         rel="preconnect"
         href="https://fonts.googleapis.com"
       />
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link
         rel="preconnect"
         href="https://fonts.gstatic.com"

@@ -11,7 +11,8 @@
    the orchestrator can say so honestly once, rather than pretend they returned.
    ═════════════════════════════════════════════════════════════════════════ */
 
-import { Job, Mode, computeStats, renderMarkdownToHtml, stripName } from './utils'
+import { computeStats, renderMarkdownToHtml, stripName, type Job, type Mode } from './utils.ts'
+import { restoreExtractionReview, type ExtractionReview } from './review/model.ts'
 
 export const SESSION_KEY = 'pm.session.v1'
 export const WORKSPACE_PREFS_KEY = 'pm.workspace.prefs.v1'
@@ -40,6 +41,7 @@ export type MrSessionDoc = {
   confidence: number
   pages?: number
   processedAt?: number
+  extractionReview?: ExtractionReview
   /** Provenance key (e.g. a GitHub file), so identity survives a reload. */
   sourceId?: string
   /**
@@ -86,6 +88,7 @@ const toDoc = (job: Job): MrSessionDoc => {
     pages: job.pages,
     processedAt: job.processedAt,
     sourceId: job.sourceId,
+    ...(job.extractionReview ? { extractionReview: job.extractionReview } : {}),
     // Only a dirty baseline is stored: when the document is clean the baseline is
     // the content, so storing both would double its weight for nothing.
     ...(dirty ? { githubBase: job.githubBase } : {}),
@@ -93,7 +96,7 @@ const toDoc = (job: Job): MrSessionDoc => {
 }
 
 /** Characters a stored doc will occupy: the body plus a persisted dirty baseline. */
-const docChars = (doc: MrSessionDoc): number => doc.markdown.length + (doc.githubBase?.markdown.length ?? 0)
+const docChars = (doc: MrSessionDoc): number => doc.markdown.length + (doc.githubBase?.markdown.length ?? 0) + (doc.extractionReview ? JSON.stringify(doc.extractionReview).length : 0)
 
 /** Build the persisted session, ordered active-first then most-recent, and
  *  apply the count/size caps. Returns the session plus how many docs it dropped. */
@@ -157,6 +160,7 @@ export function hydrateJob(doc: MrSessionDoc): Job {
     passwordAttempts: 0,
     aiActions: {},
     sourceId: doc.sourceId,
+    extractionReview: restoreExtractionReview(doc.extractionReview),
     // A clean sourced document lost its (redundant) baseline at save time; it is
     // exactly equal to the content, so rebuild it here. Without this the document
     // would look unsourced on the next edit and could never be committed.

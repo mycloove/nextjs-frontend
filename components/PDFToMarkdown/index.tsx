@@ -30,6 +30,7 @@ import { useToolAvailability } from '@/lib/usage/useToolAvailability'
 import { useAccountViewer } from '@/lib/account/useAccountViewer'
 import { useCreditBalance } from '@/lib/usage/useCreditBalance'
 import './premium.css'
+import { REVIEW_PILOT_ENABLED, acknowledgeReview, createExtractionReview, matchesReviewSource, reviseExtractionReview, sha256Bytes } from './review/model'
 import './math.css'
 import { Ic } from './icons'
 import { MrMarkdownBrandLogo } from './MrMarkdownBrandLogo'
@@ -63,19 +64,6 @@ const HISTORY_MAX      = 40
 const HISTORY_PREVIEW    = 3
 const CHUNK_TOKEN_LIMIT = 3000
 
-/* Target languages for the translate action. A fixed list keeps the codes valid
-   and replaces the old window.prompt, which accepted any free-text string. */
-const TRANSLATE_LANGS: { code: string; label: string }[] = [
-  { code: 'bn', label: 'বাংলা · Bengali' },
-  { code: 'en', label: 'English' },
-  { code: 'hi', label: 'हिन्दी · Hindi' },
-  { code: 'es', label: 'Español' },
-  { code: 'fr', label: 'Français' },
-  { code: 'ar', label: 'العربية · Arabic' },
-  { code: 'zh', label: '中文 · Chinese' },
-  { code: 'ja', label: '日本語 · Japanese' },
-]
-
 function dataUrlToFile(dataUrl: string, filename: string, mimeType: string): File {
   const comma = dataUrl.indexOf(',')
   if (comma < 0) throw new Error(`Invalid export asset: ${filename}`)
@@ -94,7 +82,10 @@ function dataUrlToFile(dataUrl: string, filename: string, mimeType: string): Fil
  */
 function withMarkdown(job: Job, markdown: string): Job {
   const stats = computeStats(markdown)
-  return { ...job, markdown, stats, html: renderMarkdownToHtml(markdown) }
+  return {
+    ...job, markdown, stats, html: renderMarkdownToHtml(markdown),
+    ...(job.extractionReview ? { extractionReview: reviseExtractionReview(job.extractionReview, job.markdown, markdown) } : {}),
+  }
 }
 
 /* ── Preset → option map ────────────────────────────────────── */
@@ -182,7 +173,6 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
   const [cmdkOpen, setCmdkOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [mergeOpen, setMergeOpen] = useState(false)
-  const [translateTarget, setTranslateTarget] = useState<string | null>(null)
 
   /* ── AI busy state (which action is in-flight) ────────────── */
   const [aiBusy, setAiBusy] = useState<string | null>(null)
@@ -398,10 +388,13 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
         return
       }
       const data = await res.json()
-      const md: string = data.markdown || ''
+      if (!data || typeof data.markdown !== 'string') throw new Error('The processor did not return a Markdown document.')
+      const md: string = data.markdown
       const stats = computeStats(md)
-      const confidence = data.confidence ?? computeConfidence(md, stats)
+      const confidence = typeof data.confidence === 'number' && Number.isFinite(data.confidence) && data.confidence >= 0 && data.confidence <= 100 ? data.confidence : computeConfidence(md, stats)
       const html = renderMarkdownToHtml(md)
+      const sourceHash = REVIEW_PILOT_ENABLED ? await job.file.arrayBuffer().then(sha256Bytes).catch(() => null) : null
+      const extractionReview = REVIEW_PILOT_ENABLED ? createExtractionReview(data, { name: job.file.name, size: job.file.size, sha256: sourceHash }) : undefined
       updateJob(job.id, {
         status: 'done',
         progress: 100,
@@ -411,12 +404,16 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
         stats,
         pages: data.pages,
         processedAt: Date.now(),
+        ...(extractionReview ? { extractionReview, sourcePdf: job.file } : {}),
       })
       pushHistory({
         id: job.id, name: job.file.name, markdown: md,
         ts: Date.now(), words: stats.words, confidence,
       })
-      toast('success', `${stripName(job.file.name)} converted (${confidence}%)`)
+      const hasNotices = Array.isArray(data.warnings) && data.warnings.length > 0
+      toast(hasNotices ? 'info' : 'success', hasNotices
+        ? `${stripName(job.file.name)} returned extraction notices. Compare the output with the original before using it.`
+        : `${stripName(job.file.name)} converted. Review the result against the original.`)
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Network error'
       updateJob(job.id, { status: 'error', progress: 0, error: msg })
@@ -642,6 +639,21 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
     setJobs((prev) => prev.map((j) => (j.id === id ? withMarkdown(j, md) : j)))
   }, [])
 
+  const acknowledgeExtraction = useCallback((id: string, issue: string, revision: number, checked: boolean) => {
+    setJobs((prev) => prev.map((job) => job.id === id && job.extractionReview?.source.sha256 && job.sourcePdf
+      ? { ...job, extractionReview: acknowledgeReview(job.extractionReview, issue, revision, checked) }
+      : job))
+  }, [])
+
+  const attachReviewSource = useCallback(async (id: string, file: File) => {
+    const current = jobs.find((job) => job.id === id)?.extractionReview
+    if (!current?.source.sha256) throw new Error('This document has no source fingerprint. Import the original PDF again.')
+    if (!await matchesReviewSource(file, current.source)) throw new Error('This file does not match the original PDF. The draft and its source record are unchanged.')
+    setJobs((prev) => prev.map((job) => job.id === id && job.extractionReview?.source.sha256 === current.source.sha256 && job.extractionReview.capturedAt === current.capturedAt
+      ? { ...job, sourcePdf: file }
+      : job))
+  }, [jobs])
+
   /*
     Write-through from the Connections panel: the panel's editor and the workspace
     document are the *same* content, so an edit keyed by provenance lands on the
@@ -804,15 +816,21 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
   }, [jobs, activeJobId, toast])
 
   /* ═══════════════════════════════════════════════════════════════════════
-     AI ACTIONS — free tier uses local heuristics + Groq for cleanup/summarize
+     DOCUMENT ACTIONS — deterministic edits; remote text actions fail closed
      ═══════════════════════════════════════════════════════════════════════ */
 
   const runAiAction = useCallback(async (
     kind: 'cleanup' | 'toc' | 'summarize' | 'translate' | 'frontmatter' | 'chunk',
-    target?: string,
   ) => {
     const j = jobs.find((x) => x.id === activeJobId)
     if (!j) return
+    // Document AI's RAG endpoint requires indexed document IDs. Sending a draft
+    // there can return a refusal as text, not a safe rewrite. Never substitute it
+    // for this document or silently send only a prefix of the user's content.
+    if (kind === 'summarize' || kind === 'translate') {
+      toast('info', 'Summary and translation are unavailable for editor drafts. Your document has not been sent or changed.')
+      return
+    }
     setAiBusy(kind)
     try {
       if (kind === 'toc') {
@@ -831,75 +849,10 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
         editMarkdown(j.id, withFm)
         toast('success', 'Frontmatter added')
       } else if (kind === 'cleanup') {
-        // Local deterministic pass first
-        const local = cleanupMarkdown(j.markdown)
-        editMarkdown(j.id, local)
-        // Then attempt Groq refinement via existing endpoint (best-effort)
-        try {
-          const r = await toolRequest('/api/document-ai/summarize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: local.slice(0, 12000),
-              instruction: 'Rewrite this markdown to fix broken hyphenations, merge split paragraphs, and normalize headings. Return only the improved markdown.',
-              mode: 'rewrite',
-            }),
-          })
-          if (r.ok) {
-            const d = await r.json()
-            if (d?.result && typeof d.result === 'string' && d.result.length > 100) {
-              editMarkdown(j.id, d.result)
-              toast('success', 'AI cleanup applied')
-              return
-            }
-          }
-        } catch {
-          // The AI refinement is optional. If it fails or is unavailable we keep
-          // the local pass already applied above and the toast below says which
-          // pass the user got - an explicit fallback, not a silent swallow.
-        }
+        editMarkdown(j.id, cleanupMarkdown(j.markdown))
         toast('success', 'Local cleanup applied')
-      } else if (kind === 'summarize') {
-        const r = await toolRequest('/api/document-ai/summarize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: j.markdown.slice(0, 16000), mode: 'summary' }),
-        })
-        if (r.ok) {
-          const d = await r.json()
-          const summary = d?.result || d?.summary || ''
-          if (summary) {
-            const block = `\n\n---\n\n## Summary\n\n${summary}\n`
-            editMarkdown(j.id, j.markdown + block)
-            toast('success', 'Summary appended')
-          } else {
-            toast('info', 'AI returned empty summary')
-          }
-        } else {
-          toast('error', 'Summary service unavailable')
-        }
-      } else if (kind === 'translate') {
-        const to = (target ?? '').trim()
-        if (!to) { setTranslateTarget('bn'); return } // open the language picker
-        setTranslateTarget(null)
-        const r = await toolRequest('/api/document-ai/summarize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: j.markdown.slice(0, 12000),
-            instruction: `Translate the following markdown to ${to}. Preserve all formatting, links, code blocks and tables verbatim.`,
-            mode: 'rewrite',
-          }),
-        })
-        if (r.ok) {
-          const d = await r.json()
-          if (d?.result) {
-            editMarkdown(j.id, d.result)
-            toast('success', `Translated to ${to.toUpperCase()}`)
-          } else toast('info', 'Empty translation')
-        } else toast('error', 'Translation unavailable')
       } else if (kind === 'chunk') {
-        downloadActive('chunks')
+        await downloadActive('chunks')
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'AI action failed'
@@ -939,11 +892,9 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
       acts.push({ id: 'dl-json', group: 'Export', label: 'Download .json', icon: Ic.download(13), fn: () => downloadActive('json') })
       acts.push({ id: 'dl-docx', group: 'Export', label: 'Download .docx', icon: Ic.download(13), fn: () => downloadActive('docx') })
       acts.push({ id: 'dl-chunks', group: 'Export', label: 'Split for AI (chunks.json)', icon: Ic.chunks(13), fn: () => downloadActive('chunks') })
-      acts.push({ id: 'ai-clean', group: 'AI', label: 'Clean up with AI', icon: Ic.broom(13), fn: () => runAiAction('cleanup') })
-      acts.push({ id: 'ai-toc', group: 'AI', label: 'Add table of contents', icon: Ic.toc(13), fn: () => runAiAction('toc') })
-      acts.push({ id: 'ai-fm', group: 'AI', label: 'Add YAML frontmatter', icon: Ic.file(13), fn: () => runAiAction('frontmatter') })
-      acts.push({ id: 'ai-sum', group: 'AI', label: 'Summarize document', icon: Ic.bulb(13), fn: () => runAiAction('summarize') })
-      acts.push({ id: 'ai-tr', group: 'AI', label: 'Translate document', icon: Ic.language(13), fn: () => runAiAction('translate') })
+      acts.push({ id: 'ai-clean', group: 'Editor', label: 'Clean up Markdown locally', icon: Ic.broom(13), fn: () => runAiAction('cleanup') })
+      acts.push({ id: 'ai-toc', group: 'Editor', label: 'Add table of contents', icon: Ic.toc(13), fn: () => runAiAction('toc') })
+      acts.push({ id: 'ai-fm', group: 'Editor', label: 'Add YAML frontmatter', icon: Ic.file(13), fn: () => runAiAction('frontmatter') })
     }
     jobs.forEach((j) => {
       if (j.status === 'done') acts.push({
@@ -1089,6 +1040,8 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
           onRemove={removeDocument}
           onBack={returnToStart}
           onEdit={editMarkdown}
+          onAcknowledgeExtraction={acknowledgeExtraction}
+          onAttachReviewSource={attachReviewSource}
           onRename={renameDocument}
           onCopy={copyActive}
           onDownload={downloadActive}
@@ -1202,7 +1155,7 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
                       <span className="pm-continuation-icon">{Ic.markdown(14)}</span>
                       <span className="pm-continuation-body">
                         <strong>{stripName(h.name) || 'Untitled document'}</strong>
-                        <small>{h.words.toLocaleString()} words · {h.confidence}% confidence</small>
+                        <small>{h.words.toLocaleString()} words · {h.confidence}/100 text signal</small>
                       </span>
                       <span className="pm-continuation-tail">
                         <span className="pm-continuation-time">{timeAgo(h.ts)}</span>
@@ -1327,45 +1280,6 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
 
       <CommandPalette open={cmdkOpen} actions={cmdActions} creditState={creditState} onClose={() => setCmdkOpen(false)} />
       <ShortcutsModal open={helpOpen} onClose={() => setHelpOpen(false)} />
-
-      {translateTarget !== null && (
-        <div
-          className="pm-modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Translate document"
-          onClick={() => setTranslateTarget(null)}
-        >
-          <div className="pm-modal-card" onClick={(e) => e.stopPropagation()}>
-            <h3 className="pm-modal-title">Translate document</h3>
-            <p className="pm-modal-sub">
-              Choose a target language — formatting, links, code blocks and tables are preserved.
-            </p>
-            <div className="pm-modal-langs">
-              {TRANSLATE_LANGS.map((l) => (
-                <button
-                  key={l.code}
-                  type="button"
-                  className="pm-modal-lang"
-                  onClick={() => runAiAction('translate', l.code)}
-                  disabled={aiBusy !== null}
-                >
-                  {l.label}
-                </button>
-              ))}
-            </div>
-            <div className="pm-modal-foot">
-              <button
-                type="button"
-                className="pm-modal-cancel"
-                onClick={() => setTranslateTarget(null)}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <ToastStack toasts={toasts} />
     </div>

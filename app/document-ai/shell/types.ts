@@ -11,7 +11,7 @@ export type ShellDocument = {
 
 export type ShellSource = {
   label: string;
-  page: number;
+  page: number | null;
   text?: string;
   doc_id?: string;
   doc_number?: number;
@@ -23,6 +23,8 @@ export type ShellMessage = {
   role: "user" | "assistant" | "system";
   text: string;
   sources?: ShellSource[];
+  /** Backend-reported resolution, never inferred from the active UI tab. */
+  resolvedDocId?: string;
   isGap?: boolean; // used to color the note answer as gap-flavor
   createdAt: number;
   loading?: boolean;
@@ -47,11 +49,11 @@ export type Theme = "light" | "dark";
 export type ShellCitation = {
   /** Stable id for re-flashing when the same chip is clicked twice. */
   id: string;
-  /** 1-based PDF page number. */
-  page: number;
+  /** Reported 1-based PDF page number; absent means unknown, not page one. */
+  page: number | null;
   /** Display label ("p.4 · §2.1"). */
   label: string;
-  /** Exact sentence / snippet we want the eye to land on. */
+  /** Retrieved snippet, not proof of a claim or an original PDF region. */
   text?: string;
   /** True when the answer is a "not found / no clause" style callout. */
   isGap?: boolean;
@@ -65,10 +67,8 @@ export type RightPanelMode = "insights" | "source";
 /* ------------------------------------------------------------------ */
 /* Source Viewer — paginated per-page contract                         */
 /*                                                                    */
-/* The chat backend returns raw snippet text per citation. We rebuild  */
-/* that into a `SourcePage[]` shape on the fly, one entry per cited   */
-/* page, so the SourceViewerView can render a paginated document that */
-/* matches the reference mockup 1-to-1.                                */
+/* The chat backend returns excerpts, not original PDF pages. Groups   */
+/* retain reported document/page identities without inventing either. */
 /* ------------------------------------------------------------------ */
 
 /** Inline segment inside a paragraph — either plain text or a highlight
@@ -91,8 +91,11 @@ export type SourceBlock =
 
 /** A rendered page in the SourceViewerView. */
 export interface SourcePage {
-  pageNum: number;
-  /** e.g. "Vendor_MSA_2026.pdf — Page 4 of 12" */
+  id: string;
+  docId?: string;
+  citationIds: string[];
+  pageNum: number | null;
+  /** Reported source identity; never a fabricated total-page count. */
   pageLabel: string;
   blocks: SourceBlock[];
 }

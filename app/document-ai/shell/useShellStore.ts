@@ -2,17 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
-  ParagraphSegment,
   RightPanelMode,
   ShellCitation,
   ShellDocument,
   ShellMessage,
   ShellRecent,
-  ShellSource,
-  SourceBlock,
-  SourcePage,
   Theme,
 } from "./types";
+import { buildSourcePages, normalizeChatSources, sourceGroupForCitation } from "./sourceEvidence";
 
 // -- LocalStorage keys (compatible with existing pages) --
 const LS_SESSION_KEY = "doc_session_id";
@@ -93,7 +90,7 @@ export function useShellStore() {
     return (localStorage.getItem(LS_VIEW_KEY) as MainView) || "chat";
   });
   const [showSidebar, setShowSidebar] = useState(false); // mobile sidebar
-  const [showRightPanel, setShowRightPanel] = useState(true);
+  const [showRightPanel, setShowRightPanel] = useState(false);
   const [showCmdk, setShowCmdk] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -113,6 +110,7 @@ export function useShellStore() {
     useState<ShellCitation | null>(null);
   const [jumpNonce, setJumpNonce] = useState(0);
   const [activeDocPage, setActiveDocPage] = useState<number | null>(null);
+  const [activeSourcePageId, setActiveSourcePageId] = useState<string | null>(null);
 
   // ---- persist ----
   useEffect(() => {
@@ -164,24 +162,20 @@ export function useShellStore() {
   // If the user switches to a different document, clear any active
   // citation so we don't accidentally point at a page in the wrong PDF.
   useEffect(() => {
-    if (!activeCitation) return;
-    if (activeCitation.docId && activeCitation.docId !== activeDocId) {
-      setActiveCitation(null);
-      setRightPanelMode("insights");
-      setActiveDocPage(null);
-    }
-  }, [activeDocId, activeCitation]);
+    setActiveCitation(null);
+    setRightPanelMode("insights");
+    setActiveDocPage(null);
+    setActiveSourcePageId(null);
+  }, [activeDocId]);
 
   // ---- Source pages (paginated view) ----
   // Rebuild a `SourcePage[]` from every assistant answer whose citations
   // belong to the current doc. Each cited page becomes a page whose
   // paragraph contains one `highlight` segment per citation on it — the
   // citationId join-key is what the SourceViewer scrolls to & flashes.
-  const totalPages = activeDoc?.pages || 12;
-  const sourcePages = useMemo<SourcePage[]>(
-    () =>
-      buildSourcePages(activeMessages, activeDoc, totalPages),
-    [activeMessages, activeDoc, totalPages]
+  const sourcePages = useMemo(
+    () => buildSourcePages(activeMessages, documents),
+    [activeMessages, documents]
   );
 
   const setTheme = useCallback((t: Theme) => setThemeState(t), []);
@@ -196,7 +190,7 @@ export function useShellStore() {
     async (file: File): Promise<ShellDocument | null> => {
       if (!file) return null;
       setUploading(true);
-      setUploadProgress(6);
+      setUploadProgress(0);
 
       const fd = new FormData();
       fd.append("file", file);
@@ -204,20 +198,15 @@ export function useShellStore() {
         sessionId || localStorage.getItem(LS_SESSION_KEY) || "";
       if (currentSession) fd.append("session_id", currentSession);
 
-      const timer = setInterval(() => {
-        setUploadProgress((p) => (p < 88 ? p + Math.random() * 12 : p));
-      }, 280);
-
       try {
         const res = await fetch(`/api/document-ai/upload`, {
           method: "POST",
           body: fd,
         });
         const data = await res.json();
-        clearInterval(timer);
         setUploadProgress(100);
 
-        if (!data.success || !data.doc_id || !data.pdf_url) {
+        if (!res.ok || !data.success || !data.doc_id || !data.pdf_url) {
           setConnectionOk(true);
           setUploading(false);
           setUploadProgress(0);
@@ -251,14 +240,11 @@ export function useShellStore() {
           return [r, ...prev].slice(0, 30);
         });
 
-        setTimeout(() => {
-          setUploading(false);
-          setUploadProgress(0);
-        }, 400);
+        setUploading(false);
+        setUploadProgress(0);
 
         return newDoc;
       } catch {
-        clearInterval(timer);
         setUploading(false);
         setUploadProgress(0);
         setConnectionOk(false);
@@ -349,41 +335,7 @@ export function useShellStore() {
         }
 
         const answer: string = data.answer || "No response.";
-        const pages: number[] = data.pages || [];
-        const rawSources: unknown[] = Array.isArray(data.sources)
-          ? data.sources
-          : [];
-        const sources: ShellSource[] = rawSources.map((raw) => {
-          const s = raw as {
-            label?: string;
-            page?: number;
-            preview?: string;
-            text?: string;
-            doc_id?: string;
-            doc_number?: number;
-          };
-          return {
-            label: s.label || (s.page ? `p.${s.page}` : "src"),
-            page: s.page ?? 0,
-            text: s.preview || s.text,
-            doc_id: s.doc_id,
-            doc_number: s.doc_number,
-          };
-        });
-
-        // If no explicit sources, synthesize from pages
-        if (sources.length === 0 && pages.length) {
-          for (const p of pages.slice(0, 4)) {
-            sources.push({ label: `p.${p}`, page: p });
-          }
-        }
-
-        // heuristic gap detection: answer starts with "no", "not", "doesn't", etc.
-        const lower = answer.toLowerCase().trim();
-        const isGap =
-          /^(no[,\s.]|not\b|there is no|doesn'?t|doesnt|missing|absent|no mention|couldn'?t)/i.test(
-            lower
-          );
+        const { sources, resolvedDocId } = normalizeChatSources(data);
 
         setMessagesByDoc((prev) => {
           const list = [...(prev[activeDoc.docId] || [])];
@@ -393,7 +345,8 @@ export function useShellStore() {
               ...list[idx],
               text: answer,
               sources,
-              isGap,
+              resolvedDocId,
+              isGap: false,
               loading: false,
             };
           }
@@ -435,12 +388,12 @@ export function useShellStore() {
     }
     setView("chat");
     setShowSidebar(false);
-  }, [activeDoc, clearActiveConversation]);
+  }, [activeDoc, clearActiveConversation, setView]);
 
   const selectDoc = useCallback((docId: string) => {
     setActiveDocId(docId);
     setView("chat");
-  }, []);
+  }, [setView]);
 
   // ---- Citation jump (Source Viewer) ----
   /**
@@ -453,9 +406,10 @@ export function useShellStore() {
     setActiveCitation(citation);
     setRightPanelMode("source");
     setShowRightPanel(true);
-    setActiveDocPage(citation.page || 1);
+    setActiveDocPage(citation.page);
+    setActiveSourcePageId(sourceGroupForCitation(sourcePages, citation)?.id ?? null);
     setJumpNonce((n) => n + 1);
-  }, []);
+  }, [sourcePages]);
 
   /** Return the right panel to the default Insights mode. */
   const showInsightsPanel = useCallback(() => {
@@ -463,16 +417,17 @@ export function useShellStore() {
     setShowRightPanel(true);
   }, []);
 
-  /** Move the PageBar (‹ Page X of Y ›) without a citation flash. */
+  /** Navigate returned source groups, not invented intervening PDF pages. */
   const stepPage = useCallback(
     (dir: number) => {
-      setActiveDocPage((cur) => {
-        const base = cur ?? activeCitation?.page ?? 1;
-        const next = Math.max(1, Math.min(totalPages, base + dir));
-        return next;
-      });
+      const index = sourcePages.findIndex((page) => page.id === activeSourcePageId);
+      const next = sourcePages[Math.max(0, Math.min(sourcePages.length - 1, Math.max(0, index) + dir))];
+      if (!next) return;
+      setActiveSourcePageId(next.id);
+      setActiveDocPage(next.pageNum);
+      setActiveCitation(null);
     },
-    [activeCitation, totalPages]
+    [activeSourcePageId, sourcePages]
   );
 
   const removeDoc = useCallback(
@@ -512,8 +467,8 @@ export function useShellStore() {
     activeCitation,
     jumpNonce,
     activeDocPage,
+    activeSourcePageId,
     sourcePages,
-    totalPages,
 
     // setters / actions
     setTheme,
@@ -540,94 +495,3 @@ export function useShellStore() {
 }
 
 export type UseShellStore = ReturnType<typeof useShellStore>;
-
-/* ------------------------------------------------------------------ */
-/* buildSourcePages — reconstruct a paginated SourcePage[] from all    */
-/* assistant citations belonging to the currently-active document.     */
-/*                                                                    */
-/* The chat API only returns raw snippet text per citation, not a     */
-/* structured page. We collapse citations by pageNum, then emit one   */
-/* SourcePage per page. The page's paragraph is a segment list where  */
-/* each cited snippet becomes a `highlight` whose citationId matches  */
-/* the ShellCitation.id the ChatPanel emits — that id is the join-key */
-/* the SourceViewer scrolls to and flashes.                            */
-/* ------------------------------------------------------------------ */
-function buildSourcePages(
-  messages: ShellMessage[],
-  doc: ShellDocument | undefined,
-  totalPages: number
-): SourcePage[] {
-  if (!doc) return [];
-
-  type CiteRef = {
-    citationId: string;
-    text: string;
-    isGap: boolean;
-    label: string;
-  };
-  const perPage = new Map<number, CiteRef[]>();
-
-  for (const m of messages) {
-    if (m.role !== "assistant" || !m.sources) continue;
-    m.sources.forEach((s, i) => {
-      const ownerDocId = s.doc_id || doc.docId;
-      if (ownerDocId !== doc.docId) return;
-      const pg = s.page || 0;
-      if (!pg) return;
-      const cid = `${m.id}_${i}`;
-      const list = perPage.get(pg) || [];
-      list.push({
-        citationId: cid,
-        text: (s.text || "").trim(),
-        isGap: !!m.isGap,
-        label:
-          s.label && s.label.startsWith("p.")
-            ? s.label
-            : `p.${pg}`,
-      });
-      perPage.set(pg, list);
-    });
-  }
-
-  const pageNums = Array.from(perPage.keys()).sort((a, b) => a - b);
-  return pageNums.map((pg) => {
-    const cites = perPage.get(pg) || [];
-    const blocks: SourceBlock[] = [
-      {
-        type: "heading",
-        level: 2,
-        text: cites.some((c) => c.isGap)
-          ? `${cites[0].label} — flagged`
-          : cites[0].label,
-      },
-    ];
-    for (const c of cites) {
-      const segments: ParagraphSegment[] = c.text
-        ? [
-            {
-              type: "highlight",
-              text: c.text,
-              citationId: c.citationId,
-              isGap: c.isGap,
-            },
-          ]
-        : [
-            { type: "text", text: "— " },
-            {
-              type: "highlight",
-              text: c.isGap
-                ? "No matching clause was found on this page."
-                : "Cited passage",
-              citationId: c.citationId,
-              isGap: c.isGap,
-            },
-          ];
-      blocks.push({ type: "paragraph", segments });
-    }
-    return {
-      pageNum: pg,
-      pageLabel: `${doc.name} — Page ${pg} of ${totalPages}`,
-      blocks,
-    };
-  });
-}

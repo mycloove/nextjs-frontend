@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 import {
   chunkMarkdown,
+  cleanupMarkdown,
+  computeDocumentHealth,
+  computeStats,
   createStructuredExport,
   markdownToPlainText,
   renderMarkdownToHtml,
@@ -11,6 +15,37 @@ import {
   resolveSourcedDocumentId,
 } from './utils.ts'
 import { CHEATSHEET_ITEMS } from './cheatsheet-data.ts'
+
+test('local cleanup preserves long document tails, identifiers and Unicode', () => {
+  const markdown = '# Report\n\n' + 'Account 12-34, total 500.25.\n'.repeat(1000) + '\nশেষ অংশ END-987'
+  const cleaned = cleanupMarkdown(markdown)
+  assert.ok(cleaned.length > 16_000)
+  assert.equal((cleaned.match(/Account 12-34, total 500\.25\./g) || []).length, 1000)
+  assert.match(cleaned, /শেষ অংশ END-987$/)
+})
+
+test('local cleanup does not erase numeric lines, page labels or code whitespace', () => {
+  const content = '42\nPage 3 of 8\nLine with a hard break  \nNext line\n\n```text\n123  \n\n\n\nend\n```'
+  assert.equal(cleanupMarkdown(content), content)
+  assert.equal(cleanupMarkdown('A\n\n\n\n\nB'), 'A\n\n\nB')
+  const tildeFence = '~~~~text\nA\n\n\n\nB\n~~~~'
+  assert.equal(cleanupMarkdown(tildeFence), tildeFence)
+})
+
+test('structural checks never certify accuracy or sharing readiness', () => {
+  const markdown = '# Report\n\n[Source](https://example.test)\n\n| A | B |\n|---|---|\n| 1 | 2 |'
+  const health = computeDocumentHealth(markdown, computeStats(markdown))
+  assert.match(health.summary, /Review the content against the original/)
+  assert.doesNotMatch(health.summary, /ready to share|accuracy verified/i)
+  assert.ok(health.strengths.some((entry) => entry.includes('destinations are not checked')))
+  assert.ok(health.strengths.some((entry) => entry.includes('cell content is not checked')))
+})
+
+test('editor drafts are not sent to the document-ID-only RAG endpoint', () => {
+  const orchestrator = readFileSync(new URL('./index.tsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(orchestrator, /toolRequest\(['"]\/api\/document-ai\//)
+  assert.doesNotMatch(orchestrator, /markdown\.slice\(0,\s*(12000|16000)\)/)
+})
 
 test('renders edited images as images and ordinary links as links', () => {
   const html = renderMarkdownToHtml(

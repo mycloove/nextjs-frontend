@@ -79,7 +79,7 @@ export default function DocumentAIPage() {
 
   return (
     <div
-      className="doc-ai-shell"
+      className={`doc-ai-shell${showRightPanel ? " right-panel-open" : ""}`}
       data-theme={theme}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

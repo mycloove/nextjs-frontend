@@ -1,6 +1,7 @@
 /* Shared utilities for PDF → Markdown premium UI. */
 
 import { extractMath, restoreMathTokens } from './math.ts'
+import type { ExtractionReview } from './review/model.ts'
 // Syntax highlighting: core build + explicitly registered languages keeps the
 // bundle small (the full highlight.js build is ~1MB). Rendered markup uses
 // hljs-* classes colored by the workspace theme in 02-workspace-layout.css,
@@ -151,6 +152,9 @@ export interface Job {
   pages?: number
   processedAt?: number
   aiActions: Record<string, boolean>
+  /** Review metadata is serializable; original PDF bytes are session-local only. */
+  extractionReview?: ExtractionReview
+  sourcePdf?: File
   /**
    * Provenance key for a document that came from somewhere specific (today: a
    * GitHub file, `github:owner/repo@branch:path`). It is what lets a second
@@ -309,12 +313,12 @@ export const computeStats = (md: string): Job['stats'] => {
   return { headings, lists, codeBlocks, tables, links, words, tokens }
 }
 
-/* ── Content-quality confidence when API doesn't send one ────── */
+/* ── Heuristic text signal when the API doesn't send one ─────── */
 /**
- * Estimates extraction quality from the actual Markdown content — garbled
+ * Estimates a text-structure signal from the Markdown content — garbled
  * characters, OCR noise, boilerplate and fragmentation all reduce the score;
  * coherent structure and volume raise it. Runs purely on the converted text,
- * so it reflects the real document, never a static value.
+ * without comparing the original. It is not a probability or measured accuracy.
  */
 export const computeConfidence = (md: string, stats: Job['stats']): number => {
   if (!md.trim()) return 0
@@ -423,7 +427,7 @@ export const computeDocumentHealth = (md: string, stats: Job['stats']): Document
     score -= Math.min(9, brokenLinks * 3)
     issues.push({ severity: 'medium', label: 'Broken links', detail: `${brokenLinks} link${brokenLinks === 1 ? '' : 's'} miss a URL or label — complete them before sharing.` })
   } else if (stats.links > 0) {
-    strengths.push(`${stats.links} valid inline link${stats.links === 1 ? '' : 's'}.`)
+    strengths.push(`${stats.links} inline link${stats.links === 1 ? '' : 's'} with labels and targets; destinations are not checked.`)
   }
 
   // Unclosed code fences
@@ -453,7 +457,7 @@ export const computeDocumentHealth = (md: string, stats: Job['stats']): Document
     score -= 6
     issues.push({ severity: 'medium', label: 'Inconsistent tables', detail: `${raggedTables.length} table${raggedTables.length === 1 ? '' : 's'} have rows with mismatched column counts — align the pipes.` })
   } else if (stats.tables > 0) {
-    strengths.push('Tables are well-formed with consistent columns.')
+    strengths.push('Detected table rows have consistent column counts; cell content is not checked.')
   }
 
   // Layout noise — long runs of blank lines
@@ -468,8 +472,8 @@ export const computeDocumentHealth = (md: string, stats: Job['stats']): Document
   score = Math.max(0, Math.min(100, Math.round(score)))
   const tone: DocumentHealth['tone'] = score >= 85 ? 'Excellent' : score >= 70 ? 'Good' : score >= 50 ? 'Fair' : 'Needs work'
   const summary = issues.length === 0
-    ? 'Structure, links, code fences and tables all check out — the document is ready to share.'
-    : `${issues.length} structural issue${issues.length === 1 ? '' : 's'} found. Fix them to bring the score to 100.`
+    ? 'No issues found by these structural checks. Review the content against the original before sharing.'
+    : `${issues.length} structural issue${issues.length === 1 ? '' : 's'} found. These checks do not verify the content against the original.`
   return { score, tone, summary, issues, strengths }
 }
 
@@ -962,14 +966,25 @@ export const generateTOC = (md: string): string => {
 }
 
 export const cleanupMarkdown = (md: string): string => {
-  // Local, deterministic cleanup — no AI call needed for baseline
-  return md
-    .replace(/\n{4,}/g, '\n\n\n')
-    .replace(/[ \t]+$/gm, '')
-    .replace(/^Page\s+\d+\s+of\s+\d+\s*$/gim, '')
-    .replace(/^\s*\d+\s*$/gm, m => (m.trim().length <= 3 ? '' : m))
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+  // Page labels and standalone numbers may be real content. Only collapse
+  // redundant blank lines; preserve fenced code and Markdown hard breaks.
+  let fence = ''
+  let blankLines = 0
+  return md.split('\n').filter((line) => {
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/)
+    if (marker) {
+      if (!fence) fence = marker[1]
+      else if (marker[1][0] === fence[0] && marker[1].length >= fence.length && !marker[2].trim()) fence = ''
+      blankLines = 0
+      return true
+    }
+    if (fence || line.trim()) {
+      blankLines = 0
+      return true
+    }
+    blankLines++
+    return blankLines <= 2
+  }).join('\n')
 }
 
 export const injectFrontmatter = (md: string, meta: {

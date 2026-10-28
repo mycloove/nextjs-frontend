@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { UseShellStore } from "./useShellStore";
 import type { ShellCitation, ShellMessage, ShellSource } from "./types";
 import { IconSend } from "./Icons";
+import { sourceCitation } from "./sourceEvidence";
 
 
 interface Props {
@@ -30,11 +31,9 @@ export function ShellChatPanel({ store, onOpenUpload }: Props) {
     activeMessages,
     selectDoc,
     sendMessage,
-    activeDocPage,
     jumpToCitation,
     busy,
     uploading,
-    uploadProgress,
     connectionOk,
   } = store;
 
@@ -47,7 +46,7 @@ export function ShellChatPanel({ store, onOpenUpload }: Props) {
     // Auto-scroll to bottom on new message
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    el.scrollTo({ top: el.scrollHeight, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? "auto" : "smooth" });
   }, [activeMessages, busy]);
 
   const canSend = useMemo(
@@ -69,18 +68,10 @@ export function ShellChatPanel({ store, onOpenUpload }: Props) {
     }
   };
 
-  const activePages = useMemo(() => {
-    // Try to infer page count. Fall back to 7 like the mockup.
-    return activeDoc?.pages || 7;
-  }, [activeDoc]);
-
-  const pageStrip = useMemo(() => {
-    const total = Math.max(3, Math.min(activePages, 12));
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }, [activePages]);
+  const pageStrip = store.sourcePages.filter((page) => page.docId === activeDoc?.docId && page.pageNum !== null);
 
   return (
-    <main className="panel-chat" id="panel-chat">
+    <main className="panel-chat" id="panel-chat" tabIndex={-1}>
       {/* Document strip / thumbnails */}
       <div className="doc-strip">
         {documents.length === 0 && (
@@ -112,18 +103,18 @@ export function ShellChatPanel({ store, onOpenUpload }: Props) {
             citation jump) so clicking a chip in the chat visually moves
             the strip in sync with the right-panel source viewer. */}
         {activeDoc &&
-          pageStrip.map((p, i) => {
-            const isActivePage =
-              activeDocPage != null ? p === activeDocPage : i === 0;
+          pageStrip.map((source) => {
+            const p = source.pageNum;
+            const isActivePage = store.activeSourcePageId === source.id;
             return (
               <button
-                key={`p-${p}`}
+                key={source.id}
                 type="button"
                 className={`doc-thumb${isActivePage ? " active" : ""}`}
-                title={`Page ${p}`}
+                title={`Retrieved excerpts from page ${p}`}
                 onClick={() =>
                   jumpToCitation({
-                    id: `stripp_${p}`,
+                    id: source.citationIds[0],
                     page: p,
                     label: `p.${p}`,
                     docId: activeDoc.docId,
@@ -158,12 +149,11 @@ export function ShellChatPanel({ store, onOpenUpload }: Props) {
               <div className="note-label">Uploading</div>
             </div>
             <p className="note-body">
-              Indexing document… this usually takes a few seconds.
+              Processing document. Large or scanned files can take longer.
             </p>
-            <div className="upload-progress">
+            <div className="upload-progress" role="progressbar" aria-label="Processing document">
               <div
-                className="upload-progress-bar"
-                style={{ width: `${Math.round(uploadProgress)}%` }}
+                className="upload-progress-bar indeterminate"
               />
             </div>
           </div>
@@ -177,7 +167,6 @@ export function ShellChatPanel({ store, onOpenUpload }: Props) {
           <MessageRow
             key={m.id}
             msg={m}
-            docId={activeDoc?.docId}
             onCitationClick={jumpToCitation}
           />
         ))}
@@ -217,8 +206,7 @@ export function ShellChatPanel({ store, onOpenUpload }: Props) {
           </button>
         </div>
         <div className="composer-hint">
-          Answers are grounded only in this document — nothing is inferred
-          beyond the page.
+          AI answers can be wrong. Retrieved excerpts are not claim verification; compare important details with the original document.
         </div>
       </div>
     </main>
@@ -248,11 +236,10 @@ function EmptyState({
         className="serif"
         style={{ margin: 0, fontSize: 22, color: "var(--ink)" }}
       >
-        Start a grounded conversation
+        Ask about your document
       </h2>
       <p style={{ fontSize: 13, color: "var(--ink-soft)", maxWidth: 420 }}>
-        Upload a PDF and ask questions. Every answer is anchored to a specific
-        page and clause of the document.
+        Upload a PDF and ask questions. Review any returned excerpts and check important details against the original; sources may be incomplete.
       </p>
       <button
         className="new-chat-btn"
@@ -282,11 +269,9 @@ function FirstQuestionHint() {
 
 function MessageRow({
   msg,
-  docId,
   onCitationClick,
 }: {
   msg: ShellMessage;
-  docId?: string;
   onCitationClick: (c: ShellCitation) => void;
 }) {
   if (msg.role === "user") {
@@ -319,18 +304,13 @@ function MessageRow({
     );
   }
 
-  const isGap = !!msg.isGap;
   const sources: ShellSource[] = msg.sources || [];
   const { html } = formatNoteText(msg.text);
 
   return (
     <div className="note">
       <div className="note-label-row">
-        <div className={`note-label${isGap ? " gap-label" : ""}`}>Answer</div>
-        <div
-          className="seal"
-          title="Verified — grounded fully in source text"
-        />
+        <div className="note-label">Response</div>
       </div>
       <p
         className="note-body"
@@ -339,30 +319,17 @@ function MessageRow({
       {sources.length > 0 && (
         <div className="cite-row">
           {sources.map((s, i) => {
-            const label = s.label?.startsWith("p.")
-              ? s.label
-              : s.page
-              ? `p.${s.page}`
-              : s.label;
+            const citation = sourceCitation(msg, s, i);
+            const label = citation.label;
             return (
               <button
                 key={i}
                 type="button"
-                className={`cite-chip${isGap ? " gap-chip" : ""}`}
+                className="cite-chip"
                 title={s.text || label}
-                onClick={() =>
-                  onCitationClick({
-                    id: `${msg.id}_${i}`,
-                    page: s.page || 1,
-                    label: label || `p.${s.page || "?"}`,
-                    text: s.text,
-                    isGap,
-                    docId: s.doc_id || docId,
-                  })
-                }
+                onClick={() => onCitationClick(citation)}
               >
                 {label}
-                {isGap ? " · gap" : ""}
               </button>
             );
           })}

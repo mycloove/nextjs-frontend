@@ -622,35 +622,6 @@
   background: var(--gap-soft);
 }
 
-/* Verified seal */
-.doc-ai-shell .seal {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  position: relative;
-  cursor: default;
-  background: radial-gradient(circle, var(--signal-deep) 0 38%, transparent 39%),
-    repeating-conic-gradient(
-      var(--signal-soft) 0deg 15deg,
-      transparent 15deg 30deg
-    );
-}
-.doc-ai-shell .seal::after {
-  content: "✓";
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-}
-.doc-ai-shell .seal[title]:hover {
-  filter: brightness(1.08);
-}
-
 .doc-ai-shell .thinking-dots {
   display: inline-flex;
   gap: 4px;
@@ -996,6 +967,18 @@
   background: var(--signal);
   transition: width 0.3s ease;
 }
+.doc-ai-shell .upload-progress-bar.indeterminate {
+  width: 35%;
+  animation: docai-upload-indeterminate 1.5s ease-in-out infinite alternate;
+}
+@keyframes docai-upload-indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(285%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doc-ai-shell .upload-progress-bar.indeterminate { animation: none; }
+  .doc-ai-shell .sv-hl.flash { animation: none; }
+}
 
 .doc-ai-shell .banner-error {
   background: var(--gap-soft);
@@ -1009,14 +992,21 @@
 }
 
 @media (max-width: 1080px) {
+  .doc-ai-shell .content-row { position: relative; }
   .doc-ai-shell .right-panel {
     display: none;
   }
   .doc-ai-shell.right-panel-open .right-panel {
     display: flex;
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(100%, 380px);
+    z-index: 20;
   }
 }
 @media (max-width: 760px) {
+  .doc-ai-shell.right-panel-open .right-panel { width: 100%; }
+  .doc-ai-shell.right-panel-open .panel-chat { display: none; }
   .doc-ai-shell .sidebar {
     position: fixed;
     left: 0;
@@ -1535,4 +1525,8 @@
 @keyframes docAiFlashPulseGap {
   0%   { background-color: #EBB7A5; box-shadow: 0 0 0 3px #EBB7A5; }
   100% { background-color: var(--gap-soft, #F6E4DF); box-shadow: 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doc-ai-shell .sv-hl.flash,
+  .doc-ai-shell .sv-hl.gap.flash { animation: none; }
 }

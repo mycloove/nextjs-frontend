@@ -29,3 +29,5 @@
    dock). Appended last by the same rule: a new surface, never an insert into
    the 00–11 cascade. Scoped to `.mr-markdown-workspace` like 11. */
 @import './styles/premium/12-connections.css';
+/* Opt-in, module-local source review. Never reorder the existing partials. */
+@import './styles/premium/13-extraction-review.css';

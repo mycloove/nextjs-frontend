@@ -27,9 +27,9 @@ export function ShellStatusFooter({ store }: Props) {
   const status = uploading
     ? "Indexing document"
     : busy
-    ? "Grounding answer"
+    ? "Generating answer"
     : connectionOk
-    ? "Grounded · Ready"
+    ? "Ready"
     : "Offline — retry required";
 
   const turns = activeMessages.filter((m) => m.role === "user").length;

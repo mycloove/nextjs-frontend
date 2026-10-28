@@ -30,11 +30,11 @@ type PremiumToolRailProps = {
 const cx = (...names: Array<string | false | null | undefined>) => names.filter(Boolean).join(' ')
 
 const PANEL_META: Record<RailPanel, { eyebrow: string; title: string; description: string }> = {
-  ai: { eyebrow: 'Assistant', title: 'AI tools', description: 'Transform the active Markdown document.' },
+  ai: { eyebrow: 'Assistant', title: 'Document tools', description: 'Local tools for the active Markdown document.' },
   table: { eyebrow: 'Structure', title: 'Table builder', description: 'Insert a clean Markdown table at the cursor.' },
   find: { eyebrow: 'Navigate', title: 'Find & replace', description: 'Search, review, and replace content precisely.' },
   outline: { eyebrow: 'Navigate', title: 'Document outline', description: 'Jump between sections without losing context.' },
-  health: { eyebrow: 'Quality', title: 'Document health', description: 'A quick editorial readiness check.' },
+  health: { eyebrow: 'Quality', title: 'Document health', description: 'Heuristic structure checks, not a content-accuracy guarantee.' },
   settings: { eyebrow: 'Preferences', title: 'Editor settings', description: 'Tune the rail and writing environment.' },
   more: { eyebrow: 'Utilities', title: 'More tools', description: 'Secondary tools, kept out of the main workflow.' },
   cheatsheet: { eyebrow: 'Learn', title: 'Markdown cheat sheet', description: 'Syntax reference with copy-paste examples. Search, filter, and copy instantly.' },
@@ -177,7 +177,7 @@ export default function PremiumToolRail({
       <div className="mr-premium-rail-divider" />
 
       <div className="mr-premium-rail-group" aria-label="Creation tools">
-        <RailButton label="AI tools" icon={Ic.sparkles(19)} shortcut="Alt+A" badge={aiBusy ? 'Working' : 'AI'} active={openPanel === 'ai'} controls="mr-rail-panel" onClick={() => togglePanel('ai')} />
+        <RailButton label="Document tools" icon={Ic.sparkles(19)} shortcut="Alt+A" badge={aiBusy ? 'Working' : undefined} active={openPanel === 'ai'} controls="mr-rail-panel" onClick={() => togglePanel('ai')} />
         <RailButton label="Table builder" icon={Ic.table(19)} shortcut="Alt+T" active={openPanel === 'table'} controls="mr-rail-panel" onClick={() => togglePanel('table')} />
         <RailButton label="Command tools" icon={Ic.cmd(18)} shortcut="Ctrl K" onClick={() => { setOpenPanel(null); onCommand() }} />
       </div>
@@ -214,12 +214,12 @@ export default function PremiumToolRail({
           <div className="mr-rail-panel-body">
             {openPanel === 'ai' ? (
               <>
-                <div className="mr-rail-ai-hero"><span>{Ic.sparkles(17)}</span><div><strong>Work smarter with this draft</strong><small>Actions use the active document and preserve your editing flow.</small></div></div>
+                <div className="mr-rail-ai-hero"><span>{Ic.sparkles(17)}</span><div><strong>Work with the whole draft</strong><small>Local actions do not send your text to an AI service.</small></div></div>
                 <div className="mr-rail-panel-list">
-                  <PanelAction icon={Ic.broom(16)} title="Clean up Markdown" description="Normalize spacing and structure" meta="Fast" busy={aiBusy === 'cleanup'} onClick={() => runAi('cleanup')} />
-                  <PanelAction icon={Ic.brain(16)} title="Summarize document" description="Create a concise executive summary" busy={aiBusy === 'summarize'} onClick={() => runAi('summarize')} />
+                  <PanelAction icon={Ic.broom(16)} title="Clean up Markdown" description="Normalize spacing locally; review changes" meta="Local" busy={aiBusy === 'cleanup'} onClick={() => runAi('cleanup')} />
+                  <PanelAction icon={Ic.brain(16)} title="Summarize document" description="Editor-draft processing is not connected" meta="Unavailable" disabled onClick={() => runAi('summarize')} />
                   <PanelAction icon={Ic.toc(16)} title="Generate table of contents" description="Build links from document headings" busy={aiBusy === 'toc'} onClick={() => runAi('toc')} />
-                  <PanelAction icon={Ic.language(16)} title="Translate content" description="Prepare a translated Markdown copy" busy={aiBusy === 'translate'} onClick={() => runAi('translate')} />
+                  <PanelAction icon={Ic.language(16)} title="Translate content" description="Editor-draft processing is not connected" meta="Unavailable" disabled onClick={() => runAi('translate')} />
                   <PanelAction icon={Ic.page(16)} title="Add frontmatter" description="Generate useful document metadata" busy={aiBusy === 'frontmatter'} onClick={() => runAi('frontmatter')} />
                   <PanelAction icon={Ic.chunks(16)} title="Create AI-ready chunks" description="Split content for retrieval workflows" busy={aiBusy === 'chunk'} onClick={() => runAi('chunk')} />
                 </div>
@@ -264,12 +264,12 @@ export default function PremiumToolRail({
                   </section>
                 </div>
                 <div className="mr-rail-health-conf">
-                  <span className="mr-rail-health-conf-icon">{Ic.check(12)}</span>
+                  <span className="mr-rail-health-conf-icon">{Ic.info(12)}</span>
                   <div>
-                    <strong>{confidence}% conversion confidence</strong>
-                    <small>{confidence >= 85 ? 'Extraction quality looks high — trust the text as converted.' : confidence >= 65 ? 'Extraction quality is fair — skim the text against the source PDF.' : 'Extraction quality is low — carefully proofread against the source PDF.'}</small>
+                    <strong>{markdown.trim() ? `${confidence}/100 text signal` : 'No text signal'}</strong>
+                    <small>Historical conversion or saved-draft signal, not measured accuracy. Edits do not reverify the PDF. Check names, numbers and completeness against the original.</small>
                   </div>
-                  <span className="mr-rail-health-conf-badge">{confidence >= 85 ? 'High' : confidence >= 65 ? 'Medium' : 'Low'}</span>
+                  <span className="mr-rail-health-conf-badge">Estimate</span>
                 </div>
                 <div className="mr-rail-metric-grid">
                   <div><span>Words</span><strong>{stats.words.toLocaleString()}</strong></div>
@@ -291,7 +291,7 @@ export default function PremiumToolRail({
                     {health.issues.length > 6 ? <p className="mr-rail-health-issues-more">+{health.issues.length - 6} more checks flagged something.</p> : null}
                   </div>
                 ) : (
-                  <div className="mr-rail-health-tip">{Ic.bulb(15)} {health.strengths[0] || 'All structural checks passed — this document is clean.'}</div>
+                  <div className="mr-rail-health-tip">{Ic.bulb(15)} {health.strengths[0] || 'No issues found by these checks. Content accuracy still needs review.'}</div>
                 )}
               </>
             ) : null}

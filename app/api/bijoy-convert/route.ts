@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { beginToolQuota } from '@/lib/usage/quota'
+import { withMicroserviceHeaders } from '@/lib/usage/internal'
 
 /**
  * Thin validating proxy for the Bijoy plain-text converter (§5 pattern).
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
   try {
     const upstream = await fetch(`${BACKEND_URL}/api/bijoy/convert`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: withMicroserviceHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ text }),
       signal: controller.signal,
     })
