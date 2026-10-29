@@ -16,10 +16,10 @@ export type PdfEditorCommand = {
 };
 
 export const PDF_EDITOR_COMMANDS: readonly PdfEditorCommand[] = [
-  { id: 'tool-select', label: 'Select tool', group: 'Tools', keywords: ['pointer', 'move', 'select'], shortcut: 'V' },
-  { id: 'tool-editText', label: 'Edit original text', group: 'Tools', keywords: ['text', 'replace', 'edit'], shortcut: 'E' },
-  { id: 'tool-text', label: 'Add text box', group: 'Tools', keywords: ['text', 'insert', 'type'], shortcut: 'T' },
-  { id: 'tool-highlight', label: 'Highlight', group: 'Tools', keywords: ['mark', 'highlight'], shortcut: 'H' },
+  { id: 'tool-select', label: 'Select tool', group: 'Tools', keywords: ['pointer', 'move', 'select'] },
+  { id: 'tool-editText', label: 'Edit original text', group: 'Tools', keywords: ['text', 'replace', 'edit'] },
+  { id: 'tool-text', label: 'Add text box', group: 'Tools', keywords: ['text', 'insert', 'type'] },
+  { id: 'tool-highlight', label: 'Highlight', group: 'Tools', keywords: ['mark', 'highlight'] },
   { id: 'tool-annotate', label: 'Annotate', group: 'Tools', keywords: ['comment', 'note', 'stamp', 'link', 'review'] },
   { id: 'tool-signature', label: 'Draw signature', group: 'Tools', keywords: ['sign', 'signature'] },
   { id: 'tool-shape-rect', label: 'Add rectangle', group: 'Tools', keywords: ['shape', 'box', 'rect'] },

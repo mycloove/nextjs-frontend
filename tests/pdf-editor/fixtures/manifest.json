@@ -1,6 +1,12 @@
 {
   "version": 1,
   "generatedBy": "tests/pdf-editor/generate-golden-corpus.ts",
+  "provenance": "Synthetic project-generated documents; no third-party source documents. The signature fixture is a structural marker, not a valid cryptographic signature.",
+  "fixedDate": "2025-01-02T03:04:05.000Z",
+  "sha256": {
+    "phase-1e-complex.pdf": "5cae419f1f1458f3c721c70c2b8460c180d7315dc7cfb1c2b6ff39acdb2d193d",
+    "phase-1e-plain.pdf": "7534f4562e054172ee8c0667a0715b674299d497f3cc202c8964da18f1731eee"
+  },
   "fixtures": {
     "phase-1e-complex.pdf": [
       "signed-marker",

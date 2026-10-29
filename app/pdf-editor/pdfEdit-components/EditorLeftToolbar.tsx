@@ -169,6 +169,7 @@ interface Props {
   onDelete:       () => void;
   /** Hides Redact when W3 authoring is disabled; no dead button. */
   redactionEnabled?: boolean;
+  sourceTextEnabled: boolean;
   /**
    * The page's editing layer is live.
    *
@@ -184,6 +185,7 @@ export default function EditorLeftToolbar({
   activeTool, canUndo, canRedo,
   onToolChange, onUndo, onRedo, onDelete,
   redactionEnabled = true,
+  sourceTextEnabled,
   toolsReady = true,
 }: Props) {
   const [openFlyout, setOpenFlyout] = useState<FlyoutId | null>(null);
@@ -439,7 +441,10 @@ export default function EditorLeftToolbar({
         }
       `}</style>
 
-      <div className="pe-ltb" ref={railRef} role="toolbar" aria-label="Editing tools" aria-orientation="vertical">
+      <div className="pe-ltb" ref={railRef} role="toolbar" aria-label="Editing tools" aria-orientation="vertical" onPointerDownCapture={event => {
+        // Safari does not focus clicked buttons; finish text focus before a tool switch.
+        if (event.target instanceof Element) event.target.closest('button')?.focus({ preventScroll: true });
+      }}>
         {PRIMARY.filter(tool => tool.id !== 'redact' || redactionEnabled).map((tool, index) => {
           const isFlyout = Boolean(tool.flyout);
           const active = isFlyout
@@ -452,7 +457,8 @@ export default function EditorLeftToolbar({
                 type="button"
                 data-testid={`pdf-tool-${tool.id}`}
                 className={`pe-tool-btn ${active ? 'active' : ''}`}
-                disabled={!toolsReady}
+                disabled={!toolsReady || (tool.id === 'editText' && !sourceTextEnabled)}
+                title={tool.id === 'editText' && !sourceTextEnabled ? 'Structural text editing is disabled for this deployment.' : undefined}
                 onClick={event => {
                   if (tool.flyout) {
                     if (openFlyout === tool.flyout) {

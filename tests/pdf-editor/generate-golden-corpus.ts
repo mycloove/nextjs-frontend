@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 import {
@@ -92,6 +93,8 @@ async function createComplexFixture() {
 
 async function createPlainFixture() {
   const pdf = await PDFDocument.create();
+  pdf.setCreationDate(FIXED_DATE);
+  pdf.setModificationDate(FIXED_DATE);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   pdf.addPage([612, 792]).drawText('Phase 1E plain browser workflow', { x: 72, y: 700, size: 18, font });
   return pdf.save({ useObjectStreams: false });
@@ -99,13 +102,17 @@ async function createPlainFixture() {
 
 async function main() {
   await mkdir(FIXTURE_DIR, { recursive: true });
-  await Promise.all([
-    writeFile(path.join(FIXTURE_DIR, 'phase-1e-complex.pdf'), await createComplexFixture()),
-    writeFile(path.join(FIXTURE_DIR, 'phase-1e-plain.pdf'), await createPlainFixture()),
-  ]);
+  const files = {
+    'phase-1e-complex.pdf': await createComplexFixture(),
+    'phase-1e-plain.pdf': await createPlainFixture(),
+  };
+  await Promise.all(Object.entries(files).map(([name, bytes]) => writeFile(path.join(FIXTURE_DIR, name), bytes)));
   await writeFile(path.join(FIXTURE_DIR, 'manifest.json'), `${JSON.stringify({
     version: 1,
     generatedBy: 'tests/pdf-editor/generate-golden-corpus.ts',
+    provenance: 'Synthetic project-generated documents; no third-party source documents. The signature fixture is a structural marker, not a valid cryptographic signature.',
+    fixedDate: FIXED_DATE.toISOString(),
+    sha256: Object.fromEntries(Object.entries(files).map(([name, bytes]) => [name, createHash('sha256').update(bytes).digest('hex')])),
     fixtures: {
       'phase-1e-complex.pdf': ['signed-marker', 'form', 'link', 'outline', 'annotation', 'attachment', 'tagged', 'rotated', 'metadata'],
       'phase-1e-plain.pdf': ['searchable-text', 'browser-workflow'],

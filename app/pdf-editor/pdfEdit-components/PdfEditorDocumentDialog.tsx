@@ -53,7 +53,7 @@ export default function PdfEditorDocumentDialog({ kind, fileName, onCancel, onCo
   const confirmRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLElement>(null);
   const cancelActionRef = useRef(onCancel);
-  cancelActionRef.current = onCancel;
+  useEffect(() => { cancelActionRef.current = onCancel; }, [onCancel]);
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     cancelRef.current?.focus();

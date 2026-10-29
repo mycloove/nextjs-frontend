@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { bengaliTypefaces } from './resumeFonts.ts'
-import { resumeTemplates, type ResumeTemplate } from './resumeTemplates.ts'
+import { resumeTemplates, templateSectionTitle, type ResumeTemplate } from './resumeTemplates.ts'
 
 const catalog = new Set(['profile', 'summary', 'experience', 'education', 'skills', 'projects', 'languages', 'awards', 'publications', 'volunteer', 'personal', 'motivation', 'references'])
 const fonts = new Set<string>(['Noto Sans Bengali', 'Latin Modern', ...bengaliTypefaces.map((font) => font.name)])
@@ -75,6 +75,11 @@ test('the latex-classic preset carries its template-only register', () => {
   assert.equal(latex.accentColor, '#3159a8')
   assert.equal(latex.rulesUnderHeadings, true)
   assert.equal(latex.titles?.skills, 'Core Technical Skills')
+  // A template that overrides titles speaks its full set: none of its enabled
+  // headings may leak a fallback title into its register.
+  assert.deepEqual(Object.keys(latex.titles ?? {}), ['profile', 'summary', 'experience', 'skills', 'projects', 'education', 'volunteer', 'awards', 'publications', 'references'])
+  assert.equal(latex.titles?.volunteer, 'Volunteering')
+  assert.equal(latex.titles?.awards, 'Awards')
   // Entry headers write the pipe convention the paper and LaTeX shapes off.
   assert.match(latex.content.experience, /\| /)
   assert.match(latex.content.projects, /\| /)
@@ -99,4 +104,36 @@ test('research records publication status and SOP provides a real multi-paragrap
   const sop = resumeTemplates.find((template) => template.id === 'admission-sop')!
   assert.ok(sop.content.motivation.split('\n\n').length >= 4)
   assert.doesNotMatch(JSON.stringify(resumeTemplates), /example\.com|Northstar|Ayesha|28%|2022/u)
+})
+
+// The preview headings must read in the applied template's register — the same
+// one the paper gets. The English catalogs mirror the studio's section titles.
+const catalogTitles: Record<string, string> = {
+  profile: 'Profile', summary: 'Professional summary', experience: 'Experience', education: 'Education',
+  skills: 'Skills', projects: 'Selected projects', personal: 'Personal details', motivation: 'Motivation',
+  languages: 'Languages', awards: 'Awards & certifications', publications: 'Publications',
+  volunteer: 'Volunteering', references: 'References',
+}
+const bengaliTitles: Record<string, string> = {
+  profile: '\u09aa\u09b0\u09bf\u099a\u09bf\u09a4\u09bf', summary: '\u09b8\u0995\u09cd\u09b7\u09bf\u09aa\u09cd\u09a4 \u09aa\u09b0\u09bf\u099a\u09af\u09bc',
+}
+
+test('the preview resolves headings in the template register, never the current draft language', () => {
+  const latex = resumeTemplates.find((template) => template.id === 'latex-classic')!
+  // The apply step must grant an English preset an override (or catalog) title
+  // for every heading it displays; none may fall back to a Bengali heading.
+  const registers = { english: (section: string) => catalogTitles[section] ?? `Missing catalog ${section}`, bangla: (section: string) => bengaliTitles[section] ?? '\u09aa\u09b0\u09bf\u099a\u09bf\u09a4\u09bf' }
+  for (const section of latex.enabled) {
+    const heading = templateSectionTitle(latex, section, registers)
+    assert.doesNotMatch(heading, /[\u0980-\u09ff]/u, `English preset heading ${section} must be Latin-script`)
+    if (section !== 'profile') assert.doesNotMatch(heading, /Missing catalog|Unknown/u)
+  }
+  assert.equal(templateSectionTitle(latex, 'skills', registers), 'Core Technical Skills')
+  const englishFallback = templateSectionTitle(latex, 'volunteer', registers)
+  assert.equal(englishFallback, 'Volunteering')
+  // Bengali presets reverse the register: the translated chain wins over the
+  // catalog, and an override title still speaks first.
+  const teacher = resumeTemplates.find((template) => template.id === 'teacher-cv')!
+  assert.match(templateSectionTitle(teacher, 'summary', registers), /[\u0980-\u09ff]/u)
+  assert.match(templateSectionTitle(teacher, 'experience', registers), /[\u0980-\u09ff]/u)
 })

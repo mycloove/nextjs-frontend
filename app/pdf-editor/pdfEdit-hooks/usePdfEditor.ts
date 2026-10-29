@@ -37,7 +37,7 @@ import {
 } from '../pdfEdit-utils/editorPageSession';
 import type { PdfEditorPageSession } from '../pdfEdit-utils/editorPageSession';
 import { decidePdfEditorPageExportStrategy, exportPdfEditorPagePlan } from '../pdfEdit-utils/editorPageExport';
-import { verifyGeneratedPdfEditorPagePlan } from '../pdfEdit-utils/editorPageExportVerification';
+import { verifyGeneratedPdfEditorPagePlan, verifyPdfEditorPagePlanSnapshots } from '../pdfEdit-utils/editorPageExportVerification';
 import type { PdfEditorPageExportImpact } from '../pdfEdit-utils/editorPageImpact';
 import type {
   PdfEditorPageOperation,
@@ -97,8 +97,8 @@ import type {
   PdfPreflightDocument,
 } from '../pdfEdit-utils/editorPreflight';
 import { verifyGeneratedPdf } from '../pdfEdit-utils/editorExportVerification';
-import type { PdfPostExportVerification } from '../pdfEdit-utils/editorExportVerification';
-import { isPdfEditorFeatureEnabled } from '../pdfEdit-utils/editorFeatureFlags';
+import type { PdfPostExportVerification, PdfPaintAdditionVerification } from '../pdfEdit-utils/editorExportVerification';
+import { isPdfEditorFeatureEnabled, pdfEditorDisabledWorkReason } from '../pdfEdit-utils/editorFeatureFlags';
 import {
   computePdfEditorExportFingerprint,
   createPdfEditorExportBuildCache,
@@ -3589,6 +3589,7 @@ export function usePdfEditor() {
         verification: PdfPostExportVerification;
         /** Fidelity downgrades the engine performed. Empty means none. */
         disclosures: string[];
+        changedPages: number[];
         /**
          * Impact of the page plan applied to this build, when the plan differs
          * from the source. Export refuses until this impact is approved.
@@ -3657,6 +3658,12 @@ export function usePdfEditor() {
       const revision = getExportRevision();
       const snapshot = JSON.parse(serializeDocumentSnapshot()) as EditorDocumentSnapshot;
       const pageSession = pageSessionRef.current ? structuredClone(pageSessionRef.current) : null;
+      const disabledWork = pdfEditorDisabledWorkReason({
+        changedPagePlan: !!pageSession && pdfEditorPageSessionHasChanges(pageSession),
+        redactionCount: snapshot.redactionMarks.length,
+        textEditCount: 0,
+      });
+      if (disabledWork) return { ok: false, message: disabledWork };
       const preflightReport = state.preflightReport;
       const consent = structuredClone(options.consent
         ?? (textConsentRef.current?.revision === revision ? textConsentRef.current.consent : null));
@@ -3692,11 +3699,13 @@ export function usePdfEditor() {
       // text content is local work, and cheap next to the engine round trip a
       // cache hit avoids.
       const textMutations: PdfEditorTextMutation[] = [];
+      let addedPaint: PdfPaintAdditionVerification[] = [];
       const originalTextByMutation: string[] = [];
       const pagesWithMutations = new Set<number>();
       const redactionMarks = snapshot.redactionMarks ?? [];
       const redactedBlocks = new Set(redactionMarks.map(mark => mark.blockKey));
       const blocksByPage = new Map<number, TextBlock[]>();
+      const editedBlockKeys = new Set<string>();
       for (let page = 1; page <= sourcePageCount; page += 1) {
         const blocks = await getTextBlocks(page, 1, sourceDoc);
         blocksByPage.set(page, blocks);
@@ -3709,6 +3718,7 @@ export function usePdfEditor() {
           const edit = snapshot.textEdits[textBlockKey(page, block.index)];
           if (!edit || !isEffectiveTextEdit(edit, block)) continue;
           const mutationBox = measureEditedTextMutationBox(block, edit, pageDims);
+          editedBlockKeys.add(textBlockKey(page, block.index));
           pagesWithMutations.add(page);
           textMutations.push({
             ...edit,
@@ -3782,6 +3792,36 @@ export function usePdfEditor() {
       // drew on first. Page order is what the export actually depends on.
       canvasPages.sort((left, right) => left.page - right.page);
 
+      const textDisabled = pdfEditorDisabledWorkReason({ changedPagePlan: false, redactionCount: 0, textEditCount: textMutations.length });
+      if (textDisabled) return { ok: false, message: textDisabled };
+      const allowedTextLosses: { page: number; text: string }[] = [];
+      const approvedBlocks = new Set<string>();
+      textMutations.forEach((mutation, index) => {
+        if (!serverTextEditConsentFor(consent, `text-${index + 1}`).allowNeighbourLoss) return;
+        for (const block of blocksByPage.get(mutation.page) ?? []) {
+          const key = textBlockKey(block.page, block.index);
+          if (editedBlockKeys.has(key) || redactedBlocks.has(key) || approvedBlocks.has(key)) continue;
+          // Only complete runs inside the reviewed box are exempted. A partial
+          // collision is not permission to lose an entire neighboring line.
+          if (block.x >= mutation.x && block.y >= mutation.y
+            && block.x + block.width <= mutation.x + mutation.width
+            && block.y + block.height <= mutation.y + mutation.height) {
+            approvedBlocks.add(key);
+            allowedTextLosses.push({ page: block.page, text: block.text });
+          }
+        }
+      });
+
+      const sourceTextRuns = [...blocksByPage.values()].flatMap(blocks => blocks
+        .filter(block => block.text.trim().length > 0)
+        .map(block => {
+          const key = textBlockKey(block.page, block.index);
+          return {
+            page: block.page,
+            text: block.text,
+            retained: !editedBlockKeys.has(key) && !redactedBlocks.has(key) && !approvedBlocks.has(key),
+          };
+        }));
       if (!isCurrent()) return { ok: false, message: 'The document changed while preparing the export. Review the current revision and retry.' };
       if (textMutations.length > 0 && !processingConsentRef.current.isAllowed(sessionId)) {
         return {
@@ -4044,6 +4084,11 @@ export function usePdfEditor() {
                   height: dims.height,
                 });
               }
+              addedPaint = [...pagesWithCanvasObjects].map(page => ({
+                page,
+                paths: vectorMutations.filter(operation => operation.page === page && operation.kind !== 'text').length,
+                images: overlayMutations.filter(operation => operation.page === page).length,
+              }));
               pdfBytes = await exportStructurePreservingPdf({
                 source: exportSourceBytes,
                 // Structural edits already contain real replacement text. Drawing
@@ -4060,7 +4105,7 @@ export function usePdfEditor() {
                   ? ' Bengali vowel signs may be copied in visual order by viewers that ignore /ActualText.'
                   : '';
                 disclosures.push(
-                  `Added text on page(s) ${[...new Set(vectorTextAdditions.map(item => item.page))].join(', ')} is selectable and searchable, set in embedded ${families.join(' and ')}; the on-canvas typeface may differ slightly.${shapedNote}`,
+                  `Added text on page(s) ${[...new Set(vectorTextAdditions.map(item => item.page))].join(', ')} uses embedded ${families.join(' and ')}; the on-canvas typeface may differ slightly.${shapedNote ? `${shapedNote} Logical copy/search order is not verified.` : ' Extracted text is checked before delivery.'}`,
                 );
               }
               for (const [page, reasons] of rasterFallbackReasons) {
@@ -4147,6 +4192,10 @@ export function usePdfEditor() {
               replacementText: mutation.text,
             })),
             addedText: vectorTextForVerification,
+            addedPaint,
+            paintSourceBytes: exportSourceBytes,
+            allowedTextLosses,
+            sourceTextRuns,
             ...(hasRedactions ? {
               redactedPages: [...new Set(redactionMarks.map(mark => mark.page))],
               redactions: pdfEditorRedactionExpectations(redactionMarks),
@@ -4167,13 +4216,7 @@ export function usePdfEditor() {
               `Page changes rebuilt the document; these source structures were not carried forward: ${planned.declaredLosses.join(', ')}.`,
             );
           }
-          const finalVerification = planned.pageCheck
-            ? {
-                ...verification,
-                checks: [...verification.checks, planned.pageCheck],
-                allowedLosses: [...verification.allowedLosses, ...planned.declaredLosses],
-              }
-            : verification;
+          let finalVerification = verification;
 
           /**
            * Annotation dictionaries are written last, after the page plan, because
@@ -4228,10 +4271,49 @@ export function usePdfEditor() {
               };
             }
             disclosures.push(
-              `${outputAnnotations.length} annotation${outputAnnotations.length === 1 ? '' : 's'} written into the exported file and verified by id after reopening.`,
+              `${outputAnnotations.length} annotation${outputAnnotations.length === 1 ? '' : 's'} written into the exported file and checked against the annotation manifest after reopening.`,
             );
           }
 
+          // The last write is authoritative. An intermediate report cannot
+          // certify bytes that were subsequently rebuilt or annotated.
+          if (planned.pageImpact || editorAnnotations.length > 0) {
+            const decision = pageSession ? decidePdfEditorPageExportStrategy(pageSession.plan) : null;
+            finalVerification = await verifyGeneratedPdf({
+              mode: planned.pageImpact && decision?.strategy === 'page-rebuild' ? 'compatibility-render'
+                : planned.pageImpact && effectiveMode === 'byte-preserving' ? 'structure-preserving' : effectiveMode,
+              sourceBytes: originalPdfBytes,
+              outputBytes: pdfBytes,
+              pagePlan: planned.pageImpact ? pageSession?.plan : null,
+              textReplacements: textMutations.map((mutation, index) => ({
+                page: mutation.page, originalText: originalTextByMutation[index], replacementText: mutation.text,
+              })),
+              addedText: vectorTextForVerification,
+              addedPaint,
+              paintSourceBytes: exportSourceBytes,
+              allowedTextLosses,
+              sourceTextRuns,
+              ...(hasRedactions ? { redactedPages: redactionMarks.map(mark => mark.page), redactions: pdfEditorRedactionExpectations(redactionMarks) } : {}),
+            });
+            if (planned.pageImpact && pageSession && decision && verification.output && finalVerification.output) {
+              const pageProof = verifyPdfEditorPagePlanSnapshots({
+                plan: pageSession.plan, decision, source: verification.output, output: finalVerification.output,
+              });
+              finalVerification = {
+                ...finalVerification,
+                ok: finalVerification.ok && pageProof.ok,
+                checks: [...finalVerification.checks, ...pageProof.checks],
+                failures: [...finalVerification.failures, ...pageProof.failures],
+                allowedLosses: [...new Set([...finalVerification.allowedLosses, ...pageProof.allowedLosses])],
+              };
+            }
+          }
+          if (!finalVerification.ok) return { ok: false, message: `Final PDF verification failed: ${finalVerification.failures.join(' ')}`, verification: finalVerification };
+          disclosures.push(...finalVerification.checks.filter(check => check.status === 'allowed-loss').map(check => check.detail));
+          const changedSourcePages = new Set([...pagesWithMutations, ...editorAnnotations.map(annotation => annotation.page)]);
+          const changedPages = snapshot.pagePlan
+            ? snapshot.pagePlan.entries.flatMap((entry, index) => changedSourcePages.has(entry.sourcePage) || entry.sourcePage !== index + 1 || entry.rotation !== 0 ? [index + 1] : [])
+            : [...changedSourcePages].sort((a, b) => a - b);
           return {
             ok: true,
             pdfBytes,
@@ -4243,7 +4325,8 @@ export function usePdfEditor() {
                   checks: [...finalVerification.checks, ...annotationVerification.checks],
                 }
               : finalVerification,
-            disclosures,
+            disclosures: [...new Set(disclosures)],
+            changedPages,
             pageImpact: planned.pageImpact,
             prePlanBytes: planned.prePlanBytes,
             requiredConfirmation,
@@ -4271,7 +4354,7 @@ export function usePdfEditor() {
           declaredLosses: string[];
         }> {
           const session = pageSession;
-          if (!isPdfEditorFeatureEnabled('pageOperations') || !session || !pdfEditorPageSessionHasChanges(session)) {
+          if (!session || !pdfEditorPageSessionHasChanges(session)) {
             return { bytes, pageImpact: null, prePlanBytes: null, pageCheck: null, declaredLosses: [] };
           }
 
@@ -4329,6 +4412,7 @@ export function usePdfEditor() {
 
         async function renderCompatibilityPdf(sourceBytes: ArrayBuffer | Uint8Array): Promise<{ bytes: Awaited<ReturnType<typeof pdfDoc.save>>; notes: string[] }> {
           const compatNotes: string[] = [];
+          addedPaint = [...pagesWithCanvasObjects].map(page => ({ page, paths: 0, images: 1 }));
           const { PDFDocument, degrees } = await import('pdf-lib');
           const pdfDoc = await PDFDocument.load(sourceBytes, { updateMetadata: false });
           const pages = pdfDoc.getPages();
@@ -4715,6 +4799,8 @@ export function usePdfEditor() {
          * page on screen is still the page they would get.
          */
         pendingConfirmation: PdfExportImpact | null;
+        changedPages: number[];
+        verificationChecks: PdfPostExportVerification['checks'];
       }
     | {
         ok: false;
@@ -4806,6 +4892,8 @@ export function usePdfEditor() {
         pendingConfirmation: build.requiredConfirmation.requiresConfirmation
           ? build.requiredConfirmation
           : null,
+        changedPages: build.changedPages,
+        verificationChecks: build.verification.checks,
       };
     } finally {
       await loadingTask.destroy().catch(() => {});

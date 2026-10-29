@@ -187,6 +187,8 @@ const latexSummary = [
   'Core strengths: [Your actual strengths]',
   'Target: [The role you want to contribute to]',
 ].join('\n')
+// Every enabled heading is authored here — a template that overrides titles
+// must speak its full set, or fallback headings leak into its register.
 const latexTitles = {
   profile: 'Profile',
   summary: 'Summary',
@@ -194,6 +196,8 @@ const latexTitles = {
   skills: 'Core Technical Skills',
   projects: 'Projects',
   education: 'Education',
+  volunteer: 'Volunteering',
+  awards: 'Awards',
   publications: 'Publications',
   references: 'References',
 } as const
@@ -219,3 +223,19 @@ export const resumeTemplates = [
     },
   },
 ] as const satisfies readonly ResumeTemplate[]
+
+/**
+ * The preview dialog must read like the document this template will actually
+ * produce. The template's own title overrides speak first (an English preset
+ * never shows a Bengali heading); a template without overrides falls through
+ * to the register the applied paper would use for its document language —
+ * the translated headings for Bangla, the catalog headings for English.
+ */
+export function templateSectionTitle(
+  template: ResumeTemplate | (typeof baseTemplates)[number],
+  section: string,
+  registers: { english: (section: string) => string; bangla: (section: string) => string },
+): string {
+  const override = 'titles' in template ? template.titles?.[section] : undefined
+  return override ?? ('language' in template && template.language === 'English' ? registers.english : registers.bangla)(section)
+}

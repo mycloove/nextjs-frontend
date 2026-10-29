@@ -107,6 +107,8 @@ export type PdfEditorTextControlLayout = {
   maxHeight: number;
   /** Size to render the control's text at, CSS pixels. Never re-scaled. */
   fontSize: number;
+  /** Extra top padding paired with an upward frame expansion; text stays put. */
+  paddingTop: number;
 };
 
 export type PdfEditorTextControlInput = {
@@ -127,6 +129,8 @@ export type PdfEditorTextControlInput = {
   fontSize: number;
   /** The control's CSS `line-height` multiplier. */
   lineHeight: number;
+  /** Room above the text, CSS pixels; expands only the frame, not the text. */
+  topClearance?: number;
   /**
    * Width the *original* run needs to stay on one line, at the font the control
    * actually renders in, in CSS pixels. Optional — omit it and the advance width
@@ -148,8 +152,8 @@ export type PdfEditorTextControlInput = {
    */
   contentWidth?: number;
   /**
-   * Height the control's own text needs, measured from the live element; omit it
-   * before the first measurement.
+   * Height the control's own text needs, excluding the extra top clearance;
+   * measured from the live element, or omitted before the first measurement.
    *
    * A replacement longer than the original wraps, and a box frozen at one line
    * would hide every line after the first — the same "where did my text go?"
@@ -225,14 +229,16 @@ export function layoutPdfEditorTextControl(
   if (pageWidth <= 0 || pageHeight <= 0) {
     // No page to stay inside yet. The canvas does not draw controls before the
     // page has rendered, so this is a guard rather than a real layout.
+    const paddingTop = Math.min(positive(input.topClearance), Math.max(0, blockY));
     return {
       left: blockX,
-      top: blockY,
+      top: blockY - paddingTop,
       width,
-      height,
+      height: height + paddingTop,
       maxWidth: width,
-      maxHeight: height,
+      maxHeight: height + paddingTop,
       fontSize,
+      paddingTop,
     };
   }
 
@@ -261,14 +267,18 @@ export function layoutPdfEditorTextControl(
     fontSize = Math.max(MIN_TEXT_CONTROL_FONT_SIZE, room / lineHeight);
   }
 
+  // Lift only the top edge, with matching padding to keep the text and bottom
+  // edge exactly where they were. Limit the lift to the room above the frame.
+  const paddingTop = Math.min(positive(input.topClearance), top);
   return {
     left,
-    top,
+    top: top - paddingTop,
     width,
-    height,
+    height: height + paddingTop,
     maxWidth: Math.max(width, pageWidth - left),
-    maxHeight: Math.max(height, pageHeight - top),
+    maxHeight: Math.max(height, pageHeight - top) + paddingTop,
     fontSize,
+    paddingTop,
   };
 }
 

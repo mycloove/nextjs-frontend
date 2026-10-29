@@ -57,5 +57,10 @@ export function normalizePdfEditorSearchQuery(query: string) {
 
 export function includesPdfEditorSearchQuery(text: string, query: string) {
   const normalizedQuery = normalizePdfEditorSearchQuery(query);
-  return normalizedQuery.length >= 2 && text.toLocaleLowerCase().includes(normalizedQuery);
+  return normalizedQuery.length >= 2 && normalizePdfEditorSearchQuery(text).includes(normalizedQuery);
+}
+
+export function retainPdfEditorSearchIndex(results: readonly { id: string }[], previousId: string | null, previousIndex: number) {
+  const retained = results.findIndex(result => result.id === previousId);
+  return retained >= 0 ? retained : Math.max(0, Math.min(results.length - 1, previousIndex));
 }

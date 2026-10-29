@@ -14,6 +14,7 @@ import {
 import {
   isDeleteShortcut,
   isEditableShortcutTarget,
+  resolvePdfEditorShortcut,
 } from './editorShortcuts.ts';
 import {
   classifyPdfLoadFailure,
@@ -226,4 +227,50 @@ test('PDF.js failures map to stable user-facing intake states', () => {
   assert.equal(classifyPdfLoadFailure({ name: 'PasswordException' }).code, 'password-protected');
   assert.equal(classifyPdfLoadFailure({ name: 'InvalidPDFException' }).code, 'invalid-pdf');
   assert.equal(classifyPdfLoadFailure(new Error('worker failed')).code, 'load-failed');
+});
+
+test('one shortcut owner prioritizes modals, controls, objects, then pages', () => {
+  const event = {
+    key: 'ArrowRight', ctrlKey: false, metaKey: false, altKey: false,
+    shiftKey: false, defaultPrevented: false, isComposing: false, target: null,
+  };
+  const context = { modalOpen: false, fabricTextEditing: false, hasObjectSelection: true };
+  assert.equal(resolvePdfEditorShortcut(event, context), 'nudge-right');
+  assert.equal(resolvePdfEditorShortcut(event, { ...context, hasObjectSelection: false }), 'page-next');
+  assert.equal(resolvePdfEditorShortcut(event, { ...context, modalOpen: true }), null);
+  assert.equal(resolvePdfEditorShortcut(event, { ...context, fabricTextEditing: true }), null);
+  assert.equal(resolvePdfEditorShortcut({ ...event, defaultPrevented: true }, context), null);
+  assert.equal(resolvePdfEditorShortcut({ ...event, isComposing: true }, context), null);
+  for (const tagName of ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A', 'SUMMARY']) {
+    assert.equal(resolvePdfEditorShortcut({ ...event, target: { tagName, isContentEditable: false } as HTMLElement }, context), null);
+  }
+  assert.equal(resolvePdfEditorShortcut({ ...event, target: {
+    tagName: 'DIV', isContentEditable: false, closest: () => ({} as Element),
+  } as unknown as HTMLElement }, context), null);
+});
+
+test('keyboard commands retain platform shortcuts without taking over native text editing', () => {
+  const event = {
+    key: 'z', ctrlKey: true, metaKey: false, altKey: false,
+    shiftKey: false, defaultPrevented: false, isComposing: false, target: null,
+  };
+  const context = { modalOpen: false, fabricTextEditing: false, hasObjectSelection: false };
+  assert.equal(resolvePdfEditorShortcut(event, context), 'undo');
+  assert.equal(resolvePdfEditorShortcut({ ...event, shiftKey: true }, context), 'redo');
+  assert.equal(resolvePdfEditorShortcut({ ...event, ctrlKey: false, metaKey: true, key: 's' }, context), 'export');
+  assert.equal(resolvePdfEditorShortcut({ ...event, key: 'k' }, context), 'commands');
+  assert.equal(resolvePdfEditorShortcut({ ...event, ctrlKey: false, key: '?' }, context), 'help');
+  assert.equal(resolvePdfEditorShortcut({ ...event, target: { tagName: 'TEXTAREA' } as HTMLElement }, context), null);
+  assert.equal(resolvePdfEditorShortcut({ ...event, altKey: true }, context), null);
+});
+
+test('modal buttons and checkboxes cannot undo or delete text behind the dialog', () => {
+  const context = { modalOpen: true, fabricTextEditing: false, hasObjectSelection: false };
+  const event = { key: 'z', ctrlKey: true, metaKey: false, altKey: false, shiftKey: false, defaultPrevented: false, isComposing: false };
+  const inModal = { closest: () => ({} as Element), isContentEditable: false };
+  assert.equal(resolvePdfEditorShortcut({ ...event, target: { ...inModal, tagName: 'BUTTON' } as unknown as HTMLElement }, context), 'suppress');
+  assert.equal(resolvePdfEditorShortcut({ ...event, target: { ...inModal, tagName: 'INPUT', getAttribute: () => 'checkbox' } as unknown as HTMLElement }, context), 'suppress');
+  assert.equal(resolvePdfEditorShortcut({ ...event, target: { ...inModal, tagName: 'TEXTAREA' } as unknown as HTMLElement }, context), null);
+  assert.equal(resolvePdfEditorShortcut({ ...event, target: { tagName: 'TEXTAREA', closest: () => null } as unknown as HTMLElement }, context), 'suppress');
+  assert.equal(resolvePdfEditorShortcut({ ...event, key: 'Backspace', ctrlKey: false, target: null }, context), 'suppress');
 });

@@ -10,6 +10,7 @@ import {
   includesPdfEditorSearchQuery,
   normalizePdfEditorPageJump,
   normalizePdfEditorSearchQuery,
+  retainPdfEditorSearchIndex,
 } from './editorShell.ts';
 
 test('fit modes are deterministic and remain within editor zoom limits', () => {
@@ -46,7 +47,16 @@ test('virtual range bounds visible rows with overscan', () => {
 
 test('search matching is case-insensitive and ignores repeated query whitespace', () => {
   assert.equal(includesPdfEditorSearchQuery('Quarterly Revenue Report', ' revenue   report '), true);
+  assert.equal(includesPdfEditorSearchQuery('Quarterly  Revenue\nReport', 'revenue report'), true);
   assert.equal(includesPdfEditorSearchQuery('Quarterly Revenue Report', 'r'), false);
+});
+
+test('search refresh retains the selected result rather than returning to the first match', () => {
+  const results = [{ id: 'p1:0' }, { id: 'p2:4' }, { id: 'p3:1' }];
+  assert.equal(retainPdfEditorSearchIndex(results, 'p2:4', 1), 1);
+  assert.equal(retainPdfEditorSearchIndex(results.slice(1), 'p2:4', 1), 0);
+  assert.equal(retainPdfEditorSearchIndex(results.slice(0, 2), 'removed', 8), 1);
+  assert.equal(retainPdfEditorSearchIndex([], 'removed', 1), 0);
 });
 
 test('zoom clamp keeps every requested scale inside the supported editor range', () => {

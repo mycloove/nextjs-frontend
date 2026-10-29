@@ -501,7 +501,7 @@ test('redaction verification fails when the glyphs are still drawn in the conten
   assert.match(failed.failures.join(' '), /still drawn/);
 });
 
-test('redacting one of two identical runs leaves the other occurrence allowed', async () => {
+test('redacting one of two identical runs requires the other occurrence to survive', async () => {
   const source = await buildSourcePdf([[CONFIDENTIAL, CONFIDENTIAL]]);
   const oneRemains = await buildSourcePdf([[CONFIDENTIAL]]);
   const noneRemains = await buildSourcePdf([[]]);
@@ -515,7 +515,8 @@ test('redacting one of two identical runs leaves the other occurrence allowed', 
       redactedPages: [1],
       redactions: [expectation],
     });
-    assert.equal(report.ok, true);
+    assert.equal(report.ok, outputBytes === oneRemains, report.failures.join(' '));
+    if (outputBytes === noneRemains) assert.match(report.failures.join(' '), /Unchanged text was not retained/);
   }
 
   const untouched = await verifyGeneratedPdf({

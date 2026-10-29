@@ -346,6 +346,11 @@ test('export preview renders the exported bytes without a blocked panel', async 
   ).toBeGreaterThan(300);
 
   await expect(page.locator('.pe-preview-blocked')).toHaveCount(0);
+  // Narrow workspaces now start with closed, inert drawers. Inspect the visible
+  // panel after opening it, not its intentionally off-screen closed position.
+  const inspector = page.getByTestId('pdf-inspector-panel');
+  if (await inspector.getAttribute('aria-hidden') === 'true') await page.getByTestId('pdf-inspector-toggle').click();
+  await expect.poll(() => inspector.evaluate(element => element.getBoundingClientRect().right <= window.innerWidth)).toBe(true);
   await expectInsideViewport(page, 'pdf-inspector-panel');
 });
 
@@ -406,10 +411,16 @@ test('upload, autosave, refresh, recover, export, and reopen', async ({ page }, 
 
 test('page-size export requires signature-impact approval before download', async ({ page }, testInfo) => {
   await upload(page);
+  if (await page.getByTestId('pdf-inspector-panel').getAttribute('aria-hidden') === 'true') await page.getByTestId('pdf-inspector-toggle').click();
   await page.getByTestId('pdf-page-size').selectOption('a4');
   await expect(page.getByTestId('pdf-save-status')).toContainText('Saved locally', { timeout: 15_000 });
   await expectInsideViewport(page, 'pdf-export-button');
-  await expect(page).toHaveScreenshot(`editor-workflow-${testInfo.project.name}.png`);
+  const imageName = `editor-workflow-${testInfo.project.name}.png`;
+  // The committed pixel baselines were reviewed on Windows. Other platforms
+  // still run every geometry/state/PDF assertion and retain a review image;
+  // they must not invent a passing baseline from their own first screenshot.
+  if (process.platform === 'win32') await expect(page).toHaveScreenshot(imageName);
+  else await testInfo.attach(imageName, { body: await page.screenshot({ animations: 'disabled', caret: 'hide' }), contentType: 'image/png' });
   const downloadPromise = page.waitForEvent('download');
   await page.getByTestId('pdf-export-button').click();
   await expect(page.getByTestId('pdf-export-impact-dialog')).toBeVisible({ timeout: 60_000 });

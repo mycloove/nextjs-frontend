@@ -105,7 +105,8 @@ interface Props {
   page:          number;
   zoom:          number;
   activeTool:    ToolType;
-  onReady:       (page: number, fc: FabricCanvasLike) => void;
+  onReady:       (page: number, fc: FabricCanvasLike) => void | boolean | Promise<void | boolean>;
+  onFailure?: (page: number, message: string | null) => void;
   renderPage:    (page: number, canvas: HTMLCanvasElement, zoom: number, pixelBudget?: number) => Promise<{ width: number; height: number; budgetLimited: boolean }>;
   getTextBlocks: (page: number, zoom: number) => Promise<TextBlock[]>;
   getOriginalTextEdit: (block: TextBlock) => OriginalTextEdit;
@@ -171,7 +172,7 @@ type CommittedTextBlocks = {
 const EMPTY_TEXT_BLOCKS: TextBlock[] = [];
 
 export default function PdfEditorCanvas({
-  page, zoom, activeTool, onReady, renderPage,
+  page, zoom, activeTool, onReady, onFailure, renderPage,
   getTextBlocks, getOriginalTextEdit, getEditedText, setTextEdit,
   selectOriginalTextBlock, selectedOriginalTextKey, onBeforeDispose, onFirstFrame, searchHighlight,
   redactionMarks, onToggleRedaction, onUnmarkRedaction,
@@ -223,6 +224,13 @@ export default function PdfEditorCanvas({
     startHeight: number;
   } | null>(null);
   const [renderingFrame, setRenderingFrame] = useState(false);
+  const [pageFailure, setPageFailure] = useState<string | null>(null);
+  const [layerFailure, setLayerFailure] = useState<string | null>(null);
+  const [retryEpoch, setRetryEpoch] = useState(0);
+  const callbacksRef = useRef({ onReady, onBeforeDispose, onShapeDragCreate, onAddAnnotationAt });
+  callbacksRef.current = { onReady, onBeforeDispose, onShapeDragCreate, onAddAnnotationAt };
+  const failure = pageFailure ?? layerFailure;
+  useEffect(() => { onFailure?.(page, failure); }, [onFailure, page, failure]);
   const [blockSet, setBlockSet] = useState<CommittedTextBlocks | null>(null);
   /** Live rectangle for a drag-to-create shape, in CSS pixels. */
   const [shapePreview, setShapePreview] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
@@ -283,6 +291,34 @@ export default function PdfEditorCanvas({
   };
 
   /**
+   * Height the control's rendered font needs for one line of itself, CSS pixels.
+   *
+   * A box floored at one *line box* (`fontSize × lineHeight`) can still shave
+   * its own glyphs: a proportional font's ascent+descent are usually taller
+   * than 1.15 em, the real glyphs overshoot the line box symmetrically, and an
+   * `overflow` control clips paint — not just layout — so the shaved top the
+   * user reported is ink overflow the element never grows for.
+   *
+   * `fontBoundingBoxAscent/Descent` are the font's own line extents for the
+   * exact family, weight and pixel size the control renders in. Their sum is
+   * therefore the smallest height that cannot shave anything. Browsers without
+   * the metrics return 0 — no floor, which is the behaviour this replaces.
+   */
+  const measuredFontLineExtent = (
+    fontSize: number,
+    edit: { fontFamily: string; bold: boolean; italic: boolean },
+  ) => {
+    const canvas = measureCanvasRef.current ??= document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context || !(fontSize > 0)) return 0;
+    context.font = `${edit.italic ? 'italic ' : ''}${edit.bold ? '700 ' : '400 '}`
+      + `${fontSize}px ${edit.fontFamily}, Helvetica, Arial, sans-serif`;
+    const metrics = context.measureText(' ');
+    const extent = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
+    return Number.isFinite(extent) && extent > 0 ? extent : 0;
+  };
+
+  /**
    * Key a dragged size is stored under: the block's position *and* its original
    * text.
    *
@@ -329,7 +365,8 @@ export default function PdfEditorCanvas({
       startX: event.clientX,
       startY: event.clientY,
       startWidth: layout.width,
-      startHeight: layout.height,
+      // Store the content size, not the frame's display-only top clearance.
+      startHeight: layout.height - layout.paddingTop,
     };
   };
 
@@ -373,7 +410,7 @@ export default function PdfEditorCanvas({
   };
 
   /**
-   * Border-box height this control's text needs, in CSS pixels.
+   * Border-box height this control's text needs, excluding frame-only clearance.
    *
    * `scrollHeight` is measured against the element's *current* box, so the
    * applied height has to come off first: a box already sized to one line
@@ -389,7 +426,10 @@ export default function PdfEditorCanvas({
     el.style.height = 'auto';
     const measured = el.scrollHeight;
     el.style.height = applied;
-    return measured + 2 * TEXT_CONTROL_CHROME.borderWidth;
+    // The added top clearance is reapplied by layout; counting it here would
+    // make the box grow again on every keystroke.
+    const topClearance = Math.max(0, (parseFloat(el.style.paddingTop) || 0) - TEXT_CONTROL_CHROME.paddingY);
+    return measured + 2 * TEXT_CONTROL_CHROME.borderWidth - topClearance;
   };
 
   const measureTextControl = (key: string) => {
@@ -424,6 +464,13 @@ export default function PdfEditorCanvas({
     if (!canvas) return;
     let cancelled = false;
     let settleTimer: number | undefined;
+    setPageFailure(null);
+    const deadline = window.setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setRenderingFrame(false);
+      setPageFailure('The page took too long to render. Your edits are retained; retry the page.');
+    }, 30_000);
     const buffer = document.createElement('canvas');
     const retryDelays = [0, 40, 120, 240, 400];
 
@@ -448,8 +495,9 @@ export default function PdfEditorCanvas({
       canvas.style.width  = buffer.style.width;
       canvas.style.height = buffer.style.height;
       const context = canvas.getContext('2d');
-      if (!context) return;
+      if (!context) throw new Error('The page canvas is unavailable.');
       context.drawImage(buffer, 0, 0);
+      window.clearTimeout(deadline);
       setRenderingFrame(false);
       setFrame({ page, width, height, zoom });
       // The shell above this frame keeps the scrollbar honest while the page is
@@ -493,7 +541,7 @@ export default function PdfEditorCanvas({
       }
       // Nothing arrived: a document that is not open yet, or a page that
       // refused to draw. Stop claiming progress instead of spinning forever.
-      if (!cancelled) setRenderingFrame(false);
+      if (!cancelled) throw new Error('No usable page frame was produced.');
     };
 
     /**
@@ -527,25 +575,30 @@ export default function PdfEditorCanvas({
           if (width > 0 && height > 0 && buffer.width > 0 && buffer.height > 0) {
             commit(width, height);
           }
-        })();
+        })().catch(error => {
+          if (!cancelled) setPageFailure(error instanceof Error ? error.message : 'The page refinement failed.');
+        });
       }, PDF_EDITOR_SETTLE_DELAY_MS);
     };
 
     renderWithRetry().catch((error) => {
       if (!cancelled) {
         setRenderingFrame(false);
+        window.clearTimeout(deadline);
+        setPageFailure(error instanceof Error ? error.message : 'The page could not be rendered.');
         console.warn('PDF page render failed', error);
       }
     });
 
     return () => {
       cancelled = true;
+      window.clearTimeout(deadline);
       if (settleTimer !== undefined) {
         window.clearTimeout(settleTimer);
         settleTimer = undefined;
       }
     };
-  }, [page, zoom, renderPage]);
+  }, [page, zoom, renderPage, retryEpoch]);
 
   useEffect(() => {
     let cancelled = false;
@@ -567,6 +620,8 @@ export default function PdfEditorCanvas({
     setContentHeights({});
     getTextBlocks(framePage, frameZoom).then(blocks => {
       if (!cancelled) setBlockSet({ page: framePage, zoom: frameZoom, blocks });
+    }).catch(error => {
+      if (!cancelled) setPageFailure(error instanceof Error ? error.message : 'Text controls could not be prepared.');
     });
 
     return () => {
@@ -609,10 +664,22 @@ export default function PdfEditorCanvas({
     if (!mountedFrame) return;
     const mountedPage = mountedFrame.page;
     let cancelled = false;
+    setLayerFailure(null);
+    const deadline = window.setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      if (fabricRef.current) {
+        callbacksRef.current.onBeforeDispose(mountedPage);
+        fabricRef.current.dispose();
+        fabricRef.current = null;
+      }
+      setLayerFailure('The editing layer took too long to initialize. Saved objects are retained; retry the page.');
+    }, 30_000);
 
     const loadFabric = async () => {
       const fabricCanvas = fabricCanvasRef.current;
       if (!fabricCanvas || !fabricCanvas.isConnected) return;
+      if (!fabricCanvas.getContext('2d')) throw new Error('The editing canvas is unavailable. Retry the page.');
 
       // Dynamically import fabric to avoid SSR issues
       const fabricModule = await import('fabric');
@@ -646,20 +713,28 @@ export default function PdfEditorCanvas({
       }
 
       fabricRef.current = fc;
-      onReady(mountedPage, fc);
+      const ready = await callbacksRef.current.onReady(mountedPage, fc);
+      if (cancelled) return;
+      if (ready === false) throw new Error('The editing layer could not restore every saved object. Retry without discarding your draft.');
+      window.clearTimeout(deadline);
     };
 
-    loadFabric();
+    void loadFabric().catch(error => {
+      if (cancelled) return;
+      window.clearTimeout(deadline);
+      setLayerFailure(error instanceof Error ? error.message : 'The editing layer could not initialize.');
+    });
 
     return () => {
       cancelled = true;
+      window.clearTimeout(deadline);
       if (fabricRef.current) {
-        onBeforeDispose(mountedPage);
+        callbacksRef.current.onBeforeDispose(mountedPage);
         fabricRef.current.dispose();
         fabricRef.current = null;
       }
     };
-  }, [framePage]);
+  }, [framePage, retryEpoch]);
 
   useEffect(() => {
     const fc = fabricRef.current;
@@ -798,7 +873,7 @@ export default function PdfEditorCanvas({
         );
         // A click, not a drag: nothing is created and the tool stays active so
         // the user can try again. A 2pt shape would be unselectable afterwards.
-        if (geometry) onShapeDragCreate?.(page, activeTool as PdfEditorDragShape, geometry);
+        if (geometry) callbacksRef.current.onShapeDragCreate?.(page, activeTool as PdfEditorDragShape, geometry);
       });
     }
 
@@ -806,7 +881,7 @@ export default function PdfEditorCanvas({
       bind('mouse:down', (event) => {
         const original = event.e as MouseEvent | undefined;
         if (original && 'button' in original && original.button !== 0) return;
-        onAddAnnotationAt?.(page, toPagePoint(event.e));
+        callbacksRef.current.onAddAnnotationAt?.(page, toPagePoint(event.e));
       });
     }
 
@@ -819,8 +894,8 @@ export default function PdfEditorCanvas({
     displayDims.height,
     displayDims.width,
     displayZoom,
-    onAddAnnotationAt,
-    onShapeDragCreate,
+    // Save/status renders must not tear down a drag in progress. Only the
+    // active tool or its coordinate space owns this listener's lifetime.
     page,
     showingRequestedPage,
   ]);
@@ -835,13 +910,16 @@ export default function PdfEditorCanvas({
         // page-width was one of the two dozen frames the old open wobbled
         // through. Before the first commit there is simply nothing here, and
         // the stage placeholder says so.
-        width:    displayDims.width,
-        height:   displayDims.height,
+        width:    failure && !hasPageDimensions ? 'min(440px, 100%)' : displayDims.width,
+        height:   failure && !hasPageDimensions ? 220 : displayDims.height,
         display:  'block',
-        visibility: hasPageDimensions ? 'visible' : 'hidden',
+        visibility: hasPageDimensions || failure ? 'visible' : 'hidden',
       }}
     >
       <style>{`
+        .pe-canvas-failure { position: absolute; inset: 0; z-index: 20; display: grid; place-content: center; gap: 12px; padding: 20px; background: var(--pe-panel); color: var(--pe-text); font-family: inherit; font-size: 13px; line-height: 1.5; text-align: center; }
+        .pe-canvas-failure p { margin: 0; max-width: 360px; }
+        .pe-canvas-failure button { justify-self: center; min-height: 40px; }
         /* W3 authoring marks. These are previews of intent, not the removal:
            the black bar disappears with the glyphs on export because the
            engine deletes the text and this overlay is never written to the
@@ -935,9 +1013,11 @@ export default function PdfEditorCanvas({
           .pe-page-rendering::after { animation: none; width: 100%; opacity: .5; }
         }
       `}</style>
+      {failure && <div className="pe-canvas-failure" role="alert" data-testid="pdf-canvas-failure"><strong>Page not ready</strong><p>{failure}</p><button type="button" className="pe-preflight-action" data-testid="pdf-canvas-retry" onClick={() => { setPageFailure(null); setLayerFailure(null); setRetryEpoch(epoch => epoch + 1); }}>Retry page and editing layer</button></div>}
       {/* PDF render layer */}
       <canvas
         ref={pdfCanvasRef}
+        data-editor-layer="source"
         style={{
           position: 'absolute',
           top: 0, left: 0,
@@ -950,6 +1030,7 @@ export default function PdfEditorCanvas({
       {/* Fabric editing layer */}
       <canvas
         ref={fabricCanvasRef}
+        data-editor-layer="objects"
         style={{
           position: 'absolute',
           top: 0, left: 0,
@@ -1080,9 +1161,19 @@ export default function PdfEditorCanvas({
       {activeTool === 'editText' && showingRequestedPage && textBlocks.map(block => {
         const edit = getOriginalTextEdit(block);
         const key = `${block.page}:${block.index}`;
+        /**
+         * The control's fill is fully opaque — the canvas raster it sits over
+         * must not read through it. At 92% the page's own glyphs underneath a
+         * box showed as ghosted strokes beside the text being edited: an
+         * unreadable double image that also read as "the edit did not take".
+         * A colour the user picked keeps whatever alpha it has, because the
+         * export paints exactly that colour that is what the control may
+         * show; only the default fill, which exists to be a clean editing
+         * surface, is opaque.
+         */
         const bgColor = edit.backgroundColor && edit.backgroundColor !== 'transparent'
           ? edit.backgroundColor
-          : 'rgba(255,255,255,.92)';
+          : 'rgb(255, 255, 255)';
         // `edit.fontSize` is in document points, so this is the one and only
         // place the zoom is applied to it — the committed zoom, because the
         // boxes this control draws over are the committed raster's own runs.
@@ -1090,6 +1181,14 @@ export default function PdfEditorCanvas({
         // line, staying inside the page — is decided by the pure function so
         // it can be proven at every zoom.
         const userSize = userSizes[dragKeyOf(block)];
+        /**
+         * The font's own line extent for this zoom, as an extra height floor.
+         * A line box taller than the glyphs is the rule, not an exception —
+         * this is what stops the control from shaving the top of its own
+         * line, including for the handful of fonts whose em box exceeds the
+         * reported rectangle outright.
+         */
+        const fontLineExtent = measuredFontLineExtent(edit.fontSize * displayZoom, edit);
         const layout = layoutPdfEditorTextControl({
           block,
           fontSize: edit.fontSize * displayZoom,
@@ -1097,7 +1196,8 @@ export default function PdfEditorCanvas({
           // line a width, and anything typed past it wraps and grows downwards.
           contentWidth: measuredRunWidth(block.text, edit.fontSize * displayZoom, edit),
           lineHeight: edit.lineHeight,
-          contentHeight: contentHeights[key],
+          topClearance: 4 * displayZoom,
+          contentHeight: Math.max(fontLineExtent, contentHeights[key] ?? 0),
           // Back into device pixels for the layout to clamp against the page.
           // A drag can only ever enlarge a box: these arrive as floors, so they
           // cannot pull it off the run it covers or below one line of its font.
@@ -1169,6 +1269,33 @@ export default function PdfEditorCanvas({
         };
         return (
         <Fragment key={key}>
+        {/*
+          The source run's full font box, painted opaque. The control's text sits
+          on the engine rectangle — that is where the export puts the replacement
+          text, so it is where the caret must sit — but a run's ink reaches
+          past that rectangle: ascenders above it, descenders below it. Those
+          parts read through beside the box as a second, ghost line. This
+          shroud covers the whole font box with the control's own fill, so no
+          part of the original run can show anywhere around the box, without
+          moving the box or its text at all. One pixel each side is the
+          canvas raster's own antialiasing fringe; vertically it stays exact,
+          because the next line's ink can start within a hairline of this
+          font box and bleed there would paint over the neighbour.
+          Beneath every control (the boxes are 8–9) and deaf to the pointer,
+          so it never stands between the user and a box or the page.
+        */}
+        <div
+          style={{
+            position: 'absolute',
+            left: (block.fontBox ?? block).x - 1,
+            top: (block.fontBox ?? block).y,
+            width: Math.max(0, (block.fontBox ?? block).width + 2),
+            height: Math.max(0, (block.fontBox ?? block).height),
+            background: bgColor,
+            pointerEvents: 'none',
+            zIndex: 7,
+          }}
+        />
         <textarea
           ref={(el) => { textAreaRefs.current[key] = el; }}
           data-testid={`pdf-original-text-${block.page}-${block.index}`}
@@ -1227,14 +1354,16 @@ export default function PdfEditorCanvas({
             // Derived from the same constant the layout arithmetic uses. Hard-code
             // either half and the box silently stops fitting its own text.
             padding: `${TEXT_CONTROL_CHROME.paddingY}px ${TEXT_CONTROL_CHROME.paddingX}px`,
+            // Offset the lifted frame, keeping the text's original position.
+            paddingTop: TEXT_CONTROL_CHROME.paddingY + layout.paddingTop,
             borderWidth: TEXT_CONTROL_CHROME.borderWidth,
             borderStyle: 'solid',
             borderColor: 'transparent',
             borderRadius: 4,
             // The visible frame is an outline, not a border, because an outline
             // is drawn outside the box and takes no part in layout. So the text
-            // area *is* the glyph rectangle: the replacement text sits where the
-            // original glyphs sat, at their size, with nothing inset — and a
+            // area's text origin stays on the glyph rectangle: the replacement
+            // text sits where the original glyphs sat, at their size — and a
             // frame that stays a hairline at 40% cannot steal a line's worth of
             // room from the box the way a border did.
             outline: '1px solid var(--pe-control-outline)',

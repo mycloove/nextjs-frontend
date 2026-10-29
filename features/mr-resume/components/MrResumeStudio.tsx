@@ -1499,7 +1499,6 @@ export default function MrResumeStudio() {
     spacingPresets, resetPageSettings, banglishMode, setBanglishMode,
     banglishSources: { title: validBanglishSources(active === 'profile' ? fullName : title(active), banglishSources[`title:${active}`] ?? []), content: validBanglishSources(content[active] ?? '', banglishSources[`content:${active}`] ?? []) },
     recordBanglish, learnedWords, spellingChoices, onLearnReading: learnReading, onForgetSpelling: forgetSpelling, onClearSpellings: clearSpellings, onExportSpellings: exportSpellings,
-    templateLibrary: <ResumeTemplateLibrary selected={templateId} hasBackup={Boolean(templateBackup)} onApply={applyTemplate} onRestore={restoreTemplateBackup} onExportBackup={downloadTemplateBackup} sectionTitle={(id) => bengaliSectionTitles[id] ?? title(id)} t={tx} />,
     languageSuggestions: <ResumeLanguageSuggestions key={active} section={active} title={active === 'profile' ? fullName : title(active)} content={content[active] ?? ''} language={language}
       targetTitle={active !== 'profile' && !Object.hasOwn(titles, active) ? (language === 'English' ? bengaliSectionTitles[active] : catalog.find((section) => section.id === active)?.title) : undefined}
       sources={{ title: banglishSources[`title:${active}`] ?? [], content: banglishSources[`content:${active}`] ?? [] }} onApply={applyLanguageProposal} t={tx} />,
@@ -1549,7 +1548,7 @@ export default function MrResumeStudio() {
       </section>
 
       <section className={styles.workspace} aria-label={tx('Resume editor')}>
-        <ResumeSectionPanel active={active} enabled={enabled} dragging={dragging} content={content} title={editorTitle} t={tx} selectSection={selectSection} dropMarker={dropMarker} dragHandle={dragHandle} addRef={addRef} libraryOpen={libraryOpen} setLibraryOpen={setLibraryOpen} catalog={catalog} addSection={addSection} addCustomSection={addCustomSection} startFresh={startFresh} confirmFresh={confirmFresh} />
+        <ResumeSectionPanel active={active} enabled={enabled} dragging={dragging} content={content} title={editorTitle} t={tx} selectSection={selectSection} dropMarker={dropMarker} dragHandle={dragHandle} addRef={addRef} libraryOpen={libraryOpen} setLibraryOpen={setLibraryOpen} catalog={catalog} addSection={addSection} addCustomSection={addCustomSection} startFresh={startFresh} confirmFresh={confirmFresh} templateLibrary={<ResumeTemplateLibrary selected={templateId} hasBackup={Boolean(templateBackup)} onApply={applyTemplate} onRestore={restoreTemplateBackup} onExportBackup={downloadTemplateBackup} sectionTitle={(id) => bengaliSectionTitles[id] ?? title(id)} catalogTitle={(id) => catalog.find((section) => section.id === id)?.title ?? 'Untitled section'} t={tx} />} />
 
         <section className={styles.canvasPanel} aria-label={tx('Live document preview')}>
           <div ref={stageRef} className={styles.paperStage} data-sort-scroll="canvas">

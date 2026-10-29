@@ -1,4 +1,5 @@
 import type { PdfEditorExportMode } from './editorExport.ts';
+import type { PdfEditorPagePlan } from './editorPageModel.ts';
 import { scriptOfCodePoint } from './editorFontPolicy.ts';
 import {
   verifyPdfEditorContentRemoval,
@@ -18,6 +19,9 @@ export type PdfVerificationSnapshot = {
   pageCount: number;
   pageText: string[];
   pageRotations: number[];
+  pageSizes?: { width: number; height: number }[];
+  /** Drawing-operation counts, not a claim of visual equivalence. */
+  pagePaint?: { paths: number; images: number }[];
   metadata: Record<string, string>;
   formFieldNames: string[];
   preflight: PdfDocumentPreflight;
@@ -210,6 +214,7 @@ function featureCount(report: PdfDocumentPreflight, feature: typeof STRUCTURE_FE
 
 export async function inspectPdfForExportVerification(
   bytes: ArrayBuffer | Uint8Array,
+  options: { includePaint?: boolean } = {},
 ): Promise<PdfVerificationSnapshot> {
   const source = bytes instanceof Uint8Array ? bytes.slice() : new Uint8Array(bytes.slice(0));
   // pdfjs-dist's browser build assumes a DOM/worker environment. In Node (unit
@@ -249,11 +254,30 @@ export async function inspectPdfForExportVerification(
   try {
     const pageText: string[] = [];
     const pageRotations: number[] = [];
+    const pageSizes: { width: number; height: number }[] = [];
+    const pagePaint: { paths: number; images: number }[] = [];
     for (let pageNumber = 1; pageNumber <= pdfjsDocument.numPages; pageNumber += 1) {
       const page = await pdfjsDocument.getPage(pageNumber);
       const content = await page.getTextContent() as { items: Array<{ str?: string }> };
       pageText.push(normalizeText(content.items.map((item: { str?: string }) => item.str ?? '').join(' ')));
       pageRotations.push(((page.rotate ?? 0) % 360 + 360) % 360);
+      const viewport = page.getViewport({ scale: 1 });
+      pageSizes.push({ width: viewport.width, height: viewport.height });
+      // Exclude annotation appearances: a stamp must not disguise lost source
+      // graphics or a missing shape. PDF.js expands form XObjects here.
+      if (options.includePaint) {
+        const operators = await page.getOperatorList({ annotationMode: 0 });
+        const imageOperators = new Set([
+          pdfjs.OPS.paintImageXObject, pdfjs.OPS.paintInlineImageXObject,
+          pdfjs.OPS.paintImageMaskXObject, pdfjs.OPS.paintSolidColorImageMask,
+          pdfjs.OPS.paintImageXObjectRepeat, pdfjs.OPS.paintImageMaskXObjectRepeat,
+          pdfjs.OPS.paintInlineImageXObjectGroup, pdfjs.OPS.paintImageMaskXObjectGroup,
+        ]);
+        pagePaint.push({
+          paths: operators.fnArray.filter(operation => operation === pdfjs.OPS.constructPath).length,
+          images: operators.fnArray.filter(operation => imageOperators.has(operation)).length,
+        });
+      }
     }
 
     const [metadata, fieldObjects] = await Promise.all([
@@ -274,6 +298,8 @@ export async function inspectPdfForExportVerification(
       pageCount: pdfjsDocument.numPages,
       pageText,
       pageRotations,
+      pageSizes,
+      ...(options.includePaint ? { pagePaint } : {}),
       metadata: normalizeMetadata(metadata?.info),
       formFieldNames: Object.keys(fieldObjects ?? {}).sort(),
       preflight,
@@ -290,6 +316,15 @@ export type PdfTextAdditionVerification = {
   text: string;
 };
 
+export type PdfSourceTextRunVerification = {
+  page: number;
+  text: string;
+  /** False only for an effective edit, redaction, or explicitly approved loss. */
+  retained: boolean;
+};
+
+export type PdfPaintAdditionVerification = { page: number; paths: number; images: number };
+
 export function verifyPdfExportSnapshots(options: {
   mode: PdfEditorExportMode;
   source: PdfVerificationSnapshot;
@@ -300,6 +335,13 @@ export function verifyPdfExportSnapshots(options: {
   addedText?: PdfTextAdditionVerification[];
   /** Output pages whose source text was intentionally removed. */
   redactedPages?: number[];
+  /** Exact source runs covered by an explicit, revision-scoped neighbor-loss grant. */
+  allowedTextLosses?: PdfTextAdditionVerification[];
+  /** Complete nonblank source runs on each edited page, in extraction order. */
+  sourceTextRuns?: readonly PdfSourceTextRunVerification[];
+  addedPaint?: PdfPaintAdditionVerification[];
+  /** Page-plan callers opt in after mapping the source paint inventory. */
+  verifyRetainedPaint?: boolean;
 }): PdfPostExportVerification {
   const { mode, source, output } = options;
   const checks: PdfVerificationCheck[] = [];
@@ -328,13 +370,89 @@ export function verifyPdfExportSnapshots(options: {
     ...flattenedTextPages,
   ]);
   source.pageText.forEach((expected, index) => {
-    if (editedPages.has(index + 1)) return;
+    const page = index + 1;
+    if (flattenedTextPages.has(page)) return;
     const normalized = normalizeText(expected);
     if (!normalized) return;
     const actual = normalizeText(output.pageText[index] ?? '');
-    if (actual.includes(normalized)) pass(`text-${index + 1}`, `Required searchable text was retained for page ${index + 1}.`);
-    else fail(`text-${index + 1}`, `Required searchable text was not found after reopening page ${index + 1}.`);
+    if (!editedPages.has(page)) {
+      if (actual.includes(normalized)) pass(`text-${page}`, `Required searchable text was retained for page ${page}.`);
+      else fail(`text-${page}`, `Required searchable text was not found after reopening page ${page}.`);
+      return;
+    }
+    const edits = (options.textReplacements ?? []).filter(edit => edit.page === page);
+    const approvedLosses = (options.allowedTextLosses ?? []).filter(loss => loss.page === page);
+    const removed = [...edits.map(edit => edit.originalText), ...approvedLosses.map(loss => loss.text)].map(normalizeText).filter(Boolean);
+    if (removed.length === 0) {
+      fail(`retained-text-${page}`, `Page ${page} has no exact removal manifest; unchanged content cannot be verified.`);
+      return;
+    }
+    const sourceRuns = options.sourceTextRuns?.filter(run => run.page === page);
+    let fragments: string[];
+    if (sourceRuns) {
+      // A first-substring match chooses the wrong occurrence when the user edits
+      // a later duplicate. The hook knows which source item was edited; verify
+      // its complete manifest before trusting that selection. Comparing sorted
+      // runs is bounded, unlike searching combinations of duplicate matches.
+      if (sourceRuns.some(run => typeof run.retained !== 'boolean')
+        || normalizeText(sourceRuns.map(run => run.text).join(' ')) !== normalized) {
+        fail(`retained-text-${page}`, `The source-run manifest does not cover the original text in order on page ${page}.`);
+        return;
+      }
+      const discarded = sourceRuns.filter(run => !run.retained).map(run => normalizeText(run.text)).filter(Boolean);
+      if (JSON.stringify(discarded.sort()) !== JSON.stringify([...removed].sort())) {
+        fail(`retained-text-${page}`, `The source-run manifest does not match the declared removal occurrences on page ${page}.`);
+        return;
+      }
+      fragments = sourceRuns.filter(run => run.retained).map(run => normalizeText(run.text)).filter(Boolean);
+    } else {
+      // Callers without source-item identity keep the conservative substring
+      // proof. They may refuse ambiguous duplicates; they never exempt the page.
+      fragments = [normalized];
+      for (const text of removed) {
+        const fragmentIndex = fragments.findIndex(fragment => fragment.includes(text));
+        if (fragmentIndex < 0) continue;
+        const fragment = fragments[fragmentIndex];
+        const at = fragment.indexOf(text);
+        fragments.splice(fragmentIndex, 1, fragment.slice(0, at), fragment.slice(at + text.length));
+      }
+    }
+    const additions = [...edits.map(edit => edit.replacementText), ...(options.addedText ?? []).filter(item => item.page === page).map(item => item.text)].map(normalizeText);
+    const missing = [...new Set(fragments.map(normalizeText).filter(Boolean))].filter(fragment => {
+      const retainedCount = sourceRuns
+        ? fragments.reduce((count, text) => count + countTextOccurrences(text, fragment), 0)
+        : Math.max(0, countTextOccurrences(normalized, fragment)
+          - removed.reduce((count, text) => count + countTextOccurrences(text, fragment), 0));
+      const expectedCount = retainedCount
+        + additions.reduce((count, text) => count + countTextOccurrences(text, fragment), 0);
+      return countTextOccurrences(actual, fragment) < expectedCount;
+    });
+    if (missing.length) fail(`retained-text-${page}`, `Unchanged text was not retained on page ${page}: ${missing.join(' | ')}.`);
+    else pass(`retained-text-${page}`, `Unchanged source text runs and their occurrence counts were retained on page ${page}; text placement is not checked by this count.`);
+    approvedLosses.forEach(loss => {
+      const detail = `Approved neighboring text loss on page ${page}: "${loss.text}".`;
+      allowedLosses.push(detail);
+      checks.push({ id: `approved-text-loss-${page}`, status: 'allowed-loss', detail });
+    });
   });
+  if (options.verifyRetainedPaint) {
+    for (let page = 1; page <= source.pageCount; page += 1) {
+      const before = source.pagePaint?.[page - 1];
+      const after = output.pagePaint?.[page - 1];
+      if (!before || !after || after.paths < before.paths || after.images < before.images) {
+        fail(`retained-graphics-${page}`, `Mapped source drawing-operation counts were not retained on output page ${page}.`);
+      } else {
+        pass(`retained-graphics-${page}`, `Mapped source drawing-operation counts were retained on output page ${page}; pixel identity and drawing geometry are not checked.`);
+      }
+    }
+  }
+  for (const addition of options.addedPaint ?? []) {
+    const before = source.pagePaint?.[addition.page - 1];
+    const after = output.pagePaint?.[addition.page - 1];
+    if (!before || !after || after.paths < before.paths + addition.paths || after.images < before.images + addition.images) {
+      fail(`added-graphics-${addition.page}`, `Required added drawing operations are missing from output page ${addition.page}.`);
+    } else pass(`added-graphics-${addition.page}`, `Required image/path drawing-operation counts were retained on page ${addition.page}; visual geometry is not proven by this count.`);
+  }
   options.addedText?.forEach((addition, index) => {
     const expected = normalizeText(addition.text);
     const actual = normalizeText(output.pageText[addition.page - 1] ?? '');
@@ -344,10 +462,9 @@ export function verifyPdfExportSnapshots(options: {
         `Added text on page ${addition.page} is selectable/searchable after reopening.`,
       );
     } else if (hasShapedScript(expected) && containsCodePointInventory(actual, expected)) {
-      pass(
-        `added-text-${index + 1}`,
-        `Added text on page ${addition.page} is extractable with every character present; shaped scripts may be returned in visual order by extractors that ignore /ActualText.`,
-      );
+      const detail = `Added text on page ${addition.page} has the expected character inventory, but logical copy/search order is unverified for this shaped script.`;
+      allowedLosses.push(detail);
+      checks.push({ id: `added-text-${index + 1}`, status: 'allowed-loss', detail });
     } else {
       fail(
         `added-text-${index + 1}`,
@@ -385,7 +502,7 @@ export function verifyPdfExportSnapshots(options: {
     const actualCount = countTextOccurrences(actual, original);
 
     if (!original || actualCount <= expectedMaximum) {
-      pass(`removed-text-${index + 1}`, `Original text was absent after reopening page ${edit.page}.`);
+      pass(`removed-text-${index + 1}`, `Original text occurrence count on page ${edit.page} is within the intended removal/replacement limit (${actualCount}/${expectedMaximum}).`);
     } else {
       fail(
         `removed-text-${index + 1}`,
@@ -480,12 +597,60 @@ export async function verifyGeneratedPdf(options: {
    * not reader extraction, so a visually hidden glyph is still a failure.
    */
   redactions?: ContentRemovalExpectation[];
+  pagePlan?: PdfEditorPagePlan | null;
+  allowedTextLosses?: PdfTextAdditionVerification[];
+  /** Source-page coordinates; remapped to output pages together with the edits. */
+  sourceTextRuns?: readonly PdfSourceTextRunVerification[];
+  addedPaint?: PdfPaintAdditionVerification[];
+  /** Server-committed source before overlays, so approved graphic redaction is not charged as loss. */
+  paintSourceBytes?: ArrayBuffer | Uint8Array;
 }): Promise<PdfPostExportVerification> {
   try {
-    const [source, output] = await Promise.all([
-      inspectPdfForExportVerification(options.sourceBytes),
-      inspectPdfForExportVerification(options.outputBytes),
+    const plan = options.pagePlan;
+    // Text cannot expose a blanked scan. Page transforms must retain the mapped
+    // paint inventory even without additions. A post-server source is the paint
+    // baseline when supplied, so intentional redaction is not charged as loss.
+    const includePaint = !!plan || !!options.addedPaint?.length;
+    const [originalSource, output, paintSource] = await Promise.all([
+      inspectPdfForExportVerification(options.sourceBytes, { includePaint: includePaint && !options.paintSourceBytes }),
+      inspectPdfForExportVerification(options.outputBytes, { includePaint }),
+      options.paintSourceBytes && includePaint
+        ? inspectPdfForExportVerification(options.paintSourceBytes, { includePaint: true }) : Promise.resolve(null),
     ]);
+    if (plan && (plan.sourcePageCount !== originalSource.pageCount || plan.entries.length === 0
+      || plan.entries.some(entry => !Number.isInteger(entry.sourcePage) || entry.sourcePage < 1 || entry.sourcePage > originalSource.pageCount))) {
+      throw new Error('The final verification page plan does not match its source document.');
+    }
+    if (plan && paintSource && paintSource.pageCount !== originalSource.pageCount) {
+      throw new Error('The paint verification source does not match the page plan source count.');
+    }
+    const mapPages = <T extends { page: number }>(items: readonly T[]): T[] => plan
+      ? plan.entries.flatMap((entry, index) => items.filter(item => item.page === entry.sourcePage).map(item => ({ ...item, page: index + 1 })))
+      : [...items];
+    const source: PdfVerificationSnapshot = plan ? {
+      ...originalSource,
+      pageCount: plan.entries.length,
+      pageText: plan.entries.map(entry => originalSource.pageText[entry.sourcePage - 1]),
+      pageRotations: plan.entries.map(entry => (originalSource.pageRotations[entry.sourcePage - 1] + entry.rotation) % 360),
+      ...((paintSource ?? originalSource).pagePaint ? { pagePaint: plan.entries.map(entry => (paintSource ?? originalSource).pagePaint![entry.sourcePage - 1]) } : {}),
+    } : { ...originalSource, ...(paintSource ? { pagePaint: paintSource.pagePaint } : {}) };
+    const rawReplacements = [...(options.textReplacements ?? [])];
+    // Some callers provide redaction intent separately. Include each requested
+    // occurrence once in retention accounting, never once per duplicate source.
+    const rawRedactions = (options.redactions ?? []).flatMap(expectation => expectation.page
+      ? [{ ...expectation, page: expectation.page }]
+      : originalSource.pageText.flatMap((text, index) => normalizeText(text).includes(normalizeText(expectation.text)) ? [{ ...expectation, page: index + 1 }] : []));
+    const used = new Map<string, number>();
+    for (const redaction of rawRedactions) {
+      const key = `${redaction.page}:${normalizeText(redaction.text)}`;
+      const count = (used.get(key) ?? 0) + 1;
+      used.set(key, count);
+      if (rawReplacements.filter(edit => edit.page === redaction.page && normalizeText(edit.originalText) === normalizeText(redaction.text) && !edit.replacementText).length < count) {
+        rawReplacements.push({ page: redaction.page, originalText: redaction.text, replacementText: '' });
+      }
+    }
+    const textReplacements = mapPages(rawReplacements);
+    const redactionsForOutput = mapPages(rawRedactions);
     const sourceBytes = options.sourceBytes instanceof Uint8Array
       ? options.sourceBytes
       : new Uint8Array(options.sourceBytes);
@@ -499,10 +664,14 @@ export async function verifyGeneratedPdf(options: {
       source,
       output,
       bytesEqual,
-      textReplacements: options.textReplacements,
+      textReplacements,
       visualTextFallback: options.visualTextFallback,
-      addedText: options.addedText,
-      redactedPages: options.redactedPages,
+      addedText: mapPages(options.addedText ?? []),
+      redactedPages: mapPages((options.redactedPages ?? []).map(page => ({ page }))).map(item => item.page),
+      allowedTextLosses: mapPages(options.allowedTextLosses ?? []),
+      sourceTextRuns: options.sourceTextRuns === undefined ? undefined : mapPages(options.sourceTextRuns),
+      addedPaint: mapPages(options.addedPaint ?? []),
+      verifyRetainedPaint: !!plan,
     });
 
     if (!options.redactions?.length) return verification;
@@ -515,7 +684,7 @@ export async function verifyGeneratedPdf(options: {
     // identical runs on a page must leave exactly one occurrence, not zero, or
     // a correct removal would be reported as retained.
     const grouped = new Map<string, { page?: number; text: string; label: string; count: number }>();
-    for (const expectation of options.redactions) {
+    for (const expectation of redactionsForOutput) {
       const key = `${expectation.page ?? 'all'}:${normalizeText(expectation.text)}`;
       const existing = grouped.get(key);
       if (existing) existing.count += 1;

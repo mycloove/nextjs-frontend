@@ -45,6 +45,16 @@ async function readPdfText(filename: string) {
   } finally { await pdf.destroy(); }
 }
 
+async function openInspector(page: Page) {
+  if (await page.getByTestId('pdf-inspector-panel').getAttribute('aria-hidden') === 'true') await page.getByTestId('pdf-inspector-toggle').click();
+  await expect(page.getByTestId('pdf-inspector-panel')).toBeVisible();
+}
+
+async function returnToPage(page: Page) {
+  const close = page.getByTestId('pdf-inspector-panel').getByRole('button', { name: 'Return to page', exact: true });
+  if (await close.isVisible()) await close.click();
+}
+
 test('no document POST before consent; cancel stays local, approval performs a real text export', async ({ page }, testInfo) => {
   const posts = await countEditorPosts(page);
   await openPdf(page, await sourcePdf());
@@ -101,7 +111,8 @@ test('an already-queued consent click cannot authorize a replacement or recovere
     (window as typeof window & { __staleProcessingClick?: () => void }).__staleProcessingClick = props.onClick;
   });
   await page.getByRole('button', { name: 'Close editor', exact: true }).evaluate((element: HTMLButtonElement) => element.click());
-  await openPdf(page, await sourcePdf('SECOND SOURCE'), 'same-name.pdf', false);
+  const secondSource = await sourcePdf('SECOND SOURCE');
+  await openPdf(page, secondSource, 'same-name.pdf', false);
   await page.evaluate(() => (window as typeof window & { __staleProcessingClick?: () => void }).__staleProcessingClick?.());
   await expect(page.getByTestId('pdf-processing-status')).toContainText('not allowed');
   await page.getByTestId('pdf-tool-editText').click();
@@ -114,7 +125,11 @@ test('an already-queued consent click cannot authorize a replacement or recovere
   await expect(page.getByTestId('pdf-save-status')).toContainText('Saved locally', { timeout: 15_000 });
   await page.reload();
   await expect(page.getByTestId('pdf-upload-input')).toHaveAttribute('data-editor-ready', 'true', { timeout: 30_000 });
-  await page.getByTestId('pdf-recovery-resume').click();
+  // Reselection also restores the hash-scoped draft where Blob persistence is
+  // unavailable. It must not restore the previous session's server permission.
+  await openPdf(page, secondSource, 'same-name.pdf', false);
+  await page.getByTestId('pdf-tool-editText').click();
+  await expect(page.getByTestId('pdf-original-text-1-0')).toHaveValue('SECOND DRAFT');
   await expect(page.getByTestId('pdf-processing-status')).toContainText('not allowed');
   await page.getByTestId('pdf-export-button').click();
   await expect(page.getByTestId('pdf-processing-dialog')).toBeVisible({ timeout: 30_000 });
@@ -126,20 +141,27 @@ test('original controls are honest while added text and annotation exports stay 
   await openPdf(page, await sourcePdf());
   await page.getByTestId('pdf-tool-editText').click();
   await page.getByTestId('pdf-original-text-1-0').click();
+  await openInspector(page);
   for (const name of ['Font family', 'Heading style', 'Line spacing', 'Text fill']) await expect(page.getByLabel(name, { exact: true })).toBeDisabled();
   for (const name of ['Bold', 'Italic', 'Underline']) await expect(page.getByRole('button', { name, exact: true })).toBeDisabled();
   await expect(page.getByLabel('Font size', { exact: true })).toBeEnabled();
   await expect(page.getByTestId('pdf-text-capability')).toContainText('editing area only');
+  await returnToPage(page);
   await page.getByRole('button', { name: 'Insert', exact: true }).click();
   await page.getByTestId('pdf-tool-text').click();
   await page.keyboard.insertText('LOCAL ADDED TEXT');
-  await page.getByTestId('pdf-tool-select').click();
+  // Keyboard activation avoids Next's development-only badge over the mobile
+  // Select button without hiding runtime error overlays or forcing a click.
+  await page.getByTestId('pdf-tool-select').press('Enter');
+  await openInspector(page);
   await page.getByRole('button', { name: 'Text 1', exact: true }).click();
   for (const name of ['Font family', 'Heading style', 'Line spacing', 'Text fill']) await expect(page.getByLabel(name, { exact: true })).toBeEnabled();
   for (const name of ['Bold', 'Italic', 'Underline']) await expect(page.getByRole('button', { name, exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Bold', exact: true }).click();
+  await returnToPage(page);
   await page.getByTestId('pdf-tool-annotate').click();
   await page.getByTestId('pdf-annotation-kind-note').click();
+  await returnToPage(page);
   await page.locator('.pe-page-frame').click({ position: { x: 100, y: 240 } });
   await expect(page.locator('[data-testid^="pdf-annotation-mark-"]')).toHaveCount(1);
   const downloaded = page.waitForEvent('download');
@@ -169,20 +191,26 @@ test('clearing current recovery drains delayed saves and preserves another PDF a
   await page.getByTestId('pdf-tool-editText').click();
   await page.getByTestId('pdf-original-text-1-0').fill('OPEN WORK');
   await expect(page.getByTestId('pdf-save-status')).toContainText('Saved locally', { timeout: 15_000 });
-  await page.evaluate(async ids => {
+  const keptSourceWasStored = await page.evaluate(async ids => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open('smilepdf:editor:v1', 1);
       request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
     });
-    const transaction = database.transaction('drafts', 'readwrite');
+    const transaction = database.transaction(['drafts', 'sources'], 'readwrite');
+    let sourceStored = false;
+    const sourceRequest = transaction.objectStore('sources').get(ids.kept);
+    sourceRequest.onsuccess = () => { sourceStored = !!sourceRequest.result; };
     const done = new Promise<void>((resolve, reject) => { transaction.oncomplete = () => resolve(); transaction.onerror = () => reject(transaction.error); });
     const store = transaction.objectStore('drafts');
     for (const id of [ids.kept, ids.cleared]) {
-      const record = await new Promise<{ draft: { version: number }; key: string }>((resolve, reject) => {
-        const request = store.get(id); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
-      });
-      localStorage.setItem(`smilepdf:editor:draft:v2:${id}`, JSON.stringify({ ...record.draft, version: id === ids.kept ? 2 : 3 }));
-      if (id === ids.kept) store.put({ ...record, key: 'latest' });
+      const request = store.get(id);
+      request.onsuccess = () => {
+        const record = request.result ?? { key: id, draft: JSON.parse(localStorage.getItem(`smilepdf:editor:draft:v2:${id}`)!) };
+        if (!record.draft) throw new Error('The test requires an actually saved draft.');
+        localStorage.setItem(`smilepdf:editor:draft:v2:${id}`, JSON.stringify({ ...record.draft, version: id === ids.kept ? 2 : 3 }));
+        store.put(record);
+        if (id === ids.kept) store.put({ ...record, key: 'latest' });
+      };
     }
     await done;
     database.close();
@@ -200,6 +228,7 @@ test('clearing current recovery drains delayed saves and preserves another PDF a
       } });
       return request;
     };
+    return sourceStored;
   }, ids);
   await page.getByTestId('pdf-original-text-1-0').fill('DELAYED OPEN WORK');
   await page.waitForFunction(() => (window as typeof window & { __recoveryOpenHeld?: boolean }).__recoveryOpenHeld);
@@ -226,7 +255,7 @@ test('clearing current recovery drains delayed saves and preserves another PDF a
         clearedFallback: localStorage.getItem(`smilepdf:editor:draft:v2:${ids.cleared}`), keptFallback: JSON.parse(localStorage.getItem(`smilepdf:editor:draft:v2:${ids.kept}`)!), unrelated: localStorage.getItem('unrelated-recovery-test') };
     } finally { database.close(); }
   }, ids);
-  expect(stored).toMatchObject({ clearedDraft: null, clearedSource: null, keptDraft: true, keptSource: true, latest: ids.kept, clearedFallback: null, keptFallback: { version: 2, documentId: ids.kept }, unrelated: 'keep' });
+  expect(stored).toMatchObject({ clearedDraft: null, clearedSource: null, keptDraft: true, keptSource: keptSourceWasStored, latest: ids.kept, clearedFallback: null, keptFallback: { version: 2, documentId: ids.kept }, unrelated: 'keep' });
   await page.getByRole('button', { name: 'Close editor', exact: true }).click();
   await expect(page.getByTestId('pdf-close-dialog')).toBeVisible();
   await page.getByTestId('pdf-close-cancel').click();
@@ -247,37 +276,53 @@ test('fallback recovery says the source must be reselected and clears only the c
 
 test('annotation limits are enforced before authoring and incompatible restored data blocks export without deletion', async ({ page }) => {
   const posts = await countEditorPosts(page);
-  await openPdf(page, await sourcePdf('ORIGINAL HEADING', true));
+  const original = await sourcePdf('ORIGINAL HEADING', true);
+  const documentId = 'sha256-' + createHash('sha256').update(original).digest('hex');
+  await openPdf(page, original);
   await page.getByTestId('pdf-page-next').click();
   await page.getByTestId('pdf-tool-annotate').click();
   await expect(page.getByTestId('pdf-annotation-capability')).toContainText('rotated');
   await expect(page.getByTestId('pdf-annotation-kind-note')).toBeDisabled();
+  await returnToPage(page);
   const rotatedTarget = page.getByTestId('pdf-annotation-target-2-0');
   await expect(rotatedTarget).toBeVisible({ timeout: 20_000 });
   await rotatedTarget.click();
   await expect(rotatedTarget).toHaveAttribute('aria-pressed', 'false');
   await page.getByTestId('pdf-page-prev').click();
+  await openInspector(page);
   await page.getByTestId('pdf-annotation-kind-note').click();
+  await returnToPage(page);
   await page.locator('.pe-page-frame').click({ position: { x: 100, y: 240 } });
   await expect(page.locator('[data-testid^="pdf-annotation-mark-"]')).toHaveCount(1);
-  await page.getByTestId('pdf-tool-select').click();
+  await page.getByTestId('pdf-tool-select').press('Enter');
   await expect(page.getByTestId('pdf-page-size').locator('option[value="a4"]')).toBeDisabled();
+  if (await page.getByTestId('pdf-navigation-panel').getAttribute('aria-hidden') === 'true') await page.getByTestId('pdf-navigation-toggle').click();
   await page.getByRole('tab', { name: 'Arrange', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Rotate output page 1 right', exact: true })).toBeDisabled();
   await expect(page.getByTestId('pdf-save-status')).toContainText('Saved locally', { timeout: 15_000 });
-  await page.evaluate(async () => {
+  await page.evaluate(async id => {
     const database = await new Promise<IDBDatabase>(resolve => { const request = indexedDB.open('smilepdf:editor:v1', 1); request.onsuccess = () => resolve(request.result); });
     const transaction = database.transaction('drafts', 'readwrite');
     const done = new Promise<void>(resolve => { transaction.oncomplete = () => resolve(); });
     const store = transaction.objectStore('drafts');
-    const record = await new Promise<{ key: string; draft: { documentId: string; pageSize: string } }>(resolve => { const request = store.get('latest'); request.onsuccess = () => resolve(request.result); });
-    record.draft.pageSize = 'a4';
-    store.put(record); store.put({ ...record, key: record.draft.documentId });
+    const request = store.get(id);
+    request.onsuccess = () => {
+      const record = request.result as { key: string; draft: { documentId: string; pageSize: string } } | undefined;
+      if (record) {
+        record.draft.pageSize = 'a4';
+        store.put({ ...record, key: 'latest' }); store.put(record);
+      } else {
+        const key = `smilepdf:editor:draft:v2:${id}`;
+        const draft = JSON.parse(localStorage.getItem(key)!);
+        if (!draft) throw new Error('The test requires an actually saved annotation draft.');
+        localStorage.setItem(key, JSON.stringify({ ...draft, pageSize: 'a4' }));
+      }
+    };
     await done; database.close();
-  });
+  }, documentId);
   await page.reload();
   await expect(page.getByTestId('pdf-upload-input')).toHaveAttribute('data-editor-ready', 'true', { timeout: 30_000 });
-  await page.getByTestId('pdf-recovery-resume').click();
+  await openPdf(page, original, 'local-first.pdf', false);
   await expect(page.locator('[data-testid^="pdf-annotation-mark-"]')).toHaveCount(1, { timeout: 30_000 });
   let downloads = 0;
   page.on('download', () => { downloads += 1; });

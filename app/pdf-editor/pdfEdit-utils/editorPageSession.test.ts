@@ -22,6 +22,8 @@ import type { PdfEditorPageSession } from './editorPageSession.ts';
 import {
   parsePdfEditorFeatureFlagValue,
   resolvePdfEditorFeatureFlags,
+  isPdfEditorFeatureEnabled,
+  pdfEditorDisabledWorkReason,
 } from './editorFeatureFlags.ts';
 import type { PdfEditorPageExportDecision } from './editorPageExport.ts';
 import type { PdfPagePlanVerification } from './editorPageExportVerification.ts';
@@ -75,11 +77,28 @@ test('a malformed flag value falls back to the safe default', () => {
   assert.equal(flags.pageExportGate, true);
 });
 
-test('the export gate can still be explicitly disabled for incident response', () => {
+test('deployment rollback cannot disable correctness guards', () => {
   const flags = resolvePdfEditorFeatureFlags({
     NEXT_PUBLIC_PDF_EDITOR_PAGE_EXPORT_GATE: 'false',
+    NEXT_PUBLIC_PDF_EDITOR_TEXT_SHAPING_GUARD: 'off',
   });
-  assert.equal(flags.pageExportGate, false);
+  assert.equal(flags.pageExportGate, true);
+  assert.equal(flags.textShapingGuard, true);
+  assert.equal(isPdfEditorFeatureEnabled('textShapingGuard', { ...flags, textShapingGuard: false }), true);
+});
+
+test('disabled capabilities retain incompatible draft intent and refuse delivery', () => {
+  const flags = resolvePdfEditorFeatureFlags({
+    NEXT_PUBLIC_PDF_EDITOR_PAGE_OPERATIONS: 'off',
+    NEXT_PUBLIC_PDF_EDITOR_REDACTION_AUTHORING: 'off',
+    NEXT_PUBLIC_PDF_EDITOR_SERVER_TEXT_EDIT: 'off',
+  });
+  const unchanged = { changedPagePlan: false, redactionCount: 0, textEditCount: 0 };
+  assert.equal(pdfEditorDisabledWorkReason(unchanged, flags), null);
+  assert.match(pdfEditorDisabledWorkReason({ ...unchanged, changedPagePlan: true }, flags)!, /page plan is retained/);
+  assert.match(pdfEditorDisabledWorkReason({ ...unchanged, redactionCount: 1 }, flags)!, /Saved marks are retained/);
+  assert.match(pdfEditorDisabledWorkReason({ ...unchanged, textEditCount: 1 }, flags)!, /no visual cover-up/);
+  assert.deepEqual(unchanged, { changedPagePlan: false, redactionCount: 0, textEditCount: 0 });
 });
 
 /* ---------------------------- operations ---------------------------- */

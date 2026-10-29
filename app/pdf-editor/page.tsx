@@ -24,7 +24,7 @@ import { pdfEditorAnnotationBlocker } from './pdfEdit-utils/editorCapabilities';
 import PdfEditorNavigationPanel from './pdfEdit-components/PdfEditorNavigationPanel';
 import PdfEditorCommandBar from './pdfEdit-components/PdfEditorCommandBar';
 import PdfEditorStatusBar from './pdfEdit-components/PdfEditorStatusBar';
-import { isDeleteShortcut, isEditableShortcutTarget } from './pdfEdit-utils/editorShortcuts';
+import { resolvePdfEditorShortcut } from './pdfEdit-utils/editorShortcuts';
 import { isPdfEditorFeatureEnabled } from './pdfEdit-utils/editorFeatureFlags';
 import {
   isPdfEditorTextSelectionVisible,
@@ -35,6 +35,8 @@ import type { ServerTextEditConsentRequest } from './pdfEdit-utils/editorServerT
 import type { PdfEditorCommentEntry, PdfEditorOutlineEntry, PdfEditorSearchResult } from './pdfEdit-hooks/usePdfEditor';
 import {
   calculatePdfEditorFitZoom,
+  normalizePdfEditorSearchQuery,
+  retainPdfEditorSearchIndex,
   type PdfEditorFitMode,
   type PdfEditorNavigationTab,
   type PdfEditorViewMode,
@@ -62,7 +64,8 @@ export default function PdfEditorPage() {
       selectPageLayer, togglePageLayerLock, togglePageLayerHidden, movePageLayer,
       groupSelectedObjects, ungroupSelectedObject } = editor;
 
-  const redactionEnabled = isPdfEditorFeatureEnabled('redactionAuthoring');
+  const sourceTextEnabled = isPdfEditorFeatureEnabled('serverTextEdit');
+  const redactionEnabled = isPdfEditorFeatureEnabled('redactionAuthoring') && sourceTextEnabled;
 
   // Derived from the canvas tool: the button label can never drift out of sync
   // with the actual drawing state, even when other tools interrupt a draw.
@@ -97,6 +100,7 @@ export default function PdfEditorPage() {
     useState<ServerTextEditConsentRequest | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [compactPanels, setCompactPanels] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [navigationTab, setNavigationTab] = useState<PdfEditorNavigationTab>('pages');
@@ -151,6 +155,9 @@ export default function PdfEditorPage() {
   const [searchResults, setSearchResults] = useState<PdfEditorSearchResult[]>([]);
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  const searchSelectionRef = useRef<{ id: string | null; index: number }>({ id: null, index: 0 });
+  const completedSearchRef = useRef('');
+  searchSelectionRef.current = { id: searchResults[activeSearchIndex]?.id ?? null, index: activeSearchIndex };
   const [pageBaseSize, setPageBaseSize] = useState<{ width: number; height: number } | null>(null);
   /**
    * The file whose fit zoom has been settled.
@@ -164,6 +171,16 @@ export default function PdfEditorPage() {
   const [fitArmedFile, setFitArmedFile] = useState<File | null>(null);
   /** The file whose first committed raster is on screen; clears the prep card. */
   const [firstFrameFile, setFirstFrameFile] = useState<File | null>(null);
+  const [canvasFailures, setCanvasFailures] = useState<Record<number, string>>({});
+  const handleCanvasFailure = useCallback((page: number, message: string | null) => {
+    setCanvasFailures(previous => {
+      if ((previous[page] ?? null) === message) return previous;
+      const next = { ...previous };
+      if (message) next[page] = message;
+      else delete next[page];
+      return next;
+    });
+  }, []);
   const [isClientReady, setIsClientReady] = useState(false);
   /**
    * The workspace/preview split, as the preview column's maximum.
@@ -222,7 +239,7 @@ export default function PdfEditorPage() {
    * file open until the first committed frame. It never covers a frame that is
    * already there — the previous page stays readable while the next is drawn.
    */
-  const showStagePrep = !!state.pdfFile && !state.loadFailure && !firstFrameShown;
+  const showStagePrep = !!state.pdfFile && !state.loadFailure && !firstFrameShown && !canvasFailures[activeSourcePage];
   /**
    * Identity of the open document, as used to key the single-view canvas.
    *
@@ -232,7 +249,7 @@ export default function PdfEditorPage() {
    * new file happens to land on page 1 at the same zoom.
    */
   const canvasFileKey = state.pdfFile
-    ? `${state.pdfFile.name}:${state.pdfFile.size}:${state.pdfFile.lastModified}`
+    ? String(state.documentSession)
     : 'none';
   /** Read by `scheduleFit`, which must not be re-bound when arming flips. */
   const fitArmedRef = useRef(false);
@@ -270,7 +287,7 @@ export default function PdfEditorPage() {
     });
   }, [unregisterFabricCanvas]);
   /** The page the user is on has an editing layer that can accept work. */
-  const editingLayerReady = fabricLivePages.has(activeSourcePage) && !state.isRestoringCanvas;
+  const editingLayerReady = fabricLivePages.has(activeSourcePage) && !state.isRestoringCanvas && !canvasFailures[activeSourcePage];
   const annotationBlocker = pdfEditorAnnotationBlocker({
     page: activeSourcePage, pageSize: state.pageSize,
     sourceRotation: state.sourcePageRotations[activeSourcePage], entries: planEntries,
@@ -283,7 +300,39 @@ export default function PdfEditorPage() {
     setPendingExportRevision(null);
     setPendingPageImpact(null);
     setPendingExportConsent(null);
+    setSearchQuery('');
+    setSearchResults([]);
+    setActiveSearchIndex(0);
+    setIsSearching(false);
+    completedSearchRef.current = '';
+    setCanvasFailures({});
+    setFabricLivePages(new Set());
   }, [state.documentSession]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1180px)');
+    const update = () => {
+      setCompactPanels(media.matches);
+      if (media.matches) { setNavigationOpen(false); setInspectorOpen(false); }
+    };
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  const openNavigation = (open: boolean) => {
+    setNavigationOpen(open);
+    if (compactPanels && open) setInspectorOpen(false);
+  };
+  const openInspector = (open: boolean) => {
+    setInspectorOpen(open);
+    if (compactPanels && open) setNavigationOpen(false);
+  };
+  const closePanels = () => {
+    setNavigationOpen(false);
+    setInspectorOpen(false);
+    canvasAreaRef.current?.focus();
+  };
 
   useEffect(() => {
     editorSetRef.current = set;
@@ -358,18 +407,30 @@ export default function PdfEditorPage() {
   useEffect(() => {
     if (searchQuery.trim().length < 2 || !state.pdfFile) return;
     let cancelled = false;
+    const queryKey = `${state.documentSession}:${normalizePdfEditorSearchQuery(searchQuery)}`;
     const timer = window.setTimeout(() => {
       setIsSearching(true);
       void searchDocument(searchQuery).then(results => {
         if (cancelled) return;
+        const refresh = completedSearchRef.current === queryKey;
+        const selection = searchSelectionRef.current;
+        const index = refresh ? retainPdfEditorSearchIndex(results, selection.id, selection.index) : 0;
         setSearchResults(results);
-        setActiveSearchIndex(0);
-        if (results[0]) set({ currentPage: results[0].position });
+        setActiveSearchIndex(index);
+        completedSearchRef.current = queryKey;
+        if (!refresh && results[0]) set({ currentPage: results[0].position });
+      }).catch(() => {
+        if (!cancelled) {
+          setSearchResults([]);
+          setToast({ msg: 'Document search could not finish. Change the query to retry.', visible: true });
+        }
+      }).finally(() => {
+        if (cancelled) return;
         setIsSearching(false);
       });
     }, 220);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [searchDocument, searchQuery, set, state.editVersion, state.pdfFile]);
+  }, [searchDocument, searchQuery, set, state.documentSession, state.editVersion, state.pdfFile]);
 
   const applyFitMode = useCallback(async (mode: Exclude<PdfEditorFitMode, 'custom'>) => {
     const area = canvasAreaRef.current;
@@ -538,71 +599,6 @@ export default function PdfEditorPage() {
     noDrag:  !!state.pdfFile,
     disabled: !isClientReady || state.isLoading,
   });
-
-  // ── Keyboard shortcuts ──────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (document.querySelector('[aria-modal="true"]')) return;
-      const key = e.key.toLowerCase();
-      const modifier = e.ctrlKey || e.metaKey;
-      if (modifier && !e.altKey && key === 'k') {
-        e.preventDefault();
-        setShortcutsOpen(false);
-        setPaletteOpen(open => !open);
-        return;
-      }
-      if (e.key === 'Escape') {
-        setPaletteOpen(false);
-        setShortcutsOpen(false);
-        return;
-      }
-      if (isEditableShortcutTarget(e.target) || isFabricTextEditing()) return;
-
-      if (!modifier && e.key === '?') {
-        e.preventDefault();
-        setPaletteOpen(false);
-        setShortcutsOpen(true);
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && key === 'c') {
-        e.preventDefault();
-        runObjectCommand(copySelectedObject);
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && key === 'v') {
-        e.preventDefault();
-        runObjectCommand(pasteObjectToCurrentPage);
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && key === 'z') {
-        e.preventDefault();
-        if (e.shiftKey) redo();
-        else undo();
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && key === 'y') {
-        e.preventDefault();
-        redo();
-        return;
-      }
-      if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight'
-        || e.key === 'ArrowUp' || e.key === 'ArrowDown')
-        && !modifier && !e.altKey && state.selectedObjectGeometry) {
-        e.preventDefault();
-        const step = e.shiftKey ? 10 : 1;
-        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
-        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
-        runObjectCommand(() => nudgeSelectedObject(dx, dy));
-        return;
-      }
-      if (isDeleteShortcut(e)) {
-        e.preventDefault();
-        deleteSelected();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [undo, redo, deleteSelected, isFabricTextEditing, nudgeSelectedObject, state.selectedObjectGeometry, copySelectedObject, pasteObjectToCurrentPage, runObjectCommand]);
 
   /**
    * Presentation adapter for the shared impact dialog. The page plan remains
@@ -782,6 +778,7 @@ export default function PdfEditorPage() {
 
   // ── Handlers ────────────────────────────────────────────────
   const handleToolChange = (tool: ToolType) => {
+    if (!editingLayerReady || (tool === 'editText' && !sourceTextEnabled) || (tool === 'redact' && !redactionEnabled)) return;
     // Textarea values only live in the DOM until committed. Switching tools must
     // flush them first, or a line typed just before choosing Redact would be
     // visible on screen but absent from the next preview/export.
@@ -794,13 +791,15 @@ export default function PdfEditorPage() {
       stopSignature(activeSourcePage);
     }
     set({ activeTool: tool });
+    if (['image', 'emoji', 'signature', 'annotate', 'redact'].includes(tool)) openInspector(true);
+    else if (compactPanels) closePanels();
     // Canvas double-click adds text — handled inside PdfEditorCanvas
     if (tool === 'text') {
       addTextbox(activeSourcePage);
     } else if (tool === 'signature') {
       startSignature(activeSourcePage);
     } else if (tool === 'annotate') {
-      setInspectorOpen(true);
+      openInspector(true);
     } else if (tool === 'highlight') {
       // The standalone Highlight tool remains click-to-place: it drops a marker
       // rectangle. The Annotate tool is the one that writes real PDF
@@ -1026,7 +1025,6 @@ export default function PdfEditorPage() {
     const tool = toolIds[id];
     if (tool) {
       handleToolChange(tool);
-      if (tool === 'image' || tool === 'emoji' || tool === 'signature') setInspectorOpen(true);
       return;
     }
 
@@ -1061,14 +1059,14 @@ export default function PdfEditorPage() {
         set({ currentPage: state.totalPages });
         break;
       case 'panel-organizer':
-        setNavigationOpen(true);
+        openNavigation(true);
         setNavigationTab('organize');
         break;
       case 'panel-navigation':
-        setNavigationOpen(open => !open);
+        openNavigation(!navigationOpen);
         break;
       case 'panel-inspector':
-        setInspectorOpen(open => !open);
+        openInspector(!inspectorOpen);
         break;
       case 'document-preview':
         handlePreviewToggle();
@@ -1100,6 +1098,10 @@ export default function PdfEditorPage() {
     setFitMode,
     set,
     isFabricTextEditing,
+    undo, redo, deleteSelected, copySelectedObject, pasteObjectToCurrentPage,
+    nudgeSelectedObject, runObjectCommand, closePanels,
+    hasObjectSelection: !!state.selectedObjectGeometry,
+    hasDocument: !!state.pdfFile,
     totalPages: state.totalPages,
   });
   // The listener below is registered once and reads the latest closures through
@@ -1116,62 +1118,52 @@ export default function PdfEditorPage() {
       setFitMode,
       set,
       isFabricTextEditing,
+      undo, redo, deleteSelected, copySelectedObject, pasteObjectToCurrentPage,
+      nudgeSelectedObject, runObjectCommand, closePanels,
+      hasObjectSelection: !!state.selectedObjectGeometry,
+      hasDocument: !!state.pdfFile,
       totalPages: state.totalPages,
     };
   });
 
-  // Navigation, fit and delivery keys. The handler reads the latest actions
-  // through a ref so the listener is registered once and never churns.
+  // One owner for every editor key: modal, native control, object, document.
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
-      if (document.querySelector('[aria-modal="true"]') || event.defaultPrevented) return;
       const actions = shortcutActionsRef.current;
-      if (isEditableShortcutTarget(event.target) || actions.isFabricTextEditing()) return;
-      const modifier = event.ctrlKey || event.metaKey;
-      const key = event.key.toLowerCase();
-
-      if (modifier && !event.altKey && key === 'f') {
-        event.preventDefault();
-        document.querySelector<HTMLInputElement>('[data-testid="pdf-document-search"]')?.focus();
-        return;
-      }
-      if (modifier && !event.altKey && key === 's') {
-        event.preventDefault();
-        void actions.handleExport();
-        return;
-      }
-      if (modifier && !event.altKey && (event.key === '+' || event.key === '=')) {
-        event.preventDefault();
-        actions.zoomIn();
-        return;
-      }
-      if (modifier && !event.altKey && event.key === '-') {
-        event.preventDefault();
-        actions.zoomOut();
-        return;
-      }
-      if (event.altKey || modifier) return;
-
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        actions.prevPage();
-      } else if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        actions.nextPage();
-      } else if (event.key === 'Home') {
-        event.preventDefault();
-        actions.set({ currentPage: 1 });
-      } else if (event.key === 'End') {
-        event.preventDefault();
-        actions.set({ currentPage: actions.totalPages });
-      } else if (event.key === '1') {
-        actions.setFitMode('fit-page');
-        void actions.applyFitMode('fit-page');
-      } else if (event.key === '2') {
-        actions.setFitMode('fit-width');
-      } else if (event.key === '3') {
-        actions.setFitMode('actual-size');
-        void actions.applyFitMode('actual-size');
+      if (!actions.hasDocument) return;
+      const command = resolvePdfEditorShortcut(event, {
+        modalOpen: !!document.querySelector('[aria-modal="true"]'),
+        fabricTextEditing: actions.isFabricTextEditing(),
+        hasObjectSelection: actions.hasObjectSelection,
+      });
+      if (!command) return;
+      event.preventDefault();
+      const step = event.shiftKey ? 10 : 1;
+      switch (command) {
+        case 'suppress': break;
+        case 'commands': setShortcutsOpen(false); setPaletteOpen(open => !open); break;
+        case 'help': setPaletteOpen(false); setShortcutsOpen(true); break;
+        case 'escape': actions.closePanels(); break;
+        case 'undo': actions.undo(); break;
+        case 'redo': actions.redo(); break;
+        case 'delete': actions.deleteSelected(); break;
+        case 'copy': actions.runObjectCommand(actions.copySelectedObject); break;
+        case 'paste': actions.runObjectCommand(actions.pasteObjectToCurrentPage); break;
+        case 'nudge-left': actions.runObjectCommand(() => actions.nudgeSelectedObject(-step, 0)); break;
+        case 'nudge-right': actions.runObjectCommand(() => actions.nudgeSelectedObject(step, 0)); break;
+        case 'nudge-up': actions.runObjectCommand(() => actions.nudgeSelectedObject(0, -step)); break;
+        case 'nudge-down': actions.runObjectCommand(() => actions.nudgeSelectedObject(0, step)); break;
+        case 'search': document.querySelector<HTMLInputElement>('[data-testid="pdf-document-search"]')?.focus(); break;
+        case 'export': void actions.handleExport(); break;
+        case 'zoom-in': actions.zoomIn(); break;
+        case 'zoom-out': actions.zoomOut(); break;
+        case 'page-prev': actions.prevPage(); break;
+        case 'page-next': actions.nextPage(); break;
+        case 'page-first': actions.set({ currentPage: 1 }); break;
+        case 'page-last': actions.set({ currentPage: actions.totalPages }); break;
+        case 'fit-width': actions.setFitMode('fit-width'); break;
+        case 'fit-page': case 'actual-size':
+          actions.setFitMode(command); void actions.applyFitMode(command); break;
       }
     };
     window.addEventListener('keydown', handler);
@@ -1851,6 +1843,7 @@ export default function PdfEditorPage() {
           --pe-dur-fast: 120ms;
           --pe-dur-base: 200ms;
           --pe-dur-slow: 360ms;
+          --pe-commandbar-height: 44px;
         }
         [data-theme="light"] .pe-editor-page,
         [data-theme="light"] .pe-impact-backdrop,
@@ -1909,8 +1902,11 @@ export default function PdfEditorPage() {
           display: flex; flex: 1; overflow: hidden;
         }
         .pe-workspace-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
-        .pe-inspector-shell { width: 220px; flex: 0 0 220px; display: flex; min-width: 0; transition: width .18s ease, flex-basis .18s ease; }
-        .pe-inspector-shell.closed { width: 0; flex-basis: 0; overflow: hidden; }
+        .pe-inspector-shell { width: 220px; flex: 0 0 220px; display: flex; flex-direction: column; min-width: 0; background: var(--pe-panel); transition: width var(--pe-dur-base) var(--pe-ease-out), flex-basis var(--pe-dur-base) var(--pe-ease-out); }
+        .pe-inspector-shell > .pe-rp { flex: 1; min-height: 0; }
+        .pe-inspector-shell.closed { width: 0; flex-basis: 0; overflow: hidden; visibility: hidden; }
+        .pe-panel-close { display: none; }
+        .pe-drawer-scrim { position: fixed; z-index: 83; inset: calc(50px + var(--pe-commandbar-height)) 0 28px; border: 0; background: var(--pe-scrim); }
         /* Redaction is a review workspace, not an inspector: it needs room for
            the matched value, the line it will actually remove, and the action.
            220px forced every one of those into a two-line ellipsis. */
@@ -1960,6 +1956,7 @@ export default function PdfEditorPage() {
         }
         .pe-edit-stage {
           position: relative;
+          isolation: isolate;
           min-height: 0;
           height: 100%;
           justify-content: flex-start;
@@ -2047,7 +2044,7 @@ export default function PdfEditorPage() {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 14px;
+          gap: 10px;
         }
         .pe-preview-head {
           width: min(100%, 640px);
@@ -2165,11 +2162,12 @@ export default function PdfEditorPage() {
         .pe-preview-notice ul { margin: 0; padding-left: 18px; }
         @media (max-width: 1100px) {
           .pe-canvas-area.preview-open {
-            grid-template-columns: 1fr;
-            grid-template-rows: auto auto;
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: max-content max-content;
+            align-content: start;
             overflow: auto;
           }
-          .pe-edit-stage { height: auto; overflow: visible; }
+          .pe-edit-stage { height: auto; min-height: min-content; overflow: visible; }
           .pe-preview-stage {
             position: static;
             height: auto;
@@ -2183,7 +2181,7 @@ export default function PdfEditorPage() {
         }
         @media (max-width: 1180px) {
           .pe-inspector-shell {
-            position: fixed; z-index: 84; right: 0; top: 94px; bottom: 28px;
+            position: fixed; z-index: 84; right: 0; top: calc(50px + var(--pe-commandbar-height)); bottom: 28px;
             width: 220px; transform: translateX(100%);
             transition: transform var(--pe-dur-base) var(--pe-ease-out);
             box-shadow: -12px 0 35px rgba(0,0,0,.42);
@@ -2193,9 +2191,13 @@ export default function PdfEditorPage() {
           .pe-inspector-shell.redaction,
           .pe-inspector-shell.redaction.closed { width: min(92vw, 320px); flex-basis: min(92vw, 320px); }
           [data-theme="light"] .pe-inspector-shell { box-shadow: -12px 0 35px rgba(30,24,48,.16); }
+          .pe-panel-close { display: block; flex: 0 0 40px; min-height: 40px; border: 0; border-bottom: 1px solid var(--pe-line); background: var(--pe-panel); color: var(--pe-text); font: inherit; cursor: pointer; }
         }
         @media (max-width: 700px) {
-          .pe-inspector-shell { top: 94px; bottom: calc(88px + env(safe-area-inset-bottom)); width: min(88vw, 280px); }
+          .pe-editor-page { --pe-commandbar-height: 88px; }
+          /* The fixed tool rail must not cover the last scrollable controls. */
+          .pe-editor-body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+          .pe-inspector-shell { bottom: calc(88px + env(safe-area-inset-bottom)); width: min(88vw, 280px); }
           .pe-inspector-shell.closed { width: min(88vw, 280px); flex-basis: min(88vw, 280px); }
           .pe-canvas-area { padding: 16px 12px; }
         }
@@ -2361,6 +2363,9 @@ export default function PdfEditorPage() {
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
           onRun={runPaletteCommand}
+          sourceTextEnabled={sourceTextEnabled}
+          editingReady={editingLayerReady}
+          redactionEnabled={redactionEnabled}
         />
         <PdfEditorShortcutsDialog
           open={shortcutsOpen}
@@ -2393,12 +2398,16 @@ export default function PdfEditorPage() {
         onViewModeChange={handleViewModeChange}
         onQueryChange={handleSearchQueryChange}
         onResultStep={stepSearchResult}
-        onNavigationToggle={() => setNavigationOpen(open => !open)}
-        onInspectorToggle={() => setInspectorOpen(open => !open)}
+        onNavigationToggle={() => openNavigation(!navigationOpen)}
+        onInspectorToggle={() => openInspector(!inspectorOpen)}
+        onCommands={() => { setShortcutsOpen(false); setPaletteOpen(true); }}
+        onHelp={() => { setPaletteOpen(false); setShortcutsOpen(true); }}
       />
 
         <div className="pe-editor-body">
+          {compactPanels && (navigationOpen || inspectorOpen) && <button type="button" className="pe-drawer-scrim" aria-label="Close open panel" onClick={closePanels} />}
           <EditorLeftToolbar
+            sourceTextEnabled={sourceTextEnabled}
             activeTool={state.activeTool}
             canUndo={state.canUndo}
             canRedo={state.canRedo}
@@ -2411,6 +2420,7 @@ export default function PdfEditorPage() {
           />
 
           <PdfEditorNavigationPanel
+            operationsEnabled={isPdfEditorFeatureEnabled('pageOperations')}
             open={navigationOpen}
             activeTab={navigationTab}
             currentPage={state.currentPage}
@@ -2423,7 +2433,7 @@ export default function PdfEditorPage() {
             onPageChange={page => set({ currentPage: page })}
             onPageOperation={handlePageOperation}
             positionForSourcePage={positionForSourcePage}
-            onClose={() => { if (window.innerWidth <= 1180) setNavigationOpen(false); }}
+            onClose={() => { if (compactPanels) closePanels(); }}
             renderThumbnail={renderThumbnail}
           />
 
@@ -2444,6 +2454,13 @@ export default function PdfEditorPage() {
             </div>
             <div
               ref={canvasAreaRef}
+              tabIndex={-1}
+              aria-label="PDF editing workspace"
+              onPointerDownCapture={event => {
+                if (event.target instanceof Element && !event.target.closest('input, textarea, select, button, a, [contenteditable="true"]')) {
+                  event.currentTarget.focus({ preventScroll: true });
+                }
+              }}
               data-testid="pdf-editor-workspace"
               className={`pe-canvas-area ${isPreviewOpen ? 'preview-open' : ''} ${effectiveViewMode === 'continuous' ? 'is-continuous' : ''}`}
               style={isPreviewOpen ? { '--pe-preview-split': `${previewSplit}%` } as CSSProperties : undefined}
@@ -2476,7 +2493,7 @@ export default function PdfEditorPage() {
                     // file's raster.
                     return (
                       <div
-                        key={effectiveViewMode === 'continuous' ? entry.id : `active-page:${canvasFileKey}`}
+                        key={effectiveViewMode === 'continuous' ? `${canvasFileKey}:${entry.id}` : `active-page:${canvasFileKey}`}
                         className="pe-page-shell"
                         data-pdf-page-shell={position}
                         onMouseDown={() => { if (position !== state.currentPage) set({ currentPage: position }); }}
@@ -2494,6 +2511,7 @@ export default function PdfEditorPage() {
                               zoom={state.zoom}
                               activeTool={state.activeTool}
                               onReady={handleFabricReady}
+                              onFailure={handleCanvasFailure}
                               onBeforeDispose={handleFabricDispose}
                               getTextBlocks={getTextBlocks}
                               getOriginalTextEdit={getOriginalTextEdit}
@@ -2507,7 +2525,7 @@ export default function PdfEditorPage() {
                                 if (file) setFirstFrameFile(current => (current === file ? current : file));
                               }}
                               searchHighlight={activeResult?.page === entry.sourcePage ? activeResult : null}
-                              redactionMarks={redactionEnabled ? state.redactionMarks : []}
+                              redactionMarks={state.redactionMarks}
                               onToggleRedaction={(block) => {
                                 void toggleRedactionMark(block, state.zoom);
                               }}
@@ -2559,6 +2577,7 @@ export default function PdfEditorPage() {
                       totalPages={state.totalPages}
                       pageSize={state.pageSize}
                       editVersion={state.editVersion}
+                      documentSession={state.documentSession}
                       dprEpoch={dprEpoch}
                       resizeEpoch={previewLayoutEpoch}
                       renderExportedPageToCanvas={renderExportedPageToCanvas}
@@ -2571,7 +2590,8 @@ export default function PdfEditorPage() {
             </div>
           </div>
 
-          <div className={`pe-inspector-shell ${inspectorOpen ? '' : 'closed'}`} data-testid="pdf-inspector-panel">
+          <div className={`pe-inspector-shell ${inspectorOpen ? '' : 'closed'}`} data-testid="pdf-inspector-panel" aria-hidden={!inspectorOpen} ref={node => { if (node) node.inert = !inspectorOpen; }}>
+            <button type="button" className="pe-panel-close" onClick={closePanels}>Return to page</button>
             <EditorRightPanel
               textStyle={state.textStyle}
               originalTextSelected={textSelectionVisible}
@@ -2590,7 +2610,7 @@ export default function PdfEditorPage() {
               selectedObjectKind={state.selectedObjectKind}
               preflightReport={state.preflightReport}
               onOpenAnnotations={() => {
-                setNavigationOpen(true);
+                openNavigation(true);
                 setNavigationTab('comments');
               }}
               redactionMarks={state.redactionMarks}

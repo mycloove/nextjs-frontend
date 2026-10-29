@@ -14,10 +14,8 @@
  *   editor does not know which export path it is on.
  * - Unknown and malformed values are not errors. A typo in an env var must not
  *   break the editor, it must fall back to the documented default.
- * - Defaults are declared per flag rather than "off for everything", because a
- *   flag protecting a *safety* behaviour (the export gate) must default ON while
- *   a flag exposing new *surface* (page tools) can default however the rollout
- *   needs.
+ * - Capability defaults are explicit. Correctness guards are mandatory, even
+ *   when an old deployment configuration requests disabling them.
  *
  * Deliberately not a React context: flags are read by pure export logic in
  * `editorPageSession`, which must stay testable without a renderer.
@@ -27,15 +25,12 @@ export type PdfEditorFeatureFlag =
   /** Phase 3: page organizer UI and page operations in the editor. */
   | 'pageOperations'
   /**
-   * Phase 3D: route page exports through the enforcement gate. Separate from
-   * `pageOperations` so the gate can be verified in isolation, and so the gate
-   * can never be disabled *by* enabling page tools.
+   * Phase 3D: mandatory page export enforcement, independent of authoring flags.
    */
   | 'pageExportGate'
   /**
-   * W2: refuse text edits whose script `drawText` cannot lay out correctly
-   * (Bengali, Devanagari, Arabic, Thai, ...). Off means reverting to the old
-   * behaviour of writing `?` placeholders or misordered glyphs silently.
+   * W2: mandatory refusal when the chosen writer cannot safely shape the text.
+   * Rollback must never re-enable missing glyphs or silently misordered output.
    */
   | 'textShapingGuard'
   /**
@@ -53,15 +48,15 @@ export type PdfEditorFeatureFlag =
   | 'vectorCanvasExport'
   /**
    * W3: author real redactions and send them through the removal engine. Off
-   * hides the redact tool and ignores saved marks; no local cover-up path is
-   * substituted for real removal.
+   * hides new authoring and refuses exports with stored marks. Drafts survive
+   * rollback; disabling a tool must never silently discard the user's intent.
    */
   | 'redactionAuthoring';
 
 
 export type PdfEditorFeatureFlagState = Readonly<Record<PdfEditorFeatureFlag, boolean>>;
 
-/** Env var that overrides each flag. Public prefix: read in the browser bundle. */
+/** Legacy guard keys remain recognized, but cannot override mandatory checks. */
 const FLAG_ENV_KEYS: Readonly<Record<PdfEditorFeatureFlag, string>> = {
   pageOperations: 'NEXT_PUBLIC_PDF_EDITOR_PAGE_OPERATIONS',
   pageExportGate: 'NEXT_PUBLIC_PDF_EDITOR_PAGE_EXPORT_GATE',
@@ -114,13 +109,20 @@ export type PdfEditorFeatureFlagSource = Readonly<Record<string, string | undefi
 export function resolvePdfEditorFeatureFlags(
   source?: PdfEditorFeatureFlagSource,
 ): PdfEditorFeatureFlagState {
-  const env: PdfEditorFeatureFlagSource =
-    source ?? (typeof process !== 'undefined' && process.env ? process.env : {});
+  // Next only bundles literal public env reads. A computed process.env[key]
+  // reads undefined in production, silently defeating deployment rollbacks.
+  const env: PdfEditorFeatureFlagSource = source ?? {
+    NEXT_PUBLIC_PDF_EDITOR_PAGE_OPERATIONS: process.env.NEXT_PUBLIC_PDF_EDITOR_PAGE_OPERATIONS,
+    NEXT_PUBLIC_PDF_EDITOR_SERVER_TEXT_EDIT: process.env.NEXT_PUBLIC_PDF_EDITOR_SERVER_TEXT_EDIT,
+    NEXT_PUBLIC_PDF_EDITOR_VECTOR_CANVAS_EXPORT: process.env.NEXT_PUBLIC_PDF_EDITOR_VECTOR_CANVAS_EXPORT,
+    NEXT_PUBLIC_PDF_EDITOR_REDACTION_AUTHORING: process.env.NEXT_PUBLIC_PDF_EDITOR_REDACTION_AUTHORING,
+  };
 
   const resolved = {} as Record<PdfEditorFeatureFlag, boolean>;
   for (const flag of Object.keys(FLAG_DEFAULTS) as PdfEditorFeatureFlag[]) {
     const override = parsePdfEditorFeatureFlagValue(env[FLAG_ENV_KEYS[flag]]);
-    resolved[flag] = override ?? FLAG_DEFAULTS[flag];
+    resolved[flag] = flag === 'pageExportGate' || flag === 'textShapingGuard'
+      ? true : override ?? FLAG_DEFAULTS[flag];
   }
   return resolved;
 }
@@ -129,7 +131,19 @@ export function isPdfEditorFeatureEnabled(
   flag: PdfEditorFeatureFlag,
   flags?: PdfEditorFeatureFlagState,
 ): boolean {
-  return (flags ?? resolvePdfEditorFeatureFlags())[flag];
+  return flag === 'pageExportGate' || flag === 'textShapingGuard'
+    || (flags ?? resolvePdfEditorFeatureFlags())[flag];
+}
+
+/** Rollback blocks incompatible delivery, not recovery or the stored work. */
+export function pdfEditorDisabledWorkReason(
+  work: { changedPagePlan: boolean; redactionCount: number; textEditCount: number },
+  flags = resolvePdfEditorFeatureFlags(),
+): string | null {
+  if (work.changedPagePlan && !flags.pageOperations) return 'Page operations are disabled for this deployment. The saved page plan is retained, but cannot be exported until the capability is restored or the changes are explicitly undone.';
+  if (work.redactionCount > 0 && !flags.redactionAuthoring) return 'Redaction is disabled for this deployment. Saved marks are retained; export is blocked rather than silently omitting them.';
+  if (work.textEditCount > 0 && !flags.serverTextEdit) return 'Structural text editing is disabled for this deployment. Your edits are retained; no visual cover-up will be substituted.';
+  return null;
 }
 
 /** Defaults exposed for tests and for documenting rollout state. */

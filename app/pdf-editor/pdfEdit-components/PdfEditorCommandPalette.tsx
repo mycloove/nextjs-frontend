@@ -10,13 +10,18 @@ interface PaletteProps {
   open: boolean;
   onClose: () => void;
   onRun: (id: string) => void;
+  editingReady: boolean;
+  redactionEnabled: boolean;
+  sourceTextEnabled: boolean;
 }
 
-export function PdfEditorCommandPalette({ open, onClose, onRun }: PaletteProps) {
+export function PdfEditorCommandPalette({ open, onClose, onRun, editingReady, redactionEnabled, sourceTextEnabled }: PaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const commands = useMemo(() => filterPdfEditorCommands(query), [query]);
+  const disabled = (command: PdfEditorCommand) => (command.id.startsWith('tool-') && !editingReady)
+    || (command.id === 'tool-redact' && !redactionEnabled) || (command.id === 'tool-editText' && !sourceTextEnabled);
 
   useEffect(() => {
     if (!open) return;
@@ -36,7 +41,7 @@ export function PdfEditorCommandPalette({ open, onClose, onRun }: PaletteProps) 
       }
       if (event.key === 'Enter') {
         const command = commands[activeIndex];
-        if (command) {
+        if (command && !((command.id.startsWith('tool-') && !editingReady) || (command.id === 'tool-redact' && !redactionEnabled) || (command.id === 'tool-editText' && !sourceTextEnabled))) {
           event.preventDefault();
           onRun(command.id);
         }
@@ -44,7 +49,7 @@ export function PdfEditorCommandPalette({ open, onClose, onRun }: PaletteProps) 
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, commands, activeIndex, onRun, onClose]);
+  }, [open, commands, activeIndex, onRun, onClose, editingReady, redactionEnabled, sourceTextEnabled]);
 
   useEffect(() => {
     const active = listRef.current?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`);
@@ -125,6 +130,7 @@ export function PdfEditorCommandPalette({ open, onClose, onRun }: PaletteProps) 
           font-size: 11px; font-weight: 650;
           font-variant-numeric: tabular-nums;
         }
+        .pe-palette-item:disabled { opacity: .45; cursor: not-allowed; }
         .pe-palette-empty {
           padding: 28px 16px;
           color: var(--pe-text-3); font-size: 12px; text-align: center;
@@ -213,6 +219,7 @@ export function PdfEditorCommandPalette({ open, onClose, onRun }: PaletteProps) 
             <CommandRow
               key={command.id}
               command={command}
+              disabled={disabled(command)}
               index={index}
               active={index === activeIndex}
               showGroup={index === 0 || commands[index - 1].group !== command.group}
@@ -237,6 +244,7 @@ function CommandRow({
   showGroup,
   onHover,
   onRun,
+  disabled,
 }: {
   command: PdfEditorCommand;
   index: number;
@@ -244,6 +252,7 @@ function CommandRow({
   showGroup: boolean;
   onHover: () => void;
   onRun: () => void;
+  disabled: boolean;
 }) {
   return (
     <>
@@ -254,6 +263,8 @@ function CommandRow({
         data-index={index}
         role="option"
         aria-selected={active}
+        disabled={disabled}
+        title={disabled ? 'This tool is unavailable until its editing layer and capability are ready.' : undefined}
         className={`pe-palette-item ${active ? 'active' : ''}`}
         onMouseEnter={onHover}
         onClick={onRun}
@@ -282,7 +293,8 @@ export function PdfEditorShortcutsDialog({ open, onClose }: { open: boolean; onC
     ['Shortcut sheet', '?'],
     ['Undo / redo', 'Ctrl + Z / Ctrl + Y'],
     ['Delete selected object', 'Delete / Backspace'],
-    ['Next / previous page', '→ / ←'],
+    ['Pages (no object selected)', '→ / ←'],
+    ['Nudge selected object', 'Arrow keys / Shift + Arrow'],
     ['Find in document', 'Ctrl + F'],
     ['Zoom in / out', 'Ctrl + + / Ctrl + −'],
     ['Fit page / width / actual', '1 / 2 / 3'],

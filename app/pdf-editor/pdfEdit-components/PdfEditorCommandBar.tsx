@@ -28,14 +28,17 @@ interface Props {
   onResultStep: (direction: -1 | 1) => void;
   onNavigationToggle: () => void;
   onInspectorToggle: () => void;
+  onCommands: () => void;
+  onHelp: () => void;
 }
 
 export default function PdfEditorCommandBar(props: Props) {
-  const pageValueRef = useRef(String(props.currentPage));
+  const pageInputRef = useRef<HTMLInputElement>(null);
 
   const commitPage = () => {
-    const page = normalizePdfEditorPageJump(pageValueRef.current, props.totalPages);
-    if (page) props.onPageChange(page);
+    const page = normalizePdfEditorPageJump(pageInputRef.current?.value ?? '', props.totalPages) ?? props.currentPage;
+    if (pageInputRef.current) pageInputRef.current.value = String(page);
+    if (page !== props.currentPage) props.onPageChange(page);
   };
 
   return (
@@ -206,15 +209,16 @@ export default function PdfEditorCommandBar(props: Props) {
           .pe-commandbar { gap: 5px; }
         }
         @media (max-width: 700px) {
-          .pe-commandbar { padding: 5px 7px; gap: 4px; }
+          .pe-commandbar { padding: 5px 7px; gap: 4px; height: 88px; flex-basis: 88px; flex-wrap: wrap; align-content: center; }
           .pe-page-jump span,
           .pe-search-meta { display: none; }
-          .pe-search { flex: 1 1 90px; }
+          .pe-search { order: 1; flex: 1 0 100%; max-width: none; height: 34px; }
           .pe-command-icon { width: 30px; flex-basis: 30px; }
           .pe-command-step { width: 26px; flex-basis: 26px; }
           .pe-zoom-btn { width: 24px; height: 24px; }
           .pe-zoom-val { min-width: 36px; }
-          .pe-command-divider { margin: 0; }
+          .pe-command-divider { display: none; }
+          .pe-command-icon, .pe-command-step { min-height: 40px; }
         }
         @media (prefers-reduced-motion: reduce) {
           .pe-commandbar,
@@ -257,15 +261,15 @@ export default function PdfEditorCommandBar(props: Props) {
       <div className="pe-page-jump">
         <input
           key={props.currentPage}
+          ref={pageInputRef}
           aria-label="Page number"
           data-testid="pdf-page-jump"
           inputMode="numeric"
           defaultValue={props.currentPage}
-          onChange={event => { pageValueRef.current = event.target.value; }}
           onBlur={commitPage}
           onKeyDown={event => {
             if (event.key === 'Enter') {
-              commitPage();
+              event.preventDefault();
               event.currentTarget.blur();
             }
           }}
@@ -373,6 +377,10 @@ export default function PdfEditorCommandBar(props: Props) {
           <path d={props.inspectorOpen ? 'm18 9 3 3-3 3' : 'm6 9-3 3 3 3'} />
         </svg>
       </button>
+      <button type="button" className="pe-command-icon" onClick={event => { event.currentTarget.focus(); props.onCommands(); }} aria-label="Open commands" title="Commands (Ctrl/Cmd+K)" data-testid="pdf-commands-open">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="m5 6 5 6-5 6M13 18h6" /></svg>
+      </button>
+      <button type="button" className="pe-command-icon" onClick={event => { event.currentTarget.focus(); props.onHelp(); }} aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" data-testid="pdf-help-open">?</button>
     </div>
   );
 }

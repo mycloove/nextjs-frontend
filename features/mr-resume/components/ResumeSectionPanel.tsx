@@ -24,11 +24,13 @@ type ResumeSectionPanelProps = {
   addCustomSection: () => void
   startFresh: () => void
   confirmFresh: boolean
+  /** Document-wide starting structures; the outline above arranges within one. */
+  templateLibrary: ReactNode
 }
 
 export default function ResumeSectionPanel({
   active, enabled, dragging, content, title, selectSection, dropMarker, dragHandle,
-  t, addRef, libraryOpen, setLibraryOpen, catalog, addSection, addCustomSection, startFresh, confirmFresh,
+  t, addRef, libraryOpen, setLibraryOpen, catalog, addSection, addCustomSection, startFresh, confirmFresh, templateLibrary,
 }: ResumeSectionPanelProps) {
   return (
     <aside className={styles.leftPanel} aria-label={t('Resume sections')}>
@@ -52,6 +54,7 @@ export default function ResumeSectionPanel({
           })}
           <button type="button" className={styles.customSection} onClick={addCustomSection}><Glyph name="edit" /><span><b>{t('Custom section')}</b><small>{t('Any heading. Your own content.')}</small></span><Glyph name="plus" /></button>
         </div>}
+        {templateLibrary}
         <div className={styles.outlineHint}><Glyph name="grip" /><p>{t('Drag a handle, or use the move controls in the section editor.')}</p></div>
       </div>
       <div className={styles.leftFoot}><Glyph name="lock" /><p><b>{t('Sample content.')}</b><span>{t('Replace it with your own.')}</span></p><button type="button" className={styles.freshDraft} onClick={startFresh} title={confirmFresh ? t('Clears the saved draft and resets the document') : t('Clear this draft and start over')}>{confirmFresh ? t('Clear draft?') : t('Start fresh')}</button></div>

@@ -400,21 +400,17 @@ test('scripts that render correctly one glyph per code point still export', asyn
   assert.deepEqual(findUnrenderableTextMutations([textMutationWith('Привет мир')]), []);
 });
 
-test('disabling the flag restores the legacy unguarded export path', async () => {
+test('a disabled safety flag cannot restore the legacy unguarded export path', async () => {
   const source = await createGoldenPdf();
   const flags = resolvePdfEditorFeatureFlags({
     NEXT_PUBLIC_PDF_EDITOR_TEXT_SHAPING_GUARD: 'off',
   });
 
-  assert.equal(flags.textShapingGuard, false);
-  // Escape hatch for incident response: the old behaviour must still be
-  // reachable without editing code, even though it produces wrong glyphs.
-  const exported = await exportStructurePreservingPdf({
-    source,
-    flags,
-    textMutations: [textMutationWith('আমার সোনার বাংলা')],
-  });
-  assert.ok(exported.byteLength > 0);
+  assert.equal(flags.textShapingGuard, true);
+  await assert.rejects(exportStructurePreservingPdf({
+    source, flags: { ...flags, textShapingGuard: false },
+    textMutations: [textMutationWith('\u05e9\u05dc\u05d5\u05dd')],
+  }), UnsupportedScriptExportError);
 });
 
 

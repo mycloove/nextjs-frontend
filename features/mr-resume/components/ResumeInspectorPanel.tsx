@@ -134,7 +134,6 @@ export type ResumeInspectorPanelProps = {
   onForgetSpelling: (source: string) => void
   onClearSpellings: () => void
   onExportSpellings: () => void
-  templateLibrary: ReactNode
   languageSuggestions: ReactNode
 }
 
@@ -155,7 +154,7 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
     fontSize, setFontSize, leading, setLeading, leadingDraft, setLeadingDraft, sectionGap,
     setSectionGap, sectionGapDraft, setSectionGapDraft, margin, setMargin, marginDraft,
     setMarginDraft, spacingPresets, resetPageSettings, banglishMode, setBanglishMode,
-    banglishSources, recordBanglish, learnedWords, spellingChoices, onLearnReading, onForgetSpelling, onClearSpellings, onExportSpellings, templateLibrary, languageSuggestions,
+    banglishSources, recordBanglish, learnedWords, spellingChoices, onLearnReading, onForgetSpelling, onClearSpellings, onExportSpellings, languageSuggestions,
   } = props
 
   const [bijoyOffer, setBijoyOffer] = useState<{ start: number; end: number; source: string; snapshot: string; section: string } | null>(null)
@@ -397,7 +396,6 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
               <div className={styles.editorNote}><Glyph name="page" /><p>{t('Your words and layout are separate. Typography lives in')} <button type="button" onClick={openPageSettings}>{t('Page settings')}</button>.</p></div>
             </div> : <div id="page-inspector" role="tabpanel" aria-labelledby="page-tab">
               <div className={styles.pageSettingsHeading}><h2>{t('Page settings')}</h2><span className={styles.eyebrow}>{t('DOCUMENT-WIDE')}</span><p>{t('Set the rhythm. Give your words room.')}</p></div>
-              {templateLibrary}
               <div className={styles.mobileDocumentName}>
                 <label className={styles.contentLabel} htmlFor="mobile-document-name">{t('Document name')}</label>
                 <input id="mobile-document-name" className={styles.textInput} value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} />

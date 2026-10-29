@@ -25,9 +25,12 @@ import {
   PDFDocument,
   PDFHexString,
   PDFName,
+  PDFNumber,
+  PDFRawStream,
   PDFRef,
   PDFString,
   StandardFonts,
+  decodePDFRawStream,
 } from 'pdf-lib';
 import type { PDFContext, PDFDict as PDFDictType, PDFFont, PDFObject, PDFPage } from 'pdf-lib';
 
@@ -71,13 +74,8 @@ export type PdfEditorAnnotationExportResult = {
   written: number;
 };
 
-export type PdfEditorAnnotationExpectation = {
-  id: string;
-  page: number;
+export type PdfEditorAnnotationExpectation = PdfEditorAnnotation & {
   subtype: PdfEditorAnnotationSubtype;
-  /** Present on replies; the verifier proves the parent link exists. */
-  replyTo?: string;
-  uri?: string;
 };
 
 export type PdfEditorAnnotationVerification = {
@@ -182,17 +180,21 @@ function appearanceOperators(annotation: PdfEditorAnnotation, color: { r: number
         `${stroke} ${Math.max(0.6, w * 0.06)} w`,
         `1 0 0 1 ${pad} ${h - pad * 2} cm`,
         `0 0 ${Math.max(1, w - pad * 2)} ${Math.max(1, h - pad * 2)} re S`,
-        `1 0 0 1 ${pad * 2} ${h * 0.62} m ${w - pad * 2} ${h * 0.62} l S`,
-        `1 0 0 1 ${pad * 2} ${h * 0.38} m ${w - pad * 3} ${h * 0.38} l S`,
+        `${pad * 2} ${h * 0.62} m ${w - pad * 2} ${h * 0.62} l S`,
+        `${pad * 2} ${h * 0.38} m ${w - pad * 3} ${h * 0.38} l S`,
       ].join('\n');
     }
     case 'stamp': {
       const border = Math.max(1, Math.min(2.5, h * 0.09));
+      // The built-in stamp names are ASCII. Helvetica needs those single-byte
+      // character codes, not the UTF-16 strings used in annotation dictionaries.
+      const label = (annotation.stamp ?? 'Approved').toUpperCase();
+      const encodedLabel = PDFHexString.of([...label].map(char => char.charCodeAt(0).toString(16).padStart(2, '0')).join(''));
       return [
         `${stroke} ${border} w 0 0 ${w} ${h} re S`,
         `BT /Helv ${Math.max(5, Math.min(12, h * 0.42))} Tf ${color.r} ${color.g} ${color.b} rg`,
         `1 0 0 1 ${Math.max(2, w * 0.06)} ${Math.max(2, h * 0.32)} Tm`,
-        `${PDFHexString.fromText((annotation.stamp ?? 'Approved').toUpperCase())} Tj ET`,
+        `${encodedLabel} Tj ET`,
       ].join('\n');
     }
     default:
@@ -245,6 +247,12 @@ export async function exportPdfEditorAnnotations(
       );
     }
     const rotation = pages[annotation.page - 1].getRotation().angle % 360;
+    const box = pages[annotation.page - 1].getCropBox();
+    if (![annotation.x, annotation.y, annotation.width, annotation.height].every(Number.isFinite)
+      || annotation.x < 0 || annotation.y < 0 || annotation.width <= 0 || annotation.height <= 0
+      || annotation.x + annotation.width > box.width + 0.01 || annotation.y + annotation.height > box.height + 0.01) {
+      throw new PdfEditorAnnotationExportError(`Annotation "${annotation.id}" has invalid or clipped page geometry. It was not exported.`);
+    }
     if (rotation !== 0) {
       throw new PdfEditorAnnotationExportError(
         `Annotation "${annotation.id}" is on page ${annotation.page}, which is rotated. `
@@ -364,11 +372,8 @@ export function pdfEditorAnnotationExpectations(
   annotations: readonly PdfEditorAnnotation[],
 ): PdfEditorAnnotationExpectation[] {
   return annotations.map(annotation => ({
-    id: annotation.id,
-    page: annotation.page,
+    ...annotation,
     subtype: pdfEditorAnnotationSubtype(annotation.kind),
-    ...(annotation.replyTo ? { replyTo: annotation.replyTo } : {}),
-    ...(annotation.uri ? { uri: annotation.uri } : {}),
   }));
 }
 
@@ -380,6 +385,14 @@ function readName(dict: PDFDict, key: string): string | null {
 function readText(dict: PDFDict, key: string): string | null {
   const value = dict.lookupMaybe(PDFName.of(key), PDFString, PDFHexString);
   return value ? value.decodeText() : null;
+}
+
+function matchesNumbers(dict: PDFDict, key: string, expected: readonly number[]) {
+  const value = dict.lookupMaybe(PDFName.of(key), PDFArray);
+  return !!value && value.size() === expected.length && expected.every((number, index) => {
+    const actual = value.lookupMaybe(index, PDFNumber);
+    return !!actual && Math.abs(actual.asNumber() - number) < 0.001;
+  });
 }
 
 /**
@@ -404,10 +417,12 @@ export async function verifyPdfEditorAnnotationExport(input: {
     return { ok: false, checks: [{ id: 'annotation-reopen', status: 'failed', detail: message }], failures: [message] };
   }
 
+  try {
   const pages = pdf.getPages();
   // Keyed by id *and* page: a duplicated source page legitimately carries the
   // same annotation on two output pages, with `/NM` suffixed on the copy.
   const found = new Map<string, { subtype: string; dict: PDFDict }>();
+  const duplicates = new Set<string>();
   pages.forEach((page, pageIndex) => {
     const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray);
     if (!annots) return;
@@ -416,7 +431,9 @@ export async function verifyPdfEditorAnnotationExport(input: {
       if (!dict) continue;
       const id = readText(dict, 'NM');
       if (!id) continue;
-      found.set(`${id}@${pageIndex + 1}`, { subtype: readName(dict, 'Subtype') ?? '', dict });
+      const key = `${id}@${pageIndex + 1}`;
+      if (found.has(key)) duplicates.add(key);
+      found.set(key, { subtype: readName(dict, 'Subtype') ?? '', dict });
     }
   });
 
@@ -449,18 +466,83 @@ export async function verifyPdfEditorAnnotationExport(input: {
     if (expectation.uri) {
       const action = actual.dict.lookupMaybe(PDFName.of('A'), PDFDict);
       const uri = action ? readText(action, 'URI') : null;
-      if (uri !== expectation.uri) {
+      if (uri !== expectation.uri || !action || readName(action, 'S') !== 'URI') {
         const detail = `Link ${expectation.id} carries "${uri ?? '(none)'}" instead of "${expectation.uri}".`;
         checks.push({ id: `annotation-${expectation.id}-${expectation.page}`, status: 'failed', detail });
         failures.push(detail);
         continue;
       }
     }
+    const mismatches: string[] = [];
+    if (duplicates.has(`${expectation.id}@${expectation.page}`)) mismatches.push('duplicate identity');
+    if (readName(actual.dict, 'Type') !== 'Annot') mismatches.push('annotation type');
+    if (actual.dict.lookupMaybe(PDFName.of('F'), PDFNumber)?.asNumber() !== 4) mismatches.push('visibility/print flags');
+    if (['OC', 'CA', 'BM'].some(key => actual.dict.has(PDFName.of(key)))) mismatches.push('unverified annotation appearance override');
+    if (readText(actual.dict, 'Contents') !== expectation.contents) mismatches.push('contents');
+    if (readText(actual.dict, 'T') !== expectation.author) mismatches.push('author');
+    const crop = pages[expectation.page - 1].getCropBox();
+    const left = crop.x + expectation.x;
+    const top = crop.y + crop.height - expectation.y;
+    const rect = [left, top - expectation.height, left + expectation.width, top];
+    if (!matchesNumbers(actual.dict, 'Rect', rect)) mismatches.push('rectangle');
+    const color = hexToRgb01(expectation.color);
+    if (!matchesNumbers(actual.dict, 'C', [color.r, color.g, color.b])) mismatches.push('color');
+    if (['highlight', 'underline', 'strikeout'].includes(expectation.kind)
+      && !matchesNumbers(actual.dict, 'QuadPoints', [rect[0], rect[3], rect[2], rect[3], rect[0], rect[1], rect[2], rect[1]])) mismatches.push('text quadrilaterals');
+    if (expectation.kind === 'stamp' && readName(actual.dict, 'Name') !== (expectation.stamp ?? 'Approved')) mismatches.push('stamp');
+    if (expectation.replyTo) {
+      const expectedParent = input.expectations.find(item => item.id === expectation.replyTo);
+      const parent = actual.dict.get(PDFName.of('IRT'));
+      if (!expectedParent || !(parent instanceof PDFRef)
+        || pdf.context.lookup(parent) !== found.get(`${expectation.replyTo}@${expectedParent.page}`)?.dict) mismatches.push('reply parent');
+    }
+    const operators = appearanceOperators(expectation, color);
+    if (operators) {
+      const ap = actual.dict.lookupMaybe(PDFName.of('AP'), PDFDict);
+      const stream = ap?.lookup(PDFName.of('N'));
+      if (!(stream instanceof PDFRawStream)
+        || !matchesNumbers(stream.dict, 'BBox', [0, 0, Math.max(1, expectation.width), Math.max(1, expectation.height)])
+        || new TextDecoder().decode(decodePDFRawStream(stream).decode()).replace(/\s+/g, ' ').trim() !== operators.replace(/\s+/g, ' ').trim()) mismatches.push('appearance');
+      else {
+        if (readName(stream.dict, 'Type') !== 'XObject' || readName(stream.dict, 'Subtype') !== 'Form'
+          || stream.dict.lookupMaybe(PDFName.of('FormType'), PDFNumber)?.asNumber() !== 1) mismatches.push('appearance form');
+        if (stream.dict.has(PDFName.of('Matrix')) && !matchesNumbers(stream.dict, 'Matrix', [1, 0, 0, 1, 0, 0])) mismatches.push('appearance matrix');
+        if (['Group', 'OC', 'Ref'].some(key => stream.dict.has(PDFName.of(key)))) mismatches.push('unverified appearance override');
+        const resources = stream.dict.lookupMaybe(PDFName.of('Resources'), PDFDict);
+        if (resources?.keys().some(key => !['ExtGState', 'Font'].includes(key.decodeText()))) mismatches.push('unverified appearance resources');
+        // Equal operators do not imply equal paint: GS0 can make them invisible,
+        // and a substituted font can draw different glyphs for the same codes.
+        // Accept only the resource semantics emitted by this writer.
+        const graphicsState = resources?.lookupMaybe(PDFName.of('ExtGState'), PDFDict)?.lookupMaybe(PDFName.of('GS0'), PDFDict);
+        const opacity = expectation.kind === 'highlight' ? 0.5 : 0.9;
+        if (!graphicsState || readName(graphicsState, 'Type') !== 'ExtGState'
+          || graphicsState.lookupMaybe(PDFName.of('ca'), PDFNumber)?.asNumber() !== opacity
+          || graphicsState.lookupMaybe(PDFName.of('CA'), PDFNumber)?.asNumber() !== opacity
+          || graphicsState.keys().some(key => !['Type', 'ca', 'CA'].includes(key.decodeText()))) mismatches.push('appearance opacity/graphics state');
+        if (expectation.kind === 'stamp') {
+          const font = resources?.lookupMaybe(PDFName.of('Font'), PDFDict)?.lookupMaybe(PDFName.of('Helv'), PDFDict);
+          if (!font || readName(font, 'Type') !== 'Font' || readName(font, 'Subtype') !== 'Type1'
+            || readName(font, 'BaseFont') !== StandardFonts.Helvetica || readName(font, 'Encoding') !== 'WinAnsiEncoding'
+            || font.keys().some(key => !['Type', 'Subtype', 'BaseFont', 'Encoding'].includes(key.decodeText()))) mismatches.push('appearance font resource');
+        }
+      }
+    }
+    if (mismatches.length) {
+      const detail = `Annotation ${expectation.id} on page ${expectation.page} does not match its intended ${mismatches.join(', ')}.`;
+      checks.push({ id: `annotation-${expectation.id}-${expectation.page}`, status: 'failed', detail });
+      failures.push(detail);
+      continue;
+    }
     checks.push({
       id: `annotation-${expectation.id}-${expectation.page}`,
       status: 'passed',
-      detail: `${expectation.subtype} annotation on page ${expectation.page} is present after reopening.`,
+      detail: `${expectation.subtype} annotation on page ${expectation.page} matches its checked content, geometry, flags, normal appearance operators/resources and relationships; pixel rendering is not compared.`,
     });
+  }
+  } catch (error) {
+    const detail = `The annotation dictionaries are malformed: ${error instanceof Error ? error.message : 'unreadable annotation data'}`;
+    checks.push({ id: 'annotation-dictionaries', status: 'failed', detail });
+    failures.push(detail);
   }
 
   return { ok: failures.length === 0, checks, failures };

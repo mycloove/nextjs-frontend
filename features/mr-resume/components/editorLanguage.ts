@@ -84,7 +84,7 @@ const banglaCopy: Record<string, string> = {
   'Keep current writing': 'বর্তমান লেখা রাখুন', 'Apply to this section': 'এই বিভাগে প্রয়োগ করুন',
   'Your writing changed. Create a new suggestion before applying it.': 'আপনার লেখা বদলেছে। প্রয়োগের আগে নতুন প্রস্তাব তৈরি করুন।',
   'Reviewed language suggestion applied to this section. Other writing is unchanged.': 'পর্যালোচিত ভাষার প্রস্তাব এই বিভাগে প্রয়োগ হয়েছে। অন্য লেখা অপরিবর্তিত আছে।',
-  'Bangla-first templates': 'বাংলা লেখার টেমপ্লেট',
+  'Templates': 'টেমপ্লেট',
   'Start with a purposeful outline. Preview first; your current draft gets a restore copy.': 'কাজের উপযোগী রূপরেখা দিয়ে শুরু করুন। আগে প্রিভিউ দেখুন; বর্তমান খসড়ার পুনরুদ্ধার কপি রাখা হবে।',
   'Restore previous draft': 'আগের খসড়া ফিরিয়ে আনুন', 'Download restore copy': 'পুনরুদ্ধার কপি ডাউনলোড করুন',
   'TEMPLATE PREVIEW': 'টেমপ্লেট প্রিভিউ', 'Close template preview': 'টেমপ্লেট প্রিভিউ বন্ধ করুন',

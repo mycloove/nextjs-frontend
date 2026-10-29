@@ -1,4 +1,5 @@
 'use client';
+import type { PdfPostExportVerification } from '../pdfEdit-utils/editorExportVerification';
 
 import { useEffect, useRef, useState } from 'react';
 import type { PdfExportImpact } from '../pdfEdit-utils/editorPreflight';
@@ -51,6 +52,7 @@ interface Props {
    * The only trigger for a rebuild.
    */
   editVersion: number;
+  documentSession: number;
   /**
    * Bumped when the device's pixel ratio changes. The ratio itself is read
    * fresh from the window when this component renders, so a bump is all the
@@ -79,6 +81,8 @@ interface Props {
         pixelWidth: number;
         pixelHeight: number;
         disclosures: string[];
+        changedPages: number[];
+        verificationChecks: PdfPostExportVerification['checks'];
         pendingConfirmation: PdfExportImpact | null;
       }
     | { ok: false; message: string; impact?: PdfExportImpact; consent?: ServerTextEditConsentRequest; processingRequired?: boolean }
@@ -120,7 +124,7 @@ function nextPreviewZoomStep(from: number, direction: 1 | -1): number {
 }
 
 type PreviewOutcome =
-  | { kind: 'ready'; width: number; height: number; disclosures: string[]; pendingConfirmation: PdfExportImpact | null }
+  | { kind: 'ready'; contentKey: string; width: number; height: number; disclosures: string[]; changedPages: number[]; verificationChecks: PdfPostExportVerification['checks']; pendingConfirmation: PdfExportImpact | null }
   | { kind: 'blocked'; message: string; impact?: PdfExportImpact; recoverable: boolean; processingRequired?: boolean };
 
 export default function PdfEditorPreview({
@@ -128,6 +132,7 @@ export default function PdfEditorPreview({
   totalPages,
   pageSize,
   editVersion,
+  documentSession,
   dprEpoch,
   resizeEpoch,
   renderExportedPageToCanvas,
@@ -140,6 +145,8 @@ export default function PdfEditorPreview({
   const [outcome, setOutcome] = useState<PreviewOutcome | null>(null);
   const [zoom, setZoom] = useState<PreviewZoom>('fit');
   const [retryEpoch, setRetryEpoch] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const attemptRef = useRef(0);
 
   /**
    * The page the panel shows.
@@ -196,7 +203,8 @@ export default function PdfEditorPreview({
     renderExportedPageRef.current = renderExportedPageToCanvas;
   }, [renderExportedPageToCanvas]);
 
-  const readyOutcome = outcome?.kind === 'ready' ? outcome : null;
+  const contentKey = `${documentSession}:${displayPage}:${editVersion}`;
+  const readyOutcome = outcome?.kind === 'ready' && outcome.contentKey === contentKey ? outcome : null;
 
   /**
    * The raster's output scale for the current display size.
@@ -219,7 +227,8 @@ export default function PdfEditorPreview({
   });
 
   useEffect(() => {
-    const contentKey = `${displayPage}:${editVersion}`;
+    if (paused) return;
+    const attempt = ++attemptRef.current;
     /**
      * The two kinds of rebuild, and why they clear differently.
      *
@@ -233,6 +242,8 @@ export default function PdfEditorPreview({
      */
     const scaleOnly = displayedContentRef.current === contentKey;
     let cancelled = false;
+    const active = () => !cancelled && attemptRef.current === attempt;
+    let timeout: number | undefined;
 
     /**
      * Erase the previous build as soon as the inputs change.
@@ -246,10 +257,11 @@ export default function PdfEditorPreview({
      * synchronously on every keystroke.
      */
     const clearStaleFrame = window.requestAnimationFrame(() => {
-      if (cancelled) return;
+      if (!active()) return;
       if (!scaleOnly) {
         const stale = previewCanvasRef.current;
         if (stale) clearCanvas(stale);
+        setOutcome(null);
       }
       setIsRendering(true);
     });
@@ -264,19 +276,30 @@ export default function PdfEditorPreview({
        */
       const buffer = document.createElement('canvas');
       setIsRendering(true);
+      timeout = window.setTimeout(() => {
+        if (!active()) return;
+        cancelled = true;
+        displayedContentRef.current = null;
+        if (previewCanvasRef.current) clearCanvas(previewCanvasRef.current);
+        setIsRendering(false);
+        setOutcome({ kind: 'blocked', recoverable: false, message: 'Preview timed out. Retry or return to editing. A server request already sent may still finish.' });
+      }, 90_000);
 
       renderExportedPageRef.current(displayPage, buffer, { outputScale })
         .then((result) => {
-          if (cancelled) return;
+          if (!active()) return;
           if (result.ok) {
             const target = previewCanvasRef.current;
             if (target) commitCanvas(target, buffer);
             displayedContentRef.current = contentKey;
             setOutcome({
               kind: 'ready',
+              contentKey,
               width: result.width,
               height: result.height,
               disclosures: result.disclosures,
+              changedPages: result.changedPages,
+              verificationChecks: result.verificationChecks,
               pendingConfirmation: result.pendingConfirmation,
             });
             return;
@@ -300,7 +323,7 @@ export default function PdfEditorPreview({
           });
         })
         .catch((error: unknown) => {
-          if (cancelled) return;
+          if (!active()) return;
           console.error('Preview build failed', error);
           const target2 = previewCanvasRef.current;
           if (target2) clearCanvas(target2);
@@ -314,7 +337,8 @@ export default function PdfEditorPreview({
           });
         })
         .finally(() => {
-          if (!cancelled) setIsRendering(false);
+          window.clearTimeout(timeout);
+          if (active()) setIsRendering(false);
         });
     }, PREVIEW_REBUILD_DELAY_MS);
 
@@ -322,8 +346,19 @@ export default function PdfEditorPreview({
       cancelled = true;
       window.cancelAnimationFrame(clearStaleFrame);
       window.clearTimeout(timer);
+      window.clearTimeout(timeout);
     };
-  }, [editVersion, displayPage, outputScale, resizeEpoch, dprEpoch, retryEpoch]);
+  }, [contentKey, displayPage, outputScale, resizeEpoch, dprEpoch, retryEpoch, paused]);
+
+  const cancelPreview = () => {
+    attemptRef.current += 1;
+    setPaused(true);
+    setIsRendering(false);
+    setOutcome(null);
+    displayedContentRef.current = null;
+    if (previewCanvasRef.current) clearCanvas(previewCanvasRef.current);
+  };
+  const retryPreview = () => { setPaused(false); setRetryEpoch(epoch => epoch + 1); };
 
   /**
    * Fit is a layout relationship, not a stop on the ladder, so a ± click from
@@ -365,7 +400,7 @@ export default function PdfEditorPreview({
           width: 100%;
           flex: 1 1 auto;
           min-height: 0;
-          display: flex; flex-direction: column; align-items: center; gap: 10px;
+          display: flex; flex-direction: column; align-items: center; gap: 8px;
         }
         /* The panel's page area fills the column: the wrap is the scrolling
            viewport for the page (both axes at a numeric zoom), so its height is
@@ -374,6 +409,30 @@ export default function PdfEditorPreview({
         .pe-preview-root .pe-preview-wrap {
           flex: 1 1 auto;
           min-height: 120px;
+        }
+        .pe-preview-review { width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--pe-text-2); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+        .pe-preview-review strong { color: var(--pe-text); }
+        .pe-preview-review .pe-preflight-action { margin: 0; }
+        .pe-preview-review summary { cursor: pointer; }
+        /* The status row exists only when it has something to say — a build in
+           flight (its cancel), or pages the build changed. Everything else it
+           used to carry (the panel's name, the build revision, the page
+           position) either belongs to the head's controls or is internal
+           bookkeeping, and repeating it here was two rows of readout above a
+           page the user is trying to read. */
+        /* One compact control line: the zoom strip, the page navigation and the
+           page-size label stay on a single row, and the row never wraps — the
+           size label (the only flexible item) gives way first, and on the
+           narrowest rows the line scrolls sideways instead of stacking, so the
+           page keeps the row's whole height. */
+        .pe-preview-head { flex-wrap: nowrap; gap: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+        .pe-preview-head::-webkit-scrollbar { display: none; }
+        .pe-preview-changes { width: 100%; max-height: 132px; overflow: auto; border-top: 1px solid var(--pe-line); padding-top: 8px; }
+        .pe-preview-changes p { margin: 3px 0; }
+        .pe-preview-changes summary:focus-visible { outline: 2px solid var(--pe-focus); }
+        @media (max-width: 700px) {
+          .pe-preview-zoom-btn, .pe-preview-zoom-step, .pe-preview-nav-jump { min-height: 40px; min-width: 32px; }
+          .pe-preview-root .pe-preflight-action { min-height: 40px; }
         }
         /* Same object language as the command bar's zoom cluster (pe-zoom-*):
            one control strip, the accent only on the active stop. It sits in the
@@ -552,6 +611,17 @@ export default function PdfEditorPreview({
         <span className="pe-preview-size" title={pageSize.toUpperCase()}>{pageSize.toUpperCase()}</span>
       </div>
 
+      {isRendering && (
+        <div className="pe-preview-review" data-testid="pdf-preview-review">
+          <button type="button" className="pe-preflight-action" onClick={cancelPreview}>Cancel preview</button>
+        </div>
+      )}
+      {!isRendering && readyOutcome && !!readyOutcome.changedPages.length && (
+        <div className="pe-preview-review" data-testid="pdf-preview-review">
+          <span>Changed output pages: {readyOutcome.changedPages.join(', ')}</span>
+        </div>
+      )}
+
       <div className="pe-preview-wrap" ref={wrapRef}>
         <div
           className="pe-preview-page-frame"
@@ -565,9 +635,11 @@ export default function PdfEditorPreview({
           <canvas
             ref={previewCanvasRef}
             className="pe-preview-canvas"
+            data-testid="pdf-preview-canvas"
+            data-preview-ready={readyOutcome && !isRendering ? 'true' : 'false'}
             // Hidden rather than unmounted: the ref has to survive so the next
             // build has a canvas to draw into.
-            style={outcome?.kind === 'blocked'
+            style={outcome?.kind === 'blocked' || paused
               ? { display: 'none' }
               : zoomedWidthPx
                 ? { width: `${zoomedWidthPx}px`, maxWidth: 'none' }
@@ -575,24 +647,27 @@ export default function PdfEditorPreview({
           />
 
           {outcome?.kind === 'blocked' && (
-            <div className="pe-preview-blocked" role="status">
+            <div className="pe-preview-blocked" role="status" data-testid="pdf-preview-blocked">
               <strong>{outcome.processingRequired ? 'Server permission required' : outcome.impact?.title ?? 'This document cannot be exported yet'}</strong>
               <p>{outcome.message}</p>
               {outcome.processingRequired
-                ? <button type="button" className="pe-preflight-action" data-testid="pdf-preview-processing" onClick={onRequestProcessing}>Review processing permission</button>
+                ? <button type="button" className="pe-preflight-action" data-testid="pdf-preview-processing" onClick={event => { event.currentTarget.focus(); onRequestProcessing(); }}>Review processing permission</button>
                 : outcome.recoverable
-                  ? <button type="button" className="pe-preflight-action" onClick={onReviewExport}>Review export consequences</button>
-                  : <button type="button" className="pe-preflight-action" disabled={isRendering} onClick={() => setRetryEpoch(epoch => epoch + 1)}>Retry preview</button>}
+                  ? <button type="button" className="pe-preflight-action" onClick={event => { event.currentTarget.focus(); onReviewExport(); }}>Review export consequences</button>
+                   : <button type="button" className="pe-preflight-action" disabled={isRendering} onClick={retryPreview}>Retry preview</button>}
             </div>
           )}
+          {paused && <div className="pe-preview-blocked" role="status" data-testid="pdf-preview-blocked"><strong>Preview cancelled</strong><p>No download was started. A server request already sent may still finish.</p><button type="button" className="pe-preflight-action" onClick={retryPreview}>Retry preview</button></div>}
         </div>
 
-        {isRendering && <div className="pe-preview-status">Building export preview...</div>}
+        {isRendering && <div className="pe-preview-status" role="status">Building export preview...</div>}
       </div>
-      {readyOutcome && !isRendering && (readyOutcome.disclosures.length > 0 || readyOutcome.pendingConfirmation) && (
-        <div className="pe-preview-notice" role="status" data-testid="pdf-preview-disclosures">
+      {readyOutcome && !isRendering && (
+        <div className="pe-preview-review pe-preview-changes" role="status" data-testid="pdf-preview-disclosures">
           {readyOutcome.disclosures.map(note => <p key={note}>{note}</p>)}
           {readyOutcome.pendingConfirmation && <p>Download still requires review: {readyOutcome.pendingConfirmation.summary}</p>}
+          {readyOutcome.pendingConfirmation && <button type="button" className="pe-preflight-action" onClick={event => { event.currentTarget.focus(); onReviewExport(); }}>Review export consequences</button>}
+          <details data-testid="pdf-preview-diagnostics"><summary>Verification details</summary><ul>{readyOutcome.verificationChecks.map((check, index) => <li key={`${check.id}-${index}`}>{check.status}: {check.detail}</li>)}</ul><p>The preview renders the generated PDF bytes. These checks are not a guarantee of every visual detail, reading order, hidden structure or external-reader behavior.</p></details>
         </div>
       )}
     </div>
@@ -610,7 +685,7 @@ function commitCanvas(target: HTMLCanvasElement, source: HTMLCanvasElement) {
   target.width = source.width;
   target.height = source.height;
   const ctx = target.getContext('2d');
-  if (!ctx) return;
+  if (!ctx) throw new Error('The preview canvas is unavailable. Retry preview.');
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(source, 0, 0);
 }

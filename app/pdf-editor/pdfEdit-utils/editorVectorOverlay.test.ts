@@ -225,7 +225,7 @@ test('embedded vector text is selectable in the exported PDF', async () => {
   assert.match(await extractText(exported), /Vector hello/);
 });
 
-test('Bengali survives a vector export round trip and is verified as extractable', async () => {
+test('Bengali retains its character inventory without claiming logical extraction order', async () => {
   const source = await emptySource();
   const bengali = 'বাংলা কি ক্ষ';
   const exported = await exportStructurePreservingPdf({
@@ -260,7 +260,7 @@ test('Bengali survives a vector export round trip and is verified as extractable
   });
   assert.equal(verification.ok, true);
   assert.equal(
-    verification.checks.some(check => check.id === 'added-text-1' && check.status === 'passed'),
+    verification.checks.some(check => check.id === 'added-text-1' && check.status === 'allowed-loss' && check.detail.includes('logical copy/search order is unverified')),
     true,
   );
 });

@@ -200,6 +200,55 @@ test('a taller line-height is honoured rather than clipped', () => {
   atLeast(layout.height - CHROME_Y, 12 * 2, 'double leading is clipped');
 });
 
+test('top clearance lifts only the frame while the text and bottom edge stay put', () => {
+  for (const zoom of [0.4, 0.6, 1, 1.6, 3]) {
+    const page = a4At(zoom);
+    const input = {
+      block: lineAt(12, zoom, 72 * zoom, 300 * zoom),
+      fontSize: 12 * zoom,
+      lineHeight: 1.15,
+      page,
+    };
+    const original = layoutPdfEditorTextControl(input);
+    const lifted = layoutPdfEditorTextControl({ ...input, topClearance: 2 * zoom });
+
+    assert.equal(lifted.paddingTop, 2 * zoom);
+    assert.ok(Math.abs(lifted.top + lifted.paddingTop - original.top) < 1e-6, 'text moved vertically');
+    assert.ok(Math.abs(lifted.height - lifted.paddingTop - original.height) < 1e-6, 'content height changed');
+    assert.ok(Math.abs(lifted.top + lifted.height - original.top - original.height) < 1e-6, 'bottom edge moved');
+    assert.ok(Math.abs(lifted.top + lifted.maxHeight - original.top - original.maxHeight) < 1e-6, 'growth limit moved');
+    assert.equal(lifted.left, original.left);
+    assert.equal(lifted.width, original.width);
+    assert.equal(lifted.fontSize, original.fontSize);
+    atMost(lifted.top + lifted.height, page.height, 'control leaves the page');
+
+    const userHeight = resizedTextControlExtent({
+      startExtent: lifted.height - lifted.paddingTop,
+      delta: 10 * zoom,
+      zoom,
+    });
+    const resized = layoutPdfEditorTextControl({ ...input, topClearance: 2 * zoom, userHeight: userHeight * zoom });
+    assert.ok(Math.abs(resized.height - lifted.height - 10 * zoom) < 1e-6, 'resize counts clearance twice');
+  }
+});
+
+test('top clearance stops at the page edge without moving the text', () => {
+  for (const y of [0, 0.5, 1, a4At(1).height - 1]) {
+    const input = {
+      block: { x: 72, y, width: 200, height: 9 },
+      fontSize: 12,
+      lineHeight: 1.15,
+      page: a4At(1),
+    };
+    const original = layoutPdfEditorTextControl(input);
+    const lifted = layoutPdfEditorTextControl({ ...input, topClearance: 2 });
+
+    atLeast(lifted.top, 0, 'frame crosses the top of the page');
+    assert.equal(lifted.top + lifted.paddingTop, original.top, 'text moved at a page edge');
+    assert.equal(lifted.top + lifted.height, original.top + original.height);
+  }
+});
+
 test('a page too small for one line shrinks the font instead of hiding it', () => {
   // Last resort, and the only case where the font gives way. Invisible text in
   // a text editor is never the better failure.

@@ -30,6 +30,7 @@ interface Props {
   /** Source page → first output position, for outline and comment links. */
   positionForSourcePage: (page: number) => number;
   onClose: () => void;
+  operationsEnabled: boolean;
   renderThumbnail: (page: number, canvas: HTMLCanvasElement, maxWidth?: number) => Promise<unknown>;
 }
 
@@ -37,11 +38,11 @@ interface Props {
  * Below this width the navigation panel renders as an overlay drawer on top of
  * the canvas, so selecting a page should dismiss it. Above it the panel sits
  * side-by-side with the canvas and must stay open when a page is selected.
- * Matches the `@media (max-width: 700px)` breakpoint in this component.
+ * Matches this component's overlay breakpoint, including tablets.
  */
 function shouldAutoDismissOnSelect(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-  return window.matchMedia('(max-width: 700px)').matches;
+  return window.matchMedia('(max-width: 1180px)').matches;
 }
 
 function Thumbnail({
@@ -94,6 +95,7 @@ function OrganizerThumb({
   onOperation,
   renderThumbnail,
   hasAnnotations,
+  operationsEnabled,
 }: {
   entry: PdfEditorPageEntry;
   position: number;
@@ -103,6 +105,7 @@ function OrganizerThumb({
   onOperation: (operation: PdfEditorPageOperation) => void;
   renderThumbnail: Props['renderThumbnail'];
   hasAnnotations: boolean;
+  operationsEnabled: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -115,7 +118,7 @@ function OrganizerThumb({
     <li
       className={`pe-organizer-item ${selected ? 'selected' : ''}`}
       data-organizer-position={position}
-      draggable
+      draggable={operationsEnabled}
       onDragStart={event => {
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', String(position));
@@ -126,11 +129,12 @@ function OrganizerThumb({
       }}
       onDrop={event => {
         event.preventDefault();
+        if (!operationsEnabled) return;
         const from = Number.parseInt(event.dataTransfer.getData('text/plain'), 10);
         if (Number.isInteger(from) && from !== position) onOperation({ type: 'move', from, to: position });
       }}
       onKeyDown={event => {
-        if (!event.altKey) return;
+        if (!operationsEnabled || !event.altKey) return;
         if (event.key === 'ArrowUp' && position > 1) {
           event.preventDefault();
           onOperation({ type: 'move', from: position, to: position - 1 });
@@ -165,7 +169,7 @@ function OrganizerThumb({
         </span>
       </button>
 
-      <div className="pe-organizer-actions">
+      <fieldset className="pe-organizer-actions" disabled={!operationsEnabled}>
         <button
           type="button"
           className="pe-organizer-action"
@@ -215,7 +219,7 @@ function OrganizerThumb({
           onClick={() => onOperation({ type: 'delete', pages: [position] })}
           data-testid={`pdf-organizer-delete-${position}`}
         >×</button>
-      </div>
+      </fieldset>
     </li>
   );
 }
@@ -265,7 +269,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
   const pages = Array.from({ length: Math.max(0, range.end - range.start) }, (_, index) => range.start + index + 1);
 
   return (
-    <aside className={`pe-navigation ${props.open ? 'open' : ''}`} data-testid="pdf-navigation-panel" aria-label="Document navigation">
+    <aside className={`pe-navigation ${props.open ? 'open' : ''}`} data-testid="pdf-navigation-panel" aria-label="Document navigation" aria-hidden={!props.open} ref={node => { if (node) node.inert = !props.open; }}>
       <style>{`
         .pe-navigation {
           width: 220px; flex: 0 0 220px;
@@ -276,6 +280,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
           overflow: hidden;
           transition: width var(--pe-dur-base) var(--pe-ease-out), flex-basis var(--pe-dur-base) var(--pe-ease-out), border-color var(--pe-dur-base) var(--pe-ease-out);
         }
+        .pe-navigation:not(.open) { visibility: hidden; }
         .pe-nav-tabs {
           height: 40px; display: grid; grid-template-columns: repeat(4,1fr);
           padding: 5px; gap: 3px;
@@ -418,7 +423,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
         }
         .pe-organizer-actions {
           display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
-          margin-top: 6px;
+          margin: 6px 0 0; padding: 0; border: 0; min-width: 0;
         }
         .pe-organizer-action {
           min-height: 26px;
@@ -446,7 +451,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
         }
         @media (max-width: 1180px) {
           .pe-navigation {
-            position: fixed; z-index: 85; left: 64px; top: 94px; bottom: 28px;
+            position: fixed; z-index: 85; left: 64px; top: calc(50px + var(--pe-commandbar-height)); bottom: 28px;
             transform: translateX(calc(-100% - 64px));
             transition: transform var(--pe-dur-base) var(--pe-ease-out);
             box-shadow: 12px 0 35px rgba(0,0,0,.42);
@@ -458,19 +463,33 @@ export default function PdfEditorNavigationPanel(props: Props) {
           .pe-navigation:not(.open) { width: 0; flex-basis: 0; border-right-color: transparent; }
         }
         @media (max-width: 700px) {
-          .pe-navigation { left: 0; top: 94px; bottom: calc(82px + env(safe-area-inset-bottom)); width: min(86vw, 300px); flex-basis: min(86vw, 300px); }
+          .pe-navigation { left: 0; bottom: calc(82px + env(safe-area-inset-bottom)); width: min(86vw, 300px); flex-basis: min(86vw, 300px); }
         }
         @media (prefers-reduced-motion: reduce) {
           .pe-navigation { transition: none; }
           .pe-organizer-canvas-inner { transition: none; }
         }
       `}</style>
-      <div className="pe-nav-tabs" role="tablist" aria-label="Document navigation views">
+      <button type="button" className="pe-panel-close" onClick={props.onClose}>Return to page</button>
+      <div className="pe-nav-tabs" role="tablist" aria-label="Document navigation views" onKeyDown={event => {
+        const tabs = ['pages', 'organize', 'outline', 'comments'] as const;
+        const current = tabs.indexOf(props.activeTab);
+        const next = event.key === 'ArrowRight' ? (current + 1) % tabs.length
+          : event.key === 'ArrowLeft' ? (current + tabs.length - 1) % tabs.length
+            : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
+        if (next < 0) return;
+        event.preventDefault();
+        props.onTabChange(tabs[next]);
+        event.currentTarget.querySelector<HTMLButtonElement>(`[data-testid="pdf-nav-${tabs[next]}"]`)?.focus();
+      }}>
         {(['pages', 'organize', 'outline', 'comments'] as const).map(tab => (
           <button
             key={tab}
             type="button"
             role="tab"
+            id={`pdf-navigation-tab-${tab}`}
+            aria-controls="pdf-navigation-view"
+            tabIndex={props.activeTab === tab ? 0 : -1}
             aria-selected={props.activeTab === tab}
             className={`pe-nav-tab ${props.activeTab === tab ? 'active' : ''}`}
             onClick={() => props.onTabChange(tab)}
@@ -484,6 +503,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
       {props.activeTab === 'pages' && (
         <div
           className="pe-nav-content"
+          role="tabpanel" id="pdf-navigation-view" aria-labelledby="pdf-navigation-tab-pages"
           ref={scrollRef}
           onScroll={event => setScrollTop(event.currentTarget.scrollTop)}
           data-testid="pdf-thumbnail-list"
@@ -510,9 +530,9 @@ export default function PdfEditorNavigationPanel(props: Props) {
       )}
 
       {props.activeTab === 'organize' && (
-        <div className="pe-organizer" data-testid="pdf-page-organizer" ref={organizerRef}>
+        <div className="pe-organizer" data-testid="pdf-page-organizer" ref={organizerRef} role="tabpanel" id="pdf-navigation-view" aria-labelledby="pdf-navigation-tab-organize">
           <p className="pe-organizer-intro">
-            Drag a page, use Alt+↑/↓, or use the buttons. Page order here is the export order; undo restores a deleted page.
+            {props.operationsEnabled ? 'Drag a page, use Alt+Up/Down, or use the buttons. Page order here is the export order; undo restores a deleted page.' : 'Page tools are disabled for this deployment. Your saved order is retained. Undo existing changes or restore this capability before export.'}
           </p>
           {props.pagePlan ? (
             <ul className="pe-organizer-list">
@@ -523,6 +543,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
                     key={entry.id}
                     entry={entry}
                     hasAnnotations={props.annotationPages?.includes(entry.sourcePage) ?? false}
+                    operationsEnabled={props.operationsEnabled}
                     position={position}
                     count={props.pagePlan?.entries.length ?? 0}
                     selected={props.currentPage === position}
@@ -541,7 +562,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
       )}
 
       {props.activeTab === 'outline' && (
-        <div className="pe-nav-content pe-nav-list" data-testid="pdf-outline-list">
+        <div className="pe-nav-content pe-nav-list" data-testid="pdf-outline-list" role="tabpanel" id="pdf-navigation-view" aria-labelledby="pdf-navigation-tab-outline">
           {props.outline.length ? props.outline.map(entry => {
             const position = entry.page ? props.positionForSourcePage(entry.page) : null;
             return (
@@ -551,7 +572,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
                 className={`pe-nav-entry ${position === props.currentPage ? 'current' : ''}`}
                 style={{ paddingLeft: 9 + entry.depth * 14 }}
                 disabled={!position}
-                onClick={() => position && props.onPageChange(position)}
+                onClick={() => { if (position) { props.onPageChange(position); if (shouldAutoDismissOnSelect()) props.onClose(); } }}
               >
                 <span className="pe-nav-entry-copy">
                   <span className="pe-nav-entry-title">{entry.title}</span>
@@ -564,7 +585,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
       )}
 
       {props.activeTab === 'comments' && (
-        <div className="pe-nav-content pe-nav-list" data-testid="pdf-comments-list">
+        <div className="pe-nav-content pe-nav-list" data-testid="pdf-comments-list" role="tabpanel" id="pdf-navigation-view" aria-labelledby="pdf-navigation-tab-comments">
           {props.comments.length ? props.comments.map(comment => {
             const position = props.positionForSourcePage(comment.page);
             return (
@@ -573,7 +594,7 @@ export default function PdfEditorNavigationPanel(props: Props) {
                 type="button"
                 className={`pe-nav-entry ${position === props.currentPage ? 'current' : ''}`}
                 disabled={!position}
-                onClick={() => { if (position) props.onPageChange(position); }}
+                onClick={() => { if (position) { props.onPageChange(position); if (shouldAutoDismissOnSelect()) props.onClose(); } }}
               >
                 <span className="pe-nav-entry-copy">
                   <span className="pe-nav-entry-title">{comment.contents}</span>
