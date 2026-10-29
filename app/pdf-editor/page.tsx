@@ -1274,7 +1274,7 @@ export default function PdfEditorPage() {
           }
           .pe-drop-wordmark {
             display: inline-flex; align-items: center; color: var(--pe-drop-ink);
-            font-family: 'Syne', sans-serif; font-size: 25px; font-weight: 800;
+            font-family: 'Manrope', sans-serif; font-size: 25px; font-weight: 800;
             letter-spacing: -.05em; line-height: 1;
           }
           .pe-drop-wordmark::after {
@@ -1333,7 +1333,7 @@ export default function PdfEditorPage() {
           }
           .pe-drop-title {
             margin: 0; color: var(--pe-drop-ink);
-            font-family: 'Syne', sans-serif; font-size: clamp(44px, 5.4vw, 68px);
+            font-family: 'Manrope', sans-serif; font-size: clamp(44px, 5.4vw, 68px);
             font-weight: 800; line-height: .95; letter-spacing: -.045em;
           }
           .pe-drop-title-dot { color: var(--pe-drop-signal); }
@@ -1440,7 +1440,7 @@ export default function PdfEditorPage() {
           .pe-drop-mount-wrap.is-rejecting .pe-drop-reg { color: var(--pe-drop-signal-ink); }
           .pe-drop-state-title {
             margin: 0; color: var(--pe-drop-ink);
-            font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700;
+            font-family: 'Manrope', sans-serif; font-size: 18px; font-weight: 700;
             letter-spacing: -.02em; line-height: 1.25;
           }
           .pe-drop-state-sub {
@@ -1452,7 +1452,7 @@ export default function PdfEditorPage() {
             min-height: 46px; margin-top: 24px; padding: 0 20px; box-sizing: border-box;
             border: 1px solid transparent; border-radius: 10px;
             background: var(--pe-drop-button); color: var(--pe-drop-button-ink);
-            font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+            font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700;
             cursor: pointer; box-shadow: 0 10px 24px rgba(20,18,28,.12);
             transition:
               transform var(--pe-drop-dur-fast) var(--pe-drop-ease-out),
@@ -1522,7 +1522,7 @@ export default function PdfEditorPage() {
           }
           .pe-drop-error-title {
             margin: 0; color: var(--pe-drop-ink);
-            font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+            font-family: 'Manrope', sans-serif; font-size: 16px; font-weight: 700;
             line-height: 1.25; letter-spacing: -.02em;
           }
           .pe-drop-error-message {

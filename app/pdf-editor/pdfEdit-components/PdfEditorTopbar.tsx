@@ -73,7 +73,7 @@ export default function PdfEditorTopbar({
         .pe-tb-wordmark {
           display: inline-flex; align-items: center;
           color: var(--pe-text);
-          font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800;
+          font-family: 'Manrope', sans-serif; font-size: 16px; font-weight: 800;
           letter-spacing: 0; line-height: 1;
           white-space: nowrap;
         }

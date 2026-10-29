@@ -353,7 +353,7 @@ export default function DocumentAnalyzer() {
           height: 3px; border-radius: 2px; background: var(--da-accent); opacity: .8;
         }
         .da-mast-title {
-          font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800;
+          font-family: 'Manrope', sans-serif; font-size: 20px; font-weight: 800;
           color: var(--text-primary); letter-spacing: -.3px; line-height: 1.1;
         }
         .da-mast-sub {
@@ -432,7 +432,7 @@ export default function DocumentAnalyzer() {
         .da-zone.active .da-sheet-line.mark { opacity: .72; }
 
         .da-zone-title {
-          font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800;
+          font-family: 'Manrope', sans-serif; font-size: 16px; font-weight: 800;
           color: var(--text-primary); margin-bottom: 6px; letter-spacing: -.2px;
         }
         .da-zone-sub { font-size: 12.5px; color: var(--text-muted); margin-bottom: 18px; }
@@ -520,7 +520,7 @@ export default function DocumentAnalyzer() {
           width: 100%; min-height: 50px; padding: 14px 20px;
           border-radius: 12px; border: 1px solid transparent;
           background: var(--da-accent); color: var(--da-ink);
-          font-family: 'Syne', sans-serif; font-size: 14.5px; font-weight: 800;
+          font-family: 'Manrope', sans-serif; font-size: 14.5px; font-weight: 800;
           letter-spacing: -.2px; cursor: pointer;
           box-shadow: 0 4px 18px var(--da-glow);
           transition: transform .16s, box-shadow .16s, background .2s, border-color .2s, color .2s, opacity .2s;
@@ -595,7 +595,7 @@ export default function DocumentAnalyzer() {
         }
         .da-reading-title {
           display: flex; align-items: center; gap: 10px;
-          font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700;
           color: var(--text-primary); text-align: center;
         }
         .da-reading-sub {
@@ -678,7 +678,7 @@ export default function DocumentAnalyzer() {
           color: var(--da-accent-text); margin-bottom: 3px;
         }
         .da-report-file {
-          font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700;
           color: var(--text-primary);
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
           max-width: 320px;
@@ -710,7 +710,7 @@ export default function DocumentAnalyzer() {
           font-size: 12.5px; color: var(--text-secondary); margin-bottom: 9px;
         }
         .da-distill-head b {
-          font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800;
+          font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 800;
           color: var(--da-accent-text);
         }
         .da-distill-track {
@@ -747,7 +747,7 @@ export default function DocumentAnalyzer() {
         .da-meta-item b { color: var(--text-secondary); font-weight: 600; }
         /* The engine reads as the product's own mark, not a vendor model id. */
         .da-meta-item .da-engine {
-          font-family: 'Syne', sans-serif; font-weight: 800;
+          font-family: 'Manrope', sans-serif; font-weight: 800;
           letter-spacing: -.02em; color: var(--text-primary);
         }
 
@@ -783,7 +783,7 @@ export default function DocumentAnalyzer() {
           display: flex; align-items: center; gap: 8px;
           padding: 11px 16px;
           border-bottom: 1px solid var(--border-card);
-          font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700;
           color: var(--text-primary);
         }
         .da-excerpts-head svg { color: var(--da-accent-text); }
@@ -802,7 +802,7 @@ export default function DocumentAnalyzer() {
           line-height: 1.55;
         }
         .da-excerpt-pg {
-          font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 10px; font-weight: 700;
           color: var(--da-accent-text);
           background: var(--da-wash);
           border: 1px solid var(--da-accent-border);

@@ -59,7 +59,7 @@
     --bw-ink is the one local constant (text on the accent fill), theme-
     invariant because both accent stops are theme-invariant.
   - Body text inherits the tool-surface voice (Inter, via the root font
-    class); Syne is the display face. Nothing that is not loaded in the
+    class); Manrope is the display face. Nothing that is not loaded in the
     repo. Every changing numeral is tabular.
   - Motion uses the house curves and honours prefers-reduced-motion;
     only opacity/transform/colour animate.
@@ -487,7 +487,7 @@ export default function BatchWorkflow() {
         .bw-frame[data-phase="dispatched"]  .bw-dot { background: var(--accent-start); animation: bw-pulse 1.6s ease-in-out infinite; }
         .bw-frame[data-phase="delivered"]   .bw-dot { background: var(--accent-start); }
         .bw-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 13px;
           font-weight: 700;
           color: var(--text-primary);
@@ -615,7 +615,7 @@ export default function BatchWorkflow() {
           border-color: color-mix(in srgb, var(--brand-red) 45%, var(--border-base));
         }
         .bw-floor-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 17px;
           font-weight: 700;
           color: var(--text-primary);
@@ -708,7 +708,7 @@ export default function BatchWorkflow() {
           animation: bw-draw 320ms var(--bw-ease) 120ms forwards;
         }
         .bw-slip-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 13px;
           font-weight: 700;
           color: var(--text-primary);
@@ -739,7 +739,7 @@ export default function BatchWorkflow() {
         }
         .bw-stamp {
           margin-left: auto;
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 9.5px;
           font-weight: 700;
           letter-spacing: 1.2px;
@@ -772,7 +772,7 @@ export default function BatchWorkflow() {
         .bw-group { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; }
         .bw-group-head { display: flex; align-items: center; gap: 8px; min-height: 24px; }
         .bw-group-label {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 10px;
           font-weight: 700;
           letter-spacing: 1.1px;
@@ -902,7 +902,7 @@ export default function BatchWorkflow() {
         .bw-btn-primary {
           background: var(--accent-start);
           color: var(--bw-ink);
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-weight: 700;
           box-shadow: 0 2px 10px color-mix(in srgb, var(--accent-start) 28%, transparent);
         }

@@ -1,4 +1,4 @@
-import { IBM_Plex_Mono, Syne } from "next/font/google";
+import { IBM_Plex_Mono, Manrope } from "next/font/google";
 import { pageMetadata } from "@/lib/metadata";
 
 import { TOOL_CATALOG } from "@/lib/usage/catalog";
@@ -12,7 +12,7 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
-const displayFont = Syne({
+const displayFont = Manrope({
   subsets: ["latin"],
   variable: "--pr-font-display",
   display: "swap",

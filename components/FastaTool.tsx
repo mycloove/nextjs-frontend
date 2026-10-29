@@ -710,7 +710,7 @@ export default function FastaTool() {
         .ft-zone.active .ft-zone-title { display: flex; align-items: center; gap: 8px; }
 
         .ft-zone-title {
-          font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 15px; font-weight: 700;
           color: var(--text-primary); margin: 20px 0 0;
         }
         .ft-zone-sub { font-size: 12px; color: var(--text-muted); margin: 5px 0 0; }
@@ -883,7 +883,7 @@ export default function FastaTool() {
           background: var(--bg-item);
           border: 1px solid var(--border-base);
           border-radius: var(--ft-r-sm);
-          font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700;
           color: var(--text-muted); cursor: pointer;
           transition: color var(--ft-dur-fast), background var(--ft-dur-fast), border-color var(--ft-dur-fast);
         }
@@ -914,7 +914,7 @@ export default function FastaTool() {
           display: flex; align-items: center; gap: 8px;
           padding: 12px 16px;
           border-bottom: 1px solid var(--border-base);
-          font-family: 'Syne', sans-serif; font-size: 12.5px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 700;
           color: var(--text-primary);
         }
         .ft-panel-head svg { color: var(--text-muted); flex-shrink: 0; }
@@ -926,7 +926,7 @@ export default function FastaTool() {
 
         /* ── Controls ── */
         .ft-lbl {
-          font-family: 'Syne', sans-serif; font-size: 9.5px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 9.5px; font-weight: 700;
           letter-spacing: 1.2px; text-transform: uppercase;
           color: var(--text-faint); display: block; margin-bottom: 7px;
         }
@@ -975,7 +975,7 @@ export default function FastaTool() {
           border-radius: var(--ft-r-sm);
           background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
           color: #fff;
-          font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700;
           cursor: pointer;
           box-shadow: 0 4px 16px var(--ft-accent-glow);
           transition: transform var(--ft-dur-fast) var(--ft-ease-out),

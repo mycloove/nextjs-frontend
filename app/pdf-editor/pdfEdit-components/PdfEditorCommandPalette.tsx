@@ -175,7 +175,7 @@ export function PdfEditorCommandPalette({ open, onClose, onRun, editingReady, re
         }
         .pe-shortcuts-title {
           margin: 0;
-          font-family: 'Syne', sans-serif; font-size: 17px;
+          font-family: 'Manrope', sans-serif; font-size: 17px;
         }
         .pe-shortcuts-close {
           min-height: 30px; padding: 0 9px;

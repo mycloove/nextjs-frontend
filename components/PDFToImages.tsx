@@ -21,7 +21,7 @@ import KineticSphere from '@/components/KineticSphere'
      coral→orange pair; --brand-yellow is reserved for edge-codes
      (frame numbers, job-ticket tag), the way film carries yellow edge
      markings. The blue of the previous implementation is gone.
-   · Fonts: Syne (display) is set explicitly for headings and values;
+   · Fonts: Manrope (display) is set explicitly for headings and values;
      body text inherits the tool-surface voice — Inter, as rendered by
      every sibling tool inside ToolWorkspace (next/font's body class
      outspecifies the DM Sans body rule in theme.css). Monospace uses
@@ -528,7 +528,7 @@ export default function PDFToImages() {
         }
         .p2i-plate-mark {
           position: absolute; top: 26px; left: 0; right: 0; text-align: center;
-          font-family: 'Syne', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 2.5px;
+          font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 10px; letter-spacing: 2.5px;
           color: var(--text-faint);
         }
         .p2i-plate-lines {
@@ -562,7 +562,7 @@ export default function PDFToImages() {
         }
 
         .p2i-zone-title {
-          font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: -0.2px;
+          font-family: 'Manrope', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: -0.2px;
           color: var(--text-primary); margin-bottom: 6px; transition: color 0.16s;
         }
         .p2i-zone.is-over .p2i-zone-title { color: color-mix(in srgb, var(--accent-start) 78%, var(--text-primary)); }
@@ -612,7 +612,7 @@ export default function PDFToImages() {
           position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
           background: color-mix(in srgb, var(--bg-card) 72%, transparent);
           backdrop-filter: blur(3px);
-          font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700;
           color: color-mix(in srgb, var(--accent-start) 78%, var(--text-primary));
           opacity: 0; pointer-events: none; transition: opacity 0.16s;
         }
@@ -661,7 +661,7 @@ export default function PDFToImages() {
         .p2i-panel-head {
           display: flex; align-items: center; gap: 8px; padding: 13px 16px;
           border-bottom: 1px solid var(--border-base);
-          font-family: 'Syne', sans-serif; font-size: 12.5px; font-weight: 700; color: var(--text-primary);
+          font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 700; color: var(--text-primary);
         }
         .p2i-panel-head svg { color: var(--text-muted); }
         .p2i-panel-body { padding: 16px; display: flex; flex-direction: column; gap: 18px; }
@@ -689,7 +689,7 @@ export default function PDFToImages() {
           background: color-mix(in srgb, var(--accent-start) 9%, var(--bg-item));
         }
         .p2i-dpi-val {
-          font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800;
+          font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 800;
           color: var(--text-primary); margin-bottom: 3px;
         }
         /* the chosen number lands — a 3px spring settle */
@@ -721,7 +721,7 @@ export default function PDFToImages() {
         .p2i-fmt-btn:disabled { cursor: not-allowed; }
         .p2i-fmt-name {
           display: flex; align-items: center; gap: 7px; margin-bottom: 2px;
-          font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 800;
+          font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 800;
           color: var(--text-muted); transition: color 0.16s;
         }
         .p2i-fmt-btn.active .p2i-fmt-name { color: var(--text-primary); }
@@ -746,7 +746,7 @@ export default function PDFToImages() {
         }
         .p2i-q-slider:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent-start) 55%, transparent); outline-offset: 4px; }
         .p2i-q-val {
-          font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700;
           color: color-mix(in srgb, var(--accent-start) 72%, var(--text-primary));
           min-width: 38px; text-align: right;
         }
@@ -816,7 +816,7 @@ export default function PDFToImages() {
           width: auto; flex: 0 0 auto; padding: 8px 18px; border: none; border-radius: 999px;
           background:
             linear-gradient(180deg, color-mix(in srgb, var(--accent-start) 90%, #fff) 0%, var(--accent-start) 42%, var(--accent-end) 100%);
-          color: #fff; font-family: 'Syne', sans-serif; font-size: 13.5px; font-weight: 700;
+          color: #fff; font-family: 'Manrope', sans-serif; font-size: 13.5px; font-weight: 700;
           letter-spacing: 0.02em; cursor: pointer;
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.5),
@@ -923,7 +923,7 @@ export default function PDFToImages() {
           animation: p2i-draw 0.32s 0.08s var(--p2i-ease-out) forwards;
         }
         .p2i-receipt-title {
-          font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700;
           color: var(--text-primary); margin-bottom: 3px;
         }
         .p2i-receipt-meta {
@@ -935,7 +935,7 @@ export default function PDFToImages() {
           display: inline-flex; align-items: center; gap: 7px;
           padding: 9px 14px; border-radius: 9px; border: none; cursor: pointer;
           background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
-          color: #fff; font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+          color: #fff; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700;
           box-shadow: 0 3px 14px color-mix(in srgb, var(--accent-start) 28%, transparent);
           transition: transform 0.16s var(--p2i-ease-out), box-shadow 0.16s;
         }
@@ -948,7 +948,7 @@ export default function PDFToImages() {
         /* ══ The frames — the contact sheet delivered ══ */
         .p2i-frames-head { display: flex; align-items: baseline; gap: 10px; padding: 0 2px; flex-wrap: wrap; }
         .p2i-frames-title {
-          font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 800;
+          font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 800;
           letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-faint);
         }
         .p2i-frames-hint { font-size: 11px; color: var(--text-muted); margin-left: auto; }

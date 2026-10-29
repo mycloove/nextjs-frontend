@@ -84,7 +84,7 @@ export default function PdfEditorDocumentDialog({ kind, fileName, onCancel, onCo
         .pe-document-backdrop { position: fixed; inset: 0; z-index: 510; display: grid; place-items: center; padding: 24px; background: var(--pe-scrim); overflow: auto; }
         .pe-document-dialog { width: min(560px, 100%); max-height: calc(100dvh - 48px); overflow: auto; border: 1px solid var(--pe-line); border-radius: var(--pe-r-md); background: var(--pe-panel); color: var(--pe-text); box-shadow: var(--pe-shadow-dialog); }
         .pe-document-dialog header { padding: 22px 22px 16px; border-bottom: 1px solid var(--pe-line); }
-        .pe-document-dialog h2 { margin: 0 0 8px; font-family: 'Syne', sans-serif; font-size: 19px; }
+        .pe-document-dialog h2 { margin: 0 0 8px; font-family: 'Manrope', sans-serif; font-size: 19px; }
         .pe-document-file { color: var(--pe-text-2); font-size: 12px; overflow-wrap: anywhere; }
         .pe-document-explanation { padding: 4px 22px; color: var(--pe-text-2); font-size: 13px; line-height: 1.6; }
         .pe-document-explanation p { margin: 14px 0; }

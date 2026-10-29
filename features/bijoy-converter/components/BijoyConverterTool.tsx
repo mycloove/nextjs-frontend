@@ -300,12 +300,12 @@ export default function BijoyConverterTool() {
           background: var(--b2u-accent-soft);
           border: 1px solid var(--b2u-accent-line);
           color: var(--b2u-accent);
-          font-family: 'Syne', sans-serif; font-weight: 700; font-size: 24px; line-height: 1;
+          font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 24px; line-height: 1;
         }
         .b2u-headmain { display: flex; flex-direction: column; gap: 3px; min-width: 220px; flex: 1; }
         .b2u-title {
           display: flex; align-items: center; gap: 9px; margin: 0;
-          font-family: 'Syne', sans-serif; font-size: 21px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 21px; font-weight: 700;
           letter-spacing: -0.2px; color: var(--text-primary);
         }
         .b2u-title .b2u-arc { display: inline-flex; color: var(--b2u-accent); }
@@ -338,7 +338,7 @@ export default function BijoyConverterTool() {
         }
         @keyframes b2u-fade { from { opacity: 0; } to { opacity: 1; } }
         .b2u-busy-label {
-          font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700;
           letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-secondary);
         }
 
@@ -354,7 +354,7 @@ export default function BijoyConverterTool() {
           padding: 12px 15px; border-bottom: 1px solid var(--border-base);
         }
         .b2u-tag {
-          font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 700;
           letter-spacing: 1.1px; text-transform: uppercase;
         }
         .b2u-desk.is-src .b2u-tag { color: var(--text-secondary); }
@@ -425,7 +425,7 @@ export default function BijoyConverterTool() {
         .b2u-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         .b2u-decode {
           display: inline-flex; align-items: center; gap: 9px;
-          font-family: 'Syne', sans-serif; font-size: 13.5px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 13.5px; font-weight: 700;
           color: var(--b2u-on-accent); background: var(--b2u-accent);
           border: none; border-radius: 10px; padding: 12px 22px; cursor: pointer;
           transition: transform 0.18s var(--b2u-ease), box-shadow 0.18s var(--b2u-ease),
@@ -468,7 +468,7 @@ export default function BijoyConverterTool() {
         .b2u-status.info { background: var(--bg-item); border: 1px solid var(--border-base); color: var(--text-muted); }
         .b2u-status.err { background: var(--b2u-danger-bg); border: 1px solid var(--b2u-danger-line); color: var(--b2u-danger-text); }
         .b2u-status svg { flex: 0 0 auto; margin-top: 1px; }
-        .b2u-status b { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--text-primary); }
+        .b2u-status b { font-family: 'Manrope', sans-serif; font-weight: 700; color: var(--text-primary); }
         .b2u-foot { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-faint); }
 
         @media (prefers-reduced-motion: reduce) {

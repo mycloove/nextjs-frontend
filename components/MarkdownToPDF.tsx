@@ -276,7 +276,7 @@ export default function MarkdownToPDF() {
         }
 
         .m2p-zone-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 15px; font-weight: 700;
           color: var(--text-primary, #e4e2ee); margin-bottom: 5px;
         }
@@ -375,7 +375,7 @@ export default function MarkdownToPDF() {
           display: flex; align-items: center; gap: 8px;
           padding: 13px 16px;
           border-bottom: 1px solid rgba(255,255,255,0.06);
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 12.5px; font-weight: 700;
           color: var(--text-primary, #e4e2ee);
         }
@@ -405,7 +405,7 @@ export default function MarkdownToPDF() {
           background: rgba(0,180,150,0.09);
         }
         .m2p-size-name {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 13px; font-weight: 700;
           color: var(--text-primary, #e4e2ee); margin-bottom: 2px;
         }
@@ -572,7 +572,7 @@ export default function MarkdownToPDF() {
           width: 100%; padding: 14px 20px; border-radius: 12px; border: none;
           background: linear-gradient(135deg, #00b496 0%, #00d4b0 100%);
           color: #fff;
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 14.5px; font-weight: 700; letter-spacing: -0.2px;
           cursor: pointer;
           box-shadow: 0 4px 24px rgba(0,180,150,0.3);

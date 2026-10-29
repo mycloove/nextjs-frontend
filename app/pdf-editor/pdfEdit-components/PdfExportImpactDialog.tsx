@@ -83,7 +83,7 @@ export default function PdfExportImpactDialog({ impact, fileName, onCancel, onCo
         }
         .pe-impact-title {
           margin: 7px 0 6px;
-          font-family: 'Syne', sans-serif; font-size: 19px; letter-spacing: 0;
+          font-family: 'Manrope', sans-serif; font-size: 19px; letter-spacing: 0;
         }
         .pe-impact-summary { margin: 0; color: var(--pe-text-2); font-size: 12.5px; line-height: 1.55; }
         .pe-impact-file {

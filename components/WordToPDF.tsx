@@ -48,7 +48,7 @@ import { toolRequest, getApiErrorMessage, ApiClientError } from '@/lib/api/clien
      colour, mirroring the Contact Sheet's yellow frame numbers);
      --brand-red carries danger and the proofreader's margin rule.
      No bare hex in any rule.
-   · Fonts: Syne (display) for headings and values; body text
+   · Fonts: Manrope (display) for headings and values; body text
      inherits the tool-surface voice — Inter, as rendered by every
      sibling tool inside ToolWorkspace. Monospace uses
      ui-monospace — nothing that is not loaded in the repo.
@@ -436,7 +436,7 @@ export default function WordToPDF() {
         }
 
         .w2p-zone-title {
-          font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: -0.2px;
+          font-family: 'Manrope', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: -0.2px;
           color: var(--text-primary); margin-bottom: 6px; transition: color 0.16s;
         }
         .w2p-zone.is-over .w2p-zone-title { color: color-mix(in srgb, var(--accent-start) 78%, var(--text-primary)); }
@@ -500,7 +500,7 @@ export default function WordToPDF() {
           position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
           background: color-mix(in srgb, var(--bg-card) 72%, transparent);
           backdrop-filter: blur(3px);
-          font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700;
           color: color-mix(in srgb, var(--accent-start) 78%, var(--text-primary));
           opacity: 0; pointer-events: none; transition: opacity 0.16s;
         }
@@ -617,7 +617,7 @@ export default function WordToPDF() {
         }
         .w2p-stage-text.is-final .w2p-stage-tag { color: color-mix(in srgb, var(--accent-start) 55%, var(--text-faint)); }
         .w2p-stage-name {
-          font-family: 'Syne', sans-serif; font-size: 12.5px; font-weight: 700; color: var(--text-primary);
+          font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 700; color: var(--text-primary);
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
         }
 
@@ -655,7 +655,7 @@ export default function WordToPDF() {
         .w2p-panel-head {
           display: flex; align-items: center; gap: 8px; padding: 13px 16px;
           border-bottom: 1px solid var(--border-base);
-          font-family: 'Syne', sans-serif; font-size: 12.5px; font-weight: 700; color: var(--text-primary);
+          font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 700; color: var(--text-primary);
         }
         .w2p-panel-head svg { color: var(--text-muted); }
         .w2p-panel-body {
@@ -724,7 +724,7 @@ export default function WordToPDF() {
           display: flex; align-items: center; justify-content: center; gap: 9px;
           width: 100%; padding: 14px 20px; border: none; border-radius: 12px;
           background: linear-gradient(135deg, var(--accent-start) 0%, var(--accent-end) 100%);
-          color: #fff; font-family: 'Syne', sans-serif; font-size: 14.5px; font-weight: 700;
+          color: #fff; font-family: 'Manrope', sans-serif; font-size: 14.5px; font-weight: 700;
           letter-spacing: -0.2px; cursor: pointer;
           box-shadow: 0 4px 24px color-mix(in srgb, var(--accent-start) 30%, transparent);
           transition: transform 0.18s var(--w2p-ease-out), box-shadow 0.18s, opacity 0.18s;
@@ -797,7 +797,7 @@ export default function WordToPDF() {
         .w2p-preview-head {
           display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
           padding: 10px 14px; border-bottom: 1px solid var(--border-base);
-          font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: var(--text-primary);
+          font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700; color: var(--text-primary);
         }
         .w2p-preview-head svg { color: var(--text-muted); }
         .w2p-preview-tag {
@@ -841,7 +841,7 @@ export default function WordToPDF() {
           animation: w2p-draw 0.32s 0.08s var(--w2p-ease-out) forwards;
         }
         .w2p-receipt-title {
-          font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700;
+          font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700;
           color: var(--text-primary); margin-bottom: 3px;
         }
         .w2p-receipt-meta {
@@ -868,7 +868,7 @@ export default function WordToPDF() {
           display: inline-flex; align-items: center; gap: 7px;
           padding: 9px 14px; border-radius: 9px; border: none; cursor: pointer;
           background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
-          color: #fff; font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
+          color: #fff; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700;
           text-decoration: none; text-align: center;
           box-shadow: 0 3px 14px color-mix(in srgb, var(--accent-start) 28%, transparent);
           transition: transform 0.16s var(--w2p-ease-out), box-shadow 0.16s;

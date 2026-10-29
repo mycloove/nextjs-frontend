@@ -1320,7 +1320,7 @@ export default function PDFToWord() {
 
         .p2w-title {
           margin: 0 0 16px;
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: clamp(28px, 3.5vw, 42px);
           font-weight: 700;
           line-height: 1.04;
@@ -1357,7 +1357,7 @@ export default function PDFToWord() {
           padding: 0 18px;
           border-radius: 9px;
           border: 1px solid transparent;
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 13px;
           font-weight: 700;
           letter-spacing: -0.005em;
@@ -1572,7 +1572,7 @@ export default function PDFToWord() {
           width: 40px;
           height: 40px;
           border-radius: 8px;
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 9px;
           font-weight: 800;
           letter-spacing: 0.04em;
@@ -1777,7 +1777,7 @@ export default function PDFToWord() {
           border-radius: 8px;
           background: linear-gradient(160deg, #2d6be4, #2452b8);
           color: #fff;
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 16px;
           font-weight: 800;
           box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26);
@@ -1818,7 +1818,7 @@ export default function PDFToWord() {
           color: var(--text-faint);
         }
         .p2w-stat b {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 14px;
           font-weight: 700;
           font-variant-numeric: tabular-nums;
@@ -2060,7 +2060,7 @@ export default function PDFToWord() {
         .p2w-proof-empty .p2w-wordmark { width: 54px; height: 54px; font-size: 21px; }
         .p2w-proof-empty h3 {
           margin: 4px 0 0;
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 18px;
           font-weight: 700;
           letter-spacing: -0.01em;

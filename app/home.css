@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
    mycloove — Premium Home Design System
-   Fonts: Inter (UI) · Syne (display) — loaded via theme.css
+   Fonts: Inter (UI) · Manrope (display) — loaded via theme.css
    Namespace: .home-*
    ═══════════════════════════════════════════════════════════════ */
 
@@ -80,7 +80,7 @@
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: 'Syne', var(--font-sans);
+  --font-display: 'Manrope', var(--font-sans);
 
   background: radial-gradient(circle at 84% 5%, rgba(232, 93, 63, 0.06), transparent 28rem),
     radial-gradient(circle at 10% 90%, rgba(38, 115, 77, 0.04), transparent 24rem),
@@ -1029,9 +1029,8 @@ html[data-theme="dark"] .home-hero-grid-bg {
 
 .home-hero-grid {
   display: grid;
-  /* 1.1 / .9: the display line "Every document task," needs ~9.9em, so the
-     copy column gets the extra measure — at 60px that is 594px in ~620px,
-     one planned line instead of a fractured four. */
+  /* The wider copy column keeps the display lines readable beside the visual
+     at desktop widths without changing the visual's space. */
   grid-template-columns: 1.1fr .9fr;
   align-items: center;
   gap: 72px;
@@ -1055,6 +1054,7 @@ html[data-theme="dark"] .home-hero-grid-bg {
   align-items: center;
   gap: 9px;
   color: var(--brand-text);
+  font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -1072,9 +1072,9 @@ html[data-theme="dark"] .home-hero-grid-bg {
 .home-page h1 {
   font-family: var(--font-display);
   font-size: clamp(40px, 4.9vw, 60px);
-  line-height: 1.04;
-  letter-spacing: -0.04em;
-  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  font-weight: 650;
   margin: 22px 0;
 }
 
@@ -1086,7 +1086,7 @@ html[data-theme="dark"] .home-hero-grid-bg {
   margin-top: 4px;
 }
 
-/* Syne has no italic; the second line's em carries the warm identity moment
+/* Manrope has no italic; the second line's em carries the warm identity moment
    instead — solid --brand-text, never gradient text: the gradient's light end
    measured 2.56:1 on the canvas, and gradient type reads as effect, not as
    hierarchy. */
@@ -1466,6 +1466,7 @@ html[data-theme="dark"] .home-file-note.error {
   gap: 9px;
   margin: 0 0 10px;
   color: var(--brand-text);
+  font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .12em;
@@ -1867,6 +1868,7 @@ html[data-theme="dark"] .home-preview-file-icon {
   gap: 9px;
   margin: 0 0 6px;
   color: var(--brand-text);
+  font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -2156,6 +2158,7 @@ html[data-theme="dark"] .home-preview-file-icon {
   gap: 9px;
   margin: 0;
   color: var(--brand-text);
+  font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -2255,6 +2258,7 @@ html[data-theme="dark"] .home-preview-file-icon {
 .home-resume-feature-copy { max-width: 590px; }
 .home-resume-kicker {
   color: var(--brand-text);
+  font-family: var(--font-display);
   font-size: 10px;
   font-weight: 750;
   letter-spacing: .11em;
@@ -2574,6 +2578,7 @@ html[data-theme="dark"] .home-preview-file-icon {
   align-items: center;
   gap: 9px;
   color: var(--brand-text);
+  font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .12em;
@@ -3515,6 +3520,7 @@ html[data-theme="dark"] .home-card-layered-icon-front {
   align-items: center;
   gap: 9px;
   color: #f5a28f;
+  font-family: var(--font-display);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .12em;

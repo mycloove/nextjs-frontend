@@ -737,7 +737,7 @@ export default function ImageToPDF() {
         .i2p.is-over .i2p-ghost:nth-child(2) { translate: -50% -7px; }
 
         .i2p-zone-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 17px; font-weight: 700; letter-spacing: -0.2px;
           color: var(--text-primary);
           margin-bottom: 7px;
@@ -761,7 +761,7 @@ export default function ImageToPDF() {
         /* ── Buttons ── */
         .i2p-browse-btn {
           display: inline-flex; align-items: center; gap: 8px;
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 13px; font-weight: 700;
           color: var(--i2p-bind-ink);
           background: var(--i2p-bind-bg);
@@ -953,7 +953,7 @@ export default function ImageToPDF() {
         /* ── The table ── */
         .i2p-table-head { display: flex; align-items: center; justify-content: space-between; }
         .i2p-table-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 13px; font-weight: 700;
           color: var(--text-primary);
           display: flex; align-items: center; gap: 9px;
@@ -1130,7 +1130,7 @@ export default function ImageToPDF() {
         .i2p-bind-sub { font-size: 11.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
         .i2p-bind-btn {
           display: inline-flex; align-items: center; gap: 9px;
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 14px; font-weight: 700; letter-spacing: -0.2px;
           color: var(--i2p-bind-ink);
           background: var(--i2p-bind-bg);
@@ -1181,7 +1181,7 @@ export default function ImageToPDF() {
           color: var(--text-primary);
         }
         .i2p-cancel-btn {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 12px; font-weight: 700;
           color: var(--i2p-danger-text);
           background: var(--i2p-danger-bg);
@@ -1202,7 +1202,7 @@ export default function ImageToPDF() {
         }
         .i2p-bound-mark { animation: i2p-doc-in 0.6s var(--i2p-spring) backwards; margin-bottom: 18px; }
         .i2p-bound-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 22px; font-weight: 800; letter-spacing: -0.4px;
           color: var(--text-primary);
           margin-bottom: 8px;
@@ -1245,7 +1245,7 @@ export default function ImageToPDF() {
           border: 1px solid var(--i2p-amber-line);
         }
         .i2p-head-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 20px; font-weight: 800; letter-spacing: -0.4px;
           color: var(--text-primary);
           margin: 0;

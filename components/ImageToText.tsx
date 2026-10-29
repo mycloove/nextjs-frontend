@@ -937,7 +937,7 @@ export default function ImageToText() {
         .i2t-bed-row { display: flex; gap: 3px; }
         .i2t-gl { width: 8px; height: 9px; border-radius: 1.5px; background: var(--text-ghost, var(--border-base)); }
         .i2t-empty-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 17px;
           font-weight: 700;
           color: var(--text-primary);
@@ -1314,14 +1314,14 @@ export default function ImageToText() {
         .i2t-p { margin: 0 0 0.85em; }
         .i2t-text > :last-child { margin-bottom: 0; }
         .i2t-h1 {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 15.5px;
           font-weight: 700;
           line-height: 1.35;
           margin: 1.15em 0 0.5em;
         }
         .i2t-h2 {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 13.5px;
           font-weight: 700;
           line-height: 1.4;
@@ -1410,7 +1410,7 @@ export default function ImageToText() {
         }
         .i2t-extra { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
         .i2t-extra-label {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-size: 10px;
           font-weight: 700;
           letter-spacing: 1.4px;
@@ -1497,7 +1497,7 @@ export default function ImageToText() {
 
         /* empty result — an honest reading, not an error */
         .i2t-none { display: flex; flex-direction: column; gap: 6px; padding-top: 2px; }
-        .i2t-none-title { font-family: 'Syne', sans-serif; font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+        .i2t-none-title { font-family: 'Manrope', sans-serif; font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
         .i2t-none-sub { font-size: 12px; line-height: 1.6; color: var(--text-muted); }
 
         /* ── Region C — action bar ── */
@@ -1531,7 +1531,7 @@ export default function ImageToText() {
         .i2t-btn-primary {
           background: var(--accent-start);
           color: var(--i2t-ink);
-          font-family: 'Syne', sans-serif;
+          font-family: 'Manrope', sans-serif;
           font-weight: 700;
           box-shadow: 0 10px 22px -12px rgba(0, 0, 0, 0.55);
         }
