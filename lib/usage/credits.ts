@@ -1,6 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { createClient } from '@/lib/supabase/server'
-import { ensureProfileRecord, getPrisma, readAccountStatus, UsageStoreMissing } from './store'
+// Identity comes from lib/auth's single reader — custom cookie session first,
+// Supabase (Google/legacy) bridge second. Same shape for both, so the credit
+// actor never depends on which system authenticated the browser.
+import { currentSessionUser } from '@/lib/auth/current-user'
+import { getPrisma, UsageStoreMissing } from './store'
 import { claimGuestCredits, readCreditBalance, type CreditActor } from './credit-store'
 import { CreditError } from './credit-policy'
 import type { CreditSnapshot } from './credit-types'
@@ -20,15 +23,12 @@ export function creditStoreError(error: unknown): CreditError {
 }
 
 export async function resolveCreditActor(anonId: string): Promise<CreditActor> {
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.getUser()
-  // A missing session is a guest. A transport/auth-service failure must not
-  // silently switch an authenticated account into somebody else's guest pool.
-  if (error && error.name !== 'AuthSessionMissingError') throw new CreditError('Could not verify the account session.', 'credit_identity_unavailable', 503)
-  if (!data.user) return { anonId, userId: null, active: true, unmetered: false }
-  await ensureProfileRecord(data.user.id, data.user.email ?? null)
-  const status = await readAccountStatus(data.user.id)
-  return { anonId, userId: status.active ? data.user.id : null, active: status.active, unmetered: status.active && (status.role === 'Owner' || status.role === 'Operator') }
+  const user = await currentSessionUser()
+  if (!user) return { anonId, userId: null, active: true, unmetered: false }
+  // currentSessionUser already ran ensureProfileRecord + readAccountStatus on
+  // both identity paths and reads an inactive account as signed-out, matching
+  // the guest-parity rule the quota wrapper applies.
+  return { anonId, userId: user.userId, active: true, unmetered: user.role === 'Owner' || user.role === 'Operator' }
 }
 
 export function legacyCreditSnapshot(actor: CreditActor, message = 'Credit accounts are not enabled. Existing tool usage limits still apply.'): CreditSnapshot {

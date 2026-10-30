@@ -8,6 +8,7 @@ import { resumeTemplates } from './resumeTemplates.ts'
 const componentNames = ['BanglishInput', 'BanglishTools', 'BanglishCorrection', 'ResumeTemplateLibrary', 'ResumeLanguageSuggestions']
 const components = componentNames.map((name) => ts.createSourceFile(`${name}.tsx`, readFileSync(new URL(`./${name}.tsx`, import.meta.url), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX))
 const stylesheet = readFileSync(new URL('./MrResumeStudio.module.css', import.meta.url), 'utf8')
+const themeStylesheet = readFileSync(new URL('./MrResumeTheme.module.css', import.meta.url), 'utf8')
 
 function literalChoices(node: ts.Expression): string[] {
   if (ts.isStringLiteral(node)) return [node.text]
@@ -57,8 +58,8 @@ test('typing and review panels never reference missing CSS-module classes', () =
 })
 
 test('review surfaces have legible light/dark role tokens without changing the global palette', () => {
-  const light = stylesheet.match(/\.studio\s*\{([^}]+)/u)![1]
-  const dark = stylesheet.match(/:global\(html\[data-theme="dark"\]\) \.studio\s*\{([^}]+)/u)![1]
+  const light = themeStylesheet.match(/\.theme\s*\{([^}]+)/u)![1]
+  const dark = themeStylesheet.match(/:global\(html\[data-theme="dark"\]\) \.theme\s*\{([^}]+)/u)![1]
   const luminance = (hex: string) => hex.match(/[a-f\d]{2}/giu)!.map((value) => parseInt(value, 16) / 255)
     .map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
     .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0)

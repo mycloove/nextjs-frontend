@@ -12,13 +12,18 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * Mr. Markdown workspace all read the *same* identity shape — email, display
  * name, role, eligibility and avatar — without one reaching into another's state.
  *
- * The Supabase session proves the identity; `/api/profile` adds the
- * product-side fields (display name, avatar, role) that Supabase Auth does not
- * own. If the profile read fails, it degrades to the session email rather than
- * blanking the control — the same fail-open posture `/api/profile` itself uses.
+ * Identity resolution order (AUTH-INDEPENDENCE plan):
+ *  1. `/api/auth/me` — the custom account session first; the endpoint itself
+ *     bridges to the Supabase session for legacy/Google identities and answers
+ *     with the same profile fields either way.
+ *  2. A direct Supabase read as fallback — only used when the endpoint says
+ *     signed-out, so a legacy browser never renders a guest form for a live
+ *     Supabase session while transport hiccups sort themselves out.
+ * If the profile read fails, it degrades to the session email rather than
+ * blanking the control — the same fail-open posture `/api/profile` uses.
  */
 export type AccountViewer = {
-  /** Supabase's authenticated ID, never an email-derived account key. */
+  /** The product user id (users.id) — the key every usage/credit row uses. */
   id: string
   email: string | null
   name: string | null
@@ -47,6 +52,18 @@ type ProfilePayload = {
   active?: boolean
 }
 
+type MePayload = {
+  signed_in?: boolean
+  user?: {
+    id?: string
+    email?: string | null
+    name?: string | null
+    role?: string | null
+    active?: boolean
+    avatar_url?: string | null
+  } | null
+}
+
 export function useAccountViewer(): AccountViewerState {
   const [status, setStatus] = useState<'loading' | 'ready'>('loading')
   const [viewer, setViewer] = useState<AccountViewer | null>(null)
@@ -63,11 +80,22 @@ export function useAccountViewer(): AccountViewerState {
     let sequence = 0
     let controller: AbortController | null = null
 
-    const resolve = async (userId: string | undefined, userEmail: string | undefined) => {
-      const requestSequence = ++sequence
+    const commitViewer = (next: AccountViewer | null) => {
+      const actorChanged = actorRef.current !== (next?.id ?? null)
+      actorRef.current = next?.id ?? null
+      if (actorChanged) {
+        // Do not keep another account's photo/name visible while its
+        // replacement resolves. Consumers also suspend their credit snapshot
+        // in this state.
+        setViewer(null)
+        setStatus(next ? 'loading' : 'ready')
+      }
+      if (next) setViewer(next)
+      window.dispatchEvent(new CustomEvent('mycloove:credits-changed'))
+    }
+
+    const resolveFromProfile = async (userId: string | undefined, userEmail: string | undefined, requestSequence: number) => {
       controller?.abort()
-      const actorChanged = actorRef.current !== (userId ?? null)
-      actorRef.current = userId ?? null
       if (!userId) {
         if (alive) {
           setViewer(null)
@@ -75,12 +103,6 @@ export function useAccountViewer(): AccountViewerState {
           window.dispatchEvent(new CustomEvent('mycloove:credits-changed'))
         }
         return
-      }
-      if (actorChanged && alive) {
-        // Do not keep another account's photo/name visible while its replacement
-        // resolves. Consumers also suspend their credit snapshot in this state.
-        setViewer(null)
-        setStatus('loading')
       }
       controller = new AbortController()
       const signal = controller.signal
@@ -98,7 +120,7 @@ export function useAccountViewer(): AccountViewerState {
         // dead-end the control.
       }
       if (!alive || requestSequence !== sequence) return
-      setViewer({
+      commitViewer({
         id: userId,
         email: userEmail ?? (typeof profile?.email === 'string' ? profile.email : null),
         name: typeof profile?.name === 'string' ? profile.name : null,
@@ -106,23 +128,43 @@ export function useAccountViewer(): AccountViewerState {
         avatarUrl: typeof profile?.avatar_url === 'string' ? profile.avatar_url : null,
         active: typeof profile?.active === 'boolean' ? profile.active : null,
       })
-      setStatus('ready')
-      window.dispatchEvent(new CustomEvent('mycloove:credits-changed'))
+      if (alive) setStatus('ready')
+    }
+
+    const resolve = async (requestSequence: number) => {
+      // 1. The unified endpoint (custom session → Supabase bridge inside).
+      let me: MePayload | null = null
+      try {
+        const response = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-store' })
+        if (response.ok) me = (await response.json()) as MePayload
+      } catch {
+        // Transport failure: fall through to the direct Supabase read below.
+      }
+      if (!alive || requestSequence !== sequence) return
+      if (me?.signed_in && me.user?.id) {
+        commitViewer(meToViewer(me))
+        setStatus('ready')
+        return
+      }
+      // 2. Direct Supabase fallback for a session the endpoint could not see.
+      const { data } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
+      if (!alive || requestSequence !== sequence) return
+      await resolveFromProfile(data.user?.id, data.user?.email, requestSequence)
     }
 
     const initialSequence = sequence
-    supabase.auth.getUser()
-      .then(({ data }) => {
-        if (alive && sequence === initialSequence) void resolve(data.user?.id, data.user?.email)
-      })
-      .catch(() => {
-        if (alive && sequence === initialSequence) void resolve(undefined, undefined)
-      })
+    void resolve(initialSequence)
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (alive) void resolve(session?.user?.id, session?.user?.email)
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!alive) return
+      // Supabase events matter for legacy/Google sessions; the /api/auth/me
+      // read decides the truth either way, so an event is just a nudge to
+      // re-resolve (a custom-session logout also fires its own refresh).
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || session?.user) {
+        void resolve(++sequence)
+      }
     })
 
     return () => {
@@ -133,10 +175,27 @@ export function useAccountViewer(): AccountViewerState {
   }, [nonce])
 
   const signOut = useCallback(async () => {
+    // Clear both identity systems: the custom DB session and any Supabase
+    // session the browser may hold (whichever exists is a no-op for the other).
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {
+      // The cookie still expires server-side; never dead-end a logout click.
+    })
     const supabase = createClient()
     const { error } = await supabase.auth.signOut()
     if (error) throw new Error(error.message)
   }, [])
 
   return { status, viewer, refresh, signOut }
+}
+
+function meToViewer(me: MePayload): AccountViewer {
+  const user = me.user ?? {}
+  return {
+    id: String(user.id ?? ''),
+    email: typeof user.email === 'string' ? user.email : null,
+    name: typeof user.name === 'string' ? user.name : null,
+    role: typeof user.role === 'string' ? user.role : null,
+    avatarUrl: typeof user.avatar_url === 'string' ? user.avatar_url : null,
+    active: typeof user.active === 'boolean' ? user.active : null,
+  }
 }

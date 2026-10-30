@@ -23,11 +23,13 @@ async function refuseIfTurnedOff(supabase: ReturnType<typeof createClient>) {
   if (body.active !== false) return false;
   await supabase.auth.signOut();
   return true;
-}
-
-type LoginClientProps = {
+}type LoginClientProps = {
   initialMode: AuthMode;
   authError?: string;
+  /** The server gate found a signed-in session whose account is turned off. */
+  signedInInactive?: boolean;
+  /** Landing state from the verify-link redirect served by /auth/verify. */
+  verifyNotice?: "verified" | "error" | null;
   signOutOnMount?: boolean;
 };
 
@@ -118,6 +120,8 @@ function emailValidationError(value: string): string {
 export default function LoginClient({
   initialMode,
   authError,
+  signedInInactive = false,
+  verifyNotice = null,
   signOutOnMount = false,
 }: LoginClientProps) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
@@ -127,12 +131,14 @@ export default function LoginClient({
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
   // Submit handlers run from form events; the ref keeps a double click from
   // launching a second request while the first is in flight.
   const busyRef = useRef(false);
   const [error, setError] = useState(authError ?? "");
   const [notice, setNotice] = useState("");
+  const [canResendVerification, setCanResendVerification] = useState(verifyNotice === "error");
   const router = useRouter();
 
   const isRegister = mode === "register";
@@ -157,10 +163,26 @@ export default function LoginClient({
   }, [isRegister, isReset, password]);
 
   useEffect(() => {
-    if (!signOutOnMount) return;
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    // A turned-off session must not linger: clear BOTH identity systems (the
+    // custom cookie and any Supabase session a legacy account holds).
+    if (!signOutOnMount && !signedInInactive) return;
+    void fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
     const supabase = createClient();
     void supabase.auth.signOut();
-  }, [signOutOnMount]);
+  }, [signOutOnMount, signedInInactive]);
+
+  useEffect(() => {
+    if (verifyNotice === "verified") {
+      setNotice("Your email is confirmed. Log in with your email and password.");
+    } else if (verifyNotice === "error") {
+      setError("That confirmation link is invalid or has expired. Enter your email below to request a new verification link.");
+      setCanResendVerification(true);
+    }
+  }, [verifyNotice]);
 
   const switchMode = (next: AuthMode) => {
     if (next === mode) return;
@@ -169,6 +191,7 @@ export default function LoginClient({
     setNotice("");
     setEmailError("");
     setConfirmPassword("");
+    setCanResendVerification(false);
   };
 
   const onEmailChange = (value: string) => {
@@ -181,19 +204,6 @@ export default function LoginClient({
   const onEmailBlur = () => {
     if (!email.trim()) return;
     setEmailError(emailValidationError(email));
-  };
-
-  const finishAfterSignIn = async (
-    supabase: ReturnType<typeof createClient>,
-  ) => {
-    if (await refuseIfTurnedOff(supabase)) {
-      setError(turnedOffMessage);
-      return;
-    }
-    await claimUsageAfterLogin();
-    const role = await fetchOwnRole();
-    router.push(role && role !== "User" ? "/admin" : "/");
-    router.refresh();
   };
 
   const onGoogle = async () => {
@@ -226,10 +236,9 @@ export default function LoginClient({
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!hydrated || busyRef.current) return;
     setError("");
     setNotice("");
-
-    const supabase = createClient();
 
     // Recovery flow: the user arrived from a reset email and already holds a
     // session, so there is no email field to collect - only a new password.
@@ -245,6 +254,7 @@ export default function LoginClient({
       busyRef.current = true;
       setBusy(true);
       try {
+        const supabase = createClient();
         const { error: updateError } = await supabase.auth.updateUser({
           password,
         });
@@ -284,50 +294,43 @@ export default function LoginClient({
       busyRef.current = true;
       setBusy(true);
       try {
-        const { data: signUpData, error: signUpError } =
-          await supabase.auth.signUp({
+        // Signup creates a pending account, never a login session. Keep the
+        // person on the form and distinguish a mail outage from a sent link.
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
             email: trimmedEmail,
             password,
-            options: {
-              // The display name rides along in user metadata.
-              data: { display_name: name.trim() || undefined },
-            },
-          });
-        if (signUpError) {
-          setError(describeAuthError(signUpError.message));
+            display_name: name.trim() || null,
+          }),
+        });
+        const data = (await response.json().catch(() => null)) as
+          | { error?: string; mail_sent?: boolean }
+          | null;
+
+        if (!response.ok) {
+          const message = typeof data?.error === "string" ? data.error : "";
+          setError(message ? describeAuthError(message) : "Something went wrong. Please try again.");
           return;
         }
 
-        // Supabase answers an already-registered address with a user that has
-        // no identities (enumeration protection). Treat it as an existing
-        // account instead of implying a new one was created.
-        if (signUpData.user && signUpData.user.identities?.length === 0) {
-          setMode("login");
-          setConfirmPassword("");
-          setNotice(
-            "That email already has an account. Log in with your password.",
-          );
-          return;
-        }
-
-        // With email confirmation off — the intended setup for an email and
-        // password account — sign-up returns a live session and the user is
-        // signed in immediately.
-        if (signUpData.session) {
-          await finishAfterSignIn(supabase);
-          return;
-        }
-
-        // Confirmation is still enabled on the Supabase project: the account
-        // exists, but password sign-in is refused until the address is
-        // confirmed. Say so plainly instead of showing a bare error.
         setMode("login");
+        setPassword("");
         setConfirmPassword("");
-        setNotice(
-          "Your account is ready. Confirm the email we sent, then log in with your password.",
-        );
+        setCanResendVerification(true);
+        if (data?.mail_sent === true) {
+          setNotice(
+            `We sent a verification link to ${trimmedEmail}. Check your inbox and spam folder. Verify your email, then log in.`,
+          );
+        } else {
+          setError(
+            'Your account was created, but we could not confirm that a verification email was sent. Check your inbox and spam folder. If it is missing, wait a minute and use "Resend verification email". Verify your email before logging in.',
+          );
+        }
       } catch {
-        setError("Something went wrong. Please try again.");
+        setError(unreachableMessage);
       } finally {
         busyRef.current = false;
         setBusy(false);
@@ -348,17 +351,33 @@ export default function LoginClient({
     busyRef.current = true;
     setBusy(true);
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
-        password,
+      // Custom login: verifies the scrypt credential in auth_accounts. When
+      // the address only exists in Supabase Auth (legacy account), the
+      // server bridges it on this same password and provisions the custom
+      // row — the next login never touches Supabase again.
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: trimmedEmail, password }),
       });
-      if (signInError) {
-        setError(describeAuthError(signInError.message));
+      const data = (await response.json().catch(() => null)) as
+        | { error?: string; code?: string; user?: { role?: string } }
+        | null;
+
+      if (!response.ok) {
+        const message = typeof data?.error === "string" ? data.error : "";
+        setError(message ? describeAuthError(message) : "Something went wrong. Please try again.");
+        if (data?.code === "email_unverified") setCanResendVerification(true);
         return;
       }
-      await finishAfterSignIn(supabase);
+
+      await claimUsageAfterLogin();
+      const role = await fetchOwnRole();
+      router.push(role && role !== "User" ? "/admin" : "/");
+      router.refresh();
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(unreachableMessage);
     } finally {
       busyRef.current = false;
       setBusy(false);
@@ -366,6 +385,7 @@ export default function LoginClient({
   };
 
   const onForgotPassword = async () => {
+    if (busyRef.current) return;
     setError("");
     setNotice("");
     const trimmedEmail = email.trim();
@@ -405,6 +425,43 @@ export default function LoginClient({
     }
   };
 
+  const onResendVerification = async () => {
+    if (busyRef.current) return;
+    const trimmedEmail = email.trim();
+    const emailMsg = emailValidationError(trimmedEmail);
+    if (emailMsg) {
+      setEmailError(emailMsg);
+      return;
+    }
+    busyRef.current = true;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/auth/resend", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: trimmedEmail }),
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(typeof data?.error === "string" ? describeAuthError(data.error) : "We could not request a verification link. Try again in a moment.");
+        return;
+      }
+      // The endpoint deliberately hides account existence and throttles recent
+      // requests. Acknowledging the request is not proof of email delivery.
+      setNotice(
+        "Verification requested. If this email has an unverified account, check its inbox and spam folder. Requests less than a minute apart do not send another email.",
+      );
+    } catch {
+      setError(unreachableMessage);
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
+
   const emailField = (
     <label className={`auth-field${emailError ? " invalid" : ""}`}>
       <span>Email</span>
@@ -420,6 +477,7 @@ export default function LoginClient({
         onChange={(event) => onEmailChange(event.target.value)}
         onBlur={onEmailBlur}
         placeholder="you@example.com"
+        disabled={!hydrated || busy}
         required
       />
       {emailError ? (
@@ -466,6 +524,9 @@ export default function LoginClient({
             </p>
             <h1 id="auth-title">{title}</h1>
             <p className="auth-lede">{subtitle}</p>
+            <noscript>
+              <p className="auth-alert error">JavaScript is required to sign up or log in.</p>
+            </noscript>
 
             {!isReset ? (
               <>
@@ -498,7 +559,7 @@ export default function LoginClient({
                   type="button"
                   className="auth-google"
                   onClick={onGoogle}
-                  disabled={busy}
+                  disabled={!hydrated || busy}
                 >
                   <svg
                     width="17"
@@ -523,7 +584,7 @@ export default function LoginClient({
                       d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
                     />
                   </svg>
-                  {busy ? "Opening Google…" : "Continue with Google"}
+                  {busy ? "Please wait..." : "Continue with Google"}
                 </button>
                 <p className="auth-divider" aria-hidden="true">
                   <span>or continue with email</span>
@@ -531,7 +592,8 @@ export default function LoginClient({
               </>
             ) : null}
 
-            <form className="auth-form" onSubmit={onSubmit} noValidate>
+            {/* Never put credentials in a URL if submission precedes hydration. */}
+            <form className="auth-form" method="post" onSubmit={onSubmit} noValidate>
               {isRegister ? (
                 <label className="auth-field">
                   <span>Full name</span>
@@ -543,6 +605,7 @@ export default function LoginClient({
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Your name (optional)"
                     maxLength={80}
+                    disabled={!hydrated || busy}
                   />
                 </label>
               ) : null}
@@ -566,12 +629,14 @@ export default function LoginClient({
                         : "Your password"
                     }
                     minLength={isRegister || isReset ? 8 : undefined}
+                    disabled={!hydrated || busy}
                     required
                   />
                   <button
                     type="button"
                     className="auth-password-toggle"
                     onClick={() => setShowPassword((open) => !open)}
+                    disabled={!hydrated}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? "Hide" : "Show"}
@@ -585,7 +650,7 @@ export default function LoginClient({
                   type="button"
                   className="auth-forgot"
                   onClick={onForgotPassword}
-                  disabled={busy}
+                  disabled={!hydrated || busy}
                 >
                   Forgot password?
                 </button>
@@ -601,6 +666,7 @@ export default function LoginClient({
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     placeholder="Repeat your password"
+                    disabled={!hydrated || busy}
                     required
                   />
                 </label>
@@ -617,8 +683,21 @@ export default function LoginClient({
                 </p>
               ) : null}
 
-              <button type="submit" className="auth-submit" disabled={busy}>
-                {busy
+              {canResendVerification && !isReset ? (
+                <button
+                  type="button"
+                  className="auth-forgot"
+                  onClick={onResendVerification}
+                  disabled={!hydrated || busy}
+                >
+                  Resend verification email
+                </button>
+              ) : null}
+
+              <button type="submit" className="auth-submit" disabled={!hydrated || busy}>
+                {!hydrated
+                  ? "Loading form..."
+                  : busy
                   ? "Please wait…"
                   : isReset
                     ? "Update password"

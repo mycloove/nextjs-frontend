@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useImperativeHandle, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent, type ReactNode, type Ref } from 'react'
 import Link from 'next/link'
 import styles from './MrResumeStudio.module.css'
+import theme from './MrResumeTheme.module.css'
+import { prepareRegularSuspension } from './regularWorkspace'
+import type { RegularLatexSnapshot } from '../latex/types'
 import { Glyph, StudioDropdown, type GlyphName } from './MrResumeStudioControls'
 import ResumeSectionPanel from './ResumeSectionPanel'
 import ResumeInspectorPanel, { type ResumeInspectorPanelProps, type ResumeHeadingIconSize, type SectionDividerConfig } from './ResumeInspectorPanel'
@@ -256,7 +259,17 @@ function SectionText({ value, sources, onCorrect, t }: { value: string; sources:
       })}</p>)
 }
 
-export default function MrResumeStudio() {
+export type RegularStudioBridge = {
+  getSnapshot: () => RegularLatexSnapshot | null
+  prepareToHide: () => ReturnType<typeof prepareRegularSuspension>
+}
+
+export default function MrResumeStudio({ embedded = false, workspaceActive = true, bridgeRef, onCopyToLatex }: {
+  embedded?: boolean
+  workspaceActive?: boolean
+  bridgeRef?: Ref<RegularStudioBridge>
+  onCopyToLatex?: () => void
+} = {}) {
   const [documentTitle, setDocumentTitle] = useState('Untitled resume')
   const [fullName, setFullName] = useState('Ayesha Rahman')
   const [purpose, setPurpose] = useState<Purpose>('Resume')
@@ -345,6 +358,7 @@ export default function MrResumeStudio() {
   const [flipTick, setFlipTick] = useState(0)
   const flipBeforeRef = useRef<Map<string, DOMRect> | null>(null)
   const stageRef = useRef<HTMLDivElement>(null)
+  const studioRef = useRef<HTMLDivElement>(null)
   const paperRef = useRef<HTMLElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
   const contentRef = useRef<HTMLTextAreaElement>(null)
@@ -364,6 +378,8 @@ export default function MrResumeStudio() {
   const [preparingPrint, setPreparingPrint] = useState(false)
   const latestPrintState = useRef<Record<string, unknown>>({})
   const latestDraftRef = useRef<ResumeDraft | null>(null)
+  const latestLatexRef = useRef('')
+  const workspaceStateRef = useRef({ restored: false, writable: false, modal: false })
   const titleBeforePrint = useRef('')
   const catalog = [...sections, ...customSections]
   const currentSection = catalog.find((section) => section.id === active) || sections[0]
@@ -382,12 +398,39 @@ export default function MrResumeStudio() {
   const editorTitle = (id: string) => titles[id] ?? tx(catalog.find((section) => section.id === id)?.title ?? 'Untitled section')
   const documentHasBangla = /[\u0980-\u09ff]/u.test([fullName, ...enabled.map((id) => `${title(id)} ${content[id] ?? ''}`)].join('\n'))
   const effectiveFontFamily = paperFontStack(font, fontFamily, language === 'Bangla' || documentHasBangla)
-  latestPrintState.current = { content, titles, enabled, fullName, documentTitle, language, font, fontSize, leading, pageSize, margin, sectionGap, format, profileAlign, photoSize, photoShape, profileImageDisplay, profileImage, accent, customAccentColor, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor }
+  latestPrintState.current = { content, titles, enabled, fullName, documentTitle, language, font, fontSize, leading, pageSize, margin, sectionGap, format, profileAlign, photoSize, photoShape, profileImageDisplay, profileImage, accent, customAccentColor, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor, workspaceActive }
 
   function captureDraft(): ResumeDraft {
     return { documentTitle, fullName, purpose, enabled, customSections, content, titles, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor, language, banglishMode, format, pageSize, font, fontSize, leading, sectionGap, margin, accent, customAccentColor, profileAlign, profileImage, photoShape, photoSize, photoBackground, photoBlur, photoCustomColor, profileImageDisplay, templateId }
   }
   latestDraftRef.current = captureDraft()
+  workspaceStateRef.current = { restored, writable: restored && saveState !== 'unavailable' && !restoreBlockedRef.current, modal: wordCorrection !== null }
+
+  // The host keeps this editor mounted. The bridge reads current refs, not the
+  // debounced storage copy, and never transfers ownership of the Regular draft.
+  useImperativeHandle(bridgeRef, () => ({
+    getSnapshot: () => {
+      const draft = latestDraftRef.current
+      if (!workspaceStateRef.current.restored || !draft) return null
+      return { title: draft.documentTitle, source: latestLatexRef.current, font: draft.font, photo: draft.profileImageDisplay ?? draft.profileImage }
+    },
+    prepareToHide: () => {
+      const result = prepareRegularSuspension({
+        ...workspaceStateRef.current,
+        printing: printingRef.current,
+        gesture: Boolean(dragRef.current || photoResizeRef.current),
+        modal: workspaceStateRef.current.modal || Boolean(studioRef.current?.querySelector('dialog[open]')),
+      }, () => {
+        const timestamp = new Date().toISOString()
+        window.localStorage.setItem(draftKey, encodeResumeDraft(latestDraftRef.current!, timestamp))
+        return timestamp
+      })
+      if (result.savedAt) { setSavedAt(result.savedAt); setSaveState('saved') }
+      if (result.saveFailed) { workspaceStateRef.current.writable = false; setSaveState('unavailable') }
+      if (!result.reason) { setBulletMenuOpen(false); setConfirmFresh(false) }
+      return result
+    },
+  }), [])
 
   function applyDraft(draft: ResumeDraft) {
     setDocumentTitle(draft.documentTitle); setFullName(draft.fullName); setPurpose(draft.purpose)
@@ -786,6 +829,7 @@ export default function MrResumeStudio() {
   ? '% Latin Modern is the TeX-native default font; no \\setmainfont override is needed.\n'
   : `\\setmainfont{${font}}\n`}${languageSetup}\n\\usepackage{xcolor,enumitem,titlesec,hyperref,dashrule}\n${hasHeadingIcons || hasContactIcons ? '\\usepackage{fontawesome5}\n' : ''}\\definecolor{accent}{HTML}{${(accent < accents.length ? accents[accent].color : customAccentColor).slice(1)}}\n\\titleformat{\\section}{\\normalsize\\bfseries\\color{accent}}{}{0em}{}\n\\titlespacing*{\\section}{0pt}{${sectionGap * .75}pt}{6pt}\n\\setlength{\\parindent}{0pt}\n\\setlength{\\parskip}{6pt}\n\\begin{document}\n\\fontsize{${fontSize}}{${(fontSize * leading).toFixed(2)}}\\selectfont\n${nameplate}${profileDivider ? `\n\n${profileDivider}` : ''}\n\n${lines.join('\n\n')}\n\\end{document}\n`
   }, [content, enabled, customSections, titles, language, documentHasBangla, fullName, pageSize, margin, font, fontSize, leading, sectionGap, accent, customAccentColor, profileAlign, profileImage, photoShape, photoSize, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor])
+  latestLatexRef.current = latex
 
   function selectSection(id: string, focus = false) {
     setActive(id)
@@ -1310,6 +1354,7 @@ export default function MrResumeStudio() {
   // real paper size and margins via @page, true scale, white paper. The
   // temporary document title gives the dialog a filename that says "draft".
   async function printDraft() {
+    if (!workspaceActive) return
     if (format !== 'Visual') {
       setNotice('The draft PDF prints from the Visual preview. Switch back to Visual, then try again.')
       return
@@ -1517,7 +1562,8 @@ export default function MrResumeStudio() {
   } as CSSProperties
 
   return (
-    <div className={styles.studio} lang={editorLanguage === 'Bangla' ? 'bn' : 'en'} data-editor-language={editorLanguage} data-mobile-panel={mobilePanel} data-dragging={!!dragging} onKeyDown={(event) => {
+    <div ref={studioRef} className={`${theme.theme} ${styles.studio} ${embedded ? styles.embedded : ''}`} lang={editorLanguage === 'Bangla' ? 'bn' : 'en'} data-editor-language={editorLanguage} data-mobile-panel={mobilePanel} data-dragging={!!dragging} onKeyDown={(event) => {
+      if (!workspaceActive) return
       if (event.ctrlKey && event.altKey && !event.metaKey && !event.shiftKey && !event.getModifierState('AltGraph') && event.code === 'KeyB' && !event.nativeEvent.isComposing) {
         event.preventDefault()
         setBanglishMode((current) => !current)
@@ -1527,7 +1573,7 @@ export default function MrResumeStudio() {
         <Link className={styles.backLink} href="/" aria-label={tx('Back to workspace')}><Glyph name="back" /></Link>
         <div className={styles.brand}><span className={styles.brandMark}><Glyph name="page" /></span><span>Mr.<b>Resume</b><small>Studio</small></span></div>
         <div className={styles.docIdentity}><input aria-label={tx('Document title')} value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /><span className={`${styles.saveStatus} ${saveState === 'unavailable' ? styles.saveUnavailable : ''}`} title={tx(saveState === 'unavailable' ? 'This browser is blocking local autosave. Download your work regularly.' : 'Your draft is autosaved on this device. Nothing is uploaded.')}><span key={savedAt ?? saveState} className={styles.savePulse}>{saveState === 'saved' && savedAt ? `${tx('Autosaved')} ${new Date(savedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` : tx(saveState === 'unavailable' ? 'Autosave unavailable' : 'Autosave on')}</span></span></div>
-        <div className={styles.topActions}><button type="button" className={styles.texButton} aria-label={tx('Export .tex')} title={tx('Editable LaTeX source')} onClick={downloadLatex}><Glyph name="download" /><span>.tex</span></button><div className={styles.editorLanguageControl}><StudioDropdown value={tx(editorLanguage)} options={(['English', 'Bangla'] as EditorLanguage[]).map(tx)} onChange={(value) => setEditorLanguage(value === tx('Bangla') ? 'Bangla' : 'English')} label={tx('Editor language')} icon="globe" /></div><button type="button" className={styles.exportButton} aria-label={tx('Download draft PDF')} title={tx('A draft PDF, printed from this preview')} disabled={preparingPrint} aria-busy={preparingPrint} onClick={printDraft}><Glyph name="download" /><span>{tx(preparingPrint ? 'Preparing PDF' : 'Draft PDF')}</span></button></div>
+        <div className={styles.topActions}><div className={styles.sourceActions}><button type="button" className={styles.texButton} aria-label={tx('Export .tex')} title={tx('Editable LaTeX source')} onClick={downloadLatex}><Glyph name="download" /><span>.tex</span></button>{onCopyToLatex && <button type="button" className={styles.copyToLatexButton} aria-label={tx('Copy to LaTeX')} title={tx('Create a separate LaTeX project from the current Regular writing')} onClick={onCopyToLatex}><span>{tx('Copy to LaTeX')}</span><span className={styles.copyToLatexArrow} aria-hidden="true">→</span></button>}</div><div className={styles.editorLanguageControl}><StudioDropdown value={tx(editorLanguage)} options={(['English', 'Bangla'] as EditorLanguage[]).map(tx)} onChange={(value) => setEditorLanguage(value === tx('Bangla') ? 'Bangla' : 'English')} label={tx('Editor language')} icon="globe" /></div><button type="button" className={styles.exportButton} aria-label={tx('Download draft PDF')} title={tx('A draft PDF, printed from this preview')} disabled={preparingPrint} aria-busy={preparingPrint} onClick={printDraft}><Glyph name="download" /><span>{tx(preparingPrint ? 'Preparing PDF' : 'Draft PDF')}</span></button></div>
       </header>
 
       <section className={styles.toolbar} aria-label={tx('Document setup')}>

@@ -1,0 +1,52 @@
+/* One MR Resume token owner; values are the existing Regular studio palette. */
+.theme {
+  --rs-bg: #f4f3ef;
+  --rs-panel: #fffefa;
+  --rs-raised: #fffefa;
+  --rs-paper: #ffffff;
+  --rs-ink: #272923;
+  --rs-muted: #6e7268;
+  --rs-line: #dadbd1;
+  --rs-control-line: #6e7466;
+  --rs-soft: #edede7;
+  --rs-accent: #405444;
+  --rs-primary: #405444;
+  --rs-on-primary: #fffefa;
+  --rs-accent-soft: #edf3ed;
+  --rs-gold: #916b2b;
+  --rs-success: #40664e;
+  --rs-danger: #9a514a;
+  --rs-focus: #8c6bad;
+  --rs-paper-ink: #272923;
+  --rs-paper-muted: #6e7268;
+  --rs-paper-control: #405444;
+  --rs-paper-guide: #dadbd1;
+  --rs-paper-border: #dadbd1;
+  --rs-shadow: 0 8px 28px rgba(40, 43, 33, .035);
+  --rs-dropdown-shadow: 0 18px 48px rgba(26, 22, 18, .16), 0 3px 10px rgba(26, 22, 18, .06);
+  --rs-paper-shadow: 0 2px 6px rgba(40, 43, 33, .06), 0 16px 42px rgba(40, 43, 33, .16);
+  --rs-ease: cubic-bezier(.16, 1, .3, 1);
+  color-scheme: light;
+}
+
+:global(html[data-theme="dark"]) .theme {
+  --rs-bg: #171916;
+  --rs-panel: #20231f;
+  --rs-raised: #20231f;
+  --rs-ink: #f0efe8;
+  --rs-muted: #b5b9ae;
+  --rs-line: #3d4238;
+  --rs-control-line: #798276;
+  --rs-soft: #2b2e28;
+  --rs-accent: #cce0b8;
+  --rs-primary: #cce0b8;
+  --rs-on-primary: #24301e;
+  --rs-accent-soft: #293c2f;
+  --rs-gold: #e0c17c;
+  --rs-success: #b3d5ba;
+  --rs-danger: #e1a29b;
+  --rs-focus: #cce0b8;
+  --rs-dropdown-shadow: 0 18px 48px rgba(0, 0, 0, .5), 0 3px 10px rgba(0, 0, 0, .3);
+  --rs-paper-shadow: 0 0 0 1px rgba(240, 239, 232, .2), 0 8px 18px rgba(0, 0, 0, .58), 0 28px 60px rgba(0, 0, 0, .76), 0 0 26px rgba(204, 224, 184, .1);
+  color-scheme: dark;
+}

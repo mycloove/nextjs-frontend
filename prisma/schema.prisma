@@ -128,6 +128,7 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
   featureUsageEvents FeatureUsageEvent[]
   creditAccount CreditAccount?
+  authAccount AuthAccount?
 
   @@map("users")
 }
@@ -328,4 +329,85 @@ model AdminAuditLog {
   @@index([actorId, createdAt(sort: Desc)])
   @@index([action, createdAt(sort: Desc)])
   @@map("admin_audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Custom account credentials (AUTH-INDEPENDENCE plan). Email + password
+// accounts are owned by this schema instead of Supabase Auth (GoTrue), so
+// sign-up is a plain row insert with no GoTrue rate limits or shared SMTP
+// quota in the path. Verification and reset mail delivery itself runs on the
+// Flask/Render service against Brevo (features/account_mail.py); this schema
+// only stores the hashed tokens. Google sign-in still uses Supabase Auth and
+// is bridged in through `legacySupabaseUserId` / `userId`.
+//
+// Passwords: node:crypto scrypt with a per-password random salt, stored as
+// `scrypt$N$r$p$salt$hash` (lib/auth/hash.ts). NOTHING in plaintext ever
+// lands here. `userId` links the credential to the product profile row in
+// `users` — same uuid key every Usage/Credit row references — so a migrated
+// legacy account keeps all its history.
+// ---------------------------------------------------------------------------
+
+enum AuthTokenPurpose {
+  signup_verify
+  password_reset
+  change_email
+
+  @@map("auth_token_purpose")
+}
+
+model AuthAccount {
+  id                   String    @id @default(uuid()) @db.Uuid
+  email                String    @unique
+  passwordHash         String    @map("password_hash")
+  displayName          String?   @map("display_name")
+  // Soft gate: an account is usable the moment the row exists; verification
+  // is required only before a password-reset token is handed out. This is the
+  // design rule that makes "signup never fails" true — a failed email is a
+  // resend, not a lost account.
+  emailVerified        Boolean   @default(false) @map("email_verified")
+  // Set once a legacy Supabase (Google / old email+password) account signs in
+  // through the compatibility bridge, so future logins stay in this table.
+  legacySupabaseUserId String?   @unique @map("legacy_supabase_user_id")
+  // Product profile row. Created together with a fresh sign-up, or linked to
+  // the existing row when a legacy account is bridged.
+  userId               String?   @unique @map("user_id") @db.Uuid
+  lastLoginAt          DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokens               VerificationToken[]
+  sessions             AuthSession[]
+
+  @@map("auth_accounts")
+}
+
+model VerificationToken {
+  // Raw tokens are Hi-random, 32+ bytes, and shown only once in an email;
+  // only their SHA-256 is stored, matching the session discipline below.
+  tokenHash String           @unique @map("token_hash")
+  id        String           @id @default(uuid()) @db.Uuid
+  purpose   AuthTokenPurpose
+  accountId String           @map("account_id") @db.Uuid
+  expiresAt DateTime         @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime?        @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  account   AuthAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, purpose])
+  @@map("auth_tokens")
+}
+
+model AuthSession {
+  // DB-backed session: the cookie carries a random token, the row carries only
+  // its SHA-256. Logout deletes the row, so a stolen cookie dies with the row.
+  id        String      @id @default(uuid()) @db.Uuid
+  tokenHash String      @unique @map("token_hash")
+  accountId String      @map("account_id") @db.Uuid
+  expiresAt DateTime    @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  userAgent String?     @map("user_agent")
+  account   AuthAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("auth_sessions")
 }

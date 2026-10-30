@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { after, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+// Identity reads go through the unified reader (custom session → Supabase bridge).
+import { currentSessionUser } from '@/lib/auth/current-user'
 import { applyAnonCookie, readOrCreateAnonId } from './cookie'
 import { parseUsageSnapshot, quotaExceededBody } from './parse'
-import { claimAnonUsage, consumeToolUsage, ensureProfileRecord, getPrisma, readAccountStatus, readToolSnapshot, recordSuccessfulFeatureUsage, releaseReservedUsage, UsageStoreMissing } from './store'
+import { claimAnonUsage, consumeToolUsage, getPrisma, readToolSnapshot, recordSuccessfulFeatureUsage, releaseReservedUsage, UsageStoreMissing } from './store'
 import type { UsageSnapshot } from './types'
 import { creditDatabase, creditRequestFingerprint, creditRequestId, creditStoreError, loadCreditSnapshot, resolveCreditActor, validateCreditOrigin } from './credits'
 import { claimGuestCredits, finishCreditOperation, reserveCredits, type CreditActor } from './credit-store'
@@ -130,18 +131,12 @@ async function beginCreditQuota(request: Request, toolId: string, anonId: string
 }
 
 async function currentUser() {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
-  const user = data.user
+  // Same unified reader as resolveCreditActor: custom cookie session →
+  // Supabase bridge. readAccountStatus already demoted a turned-off account
+  // to guest parity inside it, so the wrapper only maps the admin bypass.
+  const user = await currentSessionUser()
   if (!user) return { userId: null as string | null, isAdmin: false }
-  await ensureProfileRecord(user.id, user.email ?? null)
-  // readAccountStatus is the single authority for "who may act": a turned-off
-  // account is demoted to a guest here, so beginToolQuota meters it at the
-  // guest cap instead of the member cap. The bench gate (requireAdmin) already
-  // refuses it outright; the product path must not keep serving member quota.
-  const status = await readAccountStatus(user.id)
-  if (!status.active) return { userId: null as string | null, isAdmin: false }
-  return { userId: user.id, isAdmin: status.role === 'Owner' || status.role === 'Operator' }
+  return { userId: user.userId as string | null, isAdmin: user.role === 'Owner' || user.role === 'Operator' }
 }
 
 async function consumeUsage(anonId: string, toolId: string, requestId: string) {

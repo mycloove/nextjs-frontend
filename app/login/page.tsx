@@ -1,6 +1,5 @@
 import LoginClient from "@/app/login/LoginClient";
-import { createClient } from "@/lib/supabase/server";
-import { ensureProfileRecord, readAccountStatus } from "@/lib/usage/store";
+import { currentSessionUser } from "@/lib/auth/current-user";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
@@ -12,32 +11,41 @@ export const metadata: Metadata = {
 };
 
 type LoginPageProps = {
-  searchParams: Promise<{ mode?: string; error?: string }>;
+  searchParams: Promise<{ mode?: string; error?: string; verified?: string; verify?: string }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  let turnedOff = params.error === "inactive";
 
-  if (data.user) {
-    let destination = "/";
-    try {
-      await ensureProfileRecord(data.user.id, data.user.email ?? null);
-      const status = await readAccountStatus(data.user.id);
-      turnedOff = !status.active;
-      if (status.active && status.role !== "User") destination = "/admin";
-    } catch {
-      destination = "/";
-    }
-    if (!turnedOff) redirect(destination);
+  // One gate for both identity systems: the custom account session (cookie)
+  // and the Supabase bridge are unified inside currentSessionUser. A signed-in
+  // visitor lands in the product (admins go to the bench) instead of seeing
+  // the form again.
+  const user = await currentSessionUser();
+
+  let turnedOff = params.error === "inactive";
+  if (user) {
+    turnedOff = !user.active;
+  }
+
+  // A verification link must land on the form, even if this browser also
+  // holds a separate Google/legacy session. Confirmation is not a login.
+  const verificationLanding = params.verified === "1" || params.verify === "error";
+  if (user && !turnedOff && !verificationLanding) {
+    redirect(user.role !== "User" ? "/admin" : "/");
   }
 
   return (
     <LoginClient
       initialMode={params.mode === "register" ? "register" : "login"}
-      signOutOnMount={turnedOff}
+      signedInInactive={Boolean(user) && turnedOff}
+      verifyNotice={
+        params.verified === "1"
+          ? "verified"
+          : params.verify === "error"
+            ? "error"
+            : null
+      }
       authError={
         turnedOff
           ? "This account is turned off."

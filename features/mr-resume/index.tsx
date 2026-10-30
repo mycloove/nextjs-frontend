@@ -1,3 +1,3 @@
 'use client'
 
-export { default } from './components/MrResumeStudio'
+export { default } from './components/MrResumeWorkspace'

@@ -157,6 +157,10 @@ export default function ProfileMenu({
     try {
       if (onSignOut) await onSignOut()
       else {
+        // Clear the custom account session first, then any Supabase session
+        // (legacy/Google). Each call is a no-op when its system has no session.
+        const cleared = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        if (!cleared.ok) throw new Error('logout-failed')
         const { error } = await createClient().auth.signOut()
         if (error) throw error
       }

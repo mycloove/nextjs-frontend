@@ -1,0 +1,37 @@
+.preview { display: flex; min-width: 0; min-height: 0; height: 100%; flex: 1; flex-direction: column; color: var(--rs-ink); background: var(--rs-bg); }
+.controls { display: flex; min-height: 64px; flex: 0 0 auto; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--rs-line); background: var(--rs-panel); }
+.identity { display: flex; flex-direction: column; gap: 2px; }
+.identity b { font-size: 12px; font-weight: 650; }
+.identity span { color: var(--rs-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.identity span[data-current="false"] { color: var(--rs-gold); }
+.navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.navigation button, .navigation select { min-width: 32px; min-height: 32px; padding: 4px 8px; border: 1px solid var(--rs-control-line); border-radius: 6px; color: var(--rs-ink); background: var(--rs-panel); font: inherit; font-size: 11px; font-variant-numeric: tabular-nums; }
+.navigation button { cursor: pointer; }
+.navigation button:disabled, .navigation select:disabled { opacity: .5; cursor: not-allowed; }
+.navigation :is(button, select):focus-visible { outline: 2px solid var(--rs-focus); outline-offset: 2px; }
+.stage { position: relative; min-width: 0; min-height: 0; flex: 1; padding: 16px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--rs-control-line) transparent; }
+.empty { display: flex; min-height: 260px; height: 100%; align-items: center; justify-content: center; flex-direction: column; gap: 16px; text-align: center; }
+.emptyMark { display: grid; width: 56px; height: 68px; place-items: center; border: 1px solid var(--rs-control-line); border-radius: 6px; color: var(--rs-muted); font-family: ui-monospace, monospace; font-size: 13px; }
+.empty h3 { margin: 0; font-size: 16px; font-weight: 550; letter-spacing: -.02em; }
+.empty p { max-width: 38ch; margin: 0; color: var(--rs-muted); font-size: 13px; line-height: 1.7; }
+.sheet { position: relative; width: fit-content; margin: 0 auto; background: var(--rs-paper); box-shadow: var(--rs-paper-shadow); color-scheme: light; }
+.sheet[data-ready="false"] { visibility: hidden; }
+.canvas { display: block; max-width: none; }
+.loading { color: var(--rs-muted); font-size: 12px; }
+.error { padding: 12px; border-left: 2px solid var(--rs-danger); color: var(--rs-ink); background: var(--rs-panel); font-size: 12px; line-height: 1.7; }
+.registration { position: absolute; z-index: 3; pointer-events: none; border: 2px solid var(--rs-paper-control); background: rgba(64, 84, 68, .08); }
+.footer { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 8px 12px; border-top: 1px solid var(--rs-line); color: var(--rs-muted); background: var(--rs-panel); font-size: 10px; font-variant-numeric: tabular-nums; }
+.extracted { max-width: 72ch; margin: 16px auto 0; color: var(--rs-muted); font-size: 12px; }
+.extracted summary { padding: 8px 0; cursor: pointer; }
+.extracted pre { padding: 12px; overflow: auto; color: var(--rs-ink); background: var(--rs-panel); font: inherit; white-space: pre-wrap; }
+/* Mozilla PDF.js text-layer contract, Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0 */
+.textLayer { --min-font-size: 1; --total-scale-factor: calc(var(--scale-factor) * var(--user-unit)); --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size)); --min-font-size-inv: calc(1 / var(--min-font-size)); position: absolute; inset: 0; overflow: clip; line-height: 1; text-align: initial; text-size-adjust: none; transform-origin: 0 0; color-scheme: only light; forced-color-adjust: none; }
+.textLayer :global(:is(span, br)) { position: absolute; color: transparent; white-space: pre; cursor: text; transform-origin: 0 0; }
+.textLayer > :global(:not(.markedContent)), .textLayer :global(.markedContent span:not(.markedContent)) { z-index: 1; --font-height: 0; --scale-x: 1; --rotate: 0deg; font-size: calc(var(--text-scale-factor) * var(--font-height)); transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv)); }
+.textLayer :global(.markedContent) { display: contents; }
+.textLayer[data-main-rotation="90"] { transform: rotate(90deg) translateY(-100%); }
+.textLayer[data-main-rotation="180"] { transform: rotate(180deg) translate(-100%, -100%); }
+.textLayer[data-main-rotation="270"] { transform: rotate(270deg) translateX(-100%); }
+.textLayer :global(::selection) { color: transparent; background: rgba(64, 84, 68, .25); }
+@media (max-width: 640px) { .navigation { width: 100%; } .navigation button, .navigation select { min-height: 44px; flex: 1; } .controls { padding: 8px; } .stage { padding: 16px; } .footer { font-size: 11px; } }
+@media (prefers-reduced-motion: reduce) { .preview * { scroll-behavior: auto; } }
