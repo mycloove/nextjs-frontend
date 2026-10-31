@@ -1,4 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
+import { currentSessionUser } from '@/lib/auth/current-user'
+import { AuthStoreMissing } from '@/lib/auth/db'
 import { canOperate, isAdminRole, type AppRole } from '@/lib/supabase/roles'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -38,26 +40,40 @@ export function checkAdminWriteRate(): boolean {
 
 
 export async function requireAdmin() {
-  const supabase = await createClient()
-  const { data: userData } = await supabase.auth.getUser()
-  if (!userData.user) return { ok: false as const, status: 401 as const, supabase }
-
   try {
-    const status = await readAccountStatus(userData.user.id)
+    // Use the same identity as /login and /api/account/role. Email/password
+    // login now issues a custom cookie, not necessarily a Supabase session;
+    // checking Supabase alone bounces that admin between /admin and /login.
+    // This also keeps a second provider's account from overriding this one.
+    const account = await currentSessionUser()
+    if (!account) {
+      // The unified reader hides failed/disabled legacy sessions. Preserve the
+      // bench's unavailable/inactive diagnostics, but NEVER authorize from this
+      // second read: only the unified identity above may open the gate.
+      const supabase = await createClient()
+      const { data } = await supabase.auth.getUser()
+      if (data.user) {
+        const status = await readAccountStatus(data.user.id)
+        if (!status.active) return { ok: false as const, status: 403 as const, inactive: true as const }
+      }
+      return { ok: false as const, status: 401 as const }
+    }
+
+    const status = await readAccountStatus(account.userId)
     if (!status.active) {
-      return { ok: false as const, status: 403 as const, inactive: true as const, supabase }
+      return { ok: false as const, status: 403 as const, inactive: true as const }
     }
     if (isAdminRole(status.role)) {
-      return { ok: true as const, supabase, user: userData.user, role: status.role }
+      return { ok: true as const, user: { id: account.userId, email: account.email }, role: status.role }
     }
   } catch (error) {
-    if (error instanceof UsageStoreMissing) {
-      return { ok: false as const, status: 503 as const, supabase, message: error.message }
+    if (error instanceof UsageStoreMissing || error instanceof AuthStoreMissing) {
+      return { ok: false as const, status: 503 as const, message: error.message }
     }
     throw error
   }
 
-  return { ok: false as const, status: 403 as const, supabase }
+  return { ok: false as const, status: 403 as const }
 }
 
 type AdminGate = Awaited<ReturnType<typeof requireAdmin>>

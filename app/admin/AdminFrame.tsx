@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useTransition } from 'react'
 import BenchIcon, { type BenchIconName } from './BenchIcon'
+import { BenchToasts, useBenchToasts } from './BenchToast'
 import type { AppRole } from '@/lib/supabase/roles'
 import styles from './bench.module.css'
 
@@ -49,6 +50,8 @@ export default function AdminFrame({
   const pathname = usePathname()
   const router = useRouter()
   const [signingOut, setSigningOut] = useState(false)
+  const signingOutRef = useRef(false)
+  const toast = useBenchToasts()
 
   /*
    * Reload every panel from the store without a browser reload.
@@ -85,14 +88,22 @@ export default function AdminFrame({
   }
 
   const signOut = async () => {
-    if (signingOut) return
+    if (signingOutRef.current) return
+    signingOutRef.current = true
     setSigningOut(true)
     try {
+      // The bench accepts both identity systems, so neither session may remain
+      // when we return to /login. A failed logout must not look successful.
+      const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      if (!response.ok) throw new Error('Custom session logout failed')
       const supabase = createClient()
-      await supabase.auth.signOut()
-      router.replace('/login')
-      router.refresh()
-    } finally {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      // Discard cached signed-in route payloads as well as the cookies.
+      window.location.replace('/login')
+    } catch {
+      toast.push('bad', 'Sign-out did not finish. Check your connection and try again.')
+      signingOutRef.current = false
       setSigningOut(false)
     }
   }
@@ -184,8 +195,9 @@ export default function AdminFrame({
             <button
               type="button"
               className={styles.spineAction}
-              onClick={() => void signOut()}
+              onClick={signOut}
               disabled={signingOut}
+              aria-busy={signingOut}
               aria-label="Sign out of the bench"
             >
               <BenchIcon className={styles.navIcon} name="signOut" />
@@ -197,6 +209,7 @@ export default function AdminFrame({
         </div>
       </aside>
       <div className={styles.stage} key={stageKey}>{children}</div>
+      <BenchToasts toasts={toast.toasts} onDismiss={toast.dismiss} />
     </div>
   )
 }

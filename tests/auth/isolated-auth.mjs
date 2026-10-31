@@ -18,11 +18,18 @@ const sources = new Map([
   'lib/auth/session.ts',
   'lib/auth/mail.ts',
   'lib/auth/http.ts',
+  'lib/supabase/roles.ts',
+  'lib/usage/admin.ts',
   'app/api/auth/signup/route.ts',
   'app/api/auth/login/route.ts',
+  'app/api/auth/logout/route.ts',
   'app/api/auth/resend/route.ts',
+  'app/api/account/role/route.ts',
+  'app/api/admin/admins/route.ts',
   'app/auth/verify/route.ts',
   'app/login/page.tsx',
+  'app/admin/layout.tsx',
+  'app/admin/page.tsx',
 ].map((name) => [name.replace(/\.tsx?$/, ''), name]))
 const compiled = new Map()
 
@@ -63,8 +70,10 @@ export function createAuthHarness({ env = {}, transport } = {}) {
   }
   const createSupabase = mock.fn(async () => supabase)
   const usage = {
+    UsageStoreMissing: class UsageStoreMissing extends Error {},
     ensureProfileRecord: mock.fn(async () => {}),
     readAccountStatus: mock.fn(async () => ({ active: true, role: 'User' })),
+    listAdminRecords: mock.fn(async () => []),
   }
   const mailTransport = mock.fn(transport ?? (async () => Response.json({ messageId: 'synthetic-message-id' }, { status: 201 })))
   const errors = mock.fn()
@@ -74,6 +83,8 @@ export function createAuthHarness({ env = {}, transport } = {}) {
   const cookies = mock.fn(async () => ({ get: cookieRead }))
   const redirect = mock.fn((location) => { throw Object.assign(new Error('Isolated Next redirect'), { location }) })
   const LoginClient = () => null
+  const AdminFrame = () => null
+  const PeopleDesk = () => null
   const safeProcess = { env: Object.freeze({
     NODE_ENV: 'test', BREVO_API_KEY: 'synthetic-api-key', MAIL_FROM_EMAIL: 'sender@example.test', ...env,
   }) }
@@ -85,6 +96,7 @@ export function createAuthHarness({ env = {}, transport } = {}) {
     ['next/server', { NextResponse }],
     ['next/headers', { cookies }],
     ['next/navigation', { redirect }],
+    ['next/font/google', { JetBrains_Mono: () => ({ variable: 'synthetic-mono' }) }],
     ['react/jsx-runtime', nativeRequire('react/jsx-runtime')],
     ['lib/auth/db', {
       getAuthPrisma: () => prisma,
@@ -92,8 +104,12 @@ export function createAuthHarness({ env = {}, transport } = {}) {
       AuthStoreMissing: class AuthStoreMissing extends Error {},
     }],
     ['lib/supabase/server', { createClient: createSupabase }],
+    ['lib/supabase/service', { createServiceClient: () => { throw new Error('Live Supabase admin access is forbidden in auth regression tests') } }],
     ['lib/usage/store', usage],
     ['app/login/LoginClient', { __esModule: true, default: LoginClient }],
+    ['app/admin/AdminFrame', { __esModule: true, default: AdminFrame }],
+    ['app/admin/PeopleDesk', { __esModule: true, default: PeopleDesk }],
+    ['app/admin/format', { shortDate: (value) => value }],
   ])
   const modules = new Map()
 
@@ -135,7 +151,7 @@ export function createAuthHarness({ env = {}, transport } = {}) {
 
   return {
     load, prisma, supabase, createSupabase, usage, mailTransport, errors,
-    blockedFetch, cookieRead, redirect, LoginClient,
+    blockedFetch, cookieRead, redirect, LoginClient, AdminFrame, PeopleDesk,
     setCookie: (value) => { cookie = value },
   }
 }
