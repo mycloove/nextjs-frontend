@@ -1,5 +1,5 @@
 import { LATEX_LIMITS, LATEX_PROJECT_VERSION, type LatexAsset, type LatexProject, type RegularLatexSnapshot } from './types.ts'
-import { applyNativeFontChoices, assertLatexPath, LatexProjectError, newLatexId, validateLatexProject } from './project.ts'
+import { applyNativeFontChoices, assertLatexPath, isLatexTextPath, LatexProjectError, newLatexId, validateLatexProject } from './project.ts'
 import { decodeSourceBytes, imageDimensions } from './projectArchive.ts'
 
 function runArchiveWorker<T>(request: Record<string, unknown>, transfer: Transferable[] = []): Promise<T> {
@@ -33,7 +33,7 @@ export async function importSupportedFile(file: File): Promise<{ path: string; c
   assertLatexPath(file.name)
   if (file.size > LATEX_LIMITS.uploadBytes) throw new LatexProjectError('This file exceeds the 3 MiB project limit.')
   const bytes = new Uint8Array(await file.arrayBuffer())
-  if (/\.(?:tex|sty|cls|bib|bst)$/iu.test(file.name)) return { path: file.name, content: decodeSourceBytes(bytes) }
+  if (isLatexTextPath(file.name)) return { path: file.name, content: decodeSourceBytes(bytes) }
   const mediaType = /\.png$/iu.test(file.name) ? 'image/png' : 'image/jpeg'
   imageDimensions(bytes, mediaType)
   const blob = new Blob([new Uint8Array(bytes)], { type: mediaType })

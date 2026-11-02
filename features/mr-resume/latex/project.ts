@@ -5,7 +5,10 @@ export class LatexProjectError extends Error {
   constructor(message: string, code = 'invalid_project') { super(message); this.name = 'LatexProjectError'; this.code = code }
 }
 
-export const textExtensions = ['tex', 'sty', 'cls', 'bib', 'bst'] as const
+export const textExtensions = ['tex', 'sty', 'cls', 'bib', 'bst', 'md', 'txt'] as const
+export function isLatexTextPath(path: string) {
+  return textExtensions.some((extension) => path.toLowerCase().endsWith(`.${extension}`)) || path.split('/').pop()?.toLowerCase() === 'latexmkrc'
+}
 const engines: LatexEngine[] = ['lualatex', 'xelatex', 'pdflatex']
 const idPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u
 const reservedIds = new Set(Object.getOwnPropertyNames(Object.prototype))
@@ -38,10 +41,10 @@ export function assertLatexPath(path: string, kind: 'text' | 'asset' | 'either' 
     throw new LatexProjectError('Use a relative NFC filename with letters, numbers, hyphens or underscores. Empty, hidden and traversal segments are not supported.', 'unsafe_path')
   }
   const extension = path.split('.').pop()?.toLowerCase() ?? ''
-  const text = textExtensions.some((item) => item === extension)
+  const text = isLatexTextPath(path)
   const asset = ['png', 'jpg', 'jpeg'].includes(extension)
   if ((kind === 'text' && !text) || (kind === 'asset' && !asset) || (kind === 'either' && !text && !asset)) {
-    throw new LatexProjectError(`Unsupported file: ${path}. Use .tex, .sty, .cls, .bib, .bst, PNG or JPEG.`, 'unsupported_file')
+    throw new LatexProjectError(`Unsupported file: ${path}. Use .tex, .sty, .cls, .bib, .bst, .md, .txt, latexmkrc, PNG or JPEG.`, 'unsupported_file')
   }
   return path
 }
@@ -137,7 +140,7 @@ export function deleteProjectFile(project: LatexProject, id: string) {
   return reviseProject(project, { files: project.files.filter((file) => file.id !== id), assets: project.assets.filter((asset) => asset.id !== id) })
 }
 
-function withoutComments(line: string) {
+export function withoutComments(line: string) {
   for (let i = 0; i < line.length; i++) if (line[i] === '%') {
     let slashes = 0
     for (let j = i - 1; j >= 0 && line[j] === '\\'; j--) slashes++
@@ -163,7 +166,7 @@ export function referencesToFile(project: LatexProject, path: string) {
   const target = path.replace(/\.(?:tex|sty|cls|bib|bst|png|jpe?g)$/iu, '')
   for (const file of project.files) file.content.split(/\r\n|\n|\r/u).forEach((line, index) => {
     const text = withoutComments(line)
-    for (const match of text.matchAll(/\\(?:input|include|includegraphics|addbibresource|bibliography|documentclass|usepackage)(?:\[[^\]]*\])?\s*\{([^{}]*)\}/gu)) {
+    for (const match of text.matchAll(/\\(?:(?:input|include|includegraphics|addbibresource|bibliography|documentclass|usepackage)(?:\[[^\]]*\])?|photo[RL]?\s*\{[^{}]*\})\s*\{([^{}]*)\}/gu)) {
       if (match[1].split(',').some((value) => {
         const ref = value.trim().replace(/\.(?:tex|sty|cls|bib|bst|png|jpe?g)$/iu, '')
         const relative = `${file.path.slice(0, Math.max(0, file.path.lastIndexOf('/') + 1))}${ref}`

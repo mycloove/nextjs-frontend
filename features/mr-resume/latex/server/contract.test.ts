@@ -1,10 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { LATEX_LIMITS, type LatexSyncQuery } from '../types.ts'
-import { readLatexDiagnostics, readLatexSyncQuery, readLatexSyncResult } from './contract.ts'
+import { readLatexDiagnostics, readLatexManifest, readLatexSyncQuery, readLatexSyncResult } from './contract.ts'
 
 const inverse: LatexSyncQuery = { operationKey: 'operation-00000001', snapshotHash: 'a'.repeat(64), pdfHash: 'b'.repeat(64), direction: 'inverse', page: 1, x: 1, y: 1 }
 const location = { page: 1, x: 0, y: 0, width: 1, height: 1 }
+
+test('the compile manifest preserves inert project notes and config while still refusing executable files', () => {
+  const manifest = { version: 1, operationKey: inverse.operationKey, projectId: 'project-one', title: 'AltaCV', revision: 1, engine: 'lualatex', mainFile: 'sample.tex', assets: [],
+    files: ['sample.tex', 'docs/README.md', 'LICENSE.txt', 'latexmkrc'].map((path, index) => ({ id: `file-${index}`, path, content: `Original content ${path}\r\n` })) }
+  assert.deepEqual(readLatexManifest(manifest).files, manifest.files)
+  for (const path of ['script.py', 'build.sh', 'config.pl', 'latexmkrc.pl']) assert.throws(() => readLatexManifest({ ...manifest, files: [...manifest.files, { id: 'script', path, content: 'code' }] }), /Unsupported source/u)
+})
 
 test('diagnostic and synchronization line bounds match the full backend source-byte limit', () => {
   const line = LATEX_LIMITS.sourceBytes

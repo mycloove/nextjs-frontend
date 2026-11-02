@@ -39,6 +39,17 @@ test('supported NFC Unicode filenames and nested relative paths remain exact', (
   assert.throws(() => assertLatexPath('fonts/custom.ttf'), /Unsupported file/u)
 })
 
+test('project documentation and latexmkrc are exact editable text, not arbitrary executable uploads', async () => {
+  let project = addTextFile(createTemplateProject(), 'README.md', '# Template instructions\r\n')
+  project = addTextFile(project, 'LICENSE.txt', 'Original license notice\n')
+  project = addTextFile(project, 'latexmkrc', '$pdf_mode = 4;\n')
+  assert.equal(project.files.find((file) => file.path === 'latexmkrc')!.content, '$pdf_mode = 4;\n')
+  const hash = await projectSnapshotHash(project)
+  assert.notEqual(await projectSnapshotHash({ ...project, files: project.files.map((file) => file.path === 'README.md' ? { ...file, content: file.content + 'Edited notes' } : file) }), hash)
+  assert.throws(() => addTextFile(project, 'build.py'), /Unsupported file/u)
+  assert.throws(() => addTextFile(project, 'build.sh'), /Unsupported file/u)
+})
+
 test('project version/identity/main and alias failures leave their originals untouched', () => {
   const original = createTemplateProject(), future = { ...original, version: 7, files: original.files.map((file) => ({ ...file })) }
   const serialized = JSON.stringify(future)

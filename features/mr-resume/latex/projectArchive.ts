@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { LATEX_LIMITS, LATEX_PROJECT_VERSION, type LatexAsset, type LatexProject } from './types.ts'
-import { assertLatexPath, isRecord, LatexProjectError, newLatexId, requiredNativeFonts, sha256, utf8Bytes, validateLatexProject } from './project.ts'
+import { assertLatexPath, isLatexTextPath, isRecord, LatexProjectError, newLatexId, requiredNativeFonts, sha256, utf8Bytes, validateLatexProject, withoutComments } from './project.ts'
 import { latexSourceTemplates, templateNotice } from './templates.ts'
 
 const manifestName = 'smilepdf-project.json'
@@ -81,7 +81,7 @@ export function inspectProjectZip(bytes: Uint8Array): ZipEntryPolicy[] {
     if (!directory) {
       fileCount += path === manifestName ? 0 : 1
       expanded += size
-      if (/\.(?:tex|sty|cls|bib|bst)$/iu.test(path)) source += size
+      if (isLatexTextPath(path)) source += size
       if (path === manifestName && size > 32 * 1024) fail('The project manifest exceeds 32 KiB.')
     }
     if (fileCount > LATEX_LIMITS.files || expanded > LATEX_LIMITS.uploadBytes || source > LATEX_LIMITS.sourceBytes) fail('ZIP declared expanded content exceeds project limits. Nothing was imported.', 'archive_too_large')
@@ -202,11 +202,11 @@ export async function readProjectZip(buffer: ArrayBuffer, title = 'Imported proj
   const files: LatexProject['files'] = [], assets: LatexAsset[] = []
   for (const [path, bytes] of extracted) {
     if (path === manifestName) continue
-    const list = (manifest?.[/\.(?:tex|sty|cls|bib|bst)$/iu.test(path) ? 'files' : 'assets'] ?? []) as unknown[]
+    const list = (manifest?.[isLatexTextPath(path) ? 'files' : 'assets'] ?? []) as unknown[]
     const metadata = list.find((item) => isRecord(item) && item.path === path)
     if (manifest && (!isRecord(metadata) || typeof metadata.id !== 'string')) fail(`Missing ZIP manifest identity for ${path}.`)
     const id = isRecord(metadata) ? String(metadata.id) : newLatexId()
-    if (/\.(?:tex|sty|cls|bib|bst)$/iu.test(path)) {
+    if (isLatexTextPath(path)) {
       try { files.push({ id, path, content: decoder.decode(bytes) }) } catch { fail(`Source ${path} is not valid UTF-8. No lossy conversion was applied.`, 'invalid_unicode') }
     } else {
       const mediaType = /\.png$/iu.test(path) ? 'image/png' : 'image/jpeg'
@@ -216,11 +216,32 @@ export async function readProjectZip(buffer: ArrayBuffer, title = 'Imported proj
     }
   }
   const tex = files.filter((file) => /\.tex$/iu.test(file.path))
-  const main = manifest?.mainFile ?? (tex.find((file) => file.path === 'main.tex')?.path ?? (tex.length === 1 ? tex[0].path : null))
-  if (!main) fail('The archive has multiple .tex files but no main.tex or build manifest. Add smilepdf-project.json with a main file, or rename the entry point explicitly.', 'missing_main')
+  let main: unknown = manifest ? manifest.mainFile : tex.find((file) => file.path === 'main.tex')?.path ?? null
+  if (!manifest && !main && tex.length === 1) main = tex[0].path
+  else if (!manifest && !main && tex.length > 1) {
+    // AltaCV ships sample.tex with bibliography partials, not a main.tex. Only
+    // uncommented document declarations are candidates; multiple documents need
+    // an explicit choice rather than a guess based on archive ordering.
+    const declared = tex.filter((file) => /\\documentclass\s*(?:\[[^\]]*\]\s*)?\{/u.test(file.content.split(/\r\n|\n|\r/u).map(withoutComments).join('\n')))
+    const namedMain = declared.filter((file) => file.path.split('/').pop()?.toLowerCase() === 'main.tex')
+    if (declared.length === 1) main = declared[0].path
+    else if (namedMain.length === 1) main = namedMain[0].path
+    else fail('The archive has multiple .tex files without a single \\documentclass entry point, main.tex or build manifest. Add smilepdf-project.json with a main file, or rename the entry point explicitly. Nothing was imported.', 'missing_main')
+  }
+  const mainSource = tex.find((file) => file.path === main)
+  if (!mainSource) fail('Select an existing .tex entry point in the project manifest. The archive has no valid main file. Nothing was imported.', 'missing_main')
+  // Settings belong to the main document, not magic directives in partials or
+  // example code in a README. Project latexmkrc is preserved but never executed.
+  const engine = manifest ? manifest.engine : declaredPdfEngine(mainSource.content) ?? 'lualatex'
   const now = new Date().toISOString()
-  return validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title: manifest?.title ?? title, revision: 1, mainFile: main, engine: manifest?.engine ?? 'lualatex',
+  return validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title: manifest?.title ?? title, revision: 1, mainFile: main, engine,
     files, assets, templateId: manifest?.templateId ?? null, templateVersion: manifest?.templateVersion ?? null, createdAt: now, updatedAt: now })
+}
+
+/** The universal `% !TeX program = …` directive stays the truth for imported sources; unknown names are ignored. */
+function declaredPdfEngine(content: string) {
+  const declared = /(?:^|[\r\n])[ \t\uFEFF]*%[ \t]*!TeX[ \t]+(?:TS-)?program[ \t]*=[ \t]*([A-Za-z][A-Za-z0-9_-]*)/iu.exec(content)?.[1]?.toLowerCase()
+  return declared === 'lualatex' || declared === 'xelatex' || declared === 'pdflatex' ? declared : null
 }
 
 export async function createProjectZip(project: LatexProject) {
@@ -252,7 +273,7 @@ export function readTexProject(bytes: Uint8Array, path: string, title: string): 
   let content: string
   try { content = decoder.decode(bytes) } catch { return fail('The .tex file is not valid UTF-8. Its original bytes were not changed.', 'invalid_unicode') }
   const now = new Date().toISOString()
-  return validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title, revision: 1, mainFile: path, engine: 'lualatex', files: [{ id: newLatexId(), path, content }], assets: [], templateId: null, templateVersion: null, createdAt: now, updatedAt: now })
+  return validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title, revision: 1, mainFile: path, engine: declaredPdfEngine(content) ?? 'lualatex', files: [{ id: newLatexId(), path, content }], assets: [], templateId: null, templateVersion: null, createdAt: now, updatedAt: now })
 }
 
 export function decodeSourceBytes(bytes: Uint8Array) {

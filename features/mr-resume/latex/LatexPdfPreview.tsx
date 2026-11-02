@@ -6,20 +6,25 @@ import type { PageViewport } from 'pdfjs-dist/types/src/display/display_utils'
 import type { LatexPdfLocation, LatexProof } from './types'
 import { copyProofBytes, proofBitmapSize, proofPoint, proofSourceBox } from './pdfProof'
 import styles from './LatexPdfPreview.module.css'
+import LatexIcon from './LatexIcon'
 
-export default function LatexPdfPreview({ proof, current, active, location, onPosition }: {
+export default function LatexPdfPreview({ proof, current, active, location, onPosition, onCompile, compileDisabled, compileReason }: {
   proof: LatexProof | null
   current: boolean
   active: boolean
   location?: LatexPdfLocation | null
   onPosition?: (position: { page: number; x: number; y: number }) => void
+  onCompile: () => void
+  compileDisabled: boolean
+  compileReason: string
 }) {
   const stage = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const textContainer = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(320)
+  const [height, setHeight] = useState(480)
   const [page, setPage] = useState(1)
-  const [zoom, setZoom] = useState<number | null>(null)
+  const [zoom, setZoom] = useState<number | 'fit' | 'page'>('fit')
   const [rotation, setRotation] = useState(0)
   const [loaded, setLoaded] = useState<{ key: string; document: PDFDocumentProxy } | null>(null)
   const [failure, setFailure] = useState<{ key: string; message: string } | null>(null)
@@ -32,14 +37,17 @@ export default function LatexPdfPreview({ proof, current, active, location, onPo
   const pages = proof?.pdf.pages ?? 1
   const selectedPage = Math.max(1, Math.min(pages, page))
   const validDocument = loaded?.key === proofKey && !loaded.document.loadingTask.destroyed ? loaded.document : null
-  const spec = `${proofKey}:${validDocument?.loadingTask.docId ?? ''}:${selectedPage}:${zoom ?? 'fit'}:${rotation}:${width}`
+  const spec = `${proofKey}:${validDocument?.loadingTask.docId ?? ''}:${selectedPage}:${zoom}:${rotation}:${width}:${zoom === 'page' ? height : ''}`
   const ready = Boolean(validDocument && rendered?.spec === spec)
   const error = failure?.key === proofKey || failure?.key === spec ? failure.message : null
   const box = current && location?.page === selectedPage && ready && rendered ? proofSourceBox(location, rendered.viewport) : null
 
   useEffect(() => {
     if (!stage.current || typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(([entry]) => { if (entry.contentRect.width > 0) setWidth(Math.max(128, Math.floor(entry.contentRect.width - 32))) })
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0) setWidth(Math.max(128, Math.floor(entry.contentRect.width)))
+      if (entry.contentRect.height > 0) setHeight(Math.max(128, Math.floor(entry.contentRect.height)))
+    })
     observer.observe(stage.current)
     return () => observer.disconnect()
   }, [])
@@ -94,7 +102,8 @@ export default function LatexPdfPreview({ proof, current, active, location, onPo
       const pdfPage = await validDocument.getPage(selectedPage)
       if (disposed) return
       const base = pdfPage.getViewport({ scale: 1, rotation: (pdfPage.rotate + rotation) % 360 })
-      const scale = zoom ?? Math.max(0.05, Math.min(2, width / base.width))
+      // ResizeObserver reports the stage's content box, already excluding its padding.
+      const scale = typeof zoom === 'number' ? zoom : Math.max(0.05, Math.min(2, width / base.width, zoom === 'page' ? height / base.height : Infinity))
       const viewport = pdfPage.getViewport({ scale, rotation: (pdfPage.rotate + rotation) % 360 })
       const size = proofBitmapSize(viewport.width, viewport.height, window.devicePixelRatio || 1)
       const context = surface.getContext('2d', { alpha: false })
@@ -122,21 +131,23 @@ export default function LatexPdfPreview({ proof, current, active, location, onPo
       if (!disposed) setRendered({ spec, viewport, text, textWarning })
     })().catch((reason: unknown) => { if (!disposed) setFailure({ key: spec, message: reason instanceof Error && reason.message.includes('preview size') ? reason.message : 'This page could not be rendered safely. Reduce the zoom or download the original PDF.' }) })
     return () => { disposed = true; drawing?.cancel(); textLayer?.cancel() }
-  }, [active, validDocument, selectedPage, zoom, rotation, width, spec])
+  }, [active, validDocument, selectedPage, zoom, rotation, width, height, spec])
 
   return <section className={styles.preview} aria-label="Compiled PDF proof">
     <header className={styles.controls}>
-      <div className={styles.identity}><b>PDF proof</b><span data-current={current}>{proof ? `Revision ${proof.revision}${current ? ' / current' : ' / older source'}` : 'Not compiled'}</span></div>
+      <div className={styles.identity}><b>PDF proof</b><span data-state={!proof ? 'empty' : current ? 'current' : 'stale'}>{proof ? <><LatexIcon name={current ? 'check' : 'alert'} />r{proof.revision} / {current ? 'current' : 'out of date'}</> : 'Not compiled'}</span></div>
       <div className={styles.navigation}>
-        <button type="button" aria-label="Previous PDF page" disabled={!proof || selectedPage <= 1} onClick={() => setPage(selectedPage - 1)}>&lt;</button>
-        <select aria-label="PDF page" value={selectedPage} disabled={!proof} onChange={(event) => setPage(Number(event.target.value))}>{Array.from({ length: pages }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} / {pages}</option>)}</select>
-        <button type="button" aria-label="Next PDF page" disabled={!proof || selectedPage >= pages} onClick={() => setPage(selectedPage + 1)}>&gt;</button>
-        <select aria-label="PDF zoom" value={zoom ?? 'fit'} disabled={!proof} onChange={(event) => setZoom(event.target.value === 'fit' ? null : Number(event.target.value))}><option value="fit">Fit width</option>{[0.5, 0.75, 1, 1.25, 1.5, 2].map((value) => <option key={value} value={value}>{value * 100}%</option>)}</select>
-        <button type="button" aria-label="Rotate PDF page clockwise" disabled={!proof} onClick={() => setRotation((value) => (value + 90) % 360)}>Rotate</button>
+        <span className={styles.pageGroup}>
+          <button type="button" aria-label="Previous PDF page" disabled={!proof || selectedPage <= 1} onClick={() => setPage(selectedPage - 1)}><LatexIcon name="chevronLeft" /></button>
+          <select aria-label="PDF page" value={selectedPage} disabled={!proof} onChange={(event) => setPage(Number(event.target.value))}>{Array.from({ length: pages }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1} / {pages}</option>)}</select>
+          <button type="button" aria-label="Next PDF page" disabled={!proof || selectedPage >= pages} onClick={() => setPage(selectedPage + 1)}><LatexIcon name="chevronRight" /></button>
+        </span>
+        <select aria-label="PDF zoom" value={zoom} disabled={!proof} onChange={(event) => setZoom(event.target.value === 'fit' || event.target.value === 'page' ? event.target.value : Number(event.target.value))}><option value="fit">Fit width</option><option value="page">Fit page</option>{[0.5, 0.75, 1, 1.25, 1.5, 2].map((value) => <option key={value} value={value}>{value * 100}%</option>)}</select>
+        <button type="button" aria-label="Rotate PDF page clockwise" title="Rotate PDF page clockwise" disabled={!proof} onClick={() => setRotation((value) => (value + 90) % 360)}><LatexIcon name="rotate" /></button>
       </div>
     </header>
     <div ref={stage} className={styles.stage} aria-busy={Boolean(proof && active && !ready && !error)}>
-      {!proof ? <div className={styles.empty}><span className={styles.emptyMark} aria-hidden="true">PDF</span><h3>Your typeset proof appears here</h3><p>Compile a source snapshot to see its real PDF. Nothing is reconstructed from an HTML preview.</p></div> : <>
+      {!proof ? <div className={styles.empty}><div className={styles.emptyMark} aria-hidden="true"><span>TeX</span><i /><i /><i /><b>PDF</b></div><h3>Your typeset proof appears here</h3><p>Compile a source snapshot to see its real PDF. Nothing is reconstructed from an HTML preview.</p><button type="button" className={styles.compileButton} disabled={compileDisabled} title={compileReason || 'Compile this source snapshot'} onClick={onCompile}><LatexIcon name="play" />Compile now</button>{compileReason && <p className={styles.availability}>{compileReason}</p>}</div> : <>
         {error && <p className={styles.error} role="alert">{error}</p>}
         {!ready && !error && active && <p className={styles.loading} role="status">Rendering the compiled PDF page...</p>}
         <div className={styles.sheet} data-ready={ready && !error} onDoubleClick={(event) => {
