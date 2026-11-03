@@ -26,7 +26,13 @@ export type BrowserCompilerManifest = {
   groups?: BrowserCompilerGroup[]
   limitations: string[]
 }
-export type LatexCompileProgress = { phase: 'loading' | 'initializing' | 'compiling' | 'verifying'; message: string; pass?: number; downloadedBytes?: number; verifiedBytes?: number; totalBytes?: number; cachedBytes?: number; assetPath?: string }
+export type LatexEngineAssetAudit = EngineAssetPin & {
+  source: 'indexeddb-reuse' | 'fetch-response'
+  groupId: string
+  groupKind: BrowserCompilerGroup['kind'] | 'runtime' | 'bundle'
+  packages: string[]
+}
+export type LatexCompileProgress = { phase: 'loading' | 'initializing' | 'compiling' | 'verifying'; message: string; pass?: number; downloadedBytes?: number; verifiedBytes?: number; totalBytes?: number; cachedBytes?: number; assetPath?: string; assetAudit?: LatexEngineAssetAudit[] }
 export type BrowserCompilerWorker = {
   onmessage: ((event: MessageEvent<unknown>) => void) | null
   onerror: ((event: ErrorEvent) => void) | null
@@ -370,8 +376,15 @@ export function createBrowserLatexTransport(dependencies: Dependencies = {}) {
     } finally { pendingApprovals-- }
   }
 
-  async function loadAsset(bundle: BrowserCompilerManifest, pin: EngineAssetPin, signal: AbortSignal, bytes: { downloadedBytes: number; verifiedBytes: number; totalBytes: number; cachedBytes: number; assetPath?: string }, notify: (value: LatexCompileProgress) => void): Promise<ArrayBuffer> {
+  async function loadAsset(bundle: BrowserCompilerManifest, pin: EngineAssetPin, signal: AbortSignal, bytes: { downloadedBytes: number; verifiedBytes: number; totalBytes: number; cachedBytes: number; assetPath?: string; assetAudit: LatexEngineAssetAudit[] }, notify: (value: LatexCompileProgress) => void): Promise<ArrayBuffer> {
     bytes.assetPath = pin.path
+    const group = bundle.groups?.find((group) => group.assets.some((asset) => asset.path === pin.path))
+    const audit = (source: LatexEngineAssetAudit['source']): LatexEngineAssetAudit => ({
+      ...pin, source,
+      groupId: group?.id ?? (bundle.groups ? 'runtime' : 'engine-bundle'),
+      groupKind: group?.kind ?? (bundle.groups ? 'runtime' : 'bundle'),
+      packages: [...(group?.packages ?? [])],
+    })
     let cached: ArrayBuffer | null = null
     try { cached = await awaitLatexSignal(assetStore.load(bundle.profileVersion, { ...pin }, signal), signal) }
     catch (error) { if (signal.aborted) throw error }
@@ -379,6 +392,7 @@ export function createBrowserLatexTransport(dependencies: Dependencies = {}) {
       const data = cached.slice(0)
       if (await digest(data, signal) === pin.sha256) {
         bytes.cachedBytes += data.byteLength; bytes.verifiedBytes += data.byteLength
+        bytes.assetAudit = [...bytes.assetAudit, audit('indexeddb-reuse')]
         notify({ phase: 'loading', message: 'Verified a cached public engine asset. No source is uploaded.' })
         return data
       }
@@ -420,6 +434,7 @@ export function createBrowserLatexTransport(dependencies: Dependencies = {}) {
     if (length !== pin.bytes || (declared !== null && identityEncoding && Number(declared) !== length)) throw new Error('A compiler asset did not match its pinned or declared byte size.')
     if (await digest(data.buffer, signal) !== pin.sha256) throw new Error('A compiler asset failed its pinned SHA-256 byte-integrity check.')
     bytes.verifiedBytes += length
+    bytes.assetAudit = [...bytes.assetAudit, audit('fetch-response')]
     notify({ phase: 'loading', message: 'Verified the public engine response bytes against their pinned SHA-256.' })
     // Even an injected cache cannot mutate bytes which will execute in the worker.
     try { await awaitLatexSignal(assetStore.save(bundle.profileVersion, { ...pin }, data.buffer.slice(0), signal), signal) }
@@ -453,7 +468,7 @@ export function createBrowserLatexTransport(dependencies: Dependencies = {}) {
     if (signal?.aborted) abort()
     else signal?.addEventListener('abort', abort, { once: true })
     let timer = setTimeout(() => { timedOut = 'loading'; abort() }, dependencies.loadingTimeoutMs ?? 300_000)
-    let byteProgress: { downloadedBytes: number; verifiedBytes: number; totalBytes: number; cachedBytes: number; assetPath?: string } | undefined
+    let byteProgress: { downloadedBytes: number; verifiedBytes: number; totalBytes: number; cachedBytes: number; assetPath?: string; assetAudit: LatexEngineAssetAudit[] } | undefined
     const notify = (value: LatexCompileProgress) => { if (!controller.signal.aborted) progress?.({ ...value, ...byteProgress }) }
     const hash = (data: ArrayBuffer) => digest(data, controller.signal)
     try {
@@ -467,7 +482,7 @@ export function createBrowserLatexTransport(dependencies: Dependencies = {}) {
       const { preparation, approvedGroups } = await prepare(snapshot, bundle, controller.signal)
       if (preparation.groups.length) throw new BrowserPackageGroupRequiredError(preparation, operationKey)
       const pins = browserEngineAssetPins(bundle, snapshot.engine, approvedGroups)
-      byteProgress = { downloadedBytes: 0, verifiedBytes: 0, totalBytes: pins.reduce((sum, pin) => sum + pin.bytes, 0), cachedBytes: 0 }
+      byteProgress = { downloadedBytes: 0, verifiedBytes: 0, totalBytes: pins.reduce((sum, pin) => sum + pin.bytes, 0), cachedBytes: 0, assetAudit: [] }
       notify({ phase: 'loading', message: 'Loading only the selected pinned engine and approved packages.' })
       const engineAssets: { path: string; content: ArrayBuffer }[] = []
       for (const pin of pins) engineAssets.push({ path: pin.path, content: await loadAsset(bundle, pin, controller.signal, byteProgress, notify) })

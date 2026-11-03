@@ -468,9 +468,25 @@ test('cached second compilation has no HTTP request, works offline, and reports 
   online = false
   await compiler.compileBrowserProject(source, 'offline-cache-operation', undefined, (value) => second.push(value))
   assert.equal(urls.length, calls); assert.equal(workers.length, 2)
-  const total = [...bundle.assets.slice(0, 3), ...bundle.groups.filter((group) => group.kind === 'core' || (group.kind === 'profile' && group.profiles.includes(source.engine))).flatMap((group) => group.assets)].reduce((sum, pin) => sum + pin.bytes, 0)
+  const expected = [...bundle.assets.slice(0, 3), ...bundle.groups.filter((group) => group.kind === 'core' || (group.kind === 'profile' && group.profiles.includes(source.engine))).flatMap((group) => group.assets)]
+  const total = expected.reduce((sum, pin) => sum + pin.bytes, 0)
   assert.equal(first.at(-1)!.downloadedBytes, total); assert.equal(first.at(-1)!.verifiedBytes, total); assert.equal(first.at(-1)!.cachedBytes, 0)
   assert.equal(second.at(-1)!.downloadedBytes, 0); assert.equal(second.at(-1)!.verifiedBytes, total); assert.equal(second.at(-1)!.cachedBytes, total)
+  const firstAudit = first.at(-1)!.assetAudit!, secondAudit = second.at(-1)!.assetAudit!
+  assert.deepEqual(firstAudit.map(({ path, bytes, sha256 }) => ({ path, bytes, sha256 })), expected)
+  assert.deepEqual(secondAudit.map(({ path, bytes, sha256 }) => ({ path, bytes, sha256 })), expected)
+  assert.ok(firstAudit.every((entry) => entry.source === 'fetch-response'))
+  assert.ok(secondAudit.every((entry) => entry.source === 'indexeddb-reuse'))
+  assert.ok(firstAudit.every((entry) => entry.path !== 'manifest.json'))
+  for (const entry of firstAudit) {
+    const group = bundle.groups.find((group) => group.assets.some((asset) => asset.path === entry.path))
+    assert.equal(entry.groupId, group?.id ?? 'runtime')
+    assert.equal(entry.groupKind, group?.kind ?? 'runtime')
+    assert.deepEqual(entry.packages, group?.packages ?? [])
+  }
+  const firstVerified = first.find((value) => (value.verifiedBytes ?? 0) > 0)!
+  assert.equal(firstVerified.assetAudit!.length, 1, 'Earlier progress snapshots must not gain later audit entries')
+  assert.notEqual(firstVerified.assetAudit, firstAudit)
   assert.ok(first.some((value) => (value.downloadedBytes ?? 0) > (value.verifiedBytes ?? 0) && (value.downloadedBytes ?? 0) < total))
   for (const values of [first, second]) {
     let downloaded = 0, verified = 0, cached = 0
@@ -492,11 +508,17 @@ test('the parent independently rejects injected corrupt cache bytes and reloads 
   const store = new MemoryAssetStore(), pdf = await actualPdf(), urls: string[] = []
   const compiler = transport(new WorkerFixture(), { assetStore: store, createWorker: () => { const worker = new WorkerFixture(); successful(worker, pdf); return worker }, request: async (url, init) => { urls.push(url); return fixtureRequest()(url, init) } })
   await compiler.compileBrowserProject(createTemplateProject(), 'cache-prime-operation')
-  const pin = manifest.assets[0], calls = urls.length
+  const pin = manifest.assets[0], calls = urls.length, progress: LatexCompileProgress[] = []
   store.bytes.get(`${manifest.profileVersion}:${pin.sha256}`)!.data = new Uint8Array(pin.bytes).buffer
-  await compiler.compileBrowserProject(createTemplateProject(), 'cache-recover-operation')
+  await compiler.compileBrowserProject(createTemplateProject(), 'cache-recover-operation', undefined, (value) => progress.push(value))
   assert.deepEqual(urls.slice(calls), [`${BROWSER_LATEX_ROOT}${pin.path}?sha256=${pin.sha256}`])
   assert.equal(hashBytes(store.bytes.get(`${manifest.profileVersion}:${pin.sha256}`)!.data), pin.sha256)
+  const audit = progress.at(-1)!.assetAudit!
+  assert.equal(audit.length, manifest.assets.length)
+  assert.equal(audit.filter((entry) => entry.source === 'fetch-response').length, 1)
+  assert.equal(audit.find((entry) => entry.path === pin.path)!.source, 'fetch-response')
+  assert.ok(audit.filter((entry) => entry.path !== pin.path).every((entry) => entry.source === 'indexeddb-reuse'))
+  assert.ok(audit.every((entry) => entry.groupId === 'engine-bundle' && entry.groupKind === 'bundle' && entry.packages.length === 0))
 })
 
 test('offline cache misses, corrupt bytes and unavailable downloads never start a worker or fabricate a PDF', async () => {
@@ -590,11 +612,16 @@ test('known required packages preflight a typed exact preparation before any eng
   assert.deepEqual(store.consents, [`${bundle.profileVersion}:boxes:${expectedHash}`])
   assert.equal(urls.length, 1); assert.equal(workers.length, 0)
   assert.deepEqual((await compiler.getBrowserPreparation(source)).groups, [])
-  const proof = await compiler.compileBrowserProject(source, 'package-approved-operation')
+  const progress: LatexCompileProgress[] = []
+  const proof = await compiler.compileBrowserProject(source, 'package-approved-operation', undefined, (value) => progress.push(value))
   assert.equal(proof.snapshotHash, before); assert.equal(await projectSnapshotHash(source), before)
   const initialized = workers[0].messages[0] as { approvedGroups: string[]; assets: { path: string }[] }
   assert.deepEqual(initialized.approvedGroups, ['boxes'])
   assert.ok(initialized.assets.some((asset) => asset.path === box.archive)); assert.ok(initialized.assets.some((asset) => asset.path === box.index))
+  const packageAudit = progress.at(-1)!.assetAudit!.filter((entry) => entry.groupId === 'boxes')
+  assert.deepEqual(packageAudit.map((entry) => entry.path), [box.archive, box.index])
+  assert.ok(packageAudit.every((entry) => entry.groupKind === 'package' && entry.source === 'fetch-response'))
+  assert.ok(packageAudit.every((entry) => JSON.stringify(entry.packages) === JSON.stringify(['tcolorbox', 'mdframed'])))
   assert.doesNotMatch(JSON.stringify(urls), /tcolorbox|wrapper\/main|texlive\.snapshot|snapshot-index|groups\/layouts|usepackage/)
   await compiler.clearBrowserEngineCache()
   assert.equal((await compiler.getBrowserPreparation(source)).groups.length, 1)
@@ -665,10 +692,11 @@ test('asset stream bounds, byte hashes, redirects, status and script MIME failur
     ...['invalid', '-1', String(bytes.length + 1), '1'].map((length) => () => new Response(new Uint8Array(bytes).buffer, { headers: { 'Content-Type': 'application/javascript', 'Content-Length': length } })),
     () => { const response = new Response(new Uint8Array(bytes).buffer, { headers: { 'Content-Type': 'application/javascript' } }); Object.defineProperty(response, 'redirected', { value: true }); return response },
   ]) {
-    const worker = new WorkerFixture(), urls: string[] = []
+    const worker = new WorkerFixture(), urls: string[] = [], progress: LatexCompileProgress[] = []
     const compiler = transport(worker, { createWorker: () => assert.fail('Invalid assets cannot execute'), request: async (url) => { urls.push(url); return url.includes('manifest.json?') ? Response.json(manifest) : response() } })
-    await rejected(compiler.compileBrowserProject(createTemplateProject(), 'asset-security-operation'), 'browser_runtime_unavailable')
+    await rejected(compiler.compileBrowserProject(createTemplateProject(), 'asset-security-operation', undefined, (value) => progress.push(value)), 'browser_runtime_unavailable')
     assert.equal(urls.length, 2); assert.equal(worker.messages.length, 0)
+    assert.deepEqual(progress.at(-1)?.assetAudit, [], 'Failed assets must not enter the verified audit')
   }
 })
 
@@ -856,6 +884,8 @@ test('non-streaming asset responses still receive exact bounded hashing and trut
   assert.equal(progress.at(-1)!.downloadedBytes, total)
   assert.equal(progress.at(-1)!.verifiedBytes, total)
   assert.equal(progress.at(-1)!.cachedBytes, 0)
+  assert.equal(progress.at(-1)!.assetAudit!.length, manifest.assets.length)
+  assert.ok(progress.at(-1)!.assetAudit!.every((entry) => entry.source === 'fetch-response'))
 })
 
 test('decoded HTTP asset bytes are pinned independently of compressed wire Content-Length', async () => {

@@ -1,6 +1,6 @@
 import {
   LATEX_API, LATEX_LIMITS, LATEX_MAIN_FILE_NOTICE, type LatexCapabilities, type LatexCompileFailure, type LatexCompileManifest,
-  type LatexOperation, type LatexProject, type LatexProof, type LatexSyncQuery, type LatexSyncResult,
+  type LatexCompileResult, type LatexOperation, type LatexProject, type LatexProof, type LatexSyncQuery, type LatexSyncResult,
 } from './types.ts'
 import {
   awaitLatexSignal, compareLatexPaths, LATEX_JSON_BYTES, LatexContractError,

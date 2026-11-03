@@ -220,6 +220,10 @@ export async function readProjectZip(buffer: ArrayBuffer, title = 'Imported proj
   // An exported explicit null must also survive re-import, even if main.tex exists.
   const main = manifest && Object.hasOwn(manifest, 'mainFile') ? manifest.mainFile
     : tex.find((file) => file.path === 'main.tex')?.path ?? (tex.length === 1 ? tex[0].path : null)
+  const mainSource = main === null ? undefined : files.find((file) => file.path === main)
+  // The manifest engine stays authoritative; an archive without one honors the main document's % !TeX program directive.
+  const engine = (typeof manifest?.engine === 'string' ? manifest.engine
+    : mainSource ? declaredPdfEngine(mainSource.content) ?? 'lualatex' : 'lualatex') as LatexProject['engine']
   const now = new Date().toISOString()
   return validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title: manifest?.title ?? title, revision: 1, mainFile: main, engine,
     files, assets, templateId: manifest?.templateId ?? null, templateVersion: manifest?.templateVersion ?? null, createdAt: now, updatedAt: now })

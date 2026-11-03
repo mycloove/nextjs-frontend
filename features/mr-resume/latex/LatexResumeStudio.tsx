@@ -13,7 +13,7 @@ import { addProjectAsset, addTextFile, applyNativeFontChoices, deleteProjectFile
 import { createTemplateProject, latexSourceTemplates } from './templates.ts'
 import { createRegularLatexProject, downloadBlob, exportProjectFile, importProjectFile, importSupportedFile } from './projectImport'
 import { syncLatexProof } from './compileTransport'
-import { BROWSER_LATEX_ROOT, browserEngineAssetPins, browserLatexCompatibility, getBrowserCompilerManifest } from './browserCompiler'
+import { BROWSER_LATEX_ROOT, browserEngineAssetPins, browserLatexCompatibility, getBrowserCompilerManifest, type LatexEngineAssetAudit } from './browserCompiler'
 import type { LatexAsset, LatexCheckpoint, LatexDiagnostic, LatexImportRequest, LatexPdfLocation, LatexProject, LatexRuntime } from './types'
 import { LATEX_LIMITS, LATEX_MAIN_FILE_NOTICE } from './types'
 import { createAltaCvBrowserProject, findAltaCvEntry } from './altacvBrowser'
@@ -25,13 +25,22 @@ type Panel = 'files' | 'source' | 'proof' | 'problems'
 type Drawer = 'closed' | 'build' | 'problems' | 'log' | 'history' | 'terminal'
 type Modal = { kind: 'new' | 'rename'; fileId?: string; path?: string } | { kind: 'delete'; fileId: string; path: string }
   | { kind: 'restore'; checkpoint: LatexCheckpoint } | { kind: 'privacy'; auto: boolean } | { kind: 'fonts'; projectId: string; revision: number; fonts: string[] }
-  | { kind: 'remove'; project: LatexProject } | { kind: 'engine-cache' }
+  | { kind: 'remove'; project: LatexProject } | { kind: 'engine-cache' } | { kind: 'engine-assets'; operationKey: string }
 const emptyDiagnostics: LatexDiagnostic[] = []
 const smallSnapshot = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
 const subscribeSmall = (notify: () => void) => { const query = window.matchMedia('(max-width: 900px)'); query.addEventListener('change', notify); return () => query.removeEventListener('change', notify) }
 const engineNames = { lualatex: 'LuaLaTeX', xelatex: 'XeLaTeX', pdflatex: 'pdfLaTeX' } as const
 const localDisclosureMotion = { duration: 200, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
 function sizeLabel(bytes: number) { return bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KiB` : `${(bytes / (1024 * 1024)).toFixed(1)} MiB` }
+function groupEngineAssets(assets: LatexEngineAssetAudit[]) {
+  const groups = new Map<string, { id: string; kind: LatexEngineAssetAudit['groupKind']; packages: string[]; assets: LatexEngineAssetAudit[] }>()
+  for (const asset of assets) {
+    const group = groups.get(asset.groupId)
+    if (group) group.assets.push(asset)
+    else groups.set(asset.groupId, { id: asset.groupId, kind: asset.groupKind, packages: asset.packages, assets: [asset] })
+  }
+  return [...groups.values()]
+}
 
 function FileActionMenu({ path, children }: { path: string; children: ReactNode }) {
   const id = useId()
@@ -136,6 +145,7 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
   const [copyFonts, setCopyFonts] = useState<{ projectId: string; fonts: string[] } | null>(null)
   const [availabilityToast, setAvailabilityToast] = useState<{ message: string; ready: boolean } | null>(null)
   const [dismissedInfoToasts, setDismissedInfoToasts] = useState<string[]>([])
+  const [dismissedReadyAttempt, setDismissedReadyAttempt] = useState<string | null>(null)
   const [sync, setSync] = useState<{ identity: string; location: LatexPdfLocation | null; message: string; busy: boolean } | null>(null)
   const dialog = useRef<HTMLDialogElement>(null), splitElement = useRef<HTMLDivElement>(null), drag = useRef<number | null>(null)
   const root = useRef<HTMLDivElement>(null)
@@ -187,7 +197,7 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
   ]
   const canSync = Boolean(!localRuntime && proof?.runtime !== 'browser' && current && proof?.syncAvailable && workspace.online && active)
   const capabilityReady = workspace.capabilities.enabled && workspace.capabilities.ready
-  const browserCompiler = workspace.compilerKind === 'browser'
+  const browserCompiler = localRuntime
   const engineProfile = workspace.capabilities.profiles.find((profile) => profile.id === project?.engine)
   const compiling = Boolean(workspace.attempt && ['waiting', 'cancelling', 'recovering'].includes(workspace.attempt.stage))
   const saveLabel = !workspace.ready ? 'Restoring local project' : workspace.saveState?.kind === 'saved' ? `Saved r${workspace.saveState.revision}`
@@ -207,6 +217,13 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
   const preparationCurrent = Boolean(project && workspace.browserPreparation?.projectId === project.id && workspace.browserPreparation.revision === project.revision && sameProjectSource(workspace.browserPreparation.snapshot, project))
   const buildLog = currentAttempt?.log ?? proof?.log ?? ''
   const altaCvEntry = project ? findAltaCvEntry(project) : null
+  const readyBrowserAttempt = localRuntime && currentAttempt?.stage === 'ready' && currentAttempt.runtime === 'browser' ? currentAttempt : null
+  const readyEngineAssets = readyBrowserAttempt?.progress?.assetAudit ?? []
+  const engineAssetAttempt = modal?.kind === 'engine-assets' && readyBrowserAttempt?.operationKey === modal.operationKey && readyEngineAssets.length ? readyBrowserAttempt : null
+  const engineAssets = engineAssetAttempt?.progress?.assetAudit ?? []
+  const engineAssetGroups = groupEngineAssets(engineAssets)
+  const engineAssetBytes = engineAssets.reduce((sum, asset) => sum + asset.bytes, 0)
+  const engineAssetsReused = engineAssets.filter((asset) => asset.source === 'indexeddb-reuse').length
 
   function toggleLocalWorkspace() {
     const panel = localPanel.current, body = localBody.current
@@ -273,6 +290,10 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
   }, [modal, active])
 
   useEffect(() => {
+    if (modal?.kind === 'engine-assets' && !engineAssetAttempt) setModal(null)
+  }, [modal, engineAssetAttempt])
+
+  useEffect(() => {
     if (!availabilityToast) return
     const timeout = window.setTimeout(() => setAvailabilityToast(null), 5000)
     return () => window.clearTimeout(timeout)
@@ -310,9 +331,7 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
     if (!project?.mainFile) { workspace.compile(); return }
     if (localRuntime) { workspace.compile(); return }
     if (!capabilityReady || !workspace.online || !active) { workspace.compile(); return }
-    if (browserCompiler && project && project.engine !== 'xelatex') openModal({ kind: 'browser-engine', projectId: project.id, revision: project.revision })
-    else if (browserCompiler) workspace.compile()
-    else if (!consent) openModal({ kind: 'privacy', auto: false })
+    if (!consent) openModal({ kind: 'privacy', auto: false })
     else workspace.compile()
   }
   function selectRuntime(next: LatexRuntime) {
@@ -387,6 +406,7 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
   async function submitModal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!modal || !project) return
+    if (modal.kind === 'engine-assets') { setModal(null); return }
     setBusy(true)
     try {
       if (modal.kind === 'new') {
@@ -447,7 +467,7 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
   }
   function dismissInfoToast(id: string) { setDismissedInfoToasts((current) => current.includes(id) ? current : [...current, id]) }
   const refs = modal && (modal.kind === 'delete' || modal.kind === 'rename') && project && modal.path ? referencesToFile(project, modal.path) : []
-  const modalTitle = !modal ? '' : modal.kind === 'new' ? 'Create a source file' : modal.kind === 'rename' ? 'Rename without rewriting source' : modal.kind === 'delete' ? 'Delete this file' : modal.kind === 'restore' ? 'Restore a checkpoint' : modal.kind === 'privacy' ? (modal.auto ? 'Enable private Auto Compile' : 'Compile with the private runtime') : modal.kind === 'fonts' ? 'Source-font compatibility' : modal.kind === 'engine-cache' ? 'Clear downloaded engine assets' : 'Remove a local project'
+  const modalTitle = !modal ? '' : modal.kind === 'new' ? 'Create a source file' : modal.kind === 'rename' ? 'Rename without rewriting source' : modal.kind === 'delete' ? 'Delete this file' : modal.kind === 'restore' ? 'Restore a checkpoint' : modal.kind === 'privacy' ? (modal.auto ? 'Enable private Auto Compile' : 'Compile with the private runtime') : modal.kind === 'fonts' ? 'Source-font compatibility' : modal.kind === 'engine-cache' ? 'Clear downloaded engine assets' : modal.kind === 'engine-assets' ? 'Engine files' : 'Remove a local project'
 
   return <div ref={root} className={`${theme.theme} ${styles.root}`} data-mobile-panel={mobilePanel} data-files-collapsed={!filesOpen} data-compiler-runtime={workspace.runtime} aria-busy={!workspace.ready} style={fontSize ? { '--latex-code-size': `${fontSize}px` } as CSSProperties : undefined} onClick={(event) => {
     if ((event.target as Element).closest('button[data-close-menu]')) closeMenus(true)
@@ -533,11 +553,12 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
     {copiedFontsUnverified && project && <div className={styles.compatibility}><span>Source copy: {capabilityReady ? 'one or more requested fonts are absent from this compiler profile.' : 'compiler fonts are not verified while the runtime is unavailable.'} Regular is unchanged.</span><button type="button" className={styles.textButton} onClick={() => openModal({ kind: 'fonts', projectId: project.id, revision: project.revision, fonts: copyFonts!.fonts })}>Review source-only font choices</button></div>}
     {workspace.notice && <div className={styles.notice} role="status"><span>{workspace.notice}</span><button type="button" aria-label="Dismiss LaTeX notice" onClick={() => workspace.setNotice('')}>Close</button></div>}
     {importRequest && <div className={styles.capabilityNotice} role="status">Preparing an independent source copy and displayed JPEG sidecar. Existing projects are not replaced or uploaded.</div>}
-    {workspace.attempt && <div className={styles.attempt} data-stage={workspace.attempt.stage} data-progress={workspace.attempt.progress?.phase} role="status" aria-live="polite"><span><b>{workspace.attempt.projectId === project?.id ? `r${workspace.attempt.revision}` : 'Other project'}:</b> {workspace.attempt.message}{workspace.queuedRevision !== null && ` Latest queued intent: r${workspace.queuedRevision}.`}</span>
-      {workspace.attempt.progress?.totalBytes !== undefined && <div className={styles.engineBytes}><label htmlFor="resume-latex-engine-bytes">Engine assets: {sizeLabel(workspace.attempt.progress.verifiedBytes ?? 0)} of {sizeLabel(workspace.attempt.progress.totalBytes)} SHA-256 verified{(workspace.attempt.progress.cachedBytes ?? 0) > 0 && ` / ${sizeLabel(workspace.attempt.progress.cachedBytes!)} reused from verified engine cache`}</label><progress id="resume-latex-engine-bytes" max={workspace.attempt.progress.totalBytes || 1} value={workspace.attempt.progress.verifiedBytes ?? 0} aria-label="Verified engine asset bytes, not compile completion" /><span>{sizeLabel(workspace.attempt.progress.downloadedBytes ?? 0)} decoded asset response bytes received. HTTP cache reuse is not measured as network download.</span></div>}
+    {workspace.attempt && !(readyBrowserAttempt && dismissedReadyAttempt === readyBrowserAttempt.operationKey) && <div className={styles.attempt} data-stage={workspace.attempt.stage} data-progress={workspace.attempt.progress?.phase} role="status" aria-live="polite"><span>{!readyBrowserAttempt && <b>{workspace.attempt.projectId === project?.id ? `r${workspace.attempt.revision}` : 'Other project'}:</b>} {workspace.attempt.message}{workspace.queuedRevision !== null && ` Latest queued intent: r${workspace.queuedRevision}.`}</span>
+      {workspace.attempt.progress?.totalBytes !== undefined && !readyBrowserAttempt && <div className={styles.engineBytes}><label htmlFor="resume-latex-engine-bytes">Engine assets: {sizeLabel(workspace.attempt.progress.verifiedBytes ?? 0)} of {sizeLabel(workspace.attempt.progress.totalBytes)} SHA-256 verified{(workspace.attempt.progress.cachedBytes ?? 0) > 0 && ` / ${sizeLabel(workspace.attempt.progress.cachedBytes!)} reused from verified engine cache`}</label><progress id="resume-latex-engine-bytes" max={workspace.attempt.progress.totalBytes || 1} value={workspace.attempt.progress.verifiedBytes ?? 0} aria-label="Verified engine asset bytes, not compile completion" /><span>{sizeLabel(workspace.attempt.progress.downloadedBytes ?? 0)} decoded asset response bytes received. HTTP cache reuse is not measured as network download.</span></div>}
       {['waiting', 'cancelling', 'recoverable'].includes(workspace.attempt.stage) && <button type="button" className={styles.textButton} disabled={workspace.attempt.stage === 'cancelling'} onClick={() => void workspace.cancelCompile()}>{workspace.attempt.runtime === 'browser' ? 'Cancel local compile' : 'Cancel on server'}</button>}
       {workspace.attempt.runtime === 'native' && workspace.attempt.stage === 'waiting' && <button type="button" className={styles.textButton} onClick={workspace.stopWaiting}>Stop waiting</button>}
       {workspace.attempt.runtime === 'native' && workspace.attempt.stage === 'recoverable' && <button type="button" className={styles.textButton} disabled={!workspace.online} onClick={() => void workspace.recoverCompile()}>Recover operation</button>}
+      {readyBrowserAttempt && <div className={styles.readyActions}>{readyEngineAssets.length > 0 && <button type="button" className={styles.textButton} onClick={() => openModal({ kind: 'engine-assets', operationKey: readyBrowserAttempt.operationKey })}>View engine files</button>}<button type="button" className={styles.toastDismiss} aria-label="Dismiss PDF ready message" onClick={() => setDismissedReadyAttempt(readyBrowserAttempt.operationKey)}><LatexIcon name="close" /></button></div>}
     </div>}
     </div>
     <div className={styles.workspace}>
@@ -667,7 +688,7 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
             <div className={styles.buildFact} data-state={currentAttempt?.stage ?? 'idle'}>{currentAttempt && ['waiting', 'recovering', 'cancelling'].includes(currentAttempt.stage) ? <span className={styles.spinner} aria-hidden="true" /> : <LatexIcon name={currentAttempt?.stage === 'failed' || currentAttempt?.stage === 'recoverable' ? 'alert' : 'shield'} />}<div><span>{localRuntime ? 'Local browser compiler' : 'Private native compiler'}</span><b>{currentAttempt ? `${engineNames[currentAttempt.snapshot.engine]} / ${currentAttempt.progress?.phase ?? currentAttempt.stage}` : !localRuntime && !workspace.online ? 'Offline' : capabilityReady ? `${engineNames[project?.engine ?? 'lualatex']} / available to load` : 'Not available'}</b><small>{currentAttempt ? `Captured revision ${currentAttempt.revision}` : localRuntime ? 'Project source never leaves this device.' : 'Only a consented compile sends source.'}</small></div></div>
             <div className={styles.buildFact}><LatexIcon name={proof && current ? 'check' : 'file'} /><div><span>PDF proof</span><b>{proof ? `r${proof.revision} / ${current ? 'current' : 'not current'}` : 'Not compiled'}</b><small>{proof ? `${proof.pdf.pages} ${proof.pdf.pages === 1 ? 'page' : 'pages'} / ${sizeLabel(proof.pdf.bytes)} / exact bytes` : 'No preview or progress is fabricated.'}</small></div></div>
           </div>
-          <div className={styles.buildStatus}><p>{currentAttempt?.message ?? (compileReason || (localRuntime ? 'Ready to load the local engine on Compile. Source and generated PDF bytes stay on this device.' : 'Ready for a consented private compile. Source remains local until Compile.'))}{workspace.queuedRevision !== null && ` Latest queued intent: r${workspace.queuedRevision}.`}</p><button type="button" className={styles.button} disabled={workspace.capabilitiesLoading || workspace.engineCacheBusy} onClick={() => void checkAvailability()}><LatexIcon name="shield" />Check availability</button></div>
+          <div className={styles.buildStatus}><p>{currentAttempt?.message ?? (compileReason || (localRuntime ? 'Ready to load the local engine on Compile. Source and generated PDF bytes stay on this device.' : 'Ready for a consented private compile. Source remains local until Compile.'))}{workspace.queuedRevision !== null && ` Latest queued intent: r${workspace.queuedRevision}.`}</p><div className={styles.buildActions}><button type="button" className={styles.button} disabled={workspace.capabilitiesLoading || workspace.engineCacheBusy} onClick={() => void checkAvailability()}><LatexIcon name="shield" />Check availability</button>{readyBrowserAttempt && readyEngineAssets.length > 0 && <button type="button" className={styles.button} onClick={() => openModal({ kind: 'engine-assets', operationKey: readyBrowserAttempt.operationKey })}><LatexIcon name="layers" />View engine files</button>}</div></div>
           {workspace.capabilities.profiles.length > 0 && <details className={styles.compilerInventory}><summary>{localRuntime ? 'Bundled browser engines, fonts and packages' : 'Reported native fonts and packages'}</summary><p className={styles.helper}>{localRuntime ? 'Pinned local profiles and package subset, not universal TeX compatibility or the complete bundle inventory. The engine loads when compiling; custom project source is kept separately.' : 'Availability reported by the private compiler, not inferred from your source. Custom project files are kept separately.'}</p>{workspace.capabilities.profiles.map((profile) => <div key={profile.id}><b>{profile.name}</b><small>{profile.version}</small><p><strong>Fonts:</strong> {profile.fonts.join(', ') || 'None reported'}</p><p><strong>Packages:</strong> {profile.packages.join(', ') || 'None reported'}</p></div>)}{localManifest && <><p className={styles.helper}>{localManifest.groups ? `Selected core + ${project ? engineNames[project.engine] : 'engine'} assets: ${sizeLabel(localEngineBytes ?? 0)}. Optional package groups add their pinned bytes only after consent; the ${sizeLabel(localManifest.assets.reduce((total, asset) => total + asset.bytes, 0))} legacy full bundle is not fetched for grouped profiles.` : `Fixed runtime assets: ${sizeLabel(localManifest.assets.reduce((total, asset) => total + asset.bytes, 0))}.`} Device memory and cache availability vary.</p>{Boolean(localManifest.groups?.some((group) => group.kind === 'package')) && <ul>{localManifest.groups!.filter((group) => group.kind === 'package').map((group) => <li key={group.id}>{group.id}: {group.packages.join(', ')} / {sizeLabel(group.assets.reduce((sum, pin) => sum + pin.bytes, 0))} / explicit download consent</li>)}</ul>}<ul>{localManifest.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul><a href={`${BROWSER_LATEX_ROOT}source-offer.json`} target="_blank" rel="noreferrer">Compiler source and license provenance</a></>}</details>}
         </>}
         {drawerView === 'problems' && <><p className={styles.helper}>{diagnosticRevision ? `Reported for r${diagnosticRevision}${!diagnosticsCurrent ? '. Current source is a different snapshot; lines may differ.' : '.'}` : 'Compile diagnostics appear here. No checks have been fabricated.'}</p>{diagnostics.length ? <ul className={styles.diagnostics}>{diagnostics.map((item, index) => <li key={index} data-severity={item.severity}><b>{item.severity}</b><div><p>{item.message}</p>{item.help && <p className={styles.helper}>{item.help}</p>}{item.file && <button type="button" className={styles.textButton} disabled={!project?.files.some((source) => source.path === item.file)} onClick={() => { const target = project?.files.find((source) => source.path === item.file); if (target) jumpTo(target.id, item.line ?? 1) }}>{item.file}{item.line ? `:${item.line}` : ''}</button>}{item.code && <code className={styles.diagnosticCode}>{item.code}</code>}</div></li>)}</ul> : <p>No diagnostics reported for this view.</p>}</>}
@@ -677,7 +698,7 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
       </div>}
     </section>
     <nav className={styles.mobileNav} aria-label="LaTeX workspace views">{(['files', 'source', 'proof', 'problems'] as const).map((panel) => <button type="button" key={panel} aria-current={mobilePanel === panel ? 'page' : undefined} onClick={() => { setMobilePanel(panel); if (panel === 'problems') setDrawer(usefulProblems ? 'problems' : 'build') }}><LatexIcon name={panel === 'files' ? 'files' : panel === 'source' ? 'file' : panel === 'proof' ? 'layers' : 'terminal'} />{panel === 'files' ? 'Files' : panel === 'source' ? 'Source' : panel === 'proof' ? 'Proof' : 'Build'}{panel === 'problems' && usefulProblems && <span className={styles.mobileIssueDot} aria-label="Build has issues" />}</button>)}</nav>
-    <dialog ref={dialog} className={styles.dialog} aria-labelledby="resume-latex-dialog-title" onCancel={() => setModal(null)}><form onSubmit={(event) => void submitModal(event)}><div className={styles.dialogHeading}><h2 id="resume-latex-dialog-title">{modalTitle}</h2><button type="button" aria-label="Close LaTeX dialog" disabled={busy} onClick={() => setModal(null)}>Close</button></div>
+    <dialog ref={dialog} className={styles.dialog} data-kind={modal?.kind} aria-labelledby="resume-latex-dialog-title" onCancel={() => setModal(null)}><form onSubmit={(event) => void submitModal(event)}><div className={styles.dialogHeading}><h2 id="resume-latex-dialog-title">{modalTitle}</h2><button type="button" aria-label="Close LaTeX dialog" disabled={busy} onClick={() => setModal(null)}>Close</button></div>
       {modal && (modal.kind === 'new' || modal.kind === 'rename') && <><label className={styles.field}>Relative filename<input autoFocus value={pathDraft} onChange={(event) => setPathDraft(event.target.value)} required maxLength={240} spellCheck={false} /></label><p className={styles.helper}>.tex, .sty, .cls, .bib, .bst, .md, .txt or latexmkrc. Documentation/configuration are editable and exportable, not executed. Image renames keep their PNG/JPEG format. Use NFC letters, numbers, hyphens, underscores and relative folders; no spaces or traversal paths.</p>{modal.kind === 'new' && <label className={styles.field}>Initial raw source<textarea value={fileText} onChange={(event) => setFileText(event.target.value)} rows={8} spellCheck={false} /></label>}</>}
       {modal && (modal.kind === 'rename' || modal.kind === 'delete') && <div className={styles.dialogWarning}><p>{modal.kind === 'delete' ? `Delete ${modal.path}?` : `Rename ${modal.path}?`} A recoverable checkpoint is recorded with the change. Source references will not be rewritten automatically.</p>{refs.length ? <ul>{refs.map((reference) => <li key={`${reference.file}:${reference.line}`}>{reference.file}:{reference.line} references this path.</li>)}</ul> : <p>No literal references were found. Macro-generated references may still exist.</p>}</div>}
       {modal?.kind === 'restore' && <p className={styles.dialogWarning}>Restore {modal.checkpoint.label} (r{modal.checkpoint.project.revision}) as a new source revision. Current source is checkpointed first; the last good PDF remains labeled with its own revision.</p>}
@@ -689,7 +710,26 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
       })}{!modal.fonts.length && <p>No literal fontspec font names were detected. Custom macro-defined fonts must be reviewed in source.</p>}</>}
       {modal?.kind === 'remove' && <><p className={styles.dialogWarning}>Explicitly remove {modal.project.title || 'this project'} and its supported local checkpoints/assets/proof. This does not affect Regular or other projects. Invalid/future records are preserved. Export a Source ZIP first if you need a portable recovery copy.</p><button type="button" className={styles.button} disabled={busy} onClick={() => void downloadSource(modal.project, false)}>Download this project&apos;s ZIP</button></>}
       {modal?.kind === 'engine-cache' && <><p className={styles.dialogWarning}>Clear only the verified engine assets and package-download permissions stored on this device. Project source, original ZIP contents, checkpoints and PDF proofs stay untouched. HTTP caches are separate and are not erased. The next local compile may need to download the selected profile again; offline compilation is not promised after clearing.</p>{cacheClearError && <p className={styles.dialogWarning} role="alert">{cacheClearError}</p>}</>}
-      <div className={styles.dialogActions}><button type="button" className={styles.button} disabled={busy} onClick={() => setModal(null)}>Cancel</button><button type="submit" className={styles.primaryButton} disabled={busy || (modal?.kind === 'privacy' && !consentChecked)}>{busy ? 'Working locally...' : modal?.kind === 'privacy' ? modal.auto ? 'Enable Auto Compile' : 'Compile this revision' : modal?.kind === 'delete' ? 'Delete with checkpoint' : modal?.kind === 'restore' ? 'Restore as new revision' : modal?.kind === 'remove' ? 'Remove project' : modal?.kind === 'engine-cache' ? 'Clear engine cache only' : modal?.kind === 'fonts' ? 'Apply to LaTeX source only' : 'Apply'}</button></div>
+      {modal?.kind === 'engine-assets' && engineAssetAttempt && <>
+        <p><strong>Captured revision r{engineAssetAttempt.revision}</strong> / {engineNames[engineAssetAttempt.snapshot.engine]}</p>
+        <p className={styles.helper}>Latest successful local compile for this project, retained in this editor session. This is not a view of current cache contents or a network-traffic report. Package names apply to each group, not to individual files.</p>
+        <dl className={styles.engineAuditSummary}>
+          <div><dt>Verified assets</dt><dd>{engineAssets.length}</dd></div>
+          <div><dt>Total verified bytes</dt><dd title={`${engineAssetBytes.toLocaleString('en-US')} bytes`}>{sizeLabel(engineAssetBytes)}</dd></div>
+          <div><dt>IndexedDB reuse</dt><dd>{engineAssetsReused}</dd></div>
+          <div><dt>Fetch responses</dt><dd>{engineAssets.length - engineAssetsReused}</dd></div>
+        </dl>
+        <div className={styles.engineAuditGroups}>{engineAssetGroups.map((group) => <section key={group.id}>
+          <div className={styles.engineAuditGroupHeading}><h3>{group.kind === 'runtime' ? 'Engine runtime' : group.kind === 'bundle' ? 'Complete engine bundle' : `${group.id} / ${group.kind === 'package' ? 'Approved package group' : group.kind === 'core' ? 'Core files' : 'Engine profile'}`}</h3><span>{group.assets.length} assets</span></div>
+          {group.packages.length > 0 && <p><strong>Packages in this group:</strong> {group.packages.join(', ')}</p>}
+          <ul>{group.assets.map((asset) => <li key={asset.path}>
+            <code className={styles.engineAssetPath}>{asset.path}</code>
+            <p className={styles.engineAssetSource} data-source={asset.source}>{asset.source === 'indexeddb-reuse' ? 'IndexedDB reuse — verified local engine cache' : 'Fetch response received — HTTP cache may have been used'}</p>
+            <dl className={styles.engineAssetMetadata}><div><dt>Exact size</dt><dd>{asset.bytes.toLocaleString('en-US')} bytes / {sizeLabel(asset.bytes)}</dd></div><div><dt>SHA-256</dt><dd><code>{asset.sha256}</code></dd></div></dl>
+          </li>)}</ul>
+        </section>)}</div>
+      </>}
+      <div className={styles.dialogActions}>{modal?.kind === 'engine-assets' ? <button type="button" className={styles.primaryButton} onClick={() => setModal(null)}>Done</button> : <><button type="button" className={styles.button} disabled={busy} onClick={() => setModal(null)}>Cancel</button><button type="submit" className={styles.primaryButton} disabled={busy || (modal?.kind === 'privacy' && !consentChecked)}>{busy ? 'Working locally...' : modal?.kind === 'privacy' ? modal.auto ? 'Enable Auto Compile' : 'Compile this revision' : modal?.kind === 'delete' ? 'Delete with checkpoint' : modal?.kind === 'restore' ? 'Restore as new revision' : modal?.kind === 'remove' ? 'Remove project' : modal?.kind === 'engine-cache' ? 'Clear engine cache only' : modal?.kind === 'fonts' ? 'Apply to LaTeX source only' : 'Apply'}</button></>}</div>
     </form></dialog>
   </div>
 }

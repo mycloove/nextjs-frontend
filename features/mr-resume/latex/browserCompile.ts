@@ -5,7 +5,7 @@ import { LatexTransportError } from './compileTransport.ts'
 import { isLatexTextPath, projectSnapshotHash, sha256, validateLatexProject, withoutComments } from './project.ts'
 import { imageDimensions } from './projectArchive.ts'
 import { readLatexCompileResult, readLatexId, readBoundedLatexBytes } from './server/contract.ts'
-import { LATEX_LIMITS, type LatexCapabilities, type LatexDiagnostic, type LatexProject, type LatexProof } from './types.ts'
+import { LATEX_LIMITS, LATEX_MAIN_FILE_NOTICE, type LatexCapabilities, type LatexDiagnostic, type LatexProject, type LatexProof } from './types.ts'
 
 const font = {
   path: 'NotoSerifBengali-Regular.ttf',
@@ -101,6 +101,7 @@ export async function compileBrowserLatexProject(project: LatexProject, operatio
   }
   if (snapshot.files.some((file) => file.content.includes(font.path))) files.push({ path: font.path, data: await localFont(signal) })
   try {
+    if (snapshot.mainFile === null) throw refused(operationKey, LATEX_MAIN_FILE_NOTICE, 'missing_main')
     const output = await engine({ mainFile: snapshot.mainFile, files, signal, onProgress })
     const diagnostics = browserDiagnostics(output.log, snapshot)
     if (diagnostics.some((item) => item.severity === 'error')) throw refused(operationKey, 'TeX reported an error or missing glyph. The previous PDF and original source were retained.', 'browser_tex_error', output.log, diagnostics)
