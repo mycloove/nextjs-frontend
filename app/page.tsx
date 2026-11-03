@@ -524,7 +524,7 @@ export default function Home() {
   const libraryTools = featuredTools.length ? visibleTools.filter((tool) => !tool.featured) : visibleTools
 
   return (
-    <div className="home-page">
+    <div className="home-page home-page--landing">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
