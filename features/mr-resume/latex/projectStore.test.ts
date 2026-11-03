@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import ts from 'typescript'
-import { assertExpectedRevision, LatexStorageError, LOCAL_LATEX_LIMITS, openLatexProjectStore, storedRecordBytes, validateStoredProof } from './projectStore.ts'
+import { assertExpectedRevision, latexStoreNames, LatexStorageError, LOCAL_LATEX_LIMITS, openLatexProjectStore, storedRecordBytes, validateStoredPendingCompile, validateStoredProof } from './projectStore.ts'
 import { createTemplateProject } from './templates.ts'
-import { sha256 } from './project.ts'
+import { projectSnapshotHash, sha256 } from './project.ts'
 import type { LatexProof } from './types.ts'
 
 const workflowSource = readFileSync(new URL('./useLatexWorkspace.ts', import.meta.url), 'utf8')
@@ -48,7 +48,7 @@ test('proof metadata and future originals are rejected without detaching or modi
   const data = new TextEncoder().encode('%PDF-1.7\nsynthetic contract fixture\n%%EOF').buffer
   const proof: LatexProof = { status: 'ready', operationKey: 'operation-fixture', projectId: 'project-fixture', revision: 1, snapshotHash: 'a'.repeat(64), engine: 'lualatex', profileVersion: 'test-only',
     pdf: { id: 'pdf-fixture', sha256: await sha256(data), bytes: data.byteLength, pages: 1 }, diagnostics: [], log: '', syncAvailable: false, createdAt: '2026-10-29T08:00:00Z', data }
-  const record = { storageVersion: 1, projectId: proof.projectId, proof, snapshot: { ...createTemplateProject(), id: proof.projectId } }
+  const record = { storageVersion: 1, projectId: proof.projectId, proof, snapshot: { ...createTemplateProject(), id: proof.projectId, engine: 'lualatex' as const } }
   assert.equal(validateStoredProof(record).data, data)
   const before = new Uint8Array(data).slice()
   assert.throws(() => validateStoredProof({ ...record, storageVersion: 2 }), /unsupported/u)
@@ -57,6 +57,52 @@ test('proof metadata and future originals are rejected without detaching or modi
   assert.throws(() => validateStoredProof({ ...record, proof: { ...proof, snapshotHash: 'unverified' } }), /invalid/u)
   assert.deepEqual(new Uint8Array(data), before)
   assert.equal(data.byteLength, before.length)
+})
+
+test('pending compile validation retains the exact captured source and rejects malformed/future records without mutation', async () => {
+  const snapshot = createTemplateProject()
+  snapshot.files[0].content += '\r\n% \u09ac\u09be\u0982\u09b2\u09be \u200d\u200c e\u0301\r\n'
+  const intent = { operationKey: 'pending-operation-one', snapshot, snapshotHash: await projectSnapshotHash(snapshot), createdAt: '2026-10-29T08:00:00Z' }
+  const record = { storageVersion: 1, id: 'active', intent }
+  assert.equal(validateStoredPendingCompile(record), intent)
+  assert.equal(validateStoredPendingCompile(record).snapshot, snapshot)
+  const variants = [null, [], { ...record, storageVersion: 2 }, { ...record, id: 'other-slot' }, { ...record, extra: 'future-field' },
+    ...[null, { ...intent, extra: 'future-intent' }, { ...intent, operationKey: '../escape' }, { ...intent, operationKey: 'short' },
+      { ...intent, operationKey: '_invalid-operation' }, { ...intent, snapshotHash: 'A'.repeat(64) }, { ...intent, snapshotHash: 'unverified' },
+      { ...intent, createdAt: 'not-a-date' }].map((invalid) => ({ ...record, intent: invalid }))]
+  for (const invalid of variants) {
+    const before = structuredClone(invalid)
+    assert.throws(() => validateStoredPendingCompile(invalid), (error: unknown) => error instanceof LatexStorageError && error.code === 'protected')
+    assert.deepEqual(invalid, before)
+  }
+  for (const invalidSnapshot of [{ ...snapshot, version: 2 }, { ...snapshot, revision: 0 }, { ...snapshot, mainFile: 'missing.tex' },
+    { ...snapshot, files: [{ ...snapshot.files[0], content: '\ud800' }] }]) {
+    const invalid = { ...record, intent: { ...intent, snapshot: invalidSnapshot } }, before = structuredClone(invalid)
+    assert.throws(() => validateStoredPendingCompile(invalid))
+    assert.deepEqual(invalid, before)
+  }
+  assert.equal(record.intent.snapshot.files[0].content, snapshot.files[0].content)
+})
+
+test('schema1 upgrade creates only the additive operations store with its active-record keyPath', async () => {
+  const legacyNames = ['projects', 'assets', 'checkpoints', 'artifacts']
+  const created: { name: string; keyPath: string | string[] | null | undefined }[] = []
+  const database = { objectStoreNames: { contains: (name: string) => legacyNames.includes(name) },
+    createObjectStore: (name: string, options?: IDBObjectStoreParameters) => { created.push({ name, keyPath: options?.keyPath }) },
+    deleteObjectStore: () => assert.fail('An upgrade cannot delete schema1 projects/assets/checkpoints/proofs'), close: () => {} } as unknown as IDBDatabase
+  const operation = { result: database } as IDBOpenDBRequest
+  const factory = { open: (name: string, version: number) => {
+    assert.equal(name, 'mr-resume:latex:v1'); assert.equal(version, 2)
+    queueMicrotask(() => {
+      operation.onupgradeneeded?.call(operation, new Event('upgradeneeded') as IDBVersionChangeEvent)
+      operation.onsuccess?.call(operation, new Event('success'))
+    })
+    return operation
+  } } as unknown as IDBFactory
+  const store = await openLatexProjectStore(factory)
+  assert.deepEqual(created, [{ name: 'operations', keyPath: 'id' }])
+  assert.deepEqual(latexStoreNames, [...legacyNames, 'operations'])
+  store.close()
 })
 
 test('pending writes cannot resurrect a removed project or overwrite newly restored source', () => {

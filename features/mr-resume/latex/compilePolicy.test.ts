@@ -18,7 +18,16 @@ test('a late older artifact cannot replace a newer last-good proof', () => {
 })
 
 test('disconnect/abort/deadline require explicit operation recovery; deterministic TeX errors do not auto-retry', () => {
-  for (const code of ['transport_unavailable', 'upstream_timeout', 'request_aborted', 'operation_running']) assert.equal(recoverableCompileFailure(code), true)
+  for (const code of ['transport_unavailable', 'upstream_unavailable', 'upstream_timeout', 'request_aborted', 'operation_running']) assert.equal(recoverableCompileFailure(code), true)
   assert.equal(recoverableCompileFailure('upstream_protocol_error', 502), true)
   for (const code of ['tex_error', 'invalid_manifest', 'missing_font', 'unsupported_package', 'fair_use_limit', 'compiler_disabled']) assert.equal(recoverableCompileFailure(code, 422), false)
+})
+
+test('known cancelled/failed/missing recovery outcomes are terminal, while a running 409 remains recoverable', () => {
+  assert.equal(recoverableCompileFailure('operation_running', 409), true)
+  for (const [code, status] of [['operation_cancelled', 409], ['operation_failed', 422], ['operation_not_found', 404], ['operation_not_found', 410]] as const) {
+    assert.equal(recoverableCompileFailure(code, status), false)
+  }
+  assert.equal(recoverableCompileFailure('upstream_protocol_error', 502), true, 'Unknown network/protocol outcomes cannot claim server cancellation')
+  assert.equal(mayAutoCompile({ enabled: false, active: true, online: true, ready: true, retryAt: 0 }, Number.MAX_SAFE_INTEGER), false, 'Restoration/recovery cannot opt into Auto Compile')
 })

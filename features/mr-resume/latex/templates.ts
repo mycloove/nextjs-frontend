@@ -2,7 +2,7 @@ import { LATEX_PROJECT_VERSION, type LatexEngine, type LatexProject } from './ty
 import { newLatexId, validateLatexProject } from './project.ts'
 
 export type LatexSourceTemplate = { id: string; version: number; name: string; detail: string; engine: LatexEngine; requirements: string; files: { path: string; content: string }[] }
-export const templateNotice = 'Original SmilePDF source templates, version 1. You may edit and redistribute these sources with your resume. Native fonts and TeX packages are separate dependencies.'
+export const templateNotice = 'Original SmilePDF source templates. New templates use browser-compatible XeLaTeX and classic BibTeX; earlier saved sources are never rewritten. Public fonts and TeX packages are separate dependencies.'
 const style = String.raw`% Original SmilePDF source template, version 1.
 % You may edit and redistribute this source with your resume.
 \NeedsTeXFormat{LaTeX2e}
@@ -22,13 +22,13 @@ const style = String.raw`% Original SmilePDF source template, version 1.
 `
 
 export const latexSourceTemplates: readonly LatexSourceTemplate[] = [
-  { id: 'career-source', version: 1, name: 'Career resume', detail: 'A single-column resume with a small, editable style file.', engine: 'lualatex',
-    requirements: 'LuaLaTeX; Latin Modern Roman; fontspec, geometry, enumitem, titlesec, hyperref.', files: [
+  { id: 'career-source', version: 2, name: 'Career resume', detail: 'Browser-compatible single-column resume with an editable style file.', engine: 'xelatex',
+    requirements: 'XeLaTeX; Latin Modern Roman; fontspec, geometry, enumitem, titlesec, hyperref.', files: [
       { path: 'main.tex', content: String.raw`% Original SmilePDF source template, version 1.
 % Replace the example writing. This is source, not an ATS certification.
 \documentclass[11pt,a4paper]{article}
 \usepackage{fontspec}
-\setmainfont{Latin Modern Roman}
+\setmainfont{lmroman10-regular.otf}
 \usepackage{resume}
 \begin{document}
 {\LARGE\bfseries Ayesha Rahman}\par
@@ -63,16 +63,14 @@ Product strategy; interaction design; prototyping; design systems; user research
 \end{document}
 ` }, { path: 'resume.sty', content: style },
     ] },
-  { id: 'academic-source', version: 1, name: 'Academic CV', detail: 'Research, teaching and a real local bibliography in references.bib.', engine: 'lualatex',
-    requirements: 'LuaLaTeX; Latin Modern Roman; biblatex with biber; fontspec and resume.sty dependencies.', files: [
+  { id: 'academic-source', version: 2, name: 'Academic CV', detail: 'Browser-compatible research CV with a classic BibTeX bibliography.', engine: 'xelatex',
+    requirements: 'XeLaTeX; Latin Modern Roman; classic BibTeX; fontspec and resume.sty dependencies.', files: [
       { path: 'main.tex', content: String.raw`% Original SmilePDF source template, version 1.
-% Bibliography uses the local references.bib and the compiler's bounded biber step.
+% Classic BibTeX uses the local references.bib in the browser compiler.
 \documentclass[11pt,a4paper]{article}
 \usepackage{fontspec}
-\setmainfont{Latin Modern Roman}
+\setmainfont{lmroman10-regular.otf}
 \usepackage{resume}
-\usepackage[backend=biber,style=numeric,sorting=ydnt]{biblatex}
-\addbibresource{references.bib}
 \begin{document}
 {\LARGE\bfseries Samira Ahmed}\par
 Human-computer interaction researcher \textbullet{} Dhaka, Bangladesh\par
@@ -98,7 +96,8 @@ Teaching assistant, Interaction Design, 2024--2025.
 \section*{Selected publications}
 % This deliberately fictional entry demonstrates a real bibliography workflow.
 \nocite{ahmed2025example}
-\printbibliography[heading=none]
+\bibliographystyle{plain}
+\bibliography{references}
 
 \section*{Service and methods}
 Community accessibility workshops; qualitative analysis; prototyping; statistics.
@@ -107,25 +106,25 @@ Community accessibility workshops; qualitative analysis; prototyping; statistics
 @article{ahmed2025example,
   author = {Ahmed, Samira and Rahman, Ayesha},
   title = {An Example Study of Accessible Multilingual Services},
-  journaltitle = {Fictional Journal for Template Demonstration},
-  date = {2025},
+   journal = {Fictional Journal for Template Demonstration},
+   year = {2025},
   volume = {1},
   pages = {1--10},
   note = {Fictional example, not a real publication}
 }
 ` },
     ] },
-  { id: 'bangla-source', version: 1, name: 'Bangla / mixed-script', detail: 'Unicode Bangla writing with explicit HarfBuzz shaping and English spans.', engine: 'lualatex',
-    requirements: 'LuaHBTeX; Noto Sans Bengali and Latin Modern Roman; fontspec, polyglossia, geometry, enumitem, hyperref.', files: [
+  { id: 'bangla-source', version: 2, name: 'Bangla / mixed-script', detail: 'Browser-compatible Unicode Bangla with a real bundled Bengali TTF and English spans.', engine: 'xelatex',
+    requirements: 'XeLaTeX; NotoSerifBengali-Regular.ttf and Latin Modern Roman; fontspec, polyglossia, geometry, enumitem, hyperref.', files: [
       { path: 'main.tex', content: String.raw`% Original SmilePDF source template, version 1.
-% Unicode and joiners are preserved. LuaLaTeX must use the pinned native fonts.
+% Unicode and joiners are preserved. The browser downloads the pinned Bengali TTF.
 \documentclass[11pt,a4paper]{article}
 \usepackage{fontspec}
 \usepackage{polyglossia}
 \setdefaultlanguage{bengali}
 \setotherlanguage{english}
-\setmainfont{Latin Modern Roman}
-\newfontfamily\bengalifont[Script=Bengali,Renderer=HarfBuzz]{Noto Sans Bengali}
+\setmainfont{lmroman10-regular.otf}
+\newfontfamily\bengalifont[Script=Bengali]{NotoSerifBengali-Regular.ttf}
 \usepackage[a4paper,margin=18mm]{geometry}
 \usepackage{enumitem}
 \usepackage[hidelinks]{hyperref}

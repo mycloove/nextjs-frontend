@@ -728,6 +728,10 @@
 .mobileNav { display: none; }
 
 @media (max-width: 1150px) {
+  .topbar { flex-wrap: wrap; }
+  .docIdentity { flex: 1 1 200px; }
+  .docIdentity input { min-width: 0; flex: 1 1 0; }
+  .topActions { min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
   .toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding-inline: 12px; }
   .setupControls { min-width: 0; flex-wrap: nowrap; gap: 8px; }
   .toolbarActions { flex-shrink: 0; gap: 6px; }
@@ -767,6 +771,7 @@
 
 @media (max-width: 750px) {
   .docIdentity { display: none; }
+  .topActions { flex: 1 1 100%; justify-content: space-between; margin-left: 0; }
   .toolbar { display: grid; min-height: 0; grid-template-columns: 1fr; gap: 6px; padding: 6px 12px 8px; }
   .setupControls, .toolbarActions { width: 100%; justify-content: space-between; gap: 8px; }
   .setupControls { flex-wrap: wrap; }

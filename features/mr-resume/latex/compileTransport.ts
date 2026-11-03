@@ -1,5 +1,5 @@
 import {
-  LATEX_API, LATEX_LIMITS, type LatexCapabilities, type LatexCompileFailure, type LatexCompileManifest,
+  LATEX_API, LATEX_LIMITS, type LatexCapabilities, type LatexCompileFailure, type LatexCompileManifest, type LatexCompileResult,
   type LatexOperation, type LatexProject, type LatexProof, type LatexSyncQuery, type LatexSyncResult,
 } from './types.ts'
 import {
@@ -153,7 +153,7 @@ export function createLatexCompileTransport(dependencies: LatexTransportDependen
 
   const getLatexCapabilities = (signal?: AbortSignal): Promise<LatexCapabilities> => run(undefined, signal, false, async (context) => jsonResult(await exchange('capabilities', 'GET', context), context, readLatexCapabilities))
 
-  const compileLatexProject = (project: LatexProject, operationKey: string, signal?: AbortSignal): Promise<LatexProof> => run(operationKey, signal, true, async (context) => {
+  async function captureProject(project: LatexProject, operationKey: string, context: RequestContext) {
     if (!project || typeof project !== 'object' || !Array.isArray(project.files) || !Array.isArray(project.assets)) throw new LatexContractError('Invalid local LaTeX project.')
     const assets = project.assets.map((asset) => {
       if (!asset || typeof asset !== 'object' || !(asset.blob instanceof Blob)) throw new LatexContractError('Invalid local project asset.', 'asset_mismatch')
@@ -177,16 +177,10 @@ export function createLatexCompileTransport(dependencies: LatexTransportDependen
       engine: manifest.engine, files: [...manifest.files].sort(compareLatexPaths), assets: fingerprintAssets.sort(compareLatexPaths),
     })
     const snapshotHash = await digest(new TextEncoder().encode(canonical).buffer, context)
-    const form = new FormData()
-    form.append('manifest', JSON.stringify(manifest))
-    for (const asset of assets) form.append(`asset:${asset.id}`, asset.blob.type ? asset.blob : new Blob([asset.blob], { type: asset.mediaType }), asset.path)
-    const encoded = new Response(form)
-    const contentType = encoded.headers.get('content-type')!
-    // Inputs are already bounded. Fully consume our own multipart encoder, then measure
-    // its real overhead; cancelling an unconsumed encoder can leave a producer running.
-    const body = await awaitLatexSignal(encoded.arrayBuffer(), context.signal)
-    if (body.byteLength > LATEX_LIMITS.uploadBytes) throw new LatexContractError('The complete multipart upload exceeds the 3 MiB limit.', 'payload_too_large', 413)
-    const result = await jsonResult(await exchange('compile', 'POST', context, body, contentType), context, (input) => readLatexCompileResult(input, manifest))
+    return { manifest, assets, snapshotHash }
+  }
+
+  async function verifiedProof(result: LatexCompileResult, snapshotHash: string, context: RequestContext): Promise<LatexProof> {
     if (result.snapshotHash !== snapshotHash) throw failure(context, 'The returned proof belongs to a different source or asset snapshot.', 'result_mismatch')
 
     context.requestId = requestId()
@@ -202,6 +196,31 @@ export function createLatexCompileTransport(dependencies: LatexTransportDependen
     if (data.byteLength !== result.pdf.bytes || data.byteLength < 8 || new TextDecoder().decode(new Uint8Array(data, 0, 5)) !== '%PDF-' || await digest(data, context) !== result.pdf.sha256) throw failure(context, 'The PDF artifact failed its original-byte integrity check.', 'artifact_hash_mismatch')
     // PDF.js receives data.slice(0) in the viewer; this canonical buffer remains intact for download/storage.
     return { ...result, data }
+  }
+
+  const compileLatexProject = (project: LatexProject, operationKey: string, signal?: AbortSignal): Promise<LatexProof> => run(operationKey, signal, true, async (context) => {
+    const { manifest, assets, snapshotHash } = await captureProject(project, operationKey, context)
+    const form = new FormData()
+    form.append('manifest', JSON.stringify(manifest))
+    for (const asset of assets) form.append(`asset:${asset.id}`, asset.blob.type ? asset.blob : new Blob([asset.blob], { type: asset.mediaType }), asset.path)
+    const encoded = new Response(form)
+    const contentType = encoded.headers.get('content-type')!
+    // Consume the bounded multipart encoder before measuring its actual transport overhead.
+    const body = await awaitLatexSignal(encoded.arrayBuffer(), context.signal)
+    if (body.byteLength > LATEX_LIMITS.uploadBytes) throw new LatexContractError('The complete multipart upload exceeds the 3 MiB limit.', 'payload_too_large', 413)
+    const result = await jsonResult(await exchange('compile', 'POST', context, body, contentType), context, (input) => readLatexCompileResult(input, manifest))
+    return verifiedProof(result, snapshotHash, context)
+  })
+
+  const recoverLatexProject = (project: LatexProject, operationKey: string, signal?: AbortSignal): Promise<LatexProof> => run(operationKey, signal, true, async (context) => {
+    const { manifest, snapshotHash } = await captureProject(project, operationKey, context)
+    const operation = await jsonResult(await exchange(`operations/${operationKey}`, 'GET', context), context, (input) => {
+      const result = readLatexOperation(input, operationKey)
+      return result.status === 'ready' ? readLatexCompileResult(result, manifest) : result
+    })
+    if (operation.status === 'running') throw failure(context, 'The server still reports this operation as running. No automatic polling or duplicate build was started.', 'operation_running', 409)
+    if (operation.status !== 'ready') throw failure(context, operation.error ?? `Server operation is ${operation.status}.`, operation.status === 'cancelled' ? 'operation_cancelled' : 'operation_failed', operation.status === 'cancelled' ? 409 : 422)
+    return verifiedProof(operation, snapshotHash, context)
   })
 
   const cancelLatexCompile = (operationKey: string, signal?: AbortSignal): Promise<{ cancelled: boolean; status: string }> => run(operationKey, signal, false, async (context) => jsonResult(await exchange('cancel', 'POST', context, new TextEncoder().encode(JSON.stringify({ operationKey })).buffer, 'application/json'), context, readLatexCancelResult))
@@ -215,13 +234,14 @@ export function createLatexCompileTransport(dependencies: LatexTransportDependen
     }
     return jsonResult(response, context, (input) => readLatexSyncResult(input, validated))
   })
-  return { getLatexCapabilities, compileLatexProject, cancelLatexCompile, getLatexOperation, syncLatexProof }
+  return { getLatexCapabilities, compileLatexProject, recoverLatexProject, cancelLatexCompile, getLatexOperation, syncLatexProof }
 }
 
 // Constructing/importing this adapter does not contact the server or start compilation.
 const transport = createLatexCompileTransport()
 export const getLatexCapabilities = transport.getLatexCapabilities
 export const compileLatexProject = transport.compileLatexProject
+export const recoverLatexProject = transport.recoverLatexProject
 export const cancelLatexCompile = transport.cancelLatexCompile
 export const getLatexOperation = transport.getLatexOperation
 export const syncLatexProof = transport.syncLatexProof

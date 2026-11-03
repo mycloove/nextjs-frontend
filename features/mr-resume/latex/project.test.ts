@@ -11,11 +11,15 @@ test('three genuine versioned source templates are independent, with local style
   const career = createTemplateProject(), academic = createTemplateProject('academic-source'), bangla = createTemplateProject('bangla-source')
   assert.notEqual(career.id, createTemplateProject().id)
   assert.ok(career.files.some((file) => file.path === 'resume.sty' && file.content.includes('ProvidesPackage')))
-  assert.ok(academic.files.find((file) => file.path === 'main.tex')!.content.includes('backend=biber'))
+  const academicSource = academic.files.find((file) => file.path === 'main.tex')!.content
+  assert.ok(academicSource.includes('\\bibliographystyle{plain}'))
+  assert.ok(academicSource.includes('\\bibliography{references}'))
+  assert.doesNotMatch(academicSource, /biblatex|backend=biber/u)
   assert.ok(academic.files.some((file) => file.path === 'references.bib' && file.content.includes('@article')))
   assert.match(bangla.files[0].content, /[\u0980-\u09ff]/u)
-  assert.match(bangla.files[0].content, /Renderer=HarfBuzz/u)
-  for (const project of [career, academic, bangla]) { assert.equal(project.revision, 1); assert.equal(project.templateVersion, 1); assert.equal(validateLatexProject(project), project) }
+  assert.match(bangla.files[0].content, /\\newfontfamily\\bengalifont\[Script=Bengali\]\{NotoSerifBengali-Regular\.ttf\}/u)
+  assert.doesNotMatch(bangla.files[0].content, /Renderer=HarfBuzz/u)
+  for (const project of [career, academic, bangla]) { assert.equal(project.revision, 1); assert.equal(project.templateVersion, 2); assert.equal(project.engine, 'xelatex'); assert.equal(validateLatexProject(project), project) }
 })
 
 test('raw TeX, Unicode joiners, spaces, CRLF and plain-text specials are never globally escaped or normalized', () => {
@@ -117,7 +121,7 @@ test('authoritative hash canonicalization matches code-point path ordering and i
   const project = createTemplateProject()
   const hash = await projectSnapshotHash(project)
   assert.equal(await projectSnapshotHash({ ...project, title: 'Different title', files: [...project.files].reverse() }), hash)
-  assert.notEqual(await projectSnapshotHash({ ...project, engine: 'xelatex' }), hash)
+  assert.notEqual(await projectSnapshotHash({ ...project, engine: 'lualatex' }), hash)
   assert.notEqual(await projectSnapshotHash(reviseProject(project, { title: project.title })), hash)
   assert.notEqual(await projectSnapshotHash({ ...project, files: project.files.map((file, i) => i ? file : { ...file, content: file.content + ' ' }) }), hash)
 })
@@ -126,7 +130,7 @@ test('proof freshness changes immediately after source, engine or main-file revi
   const project = createTemplateProject(), proof = { projectId: project.id, revision: project.revision, engine: project.engine } as LatexProof
   assert.equal(isCurrentProof(project, proof), true)
   assert.equal(isCurrentProof(reviseProject(project, { title: 'New revision' }), proof), false)
-  assert.equal(isCurrentProof({ ...project, engine: 'xelatex' }, proof), false)
+  assert.equal(isCurrentProof({ ...project, engine: 'lualatex' }, proof), false)
   assert.equal(isCurrentProof(cloneAsNewProject(project), proof), false)
 })
 
@@ -142,7 +146,8 @@ test('same-revision source forks after multi-tab recovery cannot be mistaken for
 })
 
 test('source/asset hash matches the independently verified Unicode wire contract vector', async () => {
-  const project = { ...createTemplateProject(), id: 'project-one', revision: 7, mainFile: 'resume.tex',
+  // This independent wire vector predates the XeLaTeX template default; its original engine is part of the hash.
+  const project = { ...createTemplateProject(), id: 'project-one', revision: 7, mainFile: 'resume.tex', engine: 'lualatex' as const,
     files: [{ id: 'main', path: 'resume.tex', content: '\\documentclass{article}\r\n% বাংলা \u200d\u200c e\u0301\n' }],
     assets: [{ id: 'photo', path: 'assets/photo.png', mediaType: 'image/png' as const, blob: new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 99])], { type: 'image/png' }) }] }
   assert.equal(await projectSnapshotHash(project), '485563523cce7bb5b37491180005fb568a5406a807f16e58159d481ae271bc10')

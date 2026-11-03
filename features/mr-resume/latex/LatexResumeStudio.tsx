@@ -16,6 +16,7 @@ import { syncLatexProof } from './compileTransport'
 import type { LatexAsset, LatexCheckpoint, LatexDiagnostic, LatexImportRequest, LatexPdfLocation, LatexProject } from './types'
 import { LATEX_LIMITS } from './types'
 import { LOCAL_LATEX_LIMITS } from './projectStore'
+import { isBrowserProof } from './browserCompile.ts'
 
 export type LatexResumeStudioProps = { active: boolean; importRequest?: LatexImportRequest | null; onImportHandled?: (id: string) => void; onCopyRegular?: () => void }
 type Panel = 'files' | 'source' | 'proof' | 'problems'
@@ -23,6 +24,7 @@ type Drawer = 'closed' | 'build' | 'problems' | 'log' | 'history'
 type Modal = { kind: 'new' | 'rename'; fileId?: string; path?: string } | { kind: 'delete'; fileId: string; path: string }
   | { kind: 'restore'; checkpoint: LatexCheckpoint } | { kind: 'privacy'; auto: boolean } | { kind: 'fonts'; projectId: string; revision: number; fonts: string[] }
   | { kind: 'remove'; project: LatexProject }
+  | { kind: 'browser-engine'; projectId: string; revision: number }
 const emptyDiagnostics: LatexDiagnostic[] = []
 const smallSnapshot = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches
 const subscribeSmall = (notify: () => void) => { const query = window.matchMedia('(max-width: 900px)'); query.addEventListener('change', notify); return () => query.removeEventListener('change', notify) }
@@ -164,18 +166,19 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
   const drawerView = newProblems ? 'problems' : drawer === 'closed' ? 'build' : drawer
   const canSync = Boolean(current && proof?.syncAvailable && workspace.online && active)
   const capabilityReady = workspace.capabilities.enabled && workspace.capabilities.ready
+  const browserCompiler = workspace.compilerKind === 'browser'
   const engineProfile = workspace.capabilities.profiles.find((profile) => profile.id === project?.engine)
   const compiling = Boolean(workspace.attempt && ['waiting', 'cancelling', 'recovering'].includes(workspace.attempt.stage))
   const saveLabel = !workspace.ready ? 'Restoring local project' : workspace.saveState?.kind === 'saved' ? `Saved r${workspace.saveState.revision}`
     : workspace.saveState?.kind === 'saving' ? 'Saving transaction' : workspace.saveState?.kind === 'conflict' ? 'Another tab saved' : workspace.saveState?.kind === 'session' ? 'Session only' : 'Unsaved changes'
-  const nativeFonts = workspace.capabilities.profiles.find((profile) => profile.id === project?.engine)?.fonts ?? []
+  const nativeFonts = (workspace.capabilities.profiles.find((profile) => profile.id === project?.engine) ?? (browserCompiler ? workspace.capabilities.profiles[0] : undefined))?.fonts ?? []
   const copiedFontsUnverified = Boolean(copyFonts && project && copyFonts.projectId === project.id && (!capabilityReady || copyFonts.fonts.some((font) => !nativeFonts.includes(font))))
   const fileCount = project ? project.files.length + project.assets.length : 0
   const projectCheckpoints = workspace.checkpoints.filter((item) => item.project.id === project?.id)
   const contentSize = project ? projectSize(project) : { source: 0, assets: 0 }
   const outline = project ? sourceOutline(project.files) : []
-  const compileDisabled = !project || !capabilityReady || !engineProfile || !workspace.online || !active
-  const compileReason = !workspace.online ? 'Offline. Source editing and retained downloads still work.' : !capabilityReady ? workspace.capabilities.reason : project && !engineProfile ? `${engineNames[project.engine]} is not available. Select an available engine in Editor settings.` : ''
+  const compileDisabled = !project || !capabilityReady || (!engineProfile && !browserCompiler) || !workspace.online || !active
+  const compileReason = !workspace.online ? 'Offline. Source editing and retained downloads still work.' : !capabilityReady ? workspace.capabilities.reason : project && !engineProfile ? browserCompiler ? 'The free browser engine is XeLaTeX. Compile will offer an explicit engine change, without rewriting your source.' : `${engineNames[project.engine]} is not available. Select an available engine in Editor settings.` : ''
   const buildLog = currentAttempt?.log ?? proof?.log ?? ''
 
   function toggleLocalWorkspace() {
@@ -278,7 +281,9 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
   function openModal(value: Modal, path = '') { setPathDraft(path); setFileText(''); setFontChoices({}); setConsentChecked(false); setModal(value) }
   function compile() {
     if (!capabilityReady || !workspace.online || !active) { workspace.compile(); return }
-    if (!consent) openModal({ kind: 'privacy', auto: false })
+    if (browserCompiler && project && project.engine !== 'xelatex') openModal({ kind: 'browser-engine', projectId: project.id, revision: project.revision })
+    else if (browserCompiler) workspace.compile()
+    else if (!consent) openModal({ kind: 'privacy', auto: false })
     else workspace.compile()
   }
   async function checkAvailability() {
@@ -286,11 +291,11 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
       setAvailabilityToast({ message: 'Offline: editing, local backups and retained PDF downloads remain available.', ready: false })
       return
     }
-    setAvailabilityToast({ message: 'Checking private compiler availability. No source is uploaded.', ready: false })
+    setAvailabilityToast({ message: 'Checking compiler assets and availability. No source is uploaded.', ready: false })
     const result = await workspace.refreshCapabilities()
     if (!result) return
     const ready = result.enabled && result.ready
-    setAvailabilityToast({ message: ready ? 'Private LaTeX compilation is available.' : result.reason, ready })
+    setAvailabilityToast({ message: ready ? result.reason || 'LaTeX compilation is available.' : result.reason, ready })
   }
   async function downloadSource(snapshot = project, checkpoint = true) {
     if (!snapshot) return
@@ -349,6 +354,11 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
       else if (modal.kind === 'delete') { workspace.applyProject(deleteProjectFile(project, modal.fileId), `Before deleting ${modal.path}`); setSelectedAsset(null) }
       else if (modal.kind === 'restore') workspace.applyProject(restoreCheckpointProject(project, modal.checkpoint), `Before restoring ${modal.checkpoint.label}`)
       else if (modal.kind === 'privacy') { if (!consentChecked) return; setConsent(true); if (modal.auto) workspace.setAutoCompile(true); else workspace.compile() }
+      else if (modal.kind === 'browser-engine') {
+        if (modal.projectId !== project.id || modal.revision !== project.revision) throw new Error('Source changed while the engine dialog was open. Review the current revision again.')
+        workspace.applyProject(reviseProject(project, { engine: 'xelatex' }), 'Before explicit browser XeLaTeX engine change')
+        workspace.compile()
+      }
       else if (modal.kind === 'fonts') {
         if (modal.projectId !== project.id || modal.revision !== project.revision) throw new Error('Source changed while the compatibility dialog was open. Reopen it to review the latest source.')
         const files = project.files.map((item) => ({ ...item, content: applyNativeFontChoices(item.content, fontChoices) }))
@@ -396,7 +406,7 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
     if (drawerOpen && drawerView === view) { setDrawer('closed'); setDismissedProblems(problemKey) } else setDrawer(view)
   }
   const refs = modal && (modal.kind === 'delete' || modal.kind === 'rename') && project && modal.path ? referencesToFile(project, modal.path) : []
-  const modalTitle = !modal ? '' : modal.kind === 'new' ? 'Create a source file' : modal.kind === 'rename' ? 'Rename without rewriting source' : modal.kind === 'delete' ? 'Delete this file' : modal.kind === 'restore' ? 'Restore a checkpoint' : modal.kind === 'privacy' ? (modal.auto ? 'Enable Auto Compile' : 'Compile this source revision') : modal.kind === 'fonts' ? 'Native-font compatibility' : 'Remove a local project'
+  const modalTitle = !modal ? '' : modal.kind === 'new' ? 'Create a source file' : modal.kind === 'rename' ? 'Rename without rewriting source' : modal.kind === 'delete' ? 'Delete this file' : modal.kind === 'restore' ? 'Restore a checkpoint' : modal.kind === 'privacy' ? (modal.auto ? 'Enable Auto Compile' : 'Compile this source revision') : modal.kind === 'browser-engine' ? 'Compile locally with XeLaTeX' : modal.kind === 'fonts' ? 'Font compatibility' : 'Remove a local project'
 
   return <div ref={root} className={`${theme.theme} ${styles.root}`} data-mobile-panel={mobilePanel} data-files-collapsed={!filesOpen} aria-busy={!workspace.ready} style={fontSize ? { '--latex-code-size': `${fontSize}px` } as CSSProperties : undefined} onClick={(event) => {
     if ((event.target as Element).closest('button[data-close-menu]')) closeMenus(true)
@@ -466,8 +476,8 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
     {workspace.notice && <div className={styles.notice} role="status"><span>{workspace.notice}</span><button type="button" aria-label="Dismiss LaTeX notice" onClick={() => workspace.setNotice('')}>Close</button></div>}
     {importRequest && <div className={styles.capabilityNotice} role="status">Preparing an independent source copy and displayed JPEG sidecar. Existing projects are not replaced or uploaded.</div>}
     {workspace.attempt && <div className={styles.attempt} data-stage={workspace.attempt.stage} role="status"><span><b>{workspace.attempt.projectId === project?.id ? `r${workspace.attempt.revision}` : 'Other project'}:</b> {workspace.attempt.message}{workspace.queuedRevision !== null && ` Latest queued intent: r${workspace.queuedRevision}.`}</span>
-      {['waiting', 'cancelling', 'recoverable'].includes(workspace.attempt.stage) && <button type="button" className={styles.textButton} disabled={workspace.attempt.stage === 'cancelling'} onClick={() => void workspace.cancelCompile()}>Cancel on server</button>}
-      {workspace.attempt.stage === 'waiting' && <button type="button" className={styles.textButton} onClick={workspace.stopWaiting}>Stop waiting</button>}
+      {['waiting', 'cancelling', 'recovering', 'recoverable'].includes(workspace.attempt.stage) && <button type="button" className={styles.textButton} disabled={workspace.attempt.stage === 'cancelling'} onClick={() => void workspace.cancelCompile()}>{browserCompiler && workspace.attempt.stage !== 'recoverable' ? 'Cancel local compile' : 'Cancel on server'}</button>}
+      {['waiting', 'recovering'].includes(workspace.attempt.stage) && <button type="button" className={styles.textButton} onClick={workspace.stopWaiting}>Stop waiting</button>}
       {workspace.attempt.stage === 'recoverable' && <button type="button" className={styles.textButton} disabled={!workspace.online} onClick={() => void workspace.recoverCompile()}>Recover operation</button>}
     </div>}
     </div>
@@ -549,7 +559,7 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
                   <label>Engine <select aria-label="LaTeX compiler engine" value={project?.engine ?? 'lualatex'} disabled={!project} onChange={(event) => { const engine = event.target.value as keyof typeof engineNames; if (project && Object.hasOwn(engineNames, engine)) act(() => workspace.applyProject(reviseProject(project, { engine }))) }}>
                     {Object.entries(engineNames).map(([id, name]) => <option key={id} value={id}>{name}{workspace.capabilities.profiles.some((profile) => profile.id === id) ? '' : ' (not available)'}</option>)}
                   </select></label>
-                  <label className={styles.checkControl}><input type="checkbox" checked={workspace.autoCompile} disabled={!capabilityReady} onChange={(event) => event.target.checked ? (consent ? workspace.setAutoCompile(true) : openModal({ kind: 'privacy', auto: true })) : workspace.setAutoCompile(false)} />Auto Compile</label>
+                  <label className={styles.checkControl}><input type="checkbox" checked={workspace.autoCompile} disabled={!capabilityReady || (browserCompiler && project?.engine !== 'xelatex')} onChange={(event) => event.target.checked ? (browserCompiler || consent ? workspace.setAutoCompile(true) : openModal({ kind: 'privacy', auto: true })) : workspace.setAutoCompile(false)} />Auto Compile</label>
                   <p className={styles.helper}>Auto Compile is opt-in. Manual compilation never uploads while you type.</p>
                 </div>
               </details>
@@ -583,14 +593,14 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
         {drawerView === 'build' && <>
           <div className={styles.buildOverview}>
             <div className={styles.buildFact}><LatexIcon name="file" /><div><span>Source snapshot</span><b>{project ? `${project.mainFile} / r${project.revision}` : 'Restoring source'}</b><small>{project ? `${fileCount} files / ${sizeLabel(contentSize.source + contentSize.assets)}` : 'No source has been uploaded.'}</small></div></div>
-            <div className={styles.buildFact} data-state={currentAttempt?.stage ?? 'idle'}>{currentAttempt && ['waiting', 'recovering', 'cancelling'].includes(currentAttempt.stage) ? <span className={styles.spinner} aria-hidden="true" /> : <LatexIcon name={currentAttempt?.stage === 'failed' || currentAttempt?.stage === 'recoverable' ? 'alert' : 'shield'} />}<div><span>Private compiler</span><b>{currentAttempt ? `${engineNames[currentAttempt.snapshot.engine]} / ${currentAttempt.stage}` : !workspace.online ? 'Offline' : capabilityReady ? `${engineNames[project?.engine ?? 'lualatex']} / available` : 'Not available'}</b><small>{currentAttempt ? `Captured revision ${currentAttempt.revision}` : 'Only an explicit compile sends source.'}</small></div></div>
+            <div className={styles.buildFact} data-state={currentAttempt?.stage ?? 'idle'}>{currentAttempt && ['waiting', 'recovering', 'cancelling'].includes(currentAttempt.stage) ? <span className={styles.spinner} aria-hidden="true" /> : <LatexIcon name={currentAttempt?.stage === 'failed' || currentAttempt?.stage === 'recoverable' ? 'alert' : 'shield'} />}<div><span>{browserCompiler ? 'Browser compiler (free)' : 'Private compiler'}</span><b>{currentAttempt ? `${engineNames[currentAttempt.snapshot.engine]} / ${currentAttempt.stage}` : !workspace.online ? 'Offline' : capabilityReady ? `${browserCompiler ? 'XeLaTeX' : engineNames[project?.engine ?? 'lualatex']} / available` : 'Not available'}</b><small>{currentAttempt ? `Captured revision ${currentAttempt.revision}` : browserCompiler ? 'Source stays on this device. Public package downloads may be needed.' : 'Only an explicit compile sends source.'}</small></div></div>
             <div className={styles.buildFact}><LatexIcon name={proof && current ? 'check' : 'file'} /><div><span>PDF proof</span><b>{proof ? `r${proof.revision} / ${current ? 'current' : 'not current'}` : 'Not compiled'}</b><small>{proof ? `${proof.pdf.pages} ${proof.pdf.pages === 1 ? 'page' : 'pages'} / ${sizeLabel(proof.pdf.bytes)} / exact bytes` : 'No preview or progress is fabricated.'}</small></div></div>
           </div>
           <div className={styles.buildStatus}><p>{currentAttempt?.message ?? (compileReason || 'Ready for a manual compile. Your source remains local until you choose Compile.')}{workspace.queuedRevision !== null && ` Latest queued intent: r${workspace.queuedRevision}.`}</p><button type="button" className={styles.button} disabled={workspace.capabilitiesLoading} onClick={() => void checkAvailability()}><LatexIcon name="shield" />Check availability</button></div>
-          {workspace.capabilities.profiles.length > 0 && <details className={styles.compilerInventory}><summary>Reported native fonts and packages</summary><p className={styles.helper}>Availability reported by the private compiler, not inferred from your source. Custom project files are kept separately.</p>{workspace.capabilities.profiles.map((profile) => <div key={profile.id}><b>{profile.name}</b><small>{profile.version}</small><p><strong>Fonts:</strong> {profile.fonts.join(', ') || 'None reported'}</p><p><strong>Packages:</strong> {profile.packages.join(', ') || 'None reported'}</p></div>)}</details>}
+          {workspace.capabilities.profiles.length > 0 && <details className={styles.compilerInventory}><summary>{browserCompiler ? 'Browser compiler and dependencies' : 'Reported native fonts and packages'}</summary><p className={styles.helper}>{browserCompiler ? 'Real XeTeX and xdvipdfmx run in local WebAssembly workers. Public dependency filenames may be requested from the TeXlyre mirror; source/image/PDF bodies are never uploaded. First load is larger and memory usage can exceed 300 MiB. LuaLaTeX, Biber and SyncTeX are not supported. This is not native-backend certification.' : 'Availability reported by the private compiler, not inferred from your source. Custom project files are kept separately.'}</p>{workspace.capabilities.profiles.map((profile) => <div key={profile.id}><b>{profile.name}</b><small>{profile.version}</small><p><strong>Fonts:</strong> {profile.fonts.join(', ') || 'None reported'}</p><p><strong>Packages:</strong> {profile.packages.join(', ') || 'None reported'}</p></div>)}{browserCompiler && <p className={styles.helper}>Third-party compiler: <a href="https://github.com/SwiftLaTeX/SwiftLaTeX/tree/887e5438c59ccd19a6d9b728d1e21e170b208d06" target="_blank" rel="noreferrer">SwiftLaTeX source and AGPL-3.0 license</a>. Public dependencies are not guaranteed offline or immutable.</p>}</details>}
         </>}
         {drawerView === 'problems' && <><p className={styles.helper}>{diagnosticRevision ? `Reported for r${diagnosticRevision}${!diagnosticsCurrent ? '. Current source is a different snapshot; lines may differ.' : '.'}` : 'Compile diagnostics appear here. No checks have been fabricated.'}</p>{diagnostics.length ? <ul className={styles.diagnostics}>{diagnostics.map((item, index) => <li key={index} data-severity={item.severity}><b>{item.severity}</b><div><p>{item.message}</p>{item.help && <p className={styles.helper}>{item.help}</p>}{item.file && <button type="button" className={styles.textButton} disabled={!project?.files.some((source) => source.path === item.file)} onClick={() => { const target = project?.files.find((source) => source.path === item.file); if (target) jumpTo(target.id, item.line ?? 1) }}>{item.file}{item.line ? `:${item.line}` : ''}</button>}{item.code && <code className={styles.diagnosticCode}>{item.code}</code>}</div></li>)}</ul> : <p>No diagnostics reported for this view.</p>}</>}
-        {drawerView === 'log' && <><p className={styles.helper}>Private, bounded compile log. Source/log excerpts are not sent to analytics. Server results expire; an acknowledged local proof retains its log on this device.</p><pre className={styles.log}>{buildLog || 'No compile log is available.'}</pre>{currentAttempt?.requestId && <p className={styles.helper}>Request ID: <code>{currentAttempt.requestId}</code></p>}</>}
+        {drawerView === 'log' && <><p className={styles.helper}>{isBrowserProof(proof) || browserCompiler ? 'Local, bounded compile log. Source/log excerpts are not sent to analytics or a compiler service; only committed storage survives reload.' : 'Private, bounded compile log. Source/log excerpts are not sent to analytics. Server results expire; an acknowledged local proof retains its log on this device.'}</p><pre className={styles.log}>{buildLog || 'No compile log is available.'}</pre>{currentAttempt?.requestId && <p className={styles.helper}>Request ID: <code>{currentAttempt.requestId}</code></p>}</>}
         {drawerView === 'history' && <><div className={styles.historyHeading}><div><h3>Checkpoints</h3><p className={styles.helper}>{projectCheckpoints.length} / {LOCAL_LATEX_LIMITS.checkpointsPerProject} for this project. The most recent six are kept.</p></div><button type="button" className={styles.button} disabled={!project} onClick={() => void workspace.checkpointNow()}><LatexIcon name="plus" />Create checkpoint</button></div><p className={styles.helper}>Restore creates a new revision and a recovery checkpoint first. Only committed transactions survive a reload.</p><ul className={styles.history}>{projectCheckpoints.map((item) => <li key={item.id}><LatexIcon name="history" /><div><b>{item.label}</b><small>r{item.project.revision} / {new Date(item.createdAt).toLocaleString()}</small></div><button type="button" className={styles.button} onClick={() => openModal({ kind: 'restore', checkpoint: item })}>Restore...</button><button type="button" className={styles.textButton} disabled={busy} onClick={() => void downloadSource(item.project, false)}><LatexIcon name="download" />ZIP</button></li>)}</ul>{!projectCheckpoints.length && <p>No local checkpoints yet. Create one before an important source change.</p>}</>}
       </div>}
     </section>
@@ -600,13 +610,14 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
       {modal && (modal.kind === 'rename' || modal.kind === 'delete') && <div className={styles.dialogWarning}><p>{modal.kind === 'delete' ? `Delete ${modal.path}?` : `Rename ${modal.path}?`} A recoverable checkpoint is recorded with the change. Source references will not be rewritten automatically.</p>{refs.length ? <ul>{refs.map((reference) => <li key={`${reference.file}:${reference.line}`}>{reference.file}:{reference.line} references this path.</li>)}</ul> : <p>No literal references were found. Macro-generated references may still exist.</p>}</div>}
       {modal?.kind === 'restore' && <p className={styles.dialogWarning}>Restore {modal.checkpoint.label} (r{modal.checkpoint.project.revision}) as a new source revision. Current source is checkpointed first; the last good PDF remains labeled with its own revision.</p>}
       {modal?.kind === 'privacy' && <><p>Compile sends this project&apos;s LaTeX source and image assets to our private compiler. It is not cloud draft storage. Uploaded source/assets and scratch are removed at terminal completion or forced cleanup; private server PDF/log/map results expire within 15 minutes.</p><p className={styles.helper}>Guest compilation is free but bounded by fair-use limits. No AI, account login or new credit charge is added. A compiled PDF is retained locally only when device storage commits it.</p>{modal.auto && <p>Auto Compile is explicit opt-in for this session. It waits 1.8 seconds after source edits, runs only while this workspace is active and online, and coalesces the latest intent. Opening projects, restoring and saving do not start compilation.</p>}<label className={styles.consent}><input type="checkbox" checked={consentChecked} onChange={(event) => setConsentChecked(event.target.checked)} required />I understand that source and image assets are uploaded when I compile.</label></>}
+      {modal?.kind === 'browser-engine' && <><p>The free local compiler runs XeLaTeX, not LuaLaTeX/pdfLaTeX. Continuing records a checkpoint and changes only this project&apos;s engine to XeLaTeX as a new revision. Your original source and Regular draft are not rewritten.</p><p className={styles.helper}>Source, images and PDF remain on your device. Public compiler/font/package downloads are required. Lua-specific commands, Biber and SyncTeX are unavailable; unsupported source produces a real error rather than a fake PDF.</p></>}
       {modal?.kind === 'fonts' && <><p>These explicit choices change literal font declarations only in the LaTeX source copy. Regular writing and export bytes stay untouched. Engine/package compatibility and final shaping still require a real compile.</p>{!capabilityReady && <p className={styles.dialogWarning}>Compiler readiness is unavailable. Suggestions below are source-only compatibility choices, not a claim that a native font is installed.</p>}{modal.fonts.map((font) => {
         const bengali = /Bengali|Bangla|Hind Siliguri|Kalpurush|Solaiman|Nikosh/iu.test(font)
         const choices = [...new Set([font, ...(nativeFonts.length ? nativeFonts.filter((name) => !bengali || /Bengali|Bangla|Hind Siliguri|Kalpurush|Solaiman|Nikosh/iu.test(name)) : [bengali ? 'Noto Sans Bengali' : 'Latin Modern Roman'])])]
         return <label className={styles.field} key={font}>Requested: {font}<select value={fontChoices[font] ?? font} onChange={(event) => setFontChoices((previous) => ({ ...previous, [font]: event.target.value }))}>{choices.map((name) => <option key={name} value={name}>{name}{name === font ? ' (keep exact source)' : ''}</option>)}</select></label>
       })}{!modal.fonts.length && <p>No literal fontspec font names were detected. Custom macro-defined fonts must be reviewed in source.</p>}</>}
       {modal?.kind === 'remove' && <><p className={styles.dialogWarning}>Explicitly remove {modal.project.title || 'this project'} and its supported local checkpoints/assets/proof. This does not affect Regular or other projects. Invalid/future records are preserved. Export a Source ZIP first if you need a portable recovery copy.</p><button type="button" className={styles.button} disabled={busy} onClick={() => void downloadSource(modal.project, false)}>Download this project&apos;s ZIP</button></>}
-      <div className={styles.dialogActions}><button type="button" className={styles.button} disabled={busy} onClick={() => setModal(null)}>Cancel</button><button type="submit" className={styles.primaryButton} disabled={busy || (modal?.kind === 'privacy' && !consentChecked)}>{busy ? 'Working locally...' : modal?.kind === 'privacy' ? modal.auto ? 'Enable Auto Compile' : 'Compile this revision' : modal?.kind === 'delete' ? 'Delete with checkpoint' : modal?.kind === 'restore' ? 'Restore as new revision' : modal?.kind === 'remove' ? 'Remove project' : modal?.kind === 'fonts' ? 'Apply to LaTeX source only' : 'Apply'}</button></div>
+      <div className={styles.dialogActions}><button type="button" className={styles.button} disabled={busy} onClick={() => setModal(null)}>Cancel</button><button type="submit" className={styles.primaryButton} disabled={busy || (modal?.kind === 'privacy' && !consentChecked)}>{busy ? 'Working locally...' : modal?.kind === 'browser-engine' ? 'Switch to XeLaTeX and compile' : modal?.kind === 'privacy' ? modal.auto ? 'Enable Auto Compile' : 'Compile this revision' : modal?.kind === 'delete' ? 'Delete with checkpoint' : modal?.kind === 'restore' ? 'Restore as new revision' : modal?.kind === 'remove' ? 'Remove project' : modal?.kind === 'fonts' ? 'Apply to LaTeX source only' : 'Apply'}</button></div>
     </form></dialog>
   </div>
 }

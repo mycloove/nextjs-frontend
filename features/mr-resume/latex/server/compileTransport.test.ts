@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { setImmediate } from 'node:timers/promises'
 import test from 'node:test'
-import { createLatexCompileTransport, LatexTransportError } from '../compileTransport.ts'
+import { createLatexCompileTransport, LatexTransportError, recoverLatexProject } from '../compileTransport.ts'
 import { LATEX_API, LATEX_LIMITS, type LatexCompileManifest, type LatexCompileResult, type LatexProject } from '../types.ts'
 import { compareLatexPaths } from './contract.ts'
 import { handleLatexProxy, type LatexProxyRoute } from './proxy.ts'
@@ -44,6 +44,15 @@ async function uploaded(init: RequestInit) {
   return { manifest, fields, result }
 }
 
+async function retainedResult(source: LatexProject = project()): Promise<LatexCompileResult> {
+  const assets = []
+  for (const asset of source.assets) assets.push({ id: asset.id, path: asset.path, mediaType: asset.mediaType, size: asset.blob.size, sha256: sha256(new Uint8Array(await asset.blob.arrayBuffer())) })
+  const canonical = JSON.stringify({ version: source.version, projectId: source.id, revision: source.revision, mainFile: source.mainFile, engine: source.engine,
+    files: source.files.map((file) => ({ ...file })).sort(compareLatexPaths), assets: assets.sort(compareLatexPaths) })
+  return { status: 'ready', operationKey, projectId: source.id, revision: source.revision, snapshotHash: sha256(canonical), engine: source.engine,
+    profileVersion: 'resume-tex-unit-profile', pdf: { id: 'artifact-one', sha256: pdfHash, bytes: pdf.length, pages: 1 }, diagnostics: [], log: '', syncAvailable: true, createdAt: now }
+}
+
 async function rejects(action: Promise<unknown>, code: string, status?: number) {
   await assert.rejects(action, (error: unknown) => {
     assert.ok(error instanceof LatexTransportError)
@@ -58,6 +67,8 @@ test('creating the transport starts no automatic capability/compile calls or tim
   let calls = 0
   const transport = createLatexCompileTransport({ request: async () => { calls++; assert.fail('Import must not request anything'); return Response.json({}) } })
   assert.equal(typeof transport.compileLatexProject, 'function')
+  assert.equal(typeof transport.recoverLatexProject, 'function')
+  assert.equal(typeof recoverLatexProject, 'function')
   await setImmediate()
   assert.equal(calls, 0)
 })
@@ -126,6 +137,190 @@ test('source/asset snapshot is immutable across awaits and late ready results ne
   assert.equal(proof.revision, 7)
   assert.equal(source.revision, 8)
   assert.equal(source.files[0].content, 'Current writing after compile began')
+})
+
+test('ready recovery independently verifies the captured source/assets and original PDF using only two private GET requests', async () => {
+  const original = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 99])
+  const source = project({ assets: [{ id: 'photo', path: 'assets/photo.png', mediaType: 'image/png', blob: new Blob([original], { type: 'image/png' }) }] })
+  const result = await retainedResult(source), before = structuredClone(source)
+  assert.equal(result.snapshotHash, '485563523cce7bb5b37491180005fb568a5406a807f16e58159d481ae271bc10')
+  const requests: { url: string; requestId: string }[] = []
+  const transport = createLatexCompileTransport({ request: async (url, init) => {
+    const headers = new Headers(init.headers)
+    requests.push({ url, requestId: headers.get('x-request-id')! })
+    assert.equal(init.method, 'GET')
+    assert.equal(init.body, undefined, 'Recovery must never encode or upload a source body')
+    assert.equal(init.credentials, 'same-origin')
+    assert.equal(init.cache, 'no-store')
+    assert.equal(init.redirect, 'error')
+    assert.ok(init.signal instanceof AbortSignal)
+    assert.equal(headers.get('x-resume-operation-key'), operationKey)
+    for (const privateHeader of ['x-resume-internal-key', 'x-resume-principal', 'x-credit-cost']) assert.equal(headers.get(privateHeader), null)
+    if (requests.length === 1) { assert.equal(url, `${LATEX_API}/operations/${operationKey}`); return json(result, init) }
+    assert.equal(url, `${LATEX_API}/artifacts/artifact-one`)
+    return artifact(init)
+  } })
+  const proof = await transport.recoverLatexProject(source, operationKey, new AbortController().signal)
+  assert.equal(requests.length, 2)
+  assert.notEqual(requests[0].requestId, requests[1].requestId)
+  assert.equal(proof.snapshotHash, result.snapshotHash)
+  assert.deepEqual(new Uint8Array(proof.data), pdf)
+  const viewerCopy = proof.data.slice(0)
+  structuredClone(viewerCopy, { transfer: [viewerCopy] })
+  assert.equal(viewerCopy.byteLength, 0)
+  assert.equal(sha256(new Uint8Array(proof.data)), pdfHash, 'Viewer transfer cannot detach the download/storage original')
+  assert.deepEqual(source, before)
+})
+
+test('recovery captures source and asset identities before awaits without changing newer local writing', async () => {
+  const source = project({ assets: [{ id: 'photo', path: 'photo.png', mediaType: 'image/png', blob: new Blob(['123'], { type: 'image/png' }) }] })
+  const result = await retainedResult(source)
+  const transport = createLatexCompileTransport({ request: async (url, init) => {
+    assert.equal(init.method, 'GET')
+    if (url.includes('/operations/')) {
+      source.revision++
+      source.files[0].content = 'Latest local writing while recovering'
+      source.assets[0].path = 'renamed.png'
+      return json(result, init)
+    }
+    return artifact(init)
+  } })
+  const proof = await transport.recoverLatexProject(source, operationKey)
+  assert.equal(proof.revision, 7)
+  assert.equal(proof.snapshotHash, result.snapshotHash)
+  assert.equal(source.revision, 8)
+  assert.equal(source.files[0].content, 'Latest local writing while recovering')
+  assert.equal(source.assets[0].path, 'renamed.png')
+})
+
+test('recovery refuses operation, result and source mismatches before reading any PDF', async () => {
+  const result = await retainedResult()
+  for (const changed of [{ operationKey: 'different-operation' }, { projectId: 'other-project' }, { revision: 8 }, { engine: 'xelatex' }, { snapshotHash: 'a'.repeat(64) }]) {
+    let calls = 0
+    const transport = createLatexCompileTransport({ request: async (url, init) => {
+      calls++
+      assert.equal(url, `${LATEX_API}/operations/${operationKey}`)
+      assert.equal(init.method, 'GET')
+      return json({ ...result, ...changed }, init)
+    } })
+    await rejects(transport.recoverLatexProject(project(), operationKey), 'result_mismatch', 502)
+    assert.equal(calls, 1)
+  }
+  for (const content of [project().files[0].content.replace(/\r\n/g, '\n'), project().files[0].content.normalize('NFC'), `${project().files[0].content} `]) {
+    let calls = 0
+    const transport = createLatexCompileTransport({ request: async (url, init) => { calls++; assert.equal(url, `${LATEX_API}/operations/${operationKey}`); return json(result, init) } })
+    await rejects(transport.recoverLatexProject(project({ files: [{ ...project().files[0], content }] }), operationKey), 'result_mismatch', 502)
+    assert.equal(calls, 1, 'Source normalization or changed bytes must not accept the retained result')
+  }
+  const withAsset = project({ assets: [{ id: 'photo', path: 'photo.png', mediaType: 'image/png', blob: new Blob(['123'], { type: 'image/png' }) }] })
+  const assetResult = await retainedResult(withAsset)
+  withAsset.assets[0].blob = new Blob(['124'], { type: 'image/png' })
+  const transport = createLatexCompileTransport({ request: async (url, init) => { assert.equal(url, `${LATEX_API}/operations/${operationKey}`); return json(assetResult, init) } })
+  await rejects(transport.recoverLatexProject(withAsset, operationKey), 'result_mismatch', 502)
+})
+
+test('running, cancelled and failed recovery are single-query outcomes with no artifacts, upload, polling or retry', async () => {
+  for (const [state, code, status] of [['running', 'operation_running', 409], ['cancelled', 'operation_cancelled', 409], ['failed', 'operation_failed', 422]] as const) {
+    let calls = 0
+    const transport = createLatexCompileTransport({ request: async (url, init) => {
+      calls++
+      assert.equal(url, `${LATEX_API}/operations/${operationKey}`)
+      assert.equal(init.method, 'GET')
+      assert.equal(init.body, undefined)
+      return json({ status: state, operationKey, ...(state === 'failed' ? { error: 'This captured operation failed.' } : {}) }, init)
+    } })
+    await rejects(transport.recoverLatexProject(project(), operationKey), code, status)
+    await setImmediate()
+    assert.equal(calls, 1)
+  }
+  for (const status of [404, 410]) {
+    let calls = 0
+    const transport = createLatexCompileTransport({ request: async (url, init) => {
+      calls++
+      assert.equal(url, `${LATEX_API}/operations/${operationKey}`)
+      assert.equal(init.method, 'GET')
+      return json({ error: 'The private operation is missing or expired.', code: 'operation_not_found', request_id: new Headers(init.headers).get('x-request-id'), operationKey }, init, status)
+    } })
+    await rejects(transport.recoverLatexProject(project(), operationKey), 'operation_not_found', status)
+    assert.equal(calls, 1, 'An expired key must not create a replacement operation')
+  }
+})
+
+test('recovery validates all result bounds and snapshot diagnostic paths before fetching an artifact', async () => {
+  const result = await retainedResult()
+  for (const changed of [
+    { pdf: { ...result.pdf, pages: LATEX_LIMITS.pages + 1 } }, { pdf: { ...result.pdf, bytes: LATEX_LIMITS.pdfBytes + 1 } },
+    { log: 'x'.repeat(LATEX_LIMITS.logBytes + 1) }, { diagnostics: [{ severity: 'error', message: 'unsafe', file: '/private/source.tex' }] },
+    { diagnostics: [{ severity: 'warning', message: 'outside snapshot', file: 'other.tex' }] }, { status: 'ready', unreviewedProviderId: 'not-part-of-contract' },
+  ]) {
+    let calls = 0
+    const transport = createLatexCompileTransport({ request: async (url, init) => { calls++; assert.equal(url, `${LATEX_API}/operations/${operationKey}`); return json({ ...result, ...changed }, init) } })
+    await rejects(transport.recoverLatexProject(project(), operationKey), 'upstream_protocol_error', 502)
+    assert.equal(calls, 1)
+  }
+})
+
+test('recovered PDFs require matching MIME, header, measured byte count, PDF signature and independent byte hash', async () => {
+  for (const mode of ['mime', 'header', 'bytes', 'size', 'oversize', 'length', 'not-pdf']) {
+    const result = await retainedResult()
+    if (mode === 'size') result.pdf.bytes++
+    if (mode === 'not-pdf') { result.pdf.sha256 = sha256('not a PDF'); result.pdf.bytes = 9 }
+    let calls = 0
+    const transport = createLatexCompileTransport({ request: async (url, init) => {
+      calls++
+      assert.equal(init.method, 'GET')
+      if (url.includes('/operations/')) return json(result, init)
+      assert.equal(url, `${LATEX_API}/artifacts/artifact-one`)
+      if (mode === 'mime') return artifact(init, pdf, { 'Content-Type': 'text/html' })
+      if (mode === 'header') return artifact(init, pdf, { 'X-Resume-PDF-SHA256': 'a'.repeat(64) })
+      if (mode === 'bytes') { const changed = pdf.slice(); changed[changed.length - 1] = 0; return artifact(init, changed) }
+      if (mode === 'oversize') return artifact(init, new Uint8Array(LATEX_LIMITS.pdfBytes + 1), { 'Content-Length': '1' })
+      if (mode === 'length') return artifact(init, pdf, { 'Content-Length': String(pdf.length + 1) })
+      if (mode === 'not-pdf') return artifact(init, new TextEncoder().encode('not a PDF'), { 'X-Resume-PDF-SHA256': result.pdf.sha256 })
+      return artifact(init)
+    } })
+    await rejects(transport.recoverLatexProject(project(), operationKey), 'artifact_hash_mismatch', 502)
+    assert.equal(calls, 2)
+  }
+})
+
+test('recovery validates local input and respects abort/deadline without uploading or accepting late bodies', async () => {
+  let calls = 0
+  const local = createLatexCompileTransport({ request: async () => { calls++; assert.fail('Invalid or aborted recovery must stay local'); return Response.json({}) } })
+  await rejects(local.recoverLatexProject(project(), '../escape'), 'invalid_identifier', 400)
+  await rejects(local.recoverLatexProject(project({ mainFile: 'missing.tex' }), operationKey), 'invalid_main_file', 400)
+  await rejects(local.recoverLatexProject(project({ files: [{ id: 'main', path: 'resume.tex', content: '\ud800' }] }), operationKey), 'invalid_manifest', 400)
+  const aborted = new AbortController(); aborted.abort()
+  await rejects(local.recoverLatexProject(project(), operationKey, aborted.signal), 'request_aborted', 408)
+  assert.equal(calls, 0)
+
+  const result = await retainedResult()
+  for (const stalled of ['operation', 'artifact']) {
+    let requests = 0, cancelled = false
+    const transport = createLatexCompileTransport({ timeoutMs: 30, request: async (url, init) => {
+      requests++
+      assert.equal(init.method, 'GET')
+      if (stalled === 'artifact' && url.includes('/operations/')) return json(result, init)
+      return new Response(new ReadableStream({ cancel() { cancelled = true } }), { headers: { 'X-Request-Id': new Headers(init.headers).get('x-request-id')!, 'Content-Type': stalled === 'artifact' ? 'application/pdf' : 'application/json', ...(stalled === 'artifact' ? { 'X-Resume-PDF-SHA256': pdfHash } : {}) } })
+    } })
+    await rejects(transport.recoverLatexProject(project(), operationKey), 'upstream_timeout', 504)
+    assert.equal(requests, stalled === 'artifact' ? 2 : 1)
+    assert.equal(cancelled, true)
+  }
+})
+
+test('existing compile and recovery contracts still reject HTTP 202 dispatch-only responses rather than inventing asynchronous polling', async () => {
+  for (const action of ['compileLatexProject', 'recoverLatexProject'] as const) {
+    let calls = 0
+    const transport = createLatexCompileTransport({ request: async (url, init) => {
+      calls++
+      assert.equal(init.method, action === 'compileLatexProject' ? 'POST' : 'GET')
+      assert.equal(url, `${LATEX_API}/${action === 'compileLatexProject' ? 'compile' : `operations/${operationKey}`}`)
+      return json({ operationKey, status: 'running' }, init, 202)
+    } })
+    await rejects(transport[action](project(), operationKey), 'upstream_protocol_error', 502)
+    assert.equal(calls, 1)
+  }
 })
 
 test('canonical path ordering is Unicode code-point ordinal, not locale or UTF-16 ordering', async () => {

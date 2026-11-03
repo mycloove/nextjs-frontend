@@ -5,7 +5,7 @@ export function mayAutoCompile(policy: { enabled: boolean; active: boolean; onli
 }
 
 export function recoverableCompileFailure(code: string, status?: number) {
-  return ['transport_unavailable', 'upstream_timeout', 'request_aborted', 'operation_running'].includes(code)
+  return ['transport_unavailable', 'upstream_unavailable', 'upstream_timeout', 'request_aborted', 'operation_running'].includes(code)
     || (status === 502 && code === 'upstream_protocol_error')
 }
 

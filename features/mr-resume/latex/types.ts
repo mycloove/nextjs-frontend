@@ -39,6 +39,7 @@ export type RegularLatexSnapshot = {
 }
 export type LatexImportRequest = { id: string; snapshot: RegularLatexSnapshot }
 export type LatexCheckpoint = { id: string; label: string; project: LatexProject; createdAt: string }
+export type LatexPendingCompile = { operationKey: string; snapshot: LatexProject; snapshotHash: string; createdAt: string }
 export type LatexDiagnostic = {
   severity: 'error' | 'warning' | 'info'
   message: string

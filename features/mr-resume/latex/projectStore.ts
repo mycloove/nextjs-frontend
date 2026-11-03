@@ -1,16 +1,17 @@
-import { LATEX_DATABASE, LATEX_LIMITS, type LatexAsset, type LatexCheckpoint, type LatexProject, type LatexProof } from './types.ts'
+import { LATEX_DATABASE, LATEX_LIMITS, type LatexAsset, type LatexCheckpoint, type LatexPendingCompile, type LatexProject, type LatexProof } from './types.ts'
 import { imageDimensions } from './projectArchive.ts'
 import { isRecord, LatexProjectError, projectSnapshotHash, sha256, utf8Bytes, validateLatexProject } from './project.ts'
 
 export const LOCAL_LATEX_LIMITS = { projects: 8, checkpointsPerProject: 6, bytes: 32 * 1024 * 1024, recordsPerStore: 512 } as const
-const names = ['projects', 'assets', 'checkpoints', 'artifacts'] as const
+const names = ['projects', 'assets', 'checkpoints', 'artifacts', 'operations'] as const
 type StoreName = typeof names[number]
 type AssetReference = { id: string; path: string; mediaType: LatexAsset['mediaType']; size: number; sha256: string }
 type StoredProject = { storageVersion: 1; id: string; project: Omit<LatexProject, 'assets'> & { assets: AssetReference[] } }
 type StoredAsset = { storageVersion: 1; key: string; projectId: string; asset: LatexAsset; sha256: string }
 type StoredCheckpoint = { storageVersion: 1; id: string; checkpoint: LatexCheckpoint }
 type StoredProof = { storageVersion: 1; projectId: string; proof: LatexProof; snapshot: LatexProject }
-export type LocalLatexWorkspace = { projects: LatexProject[]; checkpoints: LatexCheckpoint[]; proofs: LatexProof[]; proofSnapshots: Record<string, LatexProject>; protectedRecords: string[] }
+type StoredPendingCompile = { storageVersion: 1; id: 'active'; intent: LatexPendingCompile }
+export type LocalLatexWorkspace = { projects: LatexProject[]; checkpoints: LatexCheckpoint[]; proofs: LatexProof[]; proofSnapshots: Record<string, LatexProject>; pendingCompile: LatexPendingCompile | null; protectedRecords: string[] }
 export type LatexSaveAcknowledgment = { projectId: string; revision: number; savedAt: string }
 
 export class LatexStorageError extends Error {
@@ -45,6 +46,18 @@ function readCheckpoint(value: unknown): LatexCheckpoint {
   if (Object.keys(checkpoint).some((field) => !['id', 'label', 'project', 'createdAt'].includes(field)) || checkpoint.id !== value.id || typeof checkpoint.label !== 'string' || checkpoint.label.length > 120 || typeof checkpoint.createdAt !== 'string' || !Number.isFinite(Date.parse(checkpoint.createdAt))) throw new LatexStorageError('An invalid checkpoint was preserved.', 'protected')
   validateLatexProject(checkpoint.project)
   return checkpoint as LatexCheckpoint
+}
+
+export function validateStoredPendingCompile(value: unknown): LatexPendingCompile {
+  if (!isRecord(value) || value.storageVersion !== 1 || value.id !== 'active' || !isRecord(value.intent)
+    || Object.keys(value).some((field) => !['storageVersion', 'id', 'intent'].includes(field))) throw new LatexStorageError('An unsupported compile recovery record was preserved.', 'protected')
+  const intent = value.intent
+  if (Object.keys(intent).some((field) => !['operationKey', 'snapshot', 'snapshotHash', 'createdAt'].includes(field))
+    || typeof intent.operationKey !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/u.test(intent.operationKey)
+    || typeof intent.snapshotHash !== 'string' || !/^[a-f0-9]{64}$/u.test(intent.snapshotHash)
+    || typeof intent.createdAt !== 'string' || !Number.isFinite(Date.parse(intent.createdAt))) throw new LatexStorageError('An invalid compile recovery record was preserved.', 'protected')
+  validateLatexProject(intent.snapshot)
+  return intent as LatexPendingCompile
 }
 
 export function validateStoredProof(value: unknown): LatexProof {
@@ -158,8 +171,9 @@ export class LatexProjectStore {
     try { all = await Promise.all(names.map((name) => records(transaction.objectStore(name)))); await committed }
     catch (error) { try { transaction.abort() } catch { /* Already terminal. */ } await committed.catch(() => {}); throw error }
     this.checkBudget(all)
-    const [projectRecords, assetRecords, checkpointRecords, artifactRecords] = all
+    const [projectRecords, assetRecords, checkpointRecords, artifactRecords, operationRecords] = all
     const protectedRecords: string[] = [], projects: LatexProject[] = [], checkpoints: LatexCheckpoint[] = [], proofs: LatexProof[] = [], proofSnapshots: Record<string, LatexProject> = {}
+    let pendingCompile: LatexPendingCompile | null = null
     for (const record of projectRecords) {
       try {
         const project = hydrateProject(record.value, assetRecords)
@@ -189,9 +203,54 @@ export class LatexProjectStore {
         proofSnapshots[proof.projectId] = project.revision === proof.revision ? project : snapshot
       } catch { protectedRecords.push(`Proof ${String(record.key)} was preserved without being displayed.`) }
     }
+    for (const record of operationRecords) {
+      try {
+        const intent = validateStoredPendingCompile(record.value)
+        if (record.key !== 'active' || await projectSnapshotHash(intent.snapshot) !== intent.snapshotHash) throw new Error('Compile recovery identity or source checksum mismatch.')
+        for (const asset of intent.snapshot.assets) imageDimensions(new Uint8Array(await asset.blob.arrayBuffer()), asset.mediaType)
+        const current = projects.find((project) => project.id === intent.snapshot.id && project.revision === intent.snapshot.revision)
+        // Keep captured metadata while sharing verified asset identities for proof freshness after reload.
+        const snapshot = current && await projectSnapshotHash(current) === intent.snapshotHash ? { ...intent.snapshot, assets: current.assets } : intent.snapshot
+        pendingCompile = { ...intent, snapshot }
+      } catch { protectedRecords.push(`Compile recovery ${String(record.key)} was preserved without being applied.`) }
+    }
     projects.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
     checkpoints.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-    return { projects, checkpoints, proofs, proofSnapshots, protectedRecords }
+    return { projects, checkpoints, proofs, proofSnapshots, pendingCompile, protectedRecords }
+  }
+
+  async retainPendingCompile(intent: LatexPendingCompile) {
+    const source = validateLatexProject(intent.snapshot)
+    const captured = { ...intent, snapshot: { ...source, files: source.files.map((file) => ({ ...file })), assets: source.assets.map((asset) => ({ ...asset })) } }
+    const incoming: StoredPendingCompile = { storageVersion: 1, id: 'active', intent: captured }
+    validateStoredPendingCompile(incoming)
+    if (await projectSnapshotHash(captured.snapshot) !== captured.snapshotHash) throw new LatexStorageError('The compile recovery source checksum does not match its captured snapshot.', 'protected')
+    const transaction = this.database.transaction([...names], 'readwrite'), committed = completion(transaction)
+    try {
+      const all = await Promise.all(names.map((name) => records(transaction.objectStore(name))))
+      const previous = all[4].find((record) => record.key === 'active')
+      if (previous) {
+        const current = validateStoredPendingCompile(previous.value)
+        if (current.operationKey !== captured.operationKey || current.snapshotHash !== captured.snapshotHash || current.snapshot.title !== captured.snapshot.title) throw new LatexStorageError('Another pending compile is saved on this device. Recover or cancel it in its tab, or reload this workspace to check it. No new source was uploaded.', 'conflict')
+        await committed
+        return
+      }
+      const next = all.map((values) => [...values])
+      next[4].push({ key: 'active', value: incoming })
+      this.checkBudget(next)
+      transaction.objectStore('operations').put(incoming)
+      await committed
+    } catch (error) { try { transaction.abort() } catch { /* Already terminal. */ } await committed.catch(() => {}); throw error }
+  }
+
+  async clearPendingCompile(operationKey: string) {
+    const transaction = this.database.transaction('operations', 'readwrite'), committed = completion(transaction)
+    try {
+      const pending = (await records(transaction.objectStore('operations'))).find((record) => record.key === 'active')
+      // A late response in another tab must never delete a newer operation's recovery identity.
+      if (pending && validateStoredPendingCompile(pending.value).operationKey === operationKey) transaction.objectStore('operations').delete('active')
+      await committed
+    } catch (error) { try { transaction.abort() } catch { /* Already terminal. */ } await committed.catch(() => {}); throw error }
   }
 
   async save(project: LatexProject, expectedRevision: number | null, checkpoint?: LatexCheckpoint): Promise<LatexSaveAcknowledgment> {
@@ -267,6 +326,8 @@ export class LatexProjectStore {
       if (!original) throw new LatexStorageError('The stored project no longer exists.', 'conflict')
       const current = hydrateProject(original.value, all[1])
       assertExpectedRevision(current, expectedRevision, current)
+      const pending = all[4].find((record) => record.key === 'active')
+      if (pending && validateStoredPendingCompile(pending.value).snapshot.id === projectId) throw new LatexStorageError('Recover or cancel the saved compile before removing its source project.', 'conflict')
       transaction.objectStore('projects').delete(projectId)
       for (const asset of current.assets) transaction.objectStore('assets').delete(`${projectId}:${asset.id}`)
       for (const item of all[2]) { try { if (readCheckpoint(item.value).project.id === projectId) transaction.objectStore('checkpoints').delete(item.key) } catch { /* Protected originals are never deleted as a side effect. */ } }
@@ -289,7 +350,7 @@ export function openLatexProjectStore(factory: IDBFactory | undefined = globalTh
   if (!factory) return Promise.reject(new LatexStorageError('IndexedDB is unavailable. Editing and source backups still work in this session.'))
   return new Promise((resolve, reject) => {
     let finished = false
-    const operation = factory.open(LATEX_DATABASE, 1)
+    const operation = factory.open(LATEX_DATABASE, 2)
     operation.onupgradeneeded = () => {
       const database = operation.result
       for (const name of names) if (!database.objectStoreNames.contains(name)) database.createObjectStore(name, { keyPath: name === 'assets' ? 'key' : name === 'artifacts' ? 'projectId' : 'id' })

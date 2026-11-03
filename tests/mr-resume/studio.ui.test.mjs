@@ -8,6 +8,14 @@ const screenshots = path.resolve('test-results/mr-resume-ui')
 const browser = await chromium.launch({ headless: true })
 const reports = []
 
+async function enterRegularEditor(page) {
+  // Every visit, including reload, begins at the standalone chooser.
+  await page.waitForFunction(() => [...document.querySelectorAll('button')].some((button) => button.textContent.includes('Open Regular editor') && Object.keys(button).some((key) => key.startsWith('__reactProps'))), undefined, { timeout: 60000 })
+  await page.getByRole('button', { name: 'Open Regular editor', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Regular resume editor', exact: true })).toBeVisible()
+  await expect(page.locator('.cm-editor')).toHaveCount(0)
+}
+
 async function openStudio(theme, viewport, touch = false, reducedMotion = 'no-preference') {
   const context = await browser.newContext({ viewport, colorScheme: theme, hasTouch: touch, isMobile: touch, reducedMotion })
   await context.addInitScript((value) => localStorage.setItem('smilepdf-theme', value), theme)
@@ -24,6 +32,7 @@ async function openStudio(theme, viewport, touch = false, reducedMotion = 'no-pr
   })
   const response = await page.goto(`${baseUrl}/mr-resume`, { waitUntil: 'networkidle', timeout: 120000 })
   assert.equal(response.status(), 200)
+  await enterRegularEditor(page)
   // A static SSR input is not evidence of hydration. Verify a real state round-trip
   // before screenshots temporarily hide carets and could disturb unfinished hydration.
   await expect(async () => {
@@ -82,6 +91,26 @@ async function noPageOverflow(page) {
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   const stage = page.locator('[data-sort-scroll="canvas"]')
   if (await stage.isVisible()) await expect.poll(() => stage.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
+  await assertHeaderControls(page)
+}
+
+async function assertHeaderControls(page) {
+  const controls = await page.getByRole('region', { name: 'Regular resume editor', exact: true }).locator('header').first().locator('button').evaluateAll((buttons) => buttons.filter((element) => element.getClientRects().length).map((element) => {
+    const bounds = element.getBoundingClientRect()
+    const hit = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    return {
+      name: element.getAttribute('aria-label'), bounds: bounds.toJSON(),
+      withinViewport: bounds.width > 0 && bounds.height > 0 && bounds.left >= 0 && bounds.top >= 0 && bounds.right <= innerWidth && bounds.bottom <= innerHeight,
+      ownsCenter: element === hit || element.contains(hit),
+      interceptedBy: hit && !element.contains(hit) ? hit.outerHTML : null,
+    }
+  }))
+  assert.deepEqual(controls.map((control) => control.name), ['Export .tex', 'Copy to LaTeX', 'Editor language', 'Download draft PDF'], 'All four Regular header actions must remain visible')
+  for (const control of controls) {
+    assert.ok(control.withinViewport, `Header action is clipped outside the viewport: ${JSON.stringify(control)}`)
+    assert.ok(control.ownsCenter, `Header action center is intercepted: ${JSON.stringify(control)}`)
+  }
+  return { buttons: controls.length, allWithinViewport: controls.every((control) => control.withinViewport), allOwnCenters: controls.every((control) => control.ownsCenter) }
 }
 
 async function dismissNotice(page) {
@@ -124,7 +153,15 @@ async function auditControls(page, theme) {
     return !element.getAttribute('aria-label') && !element.getAttribute('aria-labelledby') && !element.textContent.trim() && !element.labels?.length
   }).map((element) => element.outerHTML))
   assert.deepEqual(unnamed, [], 'Visible controls need accessible names')
-  assert.equal(await page.locator('[aria-hidden="true"] button, [aria-hidden="true"] input').count(), 0)
+  assert.equal(await page.locator('[aria-hidden="true"] button, [aria-hidden="true"] input:not([type="file"])').count(), 0)
+  // The current photo picker deliberately keeps one clipped, non-tabstop native input.
+  const photoPicker = page.locator('input[type="file"][aria-hidden="true"]')
+  await expect(photoPicker).toHaveCount(1)
+  await expect(photoPicker).toHaveAttribute('aria-label', 'Choose a profile photo file')
+  await expect(photoPicker).toHaveAttribute('tabindex', '-1')
+  await expect(photoPicker).toHaveCSS('opacity', '0')
+  await expect(photoPicker).toHaveCSS('pointer-events', 'none')
+  await expect(photoPicker).toHaveCSS('clip-path', 'inset(50%)')
   return Object.fromEntries(Object.entries(pairs).map(([name, ratio]) => [name, Number(ratio.toFixed(2))]))
 }
 
@@ -218,7 +255,8 @@ try {
     await page.getByRole('button', { name: 'Page settings', exact: true }).first().click()
     await page.getByRole('group', { name: 'Page size', exact: true }).getByRole('button', { name: /US Letter/ }).click()
     await page.getByRole('combobox', { name: 'Typeface', exact: true }).click()
-    await page.getByRole('option', { name: 'Georgia' }).click()
+    // resumeFonts.ts/css register this public TeX family under a CSS-only self-hosted alias.
+    await page.getByRole('option', { name: 'Noto Serif Bengali', exact: true }).click()
     await page.getByLabel('Body text size').fill('')
     await page.getByLabel('Body text size').pressSequentially('12.5')
     await expect(page.getByLabel('Body text size')).toHaveValue('12.5')
@@ -235,7 +273,12 @@ try {
     assert.equal(geometry.width, 816)
     assert.equal(geometry.minHeight, 1056)
     assert.ok(Math.abs(geometry.padding - 23 * 96 / 25.4) < .1)
-    assert.ok(geometry.font.includes('Georgia'))
+    assert.ok(geometry.font.startsWith('"Mr Resume Noto Serif Bengali"'))
+    const loadedTypeface = await page.evaluate(async () => {
+      const faces = await document.fonts.load('400 12.5pt "Mr Resume Noto Serif Bengali"', 'Aa \u09b6\u09bf\u0995\u09cd\u09b7\u09be')
+      return faces.map((face) => ({ family: face.family, status: face.status }))
+    })
+    assert.deepEqual(loadedTypeface, [{ family: 'Mr Resume Noto Serif Bengali', status: 'loaded' }], 'The selected family must load the real registered font, not silently fall back')
     assert.ok(Math.abs(geometry.fontSize - 12.5 * 96 / 72) < .1)
     assert.ok(Math.abs(geometry.leading / geometry.fontSize - 1.7) < .01)
     assert.equal(geometry.gap.trim(), '28px')
@@ -249,16 +292,17 @@ try {
     await page.getByRole('group', { name: 'Document view', exact: true }).getByRole('button', { name: /Source/ }).click()
     const source = await page.locator('pre[aria-label="Generated LaTeX source"]').innerText()
     assert.ok(source.includes('letterpaper,margin=23mm'))
-    assert.ok(source.includes('\\setmainfont{Georgia}'))
+    assert.ok(source.includes('\\setmainfont{Noto Serif Bengali}'))
     assert.ok(source.includes('\\fontsize{12.5}{21.25}'))
     assert.ok(source.includes('Awards \\& distinctions'))
     assert.ok(source.includes('\\item Community design award'))
     assert.ok(source.includes('\\item Improved completion by 28\\%.'))
     assert.ok(source.includes('Ayesha Rahman \\& Co.'))
     assert.ok(source.indexOf('\\section*{Experience}') < source.indexOf('\\section*{Career overview}'))
-    const downloadPromise = page.waitForEvent('download')
-    await page.getByRole('button', { name: 'Export .tex', exact: true }).click()
-    const download = await downloadPromise
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Export .tex', exact: true }).click(),
+    ])
     assert.ok(download.suggestedFilename().endsWith('.tex'))
     const stream = await download.createReadStream()
     const chunks = []
@@ -291,13 +335,16 @@ try {
     await expect.poll(() => page.evaluate(() => document.title)).toBe(pageTitle)
     await page.evaluate(() => { delete window.__pdfPrint })
 
-    await page.getByRole('combobox', { name: 'Document language', exact: true }).click()
-    await page.getByRole('option', { name: 'বাংলা' }).click()
+    await page.getByRole('combobox', { name: 'Resume language', exact: true }).click()
+    await page.getByRole('option', { name: 'Bangla', exact: true }).click()
     const banglaName = '\u0986\u09ae\u09be\u09b0 \u09b0\u09c7\u099c\u09c1\u09ae\u09c7'
     await page.getByLabel('Document title', { exact: true }).fill(banglaName)
-    const banglaDownloadPromise = page.waitForEvent('download')
-    await page.getByRole('button', { name: 'Export .tex', exact: true }).click()
-    assert.equal((await banglaDownloadPromise).suggestedFilename(), `${banglaName.replace(' ', '-')}.tex`)
+    await noPageOverflow(page)
+    const [banglaDownload] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Export .tex', exact: true }).click(),
+    ])
+    assert.equal(banglaDownload.suggestedFilename(), `${banglaName.replace(' ', '-')}.tex`)
     await expect(page.getByRole('article', { name: 'Resume draft' })).toHaveAttribute('lang', 'bn')
     await expect(page.locator('[data-paper-section="summary"] h3')).toHaveText('Career overview')
     await expect(page.locator('[data-paper-section="summary"]')).toContainText('I build useful products')
@@ -306,7 +353,7 @@ try {
     await assertOrder(page, ['education', 'personal'])
     await page.getByRole('combobox', { name: 'Document purpose', exact: true }).click()
     await page.getByRole('option', { name: 'Resume' }).click()
-    await page.getByRole('combobox', { name: 'Document language', exact: true }).click()
+    await page.getByRole('combobox', { name: 'Resume language', exact: true }).click()
     await page.getByRole('option', { name: 'English' }).click()
 
     // Guest autosave: a reload restores the saved document from this device.
@@ -324,6 +371,8 @@ try {
       }
     })).toBe('profile,summary,experience,education,skills')
     await page.reload({ waitUntil: 'networkidle' })
+    await enterRegularEditor(page)
+    await expect(page.getByLabel('Full name', { exact: true })).toHaveValue('Ayesha Rahman & Co.')
     await expect(async () => {
       await page.getByLabel('Full name', { exact: true }).fill('Ayesha Rahman & Co.')
       await expect(page.locator('[data-paper-section="profile"] h2')).toHaveText('Ayesha Rahman & Co.', { timeout: 1000 })
@@ -337,7 +386,7 @@ try {
     await noPageOverflow(page)
     assert.deepEqual(errors, [])
     assert.deepEqual(backendCalls, [], 'The UI must not invoke a backend')
-    reports.push({ case: `desktop-${theme}`, status: 'passed', contrast: ratios })
+    reports.push({ case: `desktop-${theme}`, status: 'passed', contrast: ratios, header: await assertHeaderControls(page) })
     console.log(`PASS desktop-${theme}: editing, ordering, page settings, source and export`)
     await context.close()
   }
@@ -355,7 +404,7 @@ try {
       assert.ok(await page.locator('#section-content').evaluate((element) => parseFloat(getComputedStyle(element).fontSize) >= 16 || innerWidth > 600))
       await noPageOverflow(page)
       await page.screenshot({ path: path.join(screenshots, `${name}-write-${theme}.png`) })
-      await panels.getByRole('button', { name: 'Sections', exact: true }).click()
+      await panels.getByRole('button', { name: 'Section', exact: true }).click()
       await expect(page.locator('[aria-label="Resume sections"]')).toBeVisible()
       await expect(page.locator('[aria-label="Live document preview"]')).toBeHidden()
       const handle = page.locator('[data-outline-section="experience"]').getByRole('button', { name: 'Reorder Experience', exact: true })
@@ -404,9 +453,12 @@ try {
       await panels.getByRole('button', { name: 'Page', exact: true }).click()
       const fileName = `${name}-${theme}-document`
       await page.getByLabel(viewport.width <= 750 ? 'Document name' : 'Document title', { exact: true }).fill(fileName)
-      const mobileDownloadPromise = page.waitForEvent('download')
-      await page.getByRole('button', { name: 'Export .tex', exact: true }).click()
-      assert.equal((await mobileDownloadPromise).suggestedFilename(), `${fileName}.tex`)
+      await noPageOverflow(page)
+      const [mobileDownload] = await Promise.all([
+        page.waitForEvent('download'),
+        page.getByRole('button', { name: 'Export .tex', exact: true }).click(),
+      ])
+      assert.equal(mobileDownload.suggestedFilename(), `${fileName}.tex`)
       await page.getByRole('group', { name: 'Page size', exact: true }).getByRole('button', { name: /US Letter/ }).click()
       await panels.getByRole('button', { name: 'Preview', exact: true }).click()
       await noPageOverflow(page)
@@ -415,12 +467,28 @@ try {
       await noPageOverflow(page)
       assert.deepEqual(errors, [])
       assert.deepEqual(backendCalls, [])
-      reports.push({ case: `${name}-${theme}-touch-reduced-motion`, status: 'passed' })
+      reports.push({ case: `${name}-${theme}-touch-reduced-motion`, status: 'passed', header: await assertHeaderControls(page) })
       console.log(`PASS ${name}-${theme}: touch ownership, focus, naming and responsive panels`)
       await context.close()
     }
   }
   console.log(JSON.stringify({ results: reports, screenshots }, null, 2))
+} catch (error) {
+  const page = browser.contexts().flatMap((context) => context.pages()).at(-1)
+  if (page && !page.isClosed()) {
+    await page.screenshot({ path: path.join(screenshots, 'failed-case.png') })
+    const diagnostics = await page.evaluate(() => ({
+      viewport: { width: innerWidth, height: innerHeight }, theme: document.documentElement.dataset.theme,
+      status: [...document.querySelectorAll('[role="status"]')].map((element) => element.textContent),
+      headerControls: [...document.querySelectorAll('header button, header a')].filter((element) => element.getClientRects().length).map((element) => {
+        const bounds = element.getBoundingClientRect()
+        const hit = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+        return { name: element.getAttribute('aria-label') || element.textContent, bounds: bounds.toJSON(), receivesPointer: element === hit || element.contains(hit), interceptedBy: hit && !element.contains(hit) ? hit.outerHTML : null }
+      }),
+    }))
+    console.error(JSON.stringify({ completed: reports, failure: String(error), screenshot: path.join(screenshots, 'failed-case.png'), diagnostics }, null, 2))
+  }
+  throw error
 } finally {
   await browser.close()
 }
