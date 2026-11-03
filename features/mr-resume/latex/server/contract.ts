@@ -9,9 +9,8 @@ export const LATEX_JSON_BYTES = 1024 * 1024
 export const LATEX_SMALL_REQUEST_BYTES = 16 * 1024
 export const LATEX_HASH_PATTERN = /^[0-9a-f]{64}$/
 const ENGINES = new Set(['lualatex', 'xelatex', 'pdflatex'])
-// Project documents/config remain part of the immutable manifest, but the
-// runner stages only TeX sources and images. latexmkrc is never executed.
-const SOURCE_PATH = /\.(?:tex|sty|cls|bib|bst|md|txt)$|(?:^|\/)latexmkrc$/i
+// Ancillary text is retained as data; the fixed runner never executes latexmkrc.
+const SOURCE_PATH = /(?:\.(tex|sty|cls|bib|bst|md|txt)|(?:^|\/)latexmkrc)$/i
 const encoder = new TextEncoder()
 
 export class LatexContractError extends Error {

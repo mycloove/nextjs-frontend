@@ -14,6 +14,7 @@ const paths = {
   close: 'M6 6l12 12 M18 6L6 18',
   check: 'M5 12l4 4L19 6',
   alert: 'M12 4L3 20h18z M12 10v4 M12 17h.01',
+  info: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 11v6 M12 7h.01',
   lock: 'M5 11h14v10H5z M8 11V7a4 4 0 0 1 8 0v4',
   settings: 'M4 7h9 M17 7h3 M4 17h3 M11 17h9 M13 5h4v4h-4z M7 15h4v4H7z',
   undo: 'M9 4L4 9l5 5 M4 9h10a6 6 0 0 1 0 12h-3',

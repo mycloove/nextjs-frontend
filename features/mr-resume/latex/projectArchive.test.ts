@@ -2,11 +2,11 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { deflateSync } from 'node:zlib'
+import { readFile } from 'node:fs/promises'
 import JSZip from 'jszip'
 import { createProjectZip, decodeSourceBytes, imageDimensions, inspectProjectZip, readProjectZip, readTexProject } from './projectArchive.ts'
 import { createTemplateProject } from './templates.ts'
-import { referencesToFile, reviseProject, sha256 } from './project.ts'
-import { readLatexManifest } from './server/contract.ts'
+import { addTextFile, reviseProject, sha256 } from './project.ts'
 
 const source = '\\documentclass{article}\n\\begin{document}ক্\u200dষ #&%\\end{document}\r\n'
 function pngChunk(name: string, payload: Uint8Array) {
@@ -64,8 +64,31 @@ test('.tex import keeps valid UTF-8/BOM/joiners and refuses lossy byte conversio
 })
 
 test('unsupported archive entries are all named and nothing is imported', async () => {
-  const bytes = await zip({ 'main.tex': source, 'fonts/custom.otf': 'font', 'script.py': 'executable', 'LICENSE.txt': 'license notice' })
-  assert.throws(() => inspectProjectZip(bytes), (error: unknown) => error instanceof Error && /custom\.otf/u.test(error.message) && /script\.py/u.test(error.message) && /Nothing was discarded/u.test(error.message))
+  const bytes = await zip({ 'main.tex': source, 'fonts/custom.otf': 'font', 'vector.svg': 'vector' })
+  assert.throws(() => inspectProjectZip(bytes), (error: unknown) => error instanceof Error && /custom\.otf/u.test(error.message) && /vector\.svg/u.test(error.message) && /Nothing was discarded/u.test(error.message))
+})
+
+test('Markdown/text/license and latexmkrc files roundtrip as inert UTF-8 data without being selected as main', async () => {
+  const entries = { 'first.tex': source, 'second.tex': source, 'README.md': '# Original notes\r\n', 'LICENSE.txt': 'Exact license\r\n', 'latexmkrc': '$hash_calc_ignore_pattern = "timestamp";\r\n' }
+  const imported = await readProjectZip((await zip(entries)).buffer as ArrayBuffer)
+  assert.equal(imported.mainFile, null)
+  assert.deepEqual(Object.fromEntries(imported.files.map((file) => [file.path, file.content])), entries)
+  const restored = await readProjectZip(await createProjectZip(imported))
+  assert.deepEqual(restored.files, imported.files)
+})
+
+test('untouched actual AltaCV ZIP imports every original source, notice, config and PNG without discarding data', async () => {
+  const archive = await readFile(new URL('../../../../Mr.Resume/AltaCV_Template.zip', import.meta.url))
+  const original = await JSZip.loadAsync(archive)
+  const imported = await readProjectZip(archive.buffer.slice(archive.byteOffset, archive.byteOffset + archive.byteLength))
+  assert.equal(imported.mainFile, null)
+  assert.equal(imported.files.length, 10)
+  assert.equal(imported.assets.length, 3)
+  for (const file of imported.files) assert.deepEqual(new TextEncoder().encode(file.content), new Uint8Array(await original.file(file.path)!.async('nodebuffer')))
+  for (const asset of imported.assets) assert.deepEqual(new Uint8Array(await asset.blob.arrayBuffer()), new Uint8Array(await original.file(asset.path)!.async('nodebuffer')))
+  const restored = await readProjectZip(await createProjectZip(imported))
+  assert.equal(restored.mainFile, null)
+  assert.deepEqual(restored.files, imported.files)
 })
 
 for (const path of ['../main.tex', '/main.tex', 'a\\main.tex', 'my resume.tex', 'a/../main.tex', 'e\u0301.tex']) {
@@ -117,81 +140,56 @@ test('truncated, overlapping, ZIP64 and excessive entry directories are refused'
   assert.throws(() => inspectProjectZip(excessive), /limits/u)
 })
 
-test('template ZIPs like AltaCV import their real entry point, declared engine and every file', async () => {
-  // Root-level layout the Makefile template actually ships: one \documentclass
-  // .tex, its class, and a photo asset — no build manifest inside.
-  const bytes = await zip({
-    'sample.tex': '% !TeX program = xelatex\n\\documentclass[10pt,A4,ragged2e]{altacv}\n\\begin{document}AltaCV\\end{document}\n',
-    'altacv.cls': '\\ProvidesClass{altacv}[2023/10/01 v3.4]\n\\LoadClass[10pt]{article}\n',
-    'PaTi.png': png,
-  })
-  const project = await readProjectZip(bytes.buffer as ArrayBuffer, 'AltaCV_Template')
-  assert.equal(project.title, 'AltaCV_Template')
-  assert.equal(project.mainFile, 'sample.tex')
-  assert.equal(project.engine, 'xelatex')
-  assert.deepEqual(project.files.map((file) => file.path), ['sample.tex', 'altacv.cls'])
-  assert.deepEqual(project.assets.map((asset) => asset.path), ['PaTi.png'])
-  // Overleaf-style wrapped folder layout: single nested entry point still opens.
-  const wrapped = await zip({ 'AltaCV_Template/sample.tex': '\\documentclass{altacv}\n', 'AltaCV_Template/altacv.cls': '\\ProvidesClass{altacv}\n' })
-  const nested = await readProjectZip(wrapped.buffer as ArrayBuffer, 'AltaCV_Template')
-  assert.equal(nested.mainFile, 'AltaCV_Template/sample.tex')
-  assert.equal(nested.engine, 'lualatex')
+test('multiple TeX entry points import as an unselected draft with every nested source and original image byte', async () => {
+  const entries = { 'template/cv.tex': '\ufeff' + source, 'template/alternate.tex': source,
+    'template/sections/body.tex': '\\section{My writing}\r\n', 'template/styles/resume.sty': '\\ProvidesPackage{resume}\r\n',
+    'template/references.bib': '@article{x,title={Exact source}}\r\n', 'template/assets/photo.png': png }
+  const imported = await readProjectZip((await zip(entries, 'DEFLATE')).buffer as ArrayBuffer, 'Imported CV')
+  assert.equal(imported.mainFile, null)
+  assert.equal(imported.title, 'Imported CV')
+  assert.deepEqual(Object.fromEntries(imported.files.map((file) => [file.path, file.content])), Object.fromEntries(Object.entries(entries).filter(([, content]) => typeof content === 'string')))
+  assert.equal(imported.assets[0].path, 'template/assets/photo.png')
+  assert.deepEqual(new Uint8Array(await imported.assets[0].blob.arrayBuffer()), png)
+  const restored = await readProjectZip(await createProjectZip(imported))
+  assert.equal(restored.mainFile, null)
+  assert.deepEqual(restored.files, imported.files)
+  assert.deepEqual(new Uint8Array(await restored.assets[0].blob.arrayBuffer()), png)
+  const selected = reviseProject(imported, { mainFile: 'template/alternate.tex' })
+  assert.equal(selected.mainFile, 'template/alternate.tex')
+  assert.deepEqual(selected.files, imported.files)
+  assert.equal(imported.mainFile, null)
 })
 
-test('the supplied AltaCV ZIP imports and roundtrips all 13 original files through the compile contract', async () => {
-  const bytes = readFileSync(new URL('../../../../Mr.Resume/AltaCV_Template.zip', import.meta.url))
-  const buffer = new Uint8Array(bytes).buffer
-  const original = await JSZip.loadAsync(buffer)
-  const project = await readProjectZip(buffer, 'AltaCV_Template')
-  const paths = ['CHANGELOG.md', 'Yacht_High.png', 'Suitcase_High.png', 'Globe_High.png', 'sample.tex', 'sample.bib', 'pubs-num.tex', 'pubs-authoryear.tex', 'nicethings_icons_readme.txt', 'latexmkrc', 'altacv.cls', 'README.md', 'LICENSE.md']
-  assert.equal(project.mainFile, 'sample.tex')
-  assert.equal(project.engine, 'lualatex')
-  assert.equal(project.files.length, 10)
-  assert.equal(project.assets.length, 3)
-  assert.ok(referencesToFile(project, 'Globe_High.png').some((reference) => reference.file === 'sample.tex'), 'AltaCV photoR image references remain visible before rename/delete')
-  assert.deepEqual([...project.files, ...project.assets].map((file) => file.path).sort(), paths.sort())
-  for (const file of project.files) assert.equal(file.content, await original.file(file.path)!.async('string'), file.path)
-  for (const asset of project.assets) assert.deepEqual(new Uint8Array(await asset.blob.arrayBuffer()), await original.file(asset.path)!.async('uint8array'), asset.path)
-  const manifest = readLatexManifest({ version: project.version, operationKey: 'altacv-regression', projectId: project.id, title: project.title, revision: project.revision,
-    mainFile: project.mainFile, engine: project.engine, files: project.files, assets: project.assets.map((asset) => ({ id: asset.id, path: asset.path, mediaType: asset.mediaType, size: asset.blob.size })) })
-  assert.equal(manifest.files.length + manifest.assets.length, 13)
-  const restored = await readProjectZip(await createProjectZip(project))
-  assert.deepEqual(restored.files, project.files)
-  assert.equal(restored.mainFile, project.mainFile)
-  assert.equal(restored.engine, project.engine)
-  for (let i = 0; i < project.assets.length; i++) assert.equal(await sha256(await restored.assets[i].blob.arrayBuffer()), await sha256(await project.assets[i].blob.arrayBuffer()))
-})
-
-test('main-file inference ignores commented declarations and does not let project notes override the engine', async () => {
-  const bytes = await zip({
-    'Template/resume.tex': '% !TeX program = pdflatex\n\\documentclass\n[10pt]\n{article}\n',
-    'Template/parts.tex': '% \\documentclass{article}\r\n\\section{Partial}\r\n',
-    'README.md': '% !TeX program = xelatex\nTemplate instructions.\n',
-    'latexmkrc': '$pdf_mode = 5;\n',
-  })
-  const project = await readProjectZip(bytes.buffer as ArrayBuffer)
-  assert.equal(project.mainFile, 'Template/resume.tex')
-  assert.equal(project.engine, 'pdflatex')
-  const standalone = readTexProject(new TextEncoder().encode('\uFEFF% Header\r% !TeX TS-program = xelatex\r' + source), 'resume.tex', 'Resume')
-  assert.equal(standalone.engine, 'xelatex')
-})
-
-test('an explicit invalid manifest entry point never silently falls back or crashes engine detection', async () => {
-  const manifest = { format: 'smilepdf-latex', version: 1, files: [{ id: 'source', path: 'main.tex' }], assets: [], mainFile: 'missing.tex', engine: 'lualatex' }
-  for (const mainFile of ['missing.tex', '', null]) {
-    await assert.rejects(readProjectZip((await zip({ 'main.tex': source, 'smilepdf-project.json': JSON.stringify({ ...manifest, mainFile }) })).buffer as ArrayBuffer), /no valid main file/u)
+test('explicitly unselected main survives portable export even when main.tex or a sole TeX file exists', async () => {
+  for (const files of [createTemplateProject().files, [{ id: 'source', path: 'cv.tex', content: source }]]) {
+    const draft = reviseProject(createTemplateProject(), { mainFile: null, files })
+    const restored = await readProjectZip(await createProjectZip(draft))
+    assert.equal(restored.mainFile, null)
+    assert.deepEqual(restored.files, files)
   }
 })
 
-test('multi-tex ZIPs without one documentclass entry point are still refused, never guessed', async () => {
-  await assert.rejects(readProjectZip((await zip({ 'sample.tex': 'no entry marker here', 'letter.tex': 'no marker either' })).buffer as ArrayBuffer), /multiple/u)
-  await assert.rejects(readProjectZip((await zip({ 'first.tex': source, 'second.tex': source })).buffer as ArrayBuffer), /multiple/u)
+test('existing root-main and sole-TeX conventions remain defaults without renaming source paths', async () => {
+  assert.equal((await readProjectZip((await zip({ 'main.tex': source, 'other.tex': source })).buffer as ArrayBuffer)).mainFile, 'main.tex')
+  assert.equal((await readProjectZip((await zip({ 'template/cv.tex': source })).buffer as ArrayBuffer)).mainFile, 'template/cv.tex')
+  assert.equal((await readProjectZip((await zip({ 'first.tex': source, 'second.tex': source })).buffer as ArrayBuffer)).mainFile, null)
 })
 
-test('ambiguous entry point and future/unsupported manifest metadata never silently choose or discard', async () => {
+test('source-only support packages import before the user creates and selects an arbitrary main', async () => {
+  const imported = await readProjectZip((await zip({ 'styles/resume.sty': '\\ProvidesPackage{resume}\r\n', 'references.bib': '@article{x}\r\n' })).buffer as ArrayBuffer)
+  assert.equal(imported.mainFile, null)
+  const created = addTextFile(imported, 'my-entry.tex', source)
+  assert.equal(created.mainFile, null)
+  assert.deepEqual(created.files.slice(0, imported.files.length), imported.files)
+  const selected = reviseProject(created, { mainFile: 'my-entry.tex' })
+  assert.equal((await readProjectZip(await createProjectZip(selected))).mainFile, 'my-entry.tex')
+})
+
+test('invalid selected main and future/unsupported manifest metadata are still refused without fallback', async () => {
   const manifest = { format: 'smilepdf-latex', version: 1, files: [{ id: 'source', path: 'main.tex' }], assets: [], mainFile: 'main.tex', engine: 'lualatex', billing: 'unsupported' }
   await assert.rejects(readProjectZip((await zip({ 'main.tex': source, 'smilepdf-project.json': JSON.stringify(manifest) })).buffer as ArrayBuffer), /unsupported fields/u)
   await assert.rejects(readProjectZip((await zip({ 'main.tex': source, 'smilepdf-project.json': JSON.stringify({ ...manifest, billing: undefined, version: 99 }) })).buffer as ArrayBuffer), /format or version/u)
+  await assert.rejects(readProjectZip((await zip({ 'main.tex': source, 'smilepdf-project.json': JSON.stringify({ ...manifest, billing: undefined, mainFile: 'missing.tex' }) })).buffer as ArrayBuffer), /existing/u)
 })
 
 test('PNG/JPEG signatures and pixel dimensions are bounded before browser/native decoding', () => {

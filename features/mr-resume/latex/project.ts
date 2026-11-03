@@ -6,9 +6,7 @@ export class LatexProjectError extends Error {
 }
 
 export const textExtensions = ['tex', 'sty', 'cls', 'bib', 'bst', 'md', 'txt'] as const
-export function isLatexTextPath(path: string) {
-  return textExtensions.some((extension) => path.toLowerCase().endsWith(`.${extension}`)) || path.split('/').pop()?.toLowerCase() === 'latexmkrc'
-}
+export const isLatexTextPath = (path: string) => textExtensions.some((extension) => path.toLowerCase().endsWith(`.${extension}`)) || /(?:^|\/)latexmkrc$/iu.test(path)
 const engines: LatexEngine[] = ['lualatex', 'xelatex', 'pdflatex']
 const idPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u
 const reservedIds = new Set(Object.getOwnPropertyNames(Object.prototype))
@@ -44,7 +42,7 @@ export function assertLatexPath(path: string, kind: 'text' | 'asset' | 'either' 
   const text = isLatexTextPath(path)
   const asset = ['png', 'jpg', 'jpeg'].includes(extension)
   if ((kind === 'text' && !text) || (kind === 'asset' && !asset) || (kind === 'either' && !text && !asset)) {
-    throw new LatexProjectError(`Unsupported file: ${path}. Use .tex, .sty, .cls, .bib, .bst, .md, .txt, latexmkrc, PNG or JPEG.`, 'unsupported_file')
+    throw new LatexProjectError(`Unsupported file: ${path}. Use TeX sources, .md/.txt notes, latexmkrc, PNG or JPEG.`, 'unsupported_file')
   }
   return path
 }
@@ -66,7 +64,7 @@ export function validateLatexProject(value: unknown): LatexProject {
   if (Object.keys(value).some((field) => !fields.includes(field))) throw new LatexProjectError('The project has unsupported metadata. Its original was preserved.', 'unsupported_version')
   if (typeof value.id !== 'string' || !idPattern.test(value.id) || reservedIds.has(value.id) || typeof value.title !== 'string' || utf8Bytes(value.title) > 512 || !isWellFormedText(value.title)
     || !Number.isSafeInteger(value.revision) || (value.revision as number) < 1 || !engines.includes(value.engine as LatexEngine)
-    || typeof value.mainFile !== 'string' || !Array.isArray(value.files) || !Array.isArray(value.assets)
+    || !(value.mainFile === null || typeof value.mainFile === 'string') || !Array.isArray(value.files) || !Array.isArray(value.assets)
     || typeof value.createdAt !== 'string' || !Number.isFinite(Date.parse(value.createdAt))
     || typeof value.updatedAt !== 'string' || !Number.isFinite(Date.parse(value.updatedAt))
     || !(value.templateId === null || (typeof value.templateId === 'string' && idPattern.test(value.templateId)))
@@ -90,7 +88,7 @@ export function validateLatexProject(value: unknown): LatexProject {
     if (!(asset.blob instanceof Blob) || !['image/png', 'image/jpeg'].includes(asset.mediaType)
       || (asset.mediaType === 'image/png') !== /\.png$/iu.test(asset.path) || (asset.blob.type && asset.blob.type !== asset.mediaType) || asset.blob.size === 0) throw new LatexProjectError(`Invalid image asset: ${asset.path}`, 'invalid_asset')
   }
-  if (!value.files.some((file) => file.path === value.mainFile && /\.tex$/iu.test(file.path))) throw new LatexProjectError('Select an existing .tex file as the main file.', 'missing_main')
+  if (value.mainFile !== null && !value.files.some((file) => file.path === value.mainFile && /\.tex$/iu.test(file.path))) throw new LatexProjectError('Select an existing .tex file as the main file.', 'missing_main')
   const project = value as LatexProject
   const size = projectSize(project)
   if (size.source > LATEX_LIMITS.sourceBytes || size.upload > LATEX_LIMITS.uploadBytes) throw new LatexProjectError('This project exceeds the 1 MiB source or 3 MiB upload limit. No file was discarded.', 'project_too_large')
@@ -190,7 +188,7 @@ export function applyNativeFontChoices(source: string, choices: Readonly<Record<
 }
 
 export function isCurrentProof(project: LatexProject | null, proof: LatexProof | null | undefined) {
-  return Boolean(project && proof && proof.projectId === project.id && proof.revision === project.revision && proof.engine === project.engine)
+  return Boolean(project && project.mainFile !== null && proof && proof.projectId === project.id && proof.revision === project.revision && proof.engine === project.engine)
 }
 
 /** Local revisions can fork between tabs before CAS rejects a write. A revision number alone is not source identity. */

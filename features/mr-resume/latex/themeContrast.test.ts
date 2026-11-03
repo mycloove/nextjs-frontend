@@ -23,9 +23,16 @@ test('existing exact MR palette provides accessible LaTeX text, syntax/status an
     assert.ok(ratio(tokens['--rs-on-primary'], tokens['--rs-primary']) >= 4.5)
     assert.ok(ratio(tokens['--rs-focus'], tokens['--rs-panel']) >= 3)
     assert.ok(ratio(tokens['--rs-control-line'], tokens['--rs-raised']) >= 3)
+    assert.ok(ratio(tokens['--rs-accent'], tokens['--rs-line']) >= 3, 'Engine-byte progress remains distinguishable from its track')
   }
   const applicationCss = readFileSync(new URL('./LatexResumeStudio.module.css', import.meta.url), 'utf8')
-  assert.match(applicationCss, /\.saveState\s*\{[^}]*color: var\(--rs-ink\)/u)
+  // The current compact header uses a semantic muted role, not a fixed ink color.
+  // Verify its actual role against both header themes instead of pinning a stale CSS spelling.
+  const saveColor = /\.saveState\s*\{[^}]*color: var\((--rs-[a-z-]+)\)/u.exec(applicationCss)?.[1]
+  assert.ok(saveColor)
+  for (const tokens of themes) assert.ok(ratio(tokens[saveColor], tokens['--rs-panel']) >= 4.5)
   assert.match(applicationCss, /\.cm-activeLine\)\s*\{[^}]*background: var\(--rs-raised\)/u)
   assert.match(applicationCss, /\.sourceRegistration\s*\{[^}]*background: var\(--rs-raised\)/u)
+  assert.match(applicationCss, /\.engineBytes\s*\{[^}]*color: var\(--rs-muted\)/u)
+  assert.match(applicationCss, /\.localWorkspaceBody:focus-visible\s*\{[^}]*outline-offset: -2px/u)
 })

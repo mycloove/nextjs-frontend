@@ -1,0 +1,3460 @@
+{
+  "version": 1,
+  "profileVersion": "browser-busytex-v1-tl2023-4499aa69-r5",
+  "archive": {
+    "path": "sources/tex-supplemental-runtime-source.tar.gz",
+    "bytes": 300133,
+    "sha256": "387bd20d62ee39c755c656b52dea417c6d40600ca657aa5aabe5ca1ba7329ad9"
+  },
+  "packages": [
+    {
+      "name": "enumitem",
+      "inputs": [
+        {
+          "name": "ubuntu-texlive-latex-extra.js",
+          "bytes": 1398581,
+          "sha256": "a99a68b79e6a93f3ca9d94f46afe8a62e7e06b6d4c5e90a705ec15fc42d8ecda",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-extra.js"
+        },
+        {
+          "name": "ubuntu-texlive-latex-extra.data",
+          "bytes": 49513577,
+          "sha256": "fb4dc0440f4b2bd2d5138dbb5689e6a33cd20c9704934422436cb97af5d623c4",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-extra.data"
+        }
+      ],
+      "groups": [
+        "core"
+      ],
+      "files": [
+        {
+          "path": "texlive/texmf-dist/tex/latex/enumitem/enumitem.sty",
+          "bytes": 51697,
+          "sha256": "a217353d233e54e8c0944d87ea2924ec1f20d849a35b749698df03884856e5e3",
+          "source": "ubuntu-texlive-latex-extra.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/enumitem/enumitem.sty",
+          "kind": "raw-shipped-runtime-file"
+        }
+      ],
+      "embeddedNotices": [
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/enumitem/enumitem.sty",
+            "bytes": 51697,
+            "sha256": "a217353d233e54e8c0944d87ea2924ec1f20d849a35b749698df03884856e5e3",
+            "source": "ubuntu-texlive-latex-extra.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/enumitem/enumitem.sty"
+          },
+          "lines": [
+            {
+              "line": 2,
+              "text": "% Copyright (C) 2003-2019 Javier Bezos http://www.texnia.com"
+            },
+            {
+              "line": 5,
+              "text": "% the MIT License. A version can be found at the end of this file."
+            },
+            {
+              "line": 45,
+              "text": "% intended. The original work is by David Carlisle, under license LPPL."
+            },
+            {
+              "line": 118,
+              "text": "% This ends the code copied from keyval (under LPPL)."
+            },
+            {
+              "line": 1008,
+              "text": "% under license LPPL."
+            },
+            {
+              "line": 1077,
+              "text": "% This ends the code adapted from latex (under LPPL)."
+            },
+            {
+              "line": 1889,
+              "text": "MIT License"
+            },
+            {
+              "line": 1896,
+              "text": "distribute, sublicense, and/or sell copies of the Software, and to"
+            },
+            {
+              "line": 1900,
+              "text": "The above copyright notice and this permission notice shall be included"
+            },
+            {
+              "line": 1906,
+              "text": "IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "fontspec",
+      "inputs": [
+        {
+          "name": "ubuntu-texlive-latex-recommended.js",
+          "bytes": 337892,
+          "sha256": "bbd975921a74adae9119988ae8a740ca9f4837db772061d313c67729fba1d9ee",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.js"
+        },
+        {
+          "name": "ubuntu-texlive-latex-recommended.data",
+          "bytes": 9058527,
+          "sha256": "fa9a03f928a0af0e9c5a24e2ce2956e64db9d580dd2c3a7517176aac16dc9006",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.data"
+        }
+      ],
+      "groups": [
+        "unicode"
+      ],
+      "files": [
+        {
+          "path": "texlive/texmf-dist/tex/latex/fontspec/fontspec-luatex.sty",
+          "bytes": 150585,
+          "sha256": "275eed9a2309c63b86f0de4d49a1fa1e6bfc665359cd2a16bad1dd21a5eb45ca",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/fontspec/fontspec-luatex.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/fontspec/fontspec-xetex.sty",
+          "bytes": 162076,
+          "sha256": "7d9dbc9c795bcfe13930a88fc0d6066f064eea04fb1006c6ded73d54c863e12b",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/fontspec/fontspec-xetex.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/fontspec/fontspec.cfg",
+          "bytes": 549,
+          "sha256": "f31d038ca5322ef4fc3fbe391f42695bf1305567a04b6ac1005964703dd1232a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/fontspec/fontspec.cfg",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/fontspec/fontspec.lua",
+          "bytes": 3021,
+          "sha256": "e68a958642a202016fbaf6c2ee639e24e53e5d102011658e3e5f588be23e05b3",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/fontspec/fontspec.lua",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/fontspec/fontspec.sty",
+          "bytes": 1656,
+          "sha256": "a13fef368454be939bc947e688700508adbf75b2b3d3dbe9730521808945fe7e",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/fontspec/fontspec.sty",
+          "kind": "raw-shipped-runtime-file"
+        }
+      ],
+      "embeddedNotices": [
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/fontspec/fontspec-luatex.sty",
+            "bytes": 150585,
+            "sha256": "275eed9a2309c63b86f0de4d49a1fa1e6bfc665359cd2a16bad1dd21a5eb45ca",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/fontspec/fontspec-luatex.sty"
+          },
+          "lines": [
+            {
+              "line": 31,
+              "text": "%% Copyright  2004-2017  Will Robertson, LPPL \"maintainer\""
+            },
+            {
+              "line": 32,
+              "text": "%% Copyright  2009-2013  Khaled Hosny"
+            },
+            {
+              "line": 35,
+              "text": "%% the conditions of the LaTeX Project Public License, version 1.3c or higher"
+            },
+            {
+              "line": 36,
+              "text": "%% (your choice): <http://www.latex-project.org/lppl/>."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/fontspec/fontspec-xetex.sty",
+            "bytes": 162076,
+            "sha256": "7d9dbc9c795bcfe13930a88fc0d6066f064eea04fb1006c6ded73d54c863e12b",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/fontspec/fontspec-xetex.sty"
+          },
+          "lines": [
+            {
+              "line": 31,
+              "text": "%% Copyright  2004-2017  Will Robertson, LPPL \"maintainer\""
+            },
+            {
+              "line": 32,
+              "text": "%% Copyright  2009-2013  Khaled Hosny"
+            },
+            {
+              "line": 35,
+              "text": "%% the conditions of the LaTeX Project Public License, version 1.3c or higher"
+            },
+            {
+              "line": 36,
+              "text": "%% (your choice): <http://www.latex-project.org/lppl/>."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/fontspec/fontspec.lua",
+            "bytes": 3021,
+            "sha256": "e68a958642a202016fbaf6c2ee639e24e53e5d102011658e3e5f588be23e05b3",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/fontspec/fontspec.lua"
+          },
+          "lines": [
+            {
+              "line": 12,
+              "text": "--  Copyright  2004-2017  Will Robertson, LPPL \"maintainer\""
+            },
+            {
+              "line": 13,
+              "text": "--  Copyright  2009-2013  Khaled Hosny"
+            },
+            {
+              "line": 16,
+              "text": "--  the conditions of the LaTeX Project Public License, version 1.3c or higher"
+            },
+            {
+              "line": 17,
+              "text": "--  (your choice): <http://www.latex-project.org/lppl/>."
+            },
+            {
+              "line": 30,
+              "text": "    copyright     = \"Khaled Hosny, Philipp Gesang, Will Robertson\","
+            },
+            {
+              "line": 31,
+              "text": "    license       = \"LPPL v1.3c\""
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/fontspec/fontspec.sty",
+            "bytes": 1656,
+            "sha256": "a13fef368454be939bc947e688700508adbf75b2b3d3dbe9730521808945fe7e",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/fontspec/fontspec.sty"
+          },
+          "lines": [
+            {
+              "line": 12,
+              "text": "%% Copyright  2004-2017  Will Robertson, LPPL \"maintainer\""
+            },
+            {
+              "line": 13,
+              "text": "%% Copyright  2009-2013  Khaled Hosny"
+            },
+            {
+              "line": 16,
+              "text": "%% the conditions of the LaTeX Project Public License, version 1.3c or higher"
+            },
+            {
+              "line": 17,
+              "text": "%% (your choice): <http://www.latex-project.org/lppl/>."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "makecmds",
+      "inputs": [
+        {
+          "name": "ubuntu-texlive-latex-extra.js",
+          "bytes": 1398581,
+          "sha256": "a99a68b79e6a93f3ca9d94f46afe8a62e7e06b6d4c5e90a705ec15fc42d8ecda",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-extra.js"
+        },
+        {
+          "name": "ubuntu-texlive-latex-extra.data",
+          "bytes": 49513577,
+          "sha256": "fb4dc0440f4b2bd2d5138dbb5689e6a33cd20c9704934422436cb97af5d623c4",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-extra.data"
+        }
+      ],
+      "groups": [
+        "unicode"
+      ],
+      "files": [
+        {
+          "path": "texlive/texmf-dist/tex/latex/makecmds/makecmds.sty",
+          "bytes": 2296,
+          "sha256": "172cc5a24f0fa7d780556f2d0fcab7c7a1b60d8f017079a56951ca3a747c82ad",
+          "source": "ubuntu-texlive-latex-extra.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/makecmds/makecmds.sty",
+          "kind": "raw-shipped-runtime-file"
+        }
+      ],
+      "embeddedNotices": [
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/makecmds/makecmds.sty",
+            "bytes": 2296,
+            "sha256": "172cc5a24f0fa7d780556f2d0fcab7c7a1b60d8f017079a56951ca3a747c82ad",
+            "source": "ubuntu-texlive-latex-extra.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/makecmds/makecmds.sty"
+          },
+          "lines": [
+            {
+              "line": 9,
+              "text": "%%  Copyright 2000 Peter R. Wilson"
+            },
+            {
+              "line": 12,
+              "text": "%%  LaTeX Project Public License distributed from CTAN"
+            },
+            {
+              "line": 13,
+              "text": "%%  archives in directory macros/latex/base/lppl.txt."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "polyglossia",
+      "inputs": [
+        {
+          "name": "ubuntu-texlive-latex-recommended.js",
+          "bytes": 337892,
+          "sha256": "bbd975921a74adae9119988ae8a740ca9f4837db772061d313c67729fba1d9ee",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.js"
+        },
+        {
+          "name": "ubuntu-texlive-latex-recommended.data",
+          "bytes": 9058527,
+          "sha256": "fa9a03f928a0af0e9c5a24e2ce2956e64db9d580dd2c3a7517176aac16dc9006",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.data"
+        }
+      ],
+      "groups": [
+        "unicode"
+      ],
+      "files": [
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/arabicdigits.map",
+          "bytes": 256,
+          "sha256": "0ab85ab55d9edd7c297651a85e4e4e86b758074f89ec1e2ab3fdd9dec8a86947",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/arabicdigits.map",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/arabicdigits.tec",
+          "bytes": 181,
+          "sha256": "1e0dde82e8664fe52466c4161d28ee36fd49e561180d0795d3ccb0b6919f263f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/arabicdigits.tec",
+          "kind": "compiled-map-with-shipped-map-source"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/bengalidigits.map",
+          "bytes": 257,
+          "sha256": "ccddbb8bcdf1b502e90b003bdd6bbfb9763249970b05802062a20ce6337e8bbf",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/bengalidigits.map",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/bengalidigits.tec",
+          "bytes": 186,
+          "sha256": "0373e9eb4ce437598d060e23bb8b9c5ee5757785f547d38bebb2b5f05894b74b",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/bengalidigits.tec",
+          "kind": "compiled-map-with-shipped-map-source"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/devanagaridigits.map",
+          "bytes": 260,
+          "sha256": "75836f05dd4be17f325fd28330729f90e3b97ddb0168bcbb897580b2d0fc9ba3",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/devanagaridigits.map",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/devanagaridigits.tec",
+          "bytes": 185,
+          "sha256": "cdcdce5327b5ec1b76b6de27e3a531f46a345ea7d7af3d9429b0cf5149250ade",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/devanagaridigits.tec",
+          "kind": "compiled-map-with-shipped-map-source"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/farsidigits.map",
+          "bytes": 255,
+          "sha256": "4bb07b9855a871f08a56193a1ac2f5900d4d584c44866e1cf7b68f52f872c8e2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/farsidigits.map",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/farsidigits.tec",
+          "bytes": 183,
+          "sha256": "e891dc8ee5a35c607c9ae97d53c70723877bd6cf0fb8d01762864ad19590f888",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/farsidigits.tec",
+          "kind": "compiled-map-with-shipped-map-source"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/gurmukhidigits.map",
+          "bytes": 258,
+          "sha256": "1406118ad11240e7a696fdd8903be2dea9fd424ea883c89593710e863c2abb80",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/gurmukhidigits.map",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/gurmukhidigits.tec",
+          "bytes": 183,
+          "sha256": "eb4731a4c666843c441c87be22894bec404a62cfd68d7a68aa2dec5c75c9db33",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/gurmukhidigits.tec",
+          "kind": "compiled-map-with-shipped-map-source"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/thaidigits.map",
+          "bytes": 254,
+          "sha256": "d46ca161525acc73c46a437d968131aac32b5e735dc43ab40e2c5e33d3cfb93c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/thaidigits.map",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/thaidigits.tec",
+          "bytes": 182,
+          "sha256": "339f6bd9e745c86e52a12ef9b49bc4b65bf98c2acdb77f9dea28bf497348be88",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/fonts/misc/xetex/fontmapping/polyglossia/thaidigits.tec",
+          "kind": "compiled-map-with-shipped-map-source"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/arabicnumbers.sty",
+          "bytes": 2029,
+          "sha256": "a59f40118d88da58768d6ecaad05eb90db9860d6db0ed0d6fb8c2d095a2b2c05",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/arabicnumbers.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/babel-hebrewalph.def",
+          "bytes": 3684,
+          "sha256": "46c1467b78f10bdc55a3728d41f9ee4eba1694ce512da7193e5ea1c96fa6f489",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/babel-hebrewalph.def",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/babelsh.def",
+          "bytes": 21082,
+          "sha256": "01e178acbb63661da5fa627bb34cf00fc0b18e24e8edd0bd1dab0fcb356e9211",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/babelsh.def",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/bengalidigits.sty",
+          "bytes": 321,
+          "sha256": "1b5dc74023ddc2da5e1b3d8700ef7bc77b17b6ab1f0650b0eff64b315252b592",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/bengalidigits.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/cal-util.def",
+          "bytes": 1911,
+          "sha256": "962429307756493663694d07bd155933bf0c6db249c163a3d48bc48a88aceda8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/cal-util.def",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/devanagaridigits.sty",
+          "bytes": 470,
+          "sha256": "852f2e974cce457a9de782311019b7498464a3279c2544c9dd6472890366d494",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/devanagaridigits.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/farsical.sty",
+          "bytes": 6905,
+          "sha256": "193510d06bccd6cf20829ba2684a2c10129a4fac1adde8250af15612945d5a9b",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/farsical.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-acadien.ldf",
+          "bytes": 237,
+          "sha256": "8e27e26cb4364a95f66994d467e92f65807100dc4dc2b1c7e457b735b8a14f83",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-acadien.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-aeb.ldf",
+          "bytes": 230,
+          "sha256": "2d69f20397f6a14082c51419417e2d83a3cc1223896a48cd6d07c23cb67c67e6",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-aeb.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-af.ldf",
+          "bytes": 234,
+          "sha256": "62ce5b33a083239eaf6dce7d7a0e5c6eee74a283d671310c08eed9a53cc71257",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-af.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-afb.ldf",
+          "bytes": 230,
+          "sha256": "117b5bad979c76fda6d1c4b1779383eb2b07fad8f733ef3f5cf8e4d9cad6cabd",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-afb.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-afrikaans.ldf",
+          "bytes": 2625,
+          "sha256": "202b094ad2e8b77cb0f6a83f2da924051675e76c0849ab41b18041b6cad18765",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-afrikaans.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-albanian.ldf",
+          "bytes": 2087,
+          "sha256": "e62071600c6e150b013886fc9f8cd997a777a0235ad241e43100781cdd3e5099",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-albanian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-am.ldf",
+          "bytes": 230,
+          "sha256": "22295f7de8cd26b1426a4ad0fab567f1497a007c00d79b9a32a640ed6ca68b84",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-am.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-american.ldf",
+          "bytes": 230,
+          "sha256": "daf7de8c1521a631c7227cdce3f8fc490bd5589908f3c6f9ace1bb3586d190be",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-american.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-amharic.ldf",
+          "bytes": 5955,
+          "sha256": "8033f81afff12824bf1c2b2ef69af802f6345fc24bf940b809ce7708184fdc95",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-amharic.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-apd.ldf",
+          "bytes": 230,
+          "sha256": "795b0e1c9d30e5fb51dd04f9cac2bb5a8ec22cb2a81123d46180ccde931c11fa",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-apd.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ar-IQ.ldf",
+          "bytes": 234,
+          "sha256": "8d9abea4fe9cc1391f0d03de010187d387a90d1dddec9527e4ab38c2faeb4029",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ar-IQ.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ar-JO.ldf",
+          "bytes": 234,
+          "sha256": "029c98695cf4d085e1dccd066609ef2dfcacf291ee433d40483fce48b8b1b2b6",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ar-JO.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ar-LB.ldf",
+          "bytes": 234,
+          "sha256": "5d5e45901c4caecf3c0346f0fe1547911c70942efa1e9a37320d664cd3a16088",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ar-LB.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ar-MR.ldf",
+          "bytes": 234,
+          "sha256": "3545abce2d6245424fac4b596b5d87b1890222b18774289dd1a048922137e551",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ar-MR.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ar-PS.ldf",
+          "bytes": 234,
+          "sha256": "874e07c17c0844bf16a1006018f6250797041f5449c01f14a0f5344ceda7deba",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ar-PS.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ar-SY.ldf",
+          "bytes": 234,
+          "sha256": "8dafaee170e683e6bea1bf1f45d25bc406c65e9d5ec9cc50b5160ba800d63211",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ar-SY.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ar-YE.ldf",
+          "bytes": 234,
+          "sha256": "da1f2310d69ab14a6243694abd9be6f37309f71277c738b098b9ea4ab15b6cc8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ar-YE.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ar.ldf",
+          "bytes": 228,
+          "sha256": "2e5e9f7cddceaf353cbe2a46d41a5f3601e903fbaa185f6bbeabe745e8fb9a84",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ar.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-arabic.ldf",
+          "bytes": 9126,
+          "sha256": "cc30389542060adc2ee4e66867e6a997bae89ce79c13318caa4d16f64569b578",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-arabic.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-armenian.ldf",
+          "bytes": 4605,
+          "sha256": "588f670b9803e10648124fe1072f5a0750d2d30ab71abe722e5193298666cd73",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-armenian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-arq.ldf",
+          "bytes": 230,
+          "sha256": "c68a3bb8227f98f2f0f806ee3885ad09a145a9a76b9e1abae22da76a94680e84",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-arq.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ary.ldf",
+          "bytes": 230,
+          "sha256": "4a698b95b541b50dd2242f5715394a9cca5de38e5ba16782d7f936eeac4574cb",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ary.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-arz.ldf",
+          "bytes": 230,
+          "sha256": "05c781a8c9cf831485e1de9ee0bca08d5def0bd348e6f9474411d681fc79dd53",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-arz.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ast.ldf",
+          "bytes": 234,
+          "sha256": "8d63fb7f14fb6fc3580e8619fa4e55222f72ad00c1e3790f339b720fa575ae0c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ast.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-asturian.ldf",
+          "bytes": 1400,
+          "sha256": "471b882100736530a15120048a2e1e4ee0892c54feb93ebc161e7a27e695ef0d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-asturian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-australian.ldf",
+          "bytes": 234,
+          "sha256": "6011b9dfd2a0279bc29408998b4643c693cd87cf6b3265fe8cc6a2f8c1bc1ba5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-australian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-austrian.ldf",
+          "bytes": 243,
+          "sha256": "cf5d3dd94433f17367beafd1f895c5c8416c10421cb5711b8759f05d199460cd",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-austrian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ayl.ldf",
+          "bytes": 230,
+          "sha256": "d631cb69bd3287b93f86217728ff127e186772569bc147fbd676d94f5f69ddbc",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ayl.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-bahasa.ldf",
+          "bytes": 226,
+          "sha256": "3c3280c23ddf9a0f64ed8c5777f7b9836ad3a7893ec315ac415e241785168595",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-bahasa.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-bahasai.ldf",
+          "bytes": 329,
+          "sha256": "cb2c65cdb2d582d776445bfa6f1cc1a01d379c6159bd0f5f1776b746d641db37",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-bahasai.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-bahasam.ldf",
+          "bytes": 325,
+          "sha256": "0a7dbabee9d5e748ad0d6cae552da5fa12e6936c27253d78351e3438161012d0",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-bahasam.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-basque.ldf",
+          "bytes": 1318,
+          "sha256": "f03efb5f362cb135667024b05aabbcfb35b331322d131ba7cb1cdd3174f4aadc",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-basque.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-be-tarask.ldf",
+          "bytes": 250,
+          "sha256": "694670f2ed5138334e6e092777780097961e2c6383ad2a6793036966a798c4e7",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-be-tarask.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-be.ldf",
+          "bytes": 236,
+          "sha256": "344c3835f230c3ee254650449fcf022cced28b87c61a3b821b014a754bd3a96f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-be.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-belarusian.ldf",
+          "bytes": 9655,
+          "sha256": "b7ed3e7e98608542e0bf806a9fc7314fc8227a75f70152d8f3dde2c9dce94760",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-belarusian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-bengali.ldf",
+          "bytes": 3857,
+          "sha256": "8890b5c37abb0636c4b01c28b690b9d5ad07777279f024b9452604b40330aa9a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-bengali.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-bg.ldf",
+          "bytes": 234,
+          "sha256": "d4a9359ccd9aaf3532f1da1d8ea282a17822f5f3f22e810dd4a15e5f091069cd",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-bg.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-bn.ldf",
+          "bytes": 230,
+          "sha256": "20a68f19cd1ae22868bf4f5259294fc011464736af63d7780cb8633019c429a5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-bn.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-bo.ldf",
+          "bytes": 230,
+          "sha256": "6993b6d63cb80d14ccf663876f16e3528447e492ee8cfcbb47daf37cff6663b1",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-bo.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-bosnian.ldf",
+          "bytes": 1370,
+          "sha256": "a1d88e6bb785c98f403abf8566e7680bb23787d1c5e7cc1f08e337dba3c81824",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-bosnian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-br.ldf",
+          "bytes": 228,
+          "sha256": "e20ced62a4a90c179b532a8acdfbc4f6a9627ef30c1464eb5062f7b3fb11c146",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-br.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-brazil.ldf",
+          "bytes": 385,
+          "sha256": "3662feccdbf0e700800ce635cc795df396987460912f931c0eeccc7413838399",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-brazil.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-breton.ldf",
+          "bytes": 2750,
+          "sha256": "f03644f81a45f4d959fc6f502fe066fed3500d590584f9d9cf72c5f7cb710128",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-breton.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-british.ldf",
+          "bytes": 228,
+          "sha256": "2b9df111641b021c3677ef77ad74420f2f1686fe807f00fe2dc1fc53747b326f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-british.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-bs.ldf",
+          "bytes": 230,
+          "sha256": "ef9d0ed06bab1afc5526a1be74084b9789d22f2b9113d11daa84fc8576bbf83f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-bs.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-bulgarian.ldf",
+          "bytes": 3185,
+          "sha256": "a200efa81a1d9a94e574589b6a58f418a430b3db01fb8aa9ae2feef2395262c5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-bulgarian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ca.ldf",
+          "bytes": 230,
+          "sha256": "7a00612fdb3f4b15c23fa4d5796c86d5fad7cfb43bd704dc665d1f83b806807d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ca.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-canadian.ldf",
+          "bytes": 230,
+          "sha256": "2d26eb6bbef4e2dffb1bebca03c56af4e348de14e5ea62599562365fea4944c2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-canadian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-canadien.ldf",
+          "bytes": 228,
+          "sha256": "538a74ee2fae76d446390f26d9dcb106ecb099cc9f137dfb4d5e943446b5e061",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-canadien.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-catalan.ldf",
+          "bytes": 4506,
+          "sha256": "ba10f281ab17eb4b45d8de05b44faee00a2093ec468ec8473777195b515c00f8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-catalan.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-chinese.ldf",
+          "bytes": 8839,
+          "sha256": "6aae087b9097ad1696da342441bf5eeaaa927787184f989d88d0a9ae9109cdf4",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-chinese.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ckb-Arab.ldf",
+          "bytes": 242,
+          "sha256": "7f6cb9bfa2e6ce0a64463ba84e140175e02deeba1c49140dc83ea4c49b732e83",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ckb-Arab.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ckb-Latn.ldf",
+          "bytes": 242,
+          "sha256": "00919ffc33981bcbd78bf4b67bc895654f998aac8df77710276d1af57bb856a0",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ckb-Latn.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ckb.ldf",
+          "bytes": 232,
+          "sha256": "e584b73c96b5c93552451e17a784fe5464e239452e2bcffdbc66135bc8c2547c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ckb.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-cop.ldf",
+          "bytes": 230,
+          "sha256": "6e8005b721841dbb21b02b2cfa9a0ba97cd02e071a8ebc342d817d788e2be55c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-cop.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-coptic.ldf",
+          "bytes": 1016,
+          "sha256": "e792bfcf1f4a268626d4442589abd099114fae002ed91874bbd52d30ee5db625",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-coptic.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-croatian.ldf",
+          "bytes": 7589,
+          "sha256": "f01c4aebfd6bb4b9ed0059b7c43e7bbdac8e2e75e955e64de490f9d0100eb890",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-croatian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-cy.ldf",
+          "bytes": 226,
+          "sha256": "983293f41f468726703997b32f2584d86674a91178dee5c1a60111db46453bfe",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-cy.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-cz.ldf",
+          "bytes": 226,
+          "sha256": "7935f4ea9892182af0bb7838e91803bb1d2766f99e985634d3133ff81287f0b8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-cz.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-czech.ldf",
+          "bytes": 7258,
+          "sha256": "e2bf71481de65fde1915e0b950f661c86dd5fc75804326852be463fd9e08327d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-czech.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-da.ldf",
+          "bytes": 228,
+          "sha256": "d836b52181cadf108beed8b724aafe9f8047f8f0bce867f0227b40abec14fca1",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-da.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-danish.ldf",
+          "bytes": 1187,
+          "sha256": "b83bd06e6ac528cff60559630433c83e5e627661213270399c7516e60bd30361",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-danish.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-AT-1901.ldf",
+          "bytes": 267,
+          "sha256": "bffcbb84fc636dbbf54bf280f589be267db5ad08c520794e29ca38cec5a85880",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-AT-1901.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-AT-1996.ldf",
+          "bytes": 253,
+          "sha256": "5a22bc4ccadb0a418bea8d28eedaa3dedc09617bdc536a09573f964d998571de",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-AT-1996.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-AT.ldf",
+          "bytes": 243,
+          "sha256": "51f300954543f9dc33c11d89d3940aeff890c54b9a0bd5126f88a581c9b31174",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-AT.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-CH-1901.ldf",
+          "bytes": 264,
+          "sha256": "1d11452a383dcacb9381963a81f318979f0d95e236b3e693a72b597c5de986ea",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-CH-1901.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-CH-1996.ldf",
+          "bytes": 250,
+          "sha256": "bc497028f252906707f9d1f6b092f0e34576bb45fbb7f7bc2e366ad6573fab77",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-CH-1996.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-CH.ldf",
+          "bytes": 240,
+          "sha256": "3e7a204f2bdfeb3c6bed4beca6c31a52eed75888fd47881f45cf04ae6653c879",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-CH.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-DE-1901.ldf",
+          "bytes": 268,
+          "sha256": "cbafaec5386051dd96471bb0b9e8ca33383b475b3ca4354e120dc70c5ec67f1c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-DE-1901.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-DE-1996.ldf",
+          "bytes": 254,
+          "sha256": "1cb9150922905f700fb37b1d4fab39cb14d0bf97cd6debaee32cbbca03bd80a7",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-DE-1996.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-DE.ldf",
+          "bytes": 244,
+          "sha256": "2fd8e443dd69f1370a6ae1e441cca9336c095d4b976be5e8234b53a5a4e40b74",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-DE.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-AT-1901.ldf",
+          "bytes": 277,
+          "sha256": "c4943d14be56fd6c6b8017076b415e5822825731ebc5cc0c0456da91cb9dcb67",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-AT-1901.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-AT-1996.ldf",
+          "bytes": 263,
+          "sha256": "884f4ca5e5806d89275f57001e0216a361bdde6c782d7784aac4478792cff38b",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-AT-1996.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-AT.ldf",
+          "bytes": 253,
+          "sha256": "4d51c2d6303cdab460a85716c6e406d45d2bc8a7940fec898c724d63c8bac8e6",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-AT.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-CH-1901.ldf",
+          "bytes": 274,
+          "sha256": "cb1e29f94eedd0ea48c06ae438d52c474009b9d48ea9d3f089aa32111074c481",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-CH-1901.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-CH-1996.ldf",
+          "bytes": 260,
+          "sha256": "034eb199d9c7b76f79fbd9d2c0ad3496fdaa7bb7bf0fe0e1ff13524f0dc7f361",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-CH-1996.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-CH.ldf",
+          "bytes": 250,
+          "sha256": "2fad0f4a2729afcc9e0e1c918b17f668d465a518d8efb6f7442b41124678b14a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-CH.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-DE-1901.ldf",
+          "bytes": 278,
+          "sha256": "b43dbef1133f3ebb6bf304c3b569cc9cee45fb71b099b8d78077a111a7ec2c01",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-DE-1901.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-DE-1996.ldf",
+          "bytes": 264,
+          "sha256": "a8945e56bf26172ae675ef6791f2fbe320403dce6ddd06586158c6707f5767c7",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-DE-1996.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-DE.ldf",
+          "bytes": 254,
+          "sha256": "d2ba225dc0f2acfccd3dd3f4e982a4e6d9235739d37e984875a95282401a58fc",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-Latf-DE.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de-Latf.ldf",
+          "bytes": 238,
+          "sha256": "3cfab8cb777796170f97358afc5928e1c67b3dde278abdd6d16223f210c52c88",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de-Latf.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-de.ldf",
+          "bytes": 228,
+          "sha256": "a0b6c7bf195b2386d471c480ca6d54a6f1101bda394d0b0e7f694e6f63a3b479",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-de.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-divehi.ldf",
+          "bytes": 1311,
+          "sha256": "fdb89bc993a6de26521cc64ac0d276d7102148fdafc2677b77683b5154084592",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-divehi.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-dsb.ldf",
+          "bytes": 232,
+          "sha256": "05408948777c9760d8df1c5809e263ee4430bd6a1a3f2df0003bc3069a9369eb",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-dsb.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-dutch.ldf",
+          "bytes": 2588,
+          "sha256": "cfee09b852298cfd3cf9c20dd2e3d89a2d6dcfa41ca6a4a35d57cf384eac196b",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-dutch.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-dv.ldf",
+          "bytes": 228,
+          "sha256": "54cd83c0eb722cf074f27553bf3abf4881ed2ee1cbfee015bd9c366450a7afb2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-dv.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-el-monoton.ldf",
+          "bytes": 242,
+          "sha256": "56b68e399aa4b0e3bd0aec986216fe38d8041296e8dd1eafba3740d3bb6f21ef",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-el-monoton.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-el-polyton.ldf",
+          "bytes": 242,
+          "sha256": "392098c9c1eabbf836a10ee4a4cc37a31c5f06490a66295c0eadd83f5d60d8c7",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-el-polyton.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-el.ldf",
+          "bytes": 226,
+          "sha256": "759d3be145c7b50872d30de434b99c9a38ca24522cd3b3d681fdb973dbc2dd76",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-el.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-en-AU.ldf",
+          "bytes": 247,
+          "sha256": "874a9583e4330b530913f6dbd7edfe704e49499acdb5191df66f293e65e9ccf4",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-en-AU.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-en-CA.ldf",
+          "bytes": 244,
+          "sha256": "9310ef71330f8b3ad169247b0d6b4bb5d0362daf00274f1d6198afaa66c25430",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-en-CA.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-en-GB.ldf",
+          "bytes": 244,
+          "sha256": "ce0b3c86713a022434f5640a4be3526e27b9b36cdfad1b75c9b12eb580473b77",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-en-GB.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-en-NZ.ldf",
+          "bytes": 247,
+          "sha256": "fa54a007aba1ae1814a38053eb9eb9689bc0780c98da83181b34055de0aaeae8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-en-NZ.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-en-US.ldf",
+          "bytes": 245,
+          "sha256": "677fa63723411bae093a1ee4e29b9ad3ddbf8f49594a45ec928733ad2ff92440",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-en-US.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-en.ldf",
+          "bytes": 230,
+          "sha256": "5261c0fbb07b1d50299d0e94ff4f3a50247cd607fea12fd64ce78e8f15600de2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-en.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-english.ldf",
+          "bytes": 6740,
+          "sha256": "ac25c89a43ab374288cfb58846f9f72a3d28ec133344663e94fa23acad80a19f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-english.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-eo.ldf",
+          "bytes": 234,
+          "sha256": "f315e4bd2783ce197086764edad32696442400e042baef0b07c45f58586341a8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-eo.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-es-ES.ldf",
+          "bytes": 244,
+          "sha256": "6c269d280cccbc1bc359f6189c49eb1264b310267ef6c6f27523ca30e91fbe81",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-es-ES.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-es-MX.ldf",
+          "bytes": 244,
+          "sha256": "0993709666395cf2c4e8aeb9c9f0c2e81bdfcb2400ce1239eecacdcb666b39d6",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-es-MX.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-es.ldf",
+          "bytes": 230,
+          "sha256": "44506202358b4a10207bde5ad9f8db9e693ba1c4c10aa36e94878c85368e5c2d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-es.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-esperanto.ldf",
+          "bytes": 2195,
+          "sha256": "3d11eb928569d07fd460a16081b36236303c0f11d35ebc677de31ec5778992ce",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-esperanto.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-estonian.ldf",
+          "bytes": 1259,
+          "sha256": "6e718f47af07a1d9428f2cc7da0da9d40bfece1acc790a9efef6f462452d707f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-estonian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-et.ldf",
+          "bytes": 232,
+          "sha256": "78d2d9d4880227eb0c7e83fb32938df94c648a003043939ca95d871fe13d6cdd",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-et.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-eu.ldf",
+          "bytes": 228,
+          "sha256": "b3c003d7168de20537806f2efd506106f8b50f7f1332c8303b33c82051c5aea1",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-eu.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-fa.ldf",
+          "bytes": 230,
+          "sha256": "1dcfbeac4fa7d443034358ceab2673da8732449a52619cdaf4e9662207a3b2d9",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-fa.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-farsi.ldf",
+          "bytes": 282,
+          "sha256": "1ce1786d35cb80ab274267e65e5bd6463656d1f9b33fa675bd38fb8c2772391a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-farsi.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-fi.ldf",
+          "bytes": 230,
+          "sha256": "ac4af51cd9fed78f2fbe856d1e3f470878221dddc2bf347d5f58c9058ab91f80",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-fi.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-finnish.ldf",
+          "bytes": 3451,
+          "sha256": "018525074d9c340977ca6c8e3080af22d5588c8be560c6fc161a87a5e7fccef3",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-finnish.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-fr-CA.ldf",
+          "bytes": 243,
+          "sha256": "7b61991145589c80bb84336e5c6899bfcbeb2f681734d2531234821a8e42ea8e",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-fr-CA.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-fr-CH.ldf",
+          "bytes": 240,
+          "sha256": "ca9fd3c5963f46a3dc4414948b474d60cd9b96c1d0fbf0f1c5b426d4544d7b5d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-fr-CH.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-fr-FR.ldf",
+          "bytes": 243,
+          "sha256": "ee0c844affb6868a4aa605a202a84c9f798c54f56e90e3fbbf92aa03ec2e709f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-fr-FR.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-fr.ldf",
+          "bytes": 228,
+          "sha256": "b06c61bf98e20e50fb3d4740efc35a45204a18285549ab056ba333272e73e1f8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-fr.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-french.ldf",
+          "bytes": 18320,
+          "sha256": "1c74ded1210677cb121cd3971b9e4c81b29817d262ec89c508e10a1712efb097",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-french.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-friulan.ldf",
+          "bytes": 242,
+          "sha256": "fe4a7e93e85dfa832d27ecaf9c6da35ca1e8eb66543717d58584967abe560ef8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-friulan.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-friulian.ldf",
+          "bytes": 2000,
+          "sha256": "e9281bfeb354dbda7a074d5cb78e14f4fa9432314abecc21222723af7fb539bf",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-friulian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-fur.ldf",
+          "bytes": 234,
+          "sha256": "d6a14ce5542ec11a672e4b2cfc07d48efc79703e15a82bccb992c370a08c17c2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-fur.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ga.ldf",
+          "bytes": 228,
+          "sha256": "0ec89a44e16810044a4ea91c8c330b2a81bff1fe1a2969908a529cdcdc1ec755",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ga.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-gaelic.ldf",
+          "bytes": 3497,
+          "sha256": "15c37f8600414100d746fd83aab8951434c502e3538ab91752e36ab613fa5cc3",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-gaelic.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-galician.ldf",
+          "bytes": 1295,
+          "sha256": "7a4ae6d1eee9483929d3a24d8845d85c54cd0cbb86d942b47d7b84889e67c981",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-galician.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-gd.ldf",
+          "bytes": 228,
+          "sha256": "28ec8f245dab3bea992c79281f4ac2af2cde595d52d9ea08da4d60b5bed39383",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-gd.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-georgian.ldf",
+          "bytes": 7155,
+          "sha256": "5eb5b41920100520ea4a6483c4037f032f351d47ceaecfef80141e289ad35c75",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-georgian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-german.ldf",
+          "bytes": 11352,
+          "sha256": "6817555037c0cb9c732736c49c3146aabfcdb42ef3f4ead0f8a0eec1d748e41c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-german.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-germanb.ldf",
+          "bytes": 233,
+          "sha256": "64ffd356e31385e0858500af6907ef26c2959f61ec2b82bb217cfcf5dc232f66",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-germanb.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-gl.ldf",
+          "bytes": 232,
+          "sha256": "7e9428b1178a3be12148d4f9f6a450ffca56fa29774062263c2460c1430852b1",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-gl.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-grc.ldf",
+          "bytes": 228,
+          "sha256": "7920938d1d4413b31103d3748bd2f8c03fbd59e93ee0c95a15a3cc243054d36c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-grc.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-greek.ldf",
+          "bytes": 13912,
+          "sha256": "c065d4f29cd521bceed02c04519947ec5a0a7ed7767b9c76f50b1e96f36d8915",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-greek.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-he.ldf",
+          "bytes": 228,
+          "sha256": "5d851f130ffd2bfef5fa0fe467ba2447694a555f97603ec62f843557b2bf203e",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-he.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-hebrew.ldf",
+          "bytes": 4451,
+          "sha256": "8c99661c31d83f3b4c507291b7aff5b64ef72ffbcc2ae597cc140cefc3ac0898",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-hebrew.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-hi.ldf",
+          "bytes": 226,
+          "sha256": "7f8758542e06e4ab56ce481864e56d0d1d9e679f1af2fc6bd200fc34c473411e",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-hi.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-hindi.ldf",
+          "bytes": 3490,
+          "sha256": "70ba58ead058079e71d345fc7ff58b2eba2336d3c3b9e2d5bfc133150e71170c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-hindi.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-hr.ldf",
+          "bytes": 232,
+          "sha256": "3478aa7c5ea7df6578f837169e125e30271cec7ded4e05c9e3740c408df7c934",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-hr.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-hsb.ldf",
+          "bytes": 239,
+          "sha256": "5ab9010f17dab20e48b8c412049fd8690a18b9595142877341a1982d40caeb0a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-hsb.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-hu.ldf",
+          "bytes": 234,
+          "sha256": "1dc7f1ed67a01149af3e17815ab03349e85e3c7303babcd5b10121628ee5174d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-hu.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-hungarian.ldf",
+          "bytes": 13401,
+          "sha256": "f9b9d2a4115f96454a370e116b6df3409ae78cc254036b3f2e096b8f24909e88",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-hungarian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-hy.ldf",
+          "bytes": 232,
+          "sha256": "eeb61989fad605bb7a848550c9fbd31c94d122c95a03353acdd07eef5b5933fa",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-hy.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ia.ldf",
+          "bytes": 238,
+          "sha256": "c08f730a13a5f5889a49e9037acb6a675b6370209f03112f9525c192ffe4fefe",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ia.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-icelandic.ldf",
+          "bytes": 2543,
+          "sha256": "d205a819c90b9d5a4a0e4ef091b7dea5dd54c4927af77d62a18786ef7871e258",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-icelandic.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-id.ldf",
+          "bytes": 226,
+          "sha256": "190202d6677a914e7f86bfaf147b42ba31acc4f67ee86a57778d7f1d7f771285",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-id.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-interlingua.ldf",
+          "bytes": 1312,
+          "sha256": "a41d385facdeec173d63abb7bc7c6bb87dd3d4c8ca989e3e5b720596ed80e5b7",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-interlingua.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-irish.ldf",
+          "bytes": 312,
+          "sha256": "d75ade4f74a002910ce508df9b6dc67d62ce1407a7047ac1b3fff92def08665f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-irish.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-is.ldf",
+          "bytes": 234,
+          "sha256": "89dca6541f0e7e505d9e142363c3f30a78ac0d02f1cd727735afb7dc91b3a78e",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-is.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-it.ldf",
+          "bytes": 230,
+          "sha256": "f8a46cd598e9ea488b61aff6d49987d59affb14aed9cdbb22489a705c7d67021",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-it.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-italian.ldf",
+          "bytes": 3842,
+          "sha256": "126087463c822498ef069f7c00cb7f4e28d5081fa65f8a2998693ce154c855e6",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-italian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ja.ldf",
+          "bytes": 232,
+          "sha256": "13d12e4fcc51236509864c167e955ecb67b99330b4e0f9f76a6095de1fc7b1b2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ja.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-japanese.ldf",
+          "bytes": 6652,
+          "sha256": "14017a5dbcb4c4f230826804d03ac9686b5dcab13d01909d922bac6518f24eec",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-japanese.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ka.ldf",
+          "bytes": 232,
+          "sha256": "81ba38442f0baf3c40284f6bdbf85f0dd83ed44e01e7219047d1523206ef62b6",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ka.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-kannada.ldf",
+          "bytes": 3544,
+          "sha256": "56eaadd53442ec82a63b8b3e2a5cf3f29f1f466c58c0f86cc0fd0da4562e2b15",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-kannada.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-khmer.ldf",
+          "bytes": 5011,
+          "sha256": "ee7e343de502f3920213d8e6e7f07468c02bc9d296fe8180e21c6e267b25c352",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-khmer.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-km.ldf",
+          "bytes": 226,
+          "sha256": "542374ae0a98b84d96cca2632a1d45d4f0126dfeff17908a90011ae7f1ab03f2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-km.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-kmr-Arab.ldf",
+          "bytes": 242,
+          "sha256": "633e623ba84006ff8ff5b49f0b73a68cda42fd167d8b9298ae2ef8a0f8d79ee3",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-kmr-Arab.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-kmr-Latn.ldf",
+          "bytes": 242,
+          "sha256": "ed4333e74ab16ad7291fcd69f85231912524406415305fefb4fd5ac418f30905",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-kmr-Latn.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-kmr.ldf",
+          "bytes": 232,
+          "sha256": "2bb3277cc1070001a3b4fc288f2d95ba15e92fd145cfba9313b8bcb28256dc03",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-kmr.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-kn.ldf",
+          "bytes": 230,
+          "sha256": "e0d9c968f14099121423cf9294f4447ac3ccb7eca73fbe3fb7c9a74292f69be0",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-kn.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ko.ldf",
+          "bytes": 228,
+          "sha256": "e3e8d7ef5fe08691b7b7b51e79e3ad469b2222409d38aa4514b686dda354db5f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ko.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-korean.ldf",
+          "bytes": 38060,
+          "sha256": "cebb352a688d9654c08df657652ccd4419e10e5410aed6ad509ce87729a66d03",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-korean.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ku-Arab.ldf",
+          "bytes": 240,
+          "sha256": "58716e879831413644d57ca71f9e1d4018cc62ddbb107b9acfff520908c2ab2d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ku-Arab.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ku-Latn.ldf",
+          "bytes": 240,
+          "sha256": "522facabd31ef8ea83e025ba948fe03420b6f71c67f30039e834edde1c93851c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ku-Latn.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ku.ldf",
+          "bytes": 230,
+          "sha256": "696ff17b0e610c7ab8b95bbb5e7b3eeb2edf892e3efc8585f1fe3b7159b0b5df",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ku.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-kurdish.ldf",
+          "bytes": 13545,
+          "sha256": "7146467462201b1b72dd0b9d10e7bdb5a88c4dbd35b3d6bd71e136be131cec5d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-kurdish.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-kurmanji.ldf",
+          "bytes": 244,
+          "sha256": "a44362fc34989ec46a9cb84cb03ac150afdddc8924e65487f3f64479af7c2311",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-kurmanji.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-la-x-classic.ldf",
+          "bytes": 244,
+          "sha256": "0c4dbde8441d551c96aa970e77c44d9dd6432b6b75d729a56ea61117448e90f2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-la-x-classic.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-la-x-ecclesia.ldf",
+          "bytes": 254,
+          "sha256": "58f1708ec40836637cb0e3cbb8efee8cf2809b05f21a18a6d57a3fe5f9f49af6",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-la-x-ecclesia.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-la-x-medieval.ldf",
+          "bytes": 246,
+          "sha256": "057469cf2fd6f434232842d0525acb6d976bf543616f29aceae7e2dea8b7c798",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-la-x-medieval.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-la.ldf",
+          "bytes": 226,
+          "sha256": "d83d0ce0209dfd3cc3819d31e744cc9a0894a8a844e098f4389e251b23efc901",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-la.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-lao.ldf",
+          "bytes": 2828,
+          "sha256": "aa0518645ecb985d15479b18be0b072c77caf9e5e4d52c576afd0c305a61b543",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-lao.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-latex.lde",
+          "bytes": 945,
+          "sha256": "fde09aaad472bc45461fd4e53a93b60a4fa86bced575d9e5945fed1563f11b2d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-latex.lde",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-latin.ldf",
+          "bytes": 35248,
+          "sha256": "e66a147a7ceaf02eba28f268e219ec336167c84e7bcb06fd0760eb206f01f018",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-latin.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-latinclassic.ldf",
+          "bytes": 229,
+          "sha256": "269de99d9284a1450cabdcd74df807ef9449f4571addb6282d07c183408c6f85",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-latinclassic.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-latinecclesiastic.ldf",
+          "bytes": 239,
+          "sha256": "5e68b688120a81fd2261918517b24602cd923794004f1fc9eadea54649b2045a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-latinecclesiastic.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-latinmedieval.ldf",
+          "bytes": 231,
+          "sha256": "ae284887e8b75cf13540543dd1b3c77c6e38de09344a9cd631d8fe6f61a99ca8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-latinmedieval.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-latvian.ldf",
+          "bytes": 1259,
+          "sha256": "1d8a05cef4b2991d6406dc2e32f440939c91b95712e086762935cfea7c491c11",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-latvian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-lithuanian.ldf",
+          "bytes": 2079,
+          "sha256": "bb2f1de026f746975d5c7c07655801bf3c7454739660f9ef1d9e6ab05de057c8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-lithuanian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-lo.ldf",
+          "bytes": 222,
+          "sha256": "af3aa620e86eab2fc2e9aab07a8b7546ad3d63c90447baacc3859e7567227dd2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-lo.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-lowersorbian.ldf",
+          "bytes": 231,
+          "sha256": "f6ee7b150b551296ddce6a91b6bc053aa2a3c496914da41f0543aa95cfdc6cc5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-lowersorbian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-lsorbian.ldf",
+          "bytes": 329,
+          "sha256": "be3105dc99c6a79b180f3271e188527078d862dfe7e42fea61b9a3e3b1c35a03",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-lsorbian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-lt.ldf",
+          "bytes": 236,
+          "sha256": "f51aa5aa258fe8d07d4ae356d18193b2da216f22ebd48501113ad7d21e2319dc",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-lt.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-lv.ldf",
+          "bytes": 230,
+          "sha256": "30e37829216f1bbd15be7521b7fcf03f19aa7b949e650a28d8ae08846dd1a6c2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-lv.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-macedonian.ldf",
+          "bytes": 2479,
+          "sha256": "c1249a3a8416f67e2db60b4b4becc579cc68bdeb3884806582cfc06b3053d726",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-macedonian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-magyar.ldf",
+          "bytes": 251,
+          "sha256": "5d5233ef5a7cbc60cc5af07e209b1103749f04d4fdf9e8bd2b7e8fb01e0ad1c9",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-magyar.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-malay.ldf",
+          "bytes": 5945,
+          "sha256": "ce2c06ee830363d75da02262dcefa2e0f67304342bce5be7311eb89d0182172a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-malay.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-malayalam.ldf",
+          "bytes": 1777,
+          "sha256": "1a96b0398fe608148edfd7b58501a561c93ec48a24dd17a558a05408b67acd57",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-malayalam.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-marathi.ldf",
+          "bytes": 6440,
+          "sha256": "9903523ccaddb2fc4964b2d992a160ac93ae860a1afcfb49f2a701bcbc5bb94d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-marathi.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-mk.ldf",
+          "bytes": 236,
+          "sha256": "fd2439a7340c87f92f89521b1bc300feab61218484e21bf4c9ecb7b96232f890",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-mk.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ml.ldf",
+          "bytes": 234,
+          "sha256": "5a73e3f83d7893f5e43ed6f6b51f9161cb0a5a92fad30b4e81d89d179a12f4e4",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ml.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-mn.ldf",
+          "bytes": 234,
+          "sha256": "5ab36166e14614cd95d91f9f54d76665394194033af4b18a68f49890c6684590",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-mn.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-mongolian.ldf",
+          "bytes": 6944,
+          "sha256": "98bb19c196c665d00a5ced475879ea835058cb057ed6bc9f5e4026962a8f0d08",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-mongolian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-mr.ldf",
+          "bytes": 230,
+          "sha256": "4b3c47bd9553a796c442c2381963a7d95f72c0cce9eb7757328bbd43dc47806f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-mr.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-naustrian.ldf",
+          "bytes": 248,
+          "sha256": "3f783b1011799753abf3035aed702e3b92873020f40237f769a9a697832b057b",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-naustrian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-nb.ldf",
+          "bytes": 234,
+          "sha256": "ad9c1100f7d24c839ec2400118c3af01d6b5969f7bcbc5a9b38ed1e1c3a51d59",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-nb.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-newzealand.ldf",
+          "bytes": 234,
+          "sha256": "0e32ae45d8fb74ffb858f0d09c667b1fa5402c63849a826807b207a35f97f86a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-newzealand.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ngerman.ldf",
+          "bytes": 237,
+          "sha256": "7819b40767cae5e7c90a58b8c4940feb8ff4fa18cc3be25b81968b3deb7422ff",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ngerman.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-nko.ldf",
+          "bytes": 2367,
+          "sha256": "9f061a7bc59431e18e3f04feb84c4009ba7ae745ddfcfc554c0553cee4cb9420",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-nko.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-norsk.ldf",
+          "bytes": 342,
+          "sha256": "cf620dc58749b00285944adf856cf78ad19a0e3838a98cf01b561b6a0a85c52d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-norsk.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-norwegian.ldf",
+          "bytes": 3277,
+          "sha256": "50b03ae75f282fbc3f1f0407255ea0e1a6a8a37a70223cbb858663e4e23dba5b",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-norwegian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-nswissgerman.ldf",
+          "bytes": 248,
+          "sha256": "cd21a4881aad9830d58851b001a80e4f2ab97eb877ba76069d38eee4c05d0d76",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-nswissgerman.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-nynorsk.ldf",
+          "bytes": 342,
+          "sha256": "492d0838a16b986778eae5a1b4343279c8a6997a0302a423422ec2020f7e945c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-nynorsk.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-occitan.ldf",
+          "bytes": 4645,
+          "sha256": "38dee7391997e6641d8c59c6792dd6b07664a96764338c76dec2ab6f9f5e4e32",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-occitan.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-pa.ldf",
+          "bytes": 230,
+          "sha256": "54e71467bb55e7fbd4db05891afd616f6a75abf3d763d8547fe6251d43a469d2",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-pa.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-persian.ldf",
+          "bytes": 4251,
+          "sha256": "6ee214bb995d8df6fed1cdcf5b3516e5eb80ebeef72c3f2810f8d0b4876727b4",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-persian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-piedmontese.ldf",
+          "bytes": 3469,
+          "sha256": "c26e79efb495bfe300d6ab727936559b6c7f5895ee3878c5a6e8cb3d04669a3d",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-piedmontese.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-polish.ldf",
+          "bytes": 7448,
+          "sha256": "f1febaf996645f4879ca755507e669d96755e1c649ffa60bf5333d292694abdb",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-polish.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-polutonikogreek.ldf",
+          "bytes": 234,
+          "sha256": "a4fcd0944c29ca0a4a2e252d61e96dab589049f616974e3b4fec9bea9b865fd5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-polutonikogreek.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-portuges.ldf",
+          "bytes": 450,
+          "sha256": "02d3b9823fd225b4602fe593bc73d494c97ea44cf2651967ffdc4b64ee9d7d9a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-portuges.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-portuguese.ldf",
+          "bytes": 6222,
+          "sha256": "4ab5c9d09e9d1171b0cc01565c85f8e7c7c3f910946c38a6204aed014a0d6933",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-portuguese.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-punjabi.ldf",
+          "bytes": 2976,
+          "sha256": "827e1a979966034d42af914b61201104adc6f3c698329a5ebaab6b1542fe1cd6",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-punjabi.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-romanian.ldf",
+          "bytes": 1257,
+          "sha256": "5ff1ad045373f2be558a645e7ef52cd48adfb191d76838b7141f1440a996b9df",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-romanian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-romansh.ldf",
+          "bytes": 1331,
+          "sha256": "f399ab35af58892d5c676b3fd46087e6d6183955e8aeaee66eda634084928b96",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-romansh.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-russian.ldf",
+          "bytes": 11603,
+          "sha256": "57db13300654b80df579947d80df8f36c9b4e0432b82e752d39d32d79fb362e4",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-russian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-sami.ldf",
+          "bytes": 2314,
+          "sha256": "b96e86675c669ce27be4f1afedb15e29140b0f61bc78628237e77da2b4eaddd9",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-sami.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-samin.ldf",
+          "bytes": 317,
+          "sha256": "fb56ff8fd29f08faecccac3e232d67a546fb26955dabcd059aa70bb64cce1ef5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-samin.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-sanskrit.ldf",
+          "bytes": 4797,
+          "sha256": "e6725c833cc0d140f91cd265469b28aa85d41a3b28fffd554e13e2a01c242433",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-sanskrit.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-scottish.ldf",
+          "bytes": 331,
+          "sha256": "af078a4b2b68c4b34850ea37d2552851db75144fdf94e01c6a6d5e1b3fcdfbbe",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-scottish.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-serbian.ldf",
+          "bytes": 10425,
+          "sha256": "2348c31bf32ed905004854cc6863cae56c0e72ba17939d9e2477816adb1140d8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-serbian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-serbianc.ldf",
+          "bytes": 232,
+          "sha256": "bef54155e4aa694b0d84846bd470b31bcd9d751cffdb15e258cac6007faaa40f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-serbianc.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-slovak.ldf",
+          "bytes": 7756,
+          "sha256": "3739e544771ab5da0242f6c20dc68beaead6986ef872f53b729e750d0733cf3a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-slovak.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-slovene.ldf",
+          "bytes": 224,
+          "sha256": "a416cc082875d1ad0e54459ba7d6a3d4d1170c89314c50e6733f41c1d503a94b",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-slovene.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-slovenian.ldf",
+          "bytes": 2189,
+          "sha256": "586f8b41b0ba5b775ffea029564bf4373942c1bf45f2b23c9de2799602535c6a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-slovenian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-sorbian.ldf",
+          "bytes": 5591,
+          "sha256": "044a0332b9320decfe3c123326c9842218f22f40df06a60311c5e63844f657b9",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-sorbian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-spanish.ldf",
+          "bytes": 6467,
+          "sha256": "d8928017ae853042e77d694f1b94dc0f5a60ee1a1a1e3403cfbca5c04928411a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-spanish.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-spanishmx.ldf",
+          "bytes": 230,
+          "sha256": "d6947a65afbcb72b9392142defcb9b304fc78e07b69b1e9d2d6fe3dd81ebe86a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-spanishmx.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-swedish.ldf",
+          "bytes": 1408,
+          "sha256": "7e08af1c88249845d46895468549040b5e44823c6e0dcbdc1cd22516e5c4efc5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-swedish.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-swissgerman.ldf",
+          "bytes": 243,
+          "sha256": "176fa97e828b21b214dc6829dd09853c21688280600d756b8b363bf6b73d4f23",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-swissgerman.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-syriac.ldf",
+          "bytes": 5278,
+          "sha256": "f4639e15476b289ccbb84e34b6b9db944bf53a8ab9c30211c21f37bfd841aa6e",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-syriac.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-tamil.ldf",
+          "bytes": 1747,
+          "sha256": "8dfb0f23912f4eab9f383ea5c4a0de5caef92061999b0fd07ce8dd31f81c0dfe",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-tamil.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-telugu.ldf",
+          "bytes": 1910,
+          "sha256": "bf7544f4d92a7f9308f28003ef25f824415f23b07e86d40bbfc72abdf834196a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-telugu.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-thai.ldf",
+          "bytes": 6315,
+          "sha256": "72df219c7378309d9345a2533a8bbda296cf21bdae20d717c931d72c981aa1a5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-thai.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-tibetan.ldf",
+          "bytes": 7337,
+          "sha256": "cf6b1709e884ad3357e01ddd96eb424b84ad4f4eb1d0f05dc37e1f270f2ed29c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-tibetan.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-turkish.ldf",
+          "bytes": 2809,
+          "sha256": "1875762e36b2fe5a02e3867de8e07009c5d2b194cd8911d7d79e1ac223fe568f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-turkish.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-turkmen.ldf",
+          "bytes": 1315,
+          "sha256": "c087c71091e777b282d4667920ba98b920a79586272c1a3ef322169f9222f262",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-turkmen.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ug.ldf",
+          "bytes": 206,
+          "sha256": "46bd9c3083dfa4b48319a7d4b7b1434391ac9d8f4e8a8d3775cb1a64c1875e64",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ug.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-ukrainian.ldf",
+          "bytes": 8692,
+          "sha256": "aebe472effd31e342c741442dfc5b7e2b391e252fa6ddd1664c3dddcc282a1f6",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-ukrainian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-uppersorbian.ldf",
+          "bytes": 231,
+          "sha256": "d28d57dda1d796344f34830626d210ad2034835609a706a49975eb79dc6347e8",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-uppersorbian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-urdu.ldf",
+          "bytes": 4168,
+          "sha256": "a6acfd789afe75d743c5f5b8d34876455a5703e8512bc1f070b4890f583ae2e7",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-urdu.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-usorbian.ldf",
+          "bytes": 329,
+          "sha256": "33eb4ff27f0d904fc0dba7db1ae2a98cb1196738b2fdf9d5badadee9856f69e5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-usorbian.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-uyghur.ldf",
+          "bytes": 17155,
+          "sha256": "dc2d4073ea03bb351367104ff31d2b723f1532a6bd459b11ddf58a8b1d3a1245",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-uyghur.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-vietnamese.ldf",
+          "bytes": 1269,
+          "sha256": "78702c6a7f17a5d9e9e88ccd1802df0b374d2504e1db09b17edb9eee92e400cb",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-vietnamese.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-welsh.ldf",
+          "bytes": 3149,
+          "sha256": "4b8a869cca39c25d18f8a03c890bf7a10deb6338b9e45786c58fa14cab3d24c5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-welsh.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-zh-CN.ldf",
+          "bytes": 236,
+          "sha256": "b5d44a2b7fbb71cbad958f5f31b91efe2230586aefd7d1e2c502e24895bdbaf5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-zh-CN.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-zh-TW.ldf",
+          "bytes": 236,
+          "sha256": "b79c293dffa66ffbebb2855e1c80f504c6a13458d9c657c0d0a1f7712077a1ed",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-zh-TW.ldf",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/gurmukhidigits.sty",
+          "bytes": 450,
+          "sha256": "fbac15b5c145f5c8488ac5ab5a4ac0f5588ac1dfbb51904a7126d16d69de0c30",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gurmukhidigits.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/hebrewcal.sty",
+          "bytes": 13098,
+          "sha256": "f23740c8933060f4bb2e2f55cdbd2a395ec24c97f5f3c5157dfd028b03c9d76c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/hebrewcal.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/hijrical.sty",
+          "bytes": 3709,
+          "sha256": "0ee195bdb7f2d48abd40333a0cb28394ad2bae3dfe39acabebecd22db2e91759",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/hijrical.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/nkonumbers.sty",
+          "bytes": 427,
+          "sha256": "e0aff8be9fd614c9092d9dbe9c812891b824cca5937e11d89450b0e78303d87f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/nkonumbers.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/polyglossia-french.lua",
+          "bytes": 1710,
+          "sha256": "302c06c1f821c6db6e3fed89e7396b23593af3ab583a205827fc46dc6f74ab0c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/polyglossia-french.lua",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/polyglossia-korean.lua",
+          "bytes": 23378,
+          "sha256": "deae10e5585361f1b7632926f6f98bb5b430e3ea95333ebcdda0f7f8ac581f3c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/polyglossia-korean.lua",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/polyglossia-latin.lua",
+          "bytes": 1242,
+          "sha256": "ee9d52b88f5cda7265a94926b16d755022821983d14e514c117abce79ca9cffc",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/polyglossia-latin.lua",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/polyglossia-punct.lua",
+          "bytes": 13427,
+          "sha256": "90f7714f1335a1ef850a3d72892d987ac00f50284132621bc59eeced51b680b5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/polyglossia-punct.lua",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/polyglossia-sanskrit.lua",
+          "bytes": 1108,
+          "sha256": "4a7d51f6a78fd95551269c8db19d213698406a5f0c44708fe0ca4bcd4eda60e5",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/polyglossia-sanskrit.lua",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/polyglossia-tibt.lua",
+          "bytes": 2835,
+          "sha256": "95ebf166f76be33374601c38c8008210e5c1aad3e8f76f36ee0934af24db651f",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/polyglossia-tibt.lua",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/polyglossia.lua",
+          "bytes": 6818,
+          "sha256": "6966e48f6b9741c76ca0e5821f5636308c7a8be2e8b3755b8b8b4f2da69d9791",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/polyglossia.lua",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/polyglossia.sty",
+          "bytes": 81197,
+          "sha256": "2a4a48e43d908fcb6456cebbc3e8266ad0e5779e467917b2b4553b991c5f7d17",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/polyglossia.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/xgreek-fixes.def",
+          "bytes": 16671,
+          "sha256": "a02fa50750c1aca77d1be06937bfa420041de6546fdf7a519e7dda6ab59deabe",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/xgreek-fixes.def",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/polyglossia/xpg-cyrillicnumbers.sty",
+          "bytes": 3630,
+          "sha256": "927092e7b370bd92ba1b59d6eb5657328941fcee19d61c2aaa9ed1bfcd6f0018",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/xpg-cyrillicnumbers.sty",
+          "kind": "raw-shipped-runtime-file"
+        }
+      ],
+      "embeddedNotices": [
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/polyglossia/farsical.sty",
+            "bytes": 6905,
+            "sha256": "193510d06bccd6cf20829ba2684a2c10129a4fac1adde8250af15612945d5a9b",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/farsical.sty"
+          },
+          "lines": [
+            {
+              "line": 12,
+              "text": "%%%  Copyright (C) 2006 Youssef Jabri"
+            },
+            {
+              "line": 14,
+              "text": "%%%  Copyright (C) 1996 Hassan Abolhassani"
+            },
+            {
+              "line": 15,
+              "text": "%%%  Copyright (C) 1996-2001 Roozbeh Pournader <roozbeh@sharif.edu>"
+            },
+            {
+              "line": 16,
+              "text": "%%%  Copyright (C) 2000-2001 Behdad Esfahbod <behdad@bamdad.org>"
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-kannada.ldf",
+            "bytes": 3544,
+            "sha256": "56eaadd53442ec82a63b8b3e2a5cf3f29f1f466c58c0f86cc0fd0da4562e2b15",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-kannada.ldf"
+          },
+          "lines": [
+            {
+              "line": 4,
+              "text": "%% Copyright 2011 Aravinda VK <hallimanearavind AT gmail.com>,"
+            },
+            {
+              "line": 9,
+              "text": "% conditions of the LaTeX Project Public License, either version 1.3"
+            },
+            {
+              "line": 10,
+              "text": "% of this license or (at your option) any later version."
+            },
+            {
+              "line": 11,
+              "text": "% The latest version of this license is in"
+            },
+            {
+              "line": 12,
+              "text": "%   http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 16,
+              "text": "% This work has the LPPL maintenance status `maintained'."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-latin.ldf",
+            "bytes": 35248,
+            "sha256": "e66a147a7ceaf02eba28f268e219ec336167c84e7bcb06fd0760eb206f01f018",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-latin.ldf"
+          },
+          "lines": [
+            {
+              "line": 1076,
+              "text": "%%   Copyright (C) Claudio Beccari 2013-2016"
+            },
+            {
+              "line": 1077,
+              "text": "%%   Copyright (C) Élie Roux 2016-2019"
+            },
+            {
+              "line": 1078,
+              "text": "%%   Copyright (C) Keno Wehr 2019-2022"
+            },
+            {
+              "line": 1084,
+              "text": "%%   distribute, sublicense, and/or sell copies of the Software, and to permit"
+            },
+            {
+              "line": 1088,
+              "text": "%%   The above copyright notice and this permission notice shall be included in"
+            },
+            {
+              "line": 1094,
+              "text": "%%   THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER"
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-occitan.ldf",
+            "bytes": 4645,
+            "sha256": "38dee7391997e6641d8c59c6792dd6b07664a96764338c76dec2ab6f9f5e4e32",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-occitan.ldf"
+          },
+          "lines": [
+            {
+              "line": 12,
+              "text": "%%   Copyright (C) 2016 Cédric Valmary"
+            },
+            {
+              "line": 15,
+              "text": "%%   Licence information appended"
+            },
+            {
+              "line": 160,
+              "text": "%% Distributable under the LaTeX Project Public License,"
+            },
+            {
+              "line": 162,
+              "text": "%% this license is at: http://www.latex-project.org/lppl.txt"
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-thai.ldf",
+            "bytes": 6315,
+            "sha256": "72df219c7378309d9345a2533a8bbda296cf21bdae20d717c931d72c981aa1a5",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-thai.ldf"
+          },
+          "lines": [
+            {
+              "line": 5,
+              "text": "%%%% Copyright (C) 1999 - 2006"
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/polyglossia/gloss-tibetan.ldf",
+            "bytes": 7337,
+            "sha256": "cf6b1709e884ad3357e01ddd96eb424b84ad4f4eb1d0f05dc37e1f270f2ed29c",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/gloss-tibetan.ldf"
+          },
+          "lines": [
+            {
+              "line": 4,
+              "text": "%% Copyright 2013 Elie Roux"
+            },
+            {
+              "line": 5,
+              "text": "%% Under the CC0 license <http://creativecommons.org/publicdomain/zero/1.0/>"
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/polyglossia/polyglossia.lua",
+            "bytes": 6818,
+            "sha256": "6966e48f6b9741c76ca0e5821f5636308c7a8be2e8b3755b8b8b4f2da69d9791",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/polyglossia/polyglossia.lua"
+          },
+          "lines": [
+            {
+              "line": 13,
+              "text": "    copyright     = \"Elie Roux\","
+            },
+            {
+              "line": 14,
+              "text": "    license       = \"CC0\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "titlesec",
+      "inputs": [
+        {
+          "name": "ubuntu-texlive-latex-extra.js",
+          "bytes": 1398581,
+          "sha256": "a99a68b79e6a93f3ca9d94f46afe8a62e7e06b6d4c5e90a705ec15fc42d8ecda",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-extra.js"
+        },
+        {
+          "name": "ubuntu-texlive-latex-extra.data",
+          "bytes": 49513577,
+          "sha256": "fb4dc0440f4b2bd2d5138dbb5689e6a33cd20c9704934422436cb97af5d623c4",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-extra.data"
+        }
+      ],
+      "groups": [
+        "core"
+      ],
+      "files": [
+        {
+          "path": "texlive/texmf-dist/tex/latex/titlesec/titleps.sty",
+          "bytes": 25334,
+          "sha256": "3f640ef3eb1202cf543058a4d6cc1750c042a226a03561e01c4ed55265adaebf",
+          "source": "ubuntu-texlive-latex-extra.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/titlesec/titleps.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/titlesec/titlesec.sty",
+          "bytes": 48833,
+          "sha256": "a8948d15987e13761cb2d97d05703051013779963336094044b5f1993057c1fb",
+          "source": "ubuntu-texlive-latex-extra.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/titlesec/titlesec.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/titlesec/titletoc.sty",
+          "bytes": 16869,
+          "sha256": "d3d85ed9a975df10b9e068a731af1d0f787db3d9384c54856ae547e2af947a5f",
+          "source": "ubuntu-texlive-latex-extra.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/titlesec/titletoc.sty",
+          "kind": "raw-shipped-runtime-file"
+        }
+      ],
+      "embeddedNotices": [
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/titlesec/titleps.sty",
+            "bytes": 25334,
+            "sha256": "3f640ef3eb1202cf543058a4d6cc1750c042a226a03561e01c4ed55265adaebf",
+            "source": "ubuntu-texlive-latex-extra.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/titlesec/titleps.sty"
+          },
+          "lines": [
+            {
+              "line": 2,
+              "text": "% Copyright (C) 1998-2021 Javier Bezos http://www.texnia.com"
+            },
+            {
+              "line": 5,
+              "text": "% the MIT License. A version can be found at the end of this file."
+            },
+            {
+              "line": 855,
+              "text": "MIT License"
+            },
+            {
+              "line": 862,
+              "text": "distribute, sublicense, and/or sell copies of the Software, and to"
+            },
+            {
+              "line": 866,
+              "text": "The above copyright notice and this permission notice shall be included"
+            },
+            {
+              "line": 872,
+              "text": "IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/titlesec/titlesec.sty",
+            "bytes": 48833,
+            "sha256": "a8948d15987e13761cb2d97d05703051013779963336094044b5f1993057c1fb",
+            "source": "ubuntu-texlive-latex-extra.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/titlesec/titlesec.sty"
+          },
+          "lines": [
+            {
+              "line": 2,
+              "text": "% Copyright (C) 1998-2021 Javier Bezos http://www.texnia.com"
+            },
+            {
+              "line": 5,
+              "text": "% the MIT License. A version can be found at the end of this file."
+            },
+            {
+              "line": 1703,
+              "text": "MIT License"
+            },
+            {
+              "line": 1710,
+              "text": "distribute, sublicense, and/or sell copies of the Software, and to"
+            },
+            {
+              "line": 1714,
+              "text": "The above copyright notice and this permission notice shall be included"
+            },
+            {
+              "line": 1720,
+              "text": "IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/titlesec/titletoc.sty",
+            "bytes": 16869,
+            "sha256": "d3d85ed9a975df10b9e068a731af1d0f787db3d9384c54856ae547e2af947a5f",
+            "source": "ubuntu-texlive-latex-extra.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/titlesec/titletoc.sty"
+          },
+          "lines": [
+            {
+              "line": 2,
+              "text": "% Copyright (C) 1998-2021 Javier Bezos http://www.texnia.com"
+            },
+            {
+              "line": 5,
+              "text": "% the MIT License. A version can be found at the end of this file."
+            },
+            {
+              "line": 588,
+              "text": "MIT License"
+            },
+            {
+              "line": 595,
+              "text": "distribute, sublicense, and/or sell copies of the Software, and to"
+            },
+            {
+              "line": 599,
+              "text": "The above copyright notice and this permission notice shall be included"
+            },
+            {
+              "line": 605,
+              "text": "IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "xkeyval",
+      "inputs": [
+        {
+          "name": "ubuntu-texlive-latex-recommended.js",
+          "bytes": 337892,
+          "sha256": "bbd975921a74adae9119988ae8a740ca9f4837db772061d313c67729fba1d9ee",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.js"
+        },
+        {
+          "name": "ubuntu-texlive-latex-recommended.data",
+          "bytes": 9058527,
+          "sha256": "fa9a03f928a0af0e9c5a24e2ce2956e64db9d580dd2c3a7517176aac16dc9006",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.data"
+        }
+      ],
+      "groups": [
+        "core"
+      ],
+      "files": [
+        {
+          "path": "texlive/texmf-dist/tex/generic/xkeyval/keyval.tex",
+          "bytes": 2725,
+          "sha256": "7a8dbfe90926a910e5dcb10ee627ae03256496e62f38348e28e2e4bc03d5e266",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/generic/xkeyval/keyval.tex",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/generic/xkeyval/pst-xkey.tex",
+          "bytes": 2369,
+          "sha256": "4549723f49707c14776318adadea24605412ef8f0bc85e4f3fc2ac0f800c54cb",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/generic/xkeyval/pst-xkey.tex",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/generic/xkeyval/xkeyval.tex",
+          "bytes": 19231,
+          "sha256": "29c2b60c6973c374a655e44791799823294d53fb04e16db31a681f71a125b3da",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/generic/xkeyval/xkeyval.tex",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/generic/xkeyval/xkvtxhdr.tex",
+          "bytes": 2856,
+          "sha256": "cc6150c71e73d1dd14e2520b73334bb66042aa77c4b00f4792cf62faa1eb2629",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/generic/xkeyval/xkvtxhdr.tex",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/generic/xkeyval/xkvutils.tex",
+          "bytes": 7677,
+          "sha256": "5e82c31b1b4492c89f0a36c8a1f65ca5dc1d3a7f2ced1b30a1a5be0da9bcc411",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/generic/xkeyval/xkvutils.tex",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/xkeyval/pst-xkey.sty",
+          "bytes": 1694,
+          "sha256": "01c1e4a615a03fe472a4cd3a779799eeea69bbb66a3cabd5b01dc302a6b7915a",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/xkeyval/pst-xkey.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/xkeyval/xkeyval.sty",
+          "bytes": 4937,
+          "sha256": "6904c396f2a6992921823387576b7f75074ac3b8e047a8c80687a869aba1e3ae",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/xkeyval/xkeyval.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/xkeyval/xkvltxp.sty",
+          "bytes": 3468,
+          "sha256": "eccfbbdac85e7b620406ea25f389bc03f6183b6d2150a90f98b5808a435c819c",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/xkeyval/xkvltxp.sty",
+          "kind": "raw-shipped-runtime-file"
+        },
+        {
+          "path": "texlive/texmf-dist/tex/latex/xkeyval/xkvview.sty",
+          "bytes": 6916,
+          "sha256": "aab6d5a1053b22a4fa33829521d576f49a41ac2d75523eafe2bff539182ee090",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/latex/xkeyval/xkvview.sty",
+          "kind": "raw-shipped-runtime-file"
+        }
+      ],
+      "embeddedNotices": [
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/generic/xkeyval/keyval.tex",
+            "bytes": 2725,
+            "sha256": "7a8dbfe90926a910e5dcb10ee627ae03256496e62f38348e28e2e4bc03d5e266",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/generic/xkeyval/keyval.tex"
+          },
+          "lines": [
+            {
+              "line": 10,
+              "text": "%% Copyright (C) 2004-2022 Hendri Adriaens"
+            },
+            {
+              "line": 14,
+              "text": "%% conditions of the LaTeX Project Public License, either version 1.3"
+            },
+            {
+              "line": 15,
+              "text": "%% of this license or (at your option) any later version."
+            },
+            {
+              "line": 16,
+              "text": "%% The latest version of this license is in"
+            },
+            {
+              "line": 17,
+              "text": "%%   http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 21,
+              "text": "%% This work has the LPPL maintenance status \"maintained\"."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/generic/xkeyval/pst-xkey.tex",
+            "bytes": 2369,
+            "sha256": "4549723f49707c14776318adadea24605412ef8f0bc85e4f3fc2ac0f800c54cb",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/generic/xkeyval/pst-xkey.tex"
+          },
+          "lines": [
+            {
+              "line": 10,
+              "text": "%% Copyright (C) 2004-2022 Hendri Adriaens"
+            },
+            {
+              "line": 14,
+              "text": "%% conditions of the LaTeX Project Public License, either version 1.3"
+            },
+            {
+              "line": 15,
+              "text": "%% of this license or (at your option) any later version."
+            },
+            {
+              "line": 16,
+              "text": "%% The latest version of this license is in"
+            },
+            {
+              "line": 17,
+              "text": "%%   http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 21,
+              "text": "%% This work has the LPPL maintenance status \"maintained\"."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/generic/xkeyval/xkeyval.tex",
+            "bytes": 19231,
+            "sha256": "29c2b60c6973c374a655e44791799823294d53fb04e16db31a681f71a125b3da",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/generic/xkeyval/xkeyval.tex"
+          },
+          "lines": [
+            {
+              "line": 10,
+              "text": "%% Copyright (C) 2004-2022 Hendri Adriaens"
+            },
+            {
+              "line": 14,
+              "text": "%% conditions of the LaTeX Project Public License, either version 1.3"
+            },
+            {
+              "line": 15,
+              "text": "%% of this license or (at your option) any later version."
+            },
+            {
+              "line": 16,
+              "text": "%% The latest version of this license is in"
+            },
+            {
+              "line": 17,
+              "text": "%%   http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 21,
+              "text": "%% This work has the LPPL maintenance status \"maintained\"."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/generic/xkeyval/xkvtxhdr.tex",
+            "bytes": 2856,
+            "sha256": "cc6150c71e73d1dd14e2520b73334bb66042aa77c4b00f4792cf62faa1eb2629",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/generic/xkeyval/xkvtxhdr.tex"
+          },
+          "lines": [
+            {
+              "line": 10,
+              "text": "%% Copyright (C) 2004-2022 Hendri Adriaens"
+            },
+            {
+              "line": 14,
+              "text": "%% conditions of the LaTeX Project Public License, either version 1.3"
+            },
+            {
+              "line": 15,
+              "text": "%% of this license or (at your option) any later version."
+            },
+            {
+              "line": 16,
+              "text": "%% The latest version of this license is in"
+            },
+            {
+              "line": 17,
+              "text": "%%   http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 21,
+              "text": "%% This work has the LPPL maintenance status \"maintained\"."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/generic/xkeyval/xkvutils.tex",
+            "bytes": 7677,
+            "sha256": "5e82c31b1b4492c89f0a36c8a1f65ca5dc1d3a7f2ced1b30a1a5be0da9bcc411",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/generic/xkeyval/xkvutils.tex"
+          },
+          "lines": [
+            {
+              "line": 10,
+              "text": "%% Copyright (C) 2004-2022 Hendri Adriaens"
+            },
+            {
+              "line": 14,
+              "text": "%% conditions of the LaTeX Project Public License, either version 1.3"
+            },
+            {
+              "line": 15,
+              "text": "%% of this license or (at your option) any later version."
+            },
+            {
+              "line": 16,
+              "text": "%% The latest version of this license is in"
+            },
+            {
+              "line": 17,
+              "text": "%%   http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 21,
+              "text": "%% This work has the LPPL maintenance status \"maintained\"."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/xkeyval/pst-xkey.sty",
+            "bytes": 1694,
+            "sha256": "01c1e4a615a03fe472a4cd3a779799eeea69bbb66a3cabd5b01dc302a6b7915a",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/xkeyval/pst-xkey.sty"
+          },
+          "lines": [
+            {
+              "line": 10,
+              "text": "%% Copyright (C) 2004-2022 Hendri Adriaens"
+            },
+            {
+              "line": 14,
+              "text": "%% conditions of the LaTeX Project Public License, either version 1.3"
+            },
+            {
+              "line": 15,
+              "text": "%% of this license or (at your option) any later version."
+            },
+            {
+              "line": 16,
+              "text": "%% The latest version of this license is in"
+            },
+            {
+              "line": 17,
+              "text": "%%   http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 21,
+              "text": "%% This work has the LPPL maintenance status \"maintained\"."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/xkeyval/xkeyval.sty",
+            "bytes": 4937,
+            "sha256": "6904c396f2a6992921823387576b7f75074ac3b8e047a8c80687a869aba1e3ae",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/xkeyval/xkeyval.sty"
+          },
+          "lines": [
+            {
+              "line": 10,
+              "text": "%% Copyright (C) 2004-2022 Hendri Adriaens"
+            },
+            {
+              "line": 14,
+              "text": "%% conditions of the LaTeX Project Public License, either version 1.3"
+            },
+            {
+              "line": 15,
+              "text": "%% of this license or (at your option) any later version."
+            },
+            {
+              "line": 16,
+              "text": "%% The latest version of this license is in"
+            },
+            {
+              "line": 17,
+              "text": "%%   http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 21,
+              "text": "%% This work has the LPPL maintenance status \"maintained\"."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/xkeyval/xkvltxp.sty",
+            "bytes": 3468,
+            "sha256": "eccfbbdac85e7b620406ea25f389bc03f6183b6d2150a90f98b5808a435c819c",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/xkeyval/xkvltxp.sty"
+          },
+          "lines": [
+            {
+              "line": 10,
+              "text": "%% Copyright (C) 2004-2022 Hendri Adriaens"
+            },
+            {
+              "line": 14,
+              "text": "%% conditions of the LaTeX Project Public License, either version 1.3"
+            },
+            {
+              "line": 15,
+              "text": "%% of this license or (at your option) any later version."
+            },
+            {
+              "line": 16,
+              "text": "%% The latest version of this license is in"
+            },
+            {
+              "line": 17,
+              "text": "%%   http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 21,
+              "text": "%% This work has the LPPL maintenance status \"maintained\"."
+            }
+          ]
+        },
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/latex/xkeyval/xkvview.sty",
+            "bytes": 6916,
+            "sha256": "aab6d5a1053b22a4fa33829521d576f49a41ac2d75523eafe2bff539182ee090",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/latex/xkeyval/xkvview.sty"
+          },
+          "lines": [
+            {
+              "line": 10,
+              "text": "%% Copyright (C) 2004-2022 Hendri Adriaens"
+            },
+            {
+              "line": 14,
+              "text": "%% conditions of the LaTeX Project Public License, either version 1.3"
+            },
+            {
+              "line": 15,
+              "text": "%% of this license or (at your option) any later version."
+            },
+            {
+              "line": 16,
+              "text": "%% The latest version of this license is in"
+            },
+            {
+              "line": 17,
+              "text": "%%   http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 21,
+              "text": "%% This work has the LPPL maintenance status \"maintained\"."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "xltxtra",
+      "inputs": [
+        {
+          "name": "ubuntu-texlive-latex-recommended.js",
+          "bytes": 337892,
+          "sha256": "bbd975921a74adae9119988ae8a740ca9f4837db772061d313c67729fba1d9ee",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.js"
+        },
+        {
+          "name": "ubuntu-texlive-latex-recommended.data",
+          "bytes": 9058527,
+          "sha256": "fa9a03f928a0af0e9c5a24e2ce2956e64db9d580dd2c3a7517176aac16dc9006",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.data"
+        }
+      ],
+      "groups": [
+        "unicode"
+      ],
+      "files": [
+        {
+          "path": "texlive/texmf-dist/tex/xelatex/xltxtra/xltxtra.sty",
+          "bytes": 5686,
+          "sha256": "ea964b874d38f547bfd7178c85896c1761100f7961dee2054e6e696cd76d9c9e",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/xelatex/xltxtra/xltxtra.sty",
+          "kind": "raw-shipped-runtime-file"
+        }
+      ],
+      "embeddedNotices": [
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/xelatex/xltxtra/xltxtra.sty",
+            "bytes": 5686,
+            "sha256": "ea964b874d38f547bfd7178c85896c1761100f7961dee2054e6e696cd76d9c9e",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/xelatex/xltxtra/xltxtra.sty"
+          },
+          "lines": [
+            {
+              "line": 11,
+              "text": "%%   License information appended"
+            },
+            {
+              "line": 17,
+              "text": "%% Copyright (C) 2006-2018 by Will Robertson <wspr81@gmail.com>"
+            },
+            {
+              "line": 19,
+              "text": "%% Distributable under the LaTeX Project Public License,"
+            },
+            {
+              "line": 21,
+              "text": "%% this license is at: http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 23,
+              "text": "%% This work is \"maintained\" (as per LPPL maintenance status)"
+            },
+            {
+              "line": 171,
+              "text": "%% Copyright (C) 2006-2018 by Will Robertson <wspr81@gmail.com>"
+            },
+            {
+              "line": 173,
+              "text": "%% Distributable under the LaTeX Project Public License,"
+            },
+            {
+              "line": 175,
+              "text": "%% this license is at: http://www.latex-project.org/lppl.txt"
+            },
+            {
+              "line": 177,
+              "text": "%% This work is \"maintained\" (as per LPPL maintenance status)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "xunicode",
+      "inputs": [
+        {
+          "name": "ubuntu-texlive-latex-recommended.js",
+          "bytes": 337892,
+          "sha256": "bbd975921a74adae9119988ae8a740ca9f4837db772061d313c67729fba1d9ee",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.js"
+        },
+        {
+          "name": "ubuntu-texlive-latex-recommended.data",
+          "bytes": 9058527,
+          "sha256": "fa9a03f928a0af0e9c5a24e2ce2956e64db9d580dd2c3a7517176aac16dc9006",
+          "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.data"
+        }
+      ],
+      "groups": [
+        "unicode"
+      ],
+      "files": [
+        {
+          "path": "texlive/texmf-dist/tex/xelatex/xunicode/xunicode.sty",
+          "bytes": 205722,
+          "sha256": "7664327147458c159dd0e4ed95b27ce5b8d6fe8fa3d5d407e437184f5358b114",
+          "source": "ubuntu-texlive-latex-recommended.data",
+          "upstreamPath": "/texmf/texmf-dist/tex/xelatex/xunicode/xunicode.sty",
+          "kind": "raw-shipped-runtime-file"
+        }
+      ],
+      "embeddedNotices": [
+        {
+          "file": {
+            "path": "texlive/texmf-dist/tex/xelatex/xunicode/xunicode.sty",
+            "bytes": 205722,
+            "sha256": "7664327147458c159dd0e4ed95b27ce5b8d6fe8fa3d5d407e437184f5358b114",
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "upstreamPath": "/texmf/texmf-dist/tex/xelatex/xunicode/xunicode.sty"
+          },
+          "lines": [
+            {
+              "line": 1,
+              "text": "% Copyright 2004-2011 Ross Moore <ross.moore@mq.edu.au>"
+            },
+            {
+              "line": 2,
+              "text": "% Released under the LPPL licence, version 1.3c or later."
+            },
+            {
+              "line": 65,
+              "text": "%       added LPPL licence statement"
+            },
+            {
+              "line": 1738,
+              "text": "\\DeclareUTFcharacter[\\UTFencname]{x00A9}{\\textcopyright}"
+            },
+            {
+              "line": 1739,
+              "text": "\\DeclareUTFcharacter[\\UTFencname]{x00A9}{\\copyright}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "coverage": "Exact unmodified supplemental runtime files, including source-format TeX/Lua/config/map files and original embedded license lines. These copies are NOT a complete upstream generated-source (.dtx/.ins), documentation or font-development archive. Compiled .tec files retain their shipped .map inputs. The basic package source subtree remains separately offered; file provenance is recorded in each group index.",
+  "originalInputs": {
+    "recipeArchive": {
+      "path": "sources/busytex-source.tar.gz",
+      "bytes": 45424,
+      "sha256": "b39ad7f7b176a834fd5f17b0136cccde68b7da6ec21f33dd9f0ce74b17e4f844"
+    },
+    "recipeFiles": [
+      {
+        "path": "busytex-4499aa69fd3cf77ad86a47287d9a5193cf5ad993/Makefile",
+        "bytes": 68022,
+        "sha256": "88355c7b145fdffc5584f1db3747e81a971d129fb43491e9426f7d275dd9f295"
+      },
+      {
+        "path": "busytex-4499aa69fd3cf77ad86a47287d9a5193cf5ad993/ubuntu_package_preload.py",
+        "bytes": 3768,
+        "sha256": "cf4c1520af32a3fef5a841c7d8953c0a3ba986bed41ff06ecd846ab9426e04ff"
+      },
+      {
+        "path": "busytex-4499aa69fd3cf77ad86a47287d9a5193cf5ad993/.github/workflows/build-wasm.yml",
+        "bytes": 3120,
+        "sha256": "0fae550e662bc08ce27f8c9e5d934554f7e51a33c2397597e67b912b2c050da9"
+      }
+    ],
+    "texliveDistribution": {
+      "url": "https://tug.ctan.org/systems/texlive/Images/texlive2023-20230313.iso",
+      "sha256": null,
+      "status": "Original full TeX Live distribution URL recorded by the pinned recipe; ISO bytes and its whole-archive hash are not available in this local source offer."
+    },
+    "ubuntuSelectors": [
+      {
+        "package": "texlive-latex-extra",
+        "url": "https://packages.ubuntu.com/lunar/all/texlive-latex-extra/filelist",
+        "sha256": null,
+        "status": "Historical Ubuntu Lunar file-list selector, not a pinned .deb or source archive; the exact distributed inputs are the release JS/data hashes above."
+      },
+      {
+        "package": "texlive-latex-recommended",
+        "url": "https://packages.ubuntu.com/lunar/all/texlive-latex-recommended/filelist",
+        "sha256": null,
+        "status": "Historical Ubuntu Lunar file-list selector, not a pinned .deb or source archive; the exact distributed inputs are the release JS/data hashes above."
+      }
+    ],
+    "debianUbuntuSourceInputs": {
+      "urls": [],
+      "status": "No exact .deb/.dsc/orig/debian source-input URLs or hashes are established by the pinned BusyTeX recipe or locally available payloads. They are not fabricated or claimed offered. A future source-completeness review must obtain and verify matching original inputs rather than assuming Ubuntu package naming proves byte provenance."
+    }
+  }
+}

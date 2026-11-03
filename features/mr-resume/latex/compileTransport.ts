@@ -1,5 +1,5 @@
 import {
-  LATEX_API, LATEX_LIMITS, type LatexCapabilities, type LatexCompileFailure, type LatexCompileManifest, type LatexCompileResult,
+  LATEX_API, LATEX_LIMITS, LATEX_MAIN_FILE_NOTICE, type LatexCapabilities, type LatexCompileFailure, type LatexCompileManifest,
   type LatexOperation, type LatexProject, type LatexProof, type LatexSyncQuery, type LatexSyncResult,
 } from './types.ts'
 import {
@@ -155,6 +155,7 @@ export function createLatexCompileTransport(dependencies: LatexTransportDependen
 
   async function captureProject(project: LatexProject, operationKey: string, context: RequestContext) {
     if (!project || typeof project !== 'object' || !Array.isArray(project.files) || !Array.isArray(project.assets)) throw new LatexContractError('Invalid local LaTeX project.')
+    if (project.mainFile === null) throw new LatexContractError(LATEX_MAIN_FILE_NOTICE, 'missing_main')
     const assets = project.assets.map((asset) => {
       if (!asset || typeof asset !== 'object' || !(asset.blob instanceof Blob)) throw new LatexContractError('Invalid local project asset.', 'asset_mismatch')
       return { id: asset.id, path: asset.path, mediaType: asset.mediaType, blob: asset.blob, size: asset.blob.size }

@@ -1,7 +1,7 @@
-import type { LatexProof } from './types.ts'
+import type { LatexProof, LatexRuntime } from './types.ts'
 
-export function mayAutoCompile(policy: { enabled: boolean; active: boolean; online: boolean; ready: boolean; retryAt: number }, now = Date.now()) {
-  return policy.enabled && policy.active && policy.online && policy.ready && now >= policy.retryAt
+export function mayAutoCompile(policy: { enabled: boolean; active: boolean; online: boolean; ready: boolean; retryAt: number; runtime?: LatexRuntime }, now = Date.now()) {
+  return policy.enabled && policy.active && (policy.runtime === 'browser' || policy.online) && policy.ready && now >= policy.retryAt
 }
 
 export function recoverableCompileFailure(code: string, status?: number) {

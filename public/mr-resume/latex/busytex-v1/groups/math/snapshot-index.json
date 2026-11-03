@@ -1,0 +1,216 @@
+{
+  "version": 1,
+  "unpackedBytes": 561152,
+  "files": [
+    {
+      "path": "texlive/texmf-dist/tex/latex/amscls/amsart.cls",
+      "bytes": 61881,
+      "sha256": "c8bf939ae935d62d4ced49e4e8f9f4f5ff3dd4a4bc8e0abd4991f5737caee4f7",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amscls/amsart.cls"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amscls/amsbook.cls",
+      "bytes": 61769,
+      "sha256": "fcde288ea3a8a6a6bd55616c9aa59f3b4d5f6d3948ea53e1d79090d766156c49",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amscls/amsbook.cls"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amscls/amsbooka.sty",
+      "bytes": 7967,
+      "sha256": "4bc8a2a43bbccd59d334f54c9edc8aa1dd328521caad57602228769eb277484d",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amscls/amsbooka.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amscls/amsdtx.cls",
+      "bytes": 17877,
+      "sha256": "7f997c0c8c8ec9015429908ff74be3b85112183206f31c8f9e6033dc4edb8833",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amscls/amsdtx.cls"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amscls/amsldoc.cls",
+      "bytes": 15109,
+      "sha256": "525f15871cbe1619a174dc867da0b4903484b9fd8d9a583e98ef21b3b2af8a4e",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amscls/amsldoc.cls"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amscls/amsmidx.sty",
+      "bytes": 3104,
+      "sha256": "20e06888a6b3010dbd91a80a1a08970987e01dd41a90d8aada05e0c36d839d11",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amscls/amsmidx.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amscls/amsproc.cls",
+      "bytes": 60234,
+      "sha256": "51968c41030a0e9bdb4708463e5147cdfad68ca17c6984d22e0e9d7013b9c1e3",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amscls/amsproc.cls"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amscls/amsthm.sty",
+      "bytes": 12594,
+      "sha256": "8d5e2bdb117297385971927b14fe4804314133dc0027b3171249a08280894626",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amscls/amsthm.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amscls/upref.sty",
+      "bytes": 2043,
+      "sha256": "e9befea9363cc9d7ebc2b535441cd3ff17a35f0fea841a3d879a8550fec6102c",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amscls/upref.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/amsfonts.sty",
+      "bytes": 5949,
+      "sha256": "dab8b0e621267acfd89736cf97bdcc02647c545c0719c4997be8a7d1bf98f9c3",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/amsfonts.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/amssymb.sty",
+      "bytes": 13829,
+      "sha256": "70838b061b56569dd3ed9f339b1bdd1c78ba185de49f27ceae331c97f48b5986",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/amssymb.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/cmmib57.sty",
+      "bytes": 1068,
+      "sha256": "292f19bf69e7860c0130b47c8f0a7465faefc44b938a2a4dacc68373a78defbd",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/cmmib57.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/eucal.sty",
+      "bytes": 1354,
+      "sha256": "0cf8e3e63f4a2d5a3548aabf02856a65152c7f1d18651ee6f9d4f0e57cdd2764",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/eucal.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/eufrak.sty",
+      "bytes": 1306,
+      "sha256": "a6d27c368a0697ce0d49149b4b51beca3ada63967db3e3f6f65c2c22df6c1c5c",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/eufrak.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/euscript.sty",
+      "bytes": 1319,
+      "sha256": "8281bcb8a516e0b4468b7a7e620fc266a7852f3dd0aa744f7860fde14b095141",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/euscript.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/ueuex.fd",
+      "bytes": 1001,
+      "sha256": "3c21e58fd3335a42e07cc5c5fbbd65fee0ec03a6e147aa9bf8eb9123dafe0d5d",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/ueuex.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/ueuf.fd",
+      "bytes": 1047,
+      "sha256": "97ae9b28e952c5f06675b3d55c1b08be62ccabe070b9bab99163a85628686091",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/ueuf.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/ueur.fd",
+      "bytes": 1065,
+      "sha256": "09f73db4894a0d33d69ca040cc7dd035b08c9971aa249fed953759da03586bdc",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/ueur.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/ueus.fd",
+      "bytes": 1063,
+      "sha256": "5d8f3989248f93de60df5eebbaba8b6d9c27f144668155a656b09215db3ca4cf",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/ueus.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/umsa.fd",
+      "bytes": 961,
+      "sha256": "48355e960333be747dd7b4500e76fde7c3ef0b1fa9c74ec0f1438af0d3a661a4",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/umsa.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsfonts/umsb.fd",
+      "bytes": 961,
+      "sha256": "e20f21f6ed631cbe3a627d5da5fef82367732a7d51207f8df5ee7e9c77ee342e",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsfonts/umsb.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsmath/amsbsy.sty",
+      "bytes": 2222,
+      "sha256": "a427d44c95f1798dbe58091bda55e7171a018464860a3d976f4f0daa3738c5e9",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsmath/amsbsy.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsmath/amscd.sty",
+      "bytes": 5321,
+      "sha256": "927496b03e4bacb10d750e9c20d1a2ade26b2395a56e9334aa5af29b758f553a",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsmath/amscd.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsmath/amsgen.sty",
+      "bytes": 4173,
+      "sha256": "62d76b906e02e5786322c073892955354ee92da35e7337a51876d9cd2f535c85",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsmath/amsgen.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsmath/amsmath-2018-12-01.sty",
+      "bytes": 85099,
+      "sha256": "2c7d8369913381ec25fb3e9b38a996254ec7ea4f5504ab9046b7414d33f96c6a",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsmath/amsmath-2018-12-01.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsmath/amsmath.sty",
+      "bytes": 88393,
+      "sha256": "52fd216f55953a9717f26f80fde0ef6b95de968d3fd4ce07593f2921a0e14e94",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsmath/amsmath.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsmath/amsopn.sty",
+      "bytes": 4474,
+      "sha256": "e73fcd2e778355edcc8b428d478cdff6b9e585f90c603c97f9e6685593747f3b",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsmath/amsopn.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsmath/amstex.sty",
+      "bytes": 69732,
+      "sha256": "e1f1f5d851532bd0d1255f0077da2a3bcc1218aa0c0cfe8c8c0cfc74cd3d4595",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsmath/amstex.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsmath/amstext.sty",
+      "bytes": 2444,
+      "sha256": "a0595d11b037f52a6ad98f441d995f057131f5c36bfe4c1de212281248b67378",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsmath/amstext.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/amsmath/amsxtra.sty",
+      "bytes": 2042,
+      "sha256": "3db5dd71dcd0f19f6affc7f446919f7798901a8621627f02e56ca36f6b0117cd",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/tex/latex/amsmath/amsxtra.sty"
+    }
+  ]
+}

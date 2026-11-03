@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { LATEX_LIMITS, LATEX_PROJECT_VERSION, type LatexAsset, type LatexProject } from './types.ts'
-import { assertLatexPath, isLatexTextPath, isRecord, LatexProjectError, newLatexId, requiredNativeFonts, sha256, utf8Bytes, validateLatexProject, withoutComments } from './project.ts'
+import { assertLatexPath, isLatexTextPath, isRecord, LatexProjectError, newLatexId, requiredNativeFonts, sha256, utf8Bytes, validateLatexProject } from './project.ts'
 import { latexSourceTemplates, templateNotice } from './templates.ts'
 
 const manifestName = 'smilepdf-project.json'
@@ -216,23 +216,10 @@ export async function readProjectZip(buffer: ArrayBuffer, title = 'Imported proj
     }
   }
   const tex = files.filter((file) => /\.tex$/iu.test(file.path))
-  let main: unknown = manifest ? manifest.mainFile : tex.find((file) => file.path === 'main.tex')?.path ?? null
-  if (!manifest && !main && tex.length === 1) main = tex[0].path
-  else if (!manifest && !main && tex.length > 1) {
-    // AltaCV ships sample.tex with bibliography partials, not a main.tex. Only
-    // uncommented document declarations are candidates; multiple documents need
-    // an explicit choice rather than a guess based on archive ordering.
-    const declared = tex.filter((file) => /\\documentclass\s*(?:\[[^\]]*\]\s*)?\{/u.test(file.content.split(/\r\n|\n|\r/u).map(withoutComments).join('\n')))
-    const namedMain = declared.filter((file) => file.path.split('/').pop()?.toLowerCase() === 'main.tex')
-    if (declared.length === 1) main = declared[0].path
-    else if (namedMain.length === 1) main = namedMain[0].path
-    else fail('The archive has multiple .tex files without a single \\documentclass entry point, main.tex or build manifest. Add smilepdf-project.json with a main file, or rename the entry point explicitly. Nothing was imported.', 'missing_main')
-  }
-  const mainSource = tex.find((file) => file.path === main)
-  if (!mainSource) fail('Select an existing .tex entry point in the project manifest. The archive has no valid main file. Nothing was imported.', 'missing_main')
-  // Settings belong to the main document, not magic directives in partials or
-  // example code in a README. Project latexmkrc is preserved but never executed.
-  const engine = manifest ? manifest.engine : declaredPdfEngine(mainSource.content) ?? 'lualatex'
+  // Entry-point ambiguity is a build setting, not a reason to refuse source import.
+  // An exported explicit null must also survive re-import, even if main.tex exists.
+  const main = manifest && Object.hasOwn(manifest, 'mainFile') ? manifest.mainFile
+    : tex.find((file) => file.path === 'main.tex')?.path ?? (tex.length === 1 ? tex[0].path : null)
   const now = new Date().toISOString()
   return validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title: manifest?.title ?? title, revision: 1, mainFile: main, engine,
     files, assets, templateId: manifest?.templateId ?? null, templateVersion: manifest?.templateVersion ?? null, createdAt: now, updatedAt: now })

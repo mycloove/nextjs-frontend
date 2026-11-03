@@ -5,6 +5,7 @@ import test from 'node:test'
 import { createLatexCompileTransport, LatexTransportError, recoverLatexProject } from '../compileTransport.ts'
 import { LATEX_API, LATEX_LIMITS, type LatexCompileManifest, type LatexCompileResult, type LatexProject } from '../types.ts'
 import { compareLatexPaths } from './contract.ts'
+import { reviseProject } from '../project.ts'
 import { handleLatexProxy, type LatexProxyRoute } from './proxy.ts'
 
 const operationKey = 'compile-operation-7'
@@ -334,6 +335,7 @@ test('canonical path ordering is Unicode code-point ordinal, not locale or UTF-1
 test('local invalid manifests fail before any upload, including source and complete multipart limits', async () => {
   let calls = 0
   const transport = createLatexCompileTransport({ request: async () => { calls++; assert.fail('Invalid project must not upload'); return Response.json({}) } })
+  await rejects(transport.compileLatexProject(project({ mainFile: null }), operationKey), 'missing_main', 400)
   await rejects(transport.compileLatexProject(project({ mainFile: 'missing.tex' }), operationKey), 'invalid_main_file', 400)
   await rejects(transport.compileLatexProject(project(), '../escape'), 'invalid_identifier', 400)
   await rejects(transport.compileLatexProject(project({ files: [{ id: 'main', path: '../resume.tex', content: '' }] }), operationKey), 'invalid_path', 400)
@@ -341,6 +343,35 @@ test('local invalid manifests fail before any upload, including source and compl
   await rejects(transport.compileLatexProject(project({ files: [{ id: 'main', path: 'resume.tex', content: 'x'.repeat(LATEX_LIMITS.sourceBytes + 1) }] }), operationKey), 'payload_too_large', 413)
   await rejects(transport.compileLatexProject(project({ files: [{ id: 'main', path: 'resume.tex', content: '' }], assets: [{ id: 'large', path: 'large.png', mediaType: 'image/png', blob: new Blob([new Uint8Array(LATEX_LIMITS.uploadBytes - 16)], { type: 'image/png' }) }] }), operationKey), 'payload_too_large', 413)
   assert.equal(calls, 0)
+})
+
+test('private compilation keeps draft import separate from a selected arbitrary main and transports every source and asset', async () => {
+  const image = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 99])
+  const draft = project({ mainFile: null, files: [{ id: 'first', path: 'template/first.tex', content: 'Unchanged alternate source\r\n' },
+    { id: 'chosen', path: 'template/custom-entry.tex', content: '\\documentclass{article}\\begin{document}Chosen source\\end{document}' },
+    { id: 'body', path: 'template/sections/body.tex', content: 'Unchanged included source\r\n' }],
+    assets: [{ id: 'photo', path: 'template/assets/photo.png', mediaType: 'image/png', blob: new Blob([image], { type: 'image/png' }) }] })
+  let calls = 0
+  const selected = reviseProject(draft, { mainFile: 'template/custom-entry.tex' })
+  const transport = createLatexCompileTransport({ request: async (url, init) => {
+    calls++
+    if (url.endsWith('/compile')) {
+      const { manifest, fields, result } = await uploaded(init)
+      assert.equal(manifest.mainFile, selected.mainFile)
+      assert.deepEqual(manifest.files, selected.files)
+      assert.equal(manifest.assets[0].path, draft.assets[0].path)
+      assert.deepEqual(new Uint8Array(await (fields.get('asset:photo') as Blob).arrayBuffer()), image)
+      return json(result, init)
+    }
+    return artifact(init)
+  } })
+  await rejects(transport.compileLatexProject(draft, operationKey), 'missing_main', 400)
+  assert.equal(calls, 0)
+  const proof = await transport.compileLatexProject(selected, operationKey)
+  assert.equal(proof.revision, selected.revision)
+  assert.deepEqual(new Uint8Array(proof.data), pdf)
+  assert.equal(draft.mainFile, null)
+  assert.equal(calls, 2)
 })
 
 test('mismatched compile identity/source hashes are rejected before artifact fetch', async () => {

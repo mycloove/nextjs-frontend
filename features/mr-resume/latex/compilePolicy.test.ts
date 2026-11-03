@@ -10,6 +10,15 @@ test('Auto Compile requires explicit opt-in, active workspace, network, readines
   assert.equal(mayAutoCompile(policy, 99), false)
 })
 
+test('local Auto Compile is opt-in and ready-gated, but offline cached assets do not require a server connection', () => {
+  const policy = { enabled: true, active: true, online: false, ready: true, retryAt: 0, runtime: 'browser' as const }
+  assert.equal(mayAutoCompile(policy, 1), true)
+  assert.equal(mayAutoCompile({ ...policy, enabled: false }, 1), false)
+  assert.equal(mayAutoCompile({ ...policy, active: false }, 1), false)
+  assert.equal(mayAutoCompile({ ...policy, ready: false }, 1), false)
+  assert.equal(mayAutoCompile({ ...policy, runtime: 'native' }, 1), false)
+})
+
 test('a late older artifact cannot replace a newer last-good proof', () => {
   const good = { projectId: 'project', revision: 5 } as LatexProof, late = { projectId: 'project', revision: 3 } as LatexProof
   assert.equal(newerProof(good, late), false)
@@ -20,7 +29,7 @@ test('a late older artifact cannot replace a newer last-good proof', () => {
 test('disconnect/abort/deadline require explicit operation recovery; deterministic TeX errors do not auto-retry', () => {
   for (const code of ['transport_unavailable', 'upstream_unavailable', 'upstream_timeout', 'request_aborted', 'operation_running']) assert.equal(recoverableCompileFailure(code), true)
   assert.equal(recoverableCompileFailure('upstream_protocol_error', 502), true)
-  for (const code of ['tex_error', 'invalid_manifest', 'missing_font', 'unsupported_package', 'fair_use_limit', 'compiler_disabled']) assert.equal(recoverableCompileFailure(code, 422), false)
+  for (const code of ['tex_error', 'invalid_manifest', 'missing_font', 'unsupported_package', 'fair_use_limit', 'compiler_disabled', 'browser_compile_cancelled', 'browser_loading_timeout', 'browser_compiling_timeout', 'browser_worker_failed', 'browser_pdf_invalid']) assert.equal(recoverableCompileFailure(code, 422), false)
 })
 
 test('known cancelled/failed/missing recovery outcomes are terminal, while a running 409 remains recoverable', () => {

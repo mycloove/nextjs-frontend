@@ -79,8 +79,9 @@ export default function CodeMirrorSource(props: Props) {
         return []
       }),
       keymap.of([
-        ...closeBracketsKeymap, ...completionKeymap, ...searchKeymap, ...historyKeymap, ...foldKeymap, ...defaultKeymap,
+        // Override the default blank-line command; compiling must not edit source.
         { key: 'Mod-Enter', run: () => { latest.current.onCompile(); return true } },
+        ...closeBracketsKeymap, ...completionKeymap, ...searchKeymap, ...historyKeymap, ...foldKeymap, ...defaultKeymap,
         { key: 'Escape', run: (editor) => { editor.setTabFocusMode(3000); toolbar.current?.focus(); return true } }, indentWithTab,
       ]),
       EditorView.updateListener.of((update) => {

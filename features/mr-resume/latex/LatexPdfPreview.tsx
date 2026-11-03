@@ -163,6 +163,6 @@ export default function LatexPdfPreview({ proof, current, active, location, onPo
         {ready && rendered?.text && <details className={styles.extracted}><summary>Inspect this PDF page&apos;s extracted text</summary><pre>{rendered.text}</pre></details>}
       </>}
     </div>
-    <footer className={styles.footer}><span>{proof ? `${proof.engine} / ${proof.profileVersion} / ${(proof.pdf.bytes / 1024).toFixed(0)} KB / exact PDF bytes` : 'Source editing does not upload or compile automatically.'}</span><span>{proof?.syncAvailable && current ? 'Double-click the proof to locate source.' : proof ? 'Source navigation is unavailable for this proof.' : 'Compile to generate a proof.'}</span></footer>
+    <footer className={styles.footer}><span>{proof ? `${proof.runtime === 'browser' ? 'Local browser' : 'Private native'} / ${proof.engine} / ${proof.profileVersion} / ${(proof.pdf.bytes / 1024).toFixed(0)} KB / exact PDF bytes` : 'Source editing does not upload or compile automatically.'}</span><span>{proof?.syncAvailable && current && onPosition ? 'Double-click the proof to locate source.' : proof ? 'Source navigation is unavailable for this proof.' : 'Compile to generate a proof.'}</span></footer>
   </section>
 }

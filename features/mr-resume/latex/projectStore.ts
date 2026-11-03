@@ -64,13 +64,15 @@ export function validateStoredProof(value: unknown): LatexProof {
   if (!isRecord(value) || value.storageVersion !== 1 || Object.keys(value).some((field) => !['storageVersion', 'projectId', 'proof', 'snapshot'].includes(field)) || !isRecord(value.proof)) throw new LatexStorageError('An unsupported proof record was preserved.', 'protected')
   const proof = value.proof
   const snapshot = validateLatexProject(value.snapshot)
-  if (Object.keys(proof).some((field) => !['status', 'operationKey', 'projectId', 'revision', 'snapshotHash', 'engine', 'profileVersion', 'pdf', 'diagnostics', 'log', 'syncAvailable', 'createdAt', 'data'].includes(field))) throw new LatexStorageError('Unsupported proof metadata was preserved.', 'protected')
+  if (Object.keys(proof).some((field) => !['status', 'operationKey', 'projectId', 'revision', 'snapshotHash', 'engine', 'profileVersion', 'pdf', 'diagnostics', 'log', 'syncAvailable', 'createdAt', 'data', 'runtime'].includes(field))) throw new LatexStorageError('Unsupported proof metadata was preserved.', 'protected')
   const hash = /^[a-f0-9]{64}$/u
-  if (proof.status !== 'ready' || proof.projectId !== value.projectId || proof.projectId !== snapshot.id || proof.revision !== snapshot.revision || proof.engine !== snapshot.engine
+  if (snapshot.mainFile === null || proof.status !== 'ready' || proof.projectId !== value.projectId || proof.projectId !== snapshot.id || proof.revision !== snapshot.revision || proof.engine !== snapshot.engine
     || typeof proof.operationKey !== 'string' || !/^[A-Za-z0-9_-]{8,128}$/u.test(proof.operationKey)
     || typeof proof.projectId !== 'string' || !Number.isSafeInteger(proof.revision) || (proof.revision as number) < 1
     || typeof proof.snapshotHash !== 'string' || !hash.test(proof.snapshotHash) || !['lualatex', 'xelatex', 'pdflatex'].includes(String(proof.engine))
     || typeof proof.profileVersion !== 'string' || proof.profileVersion.length > 512 || typeof proof.createdAt !== 'string' || !Number.isFinite(Date.parse(proof.createdAt))
+    || (proof.runtime !== undefined && proof.runtime !== 'browser' && proof.runtime !== 'native')
+    || (proof.runtime === 'browser' && (proof.syncAvailable !== false || typeof proof.profileVersion !== 'string' || !proof.profileVersion.startsWith('browser-')))
     || typeof proof.syncAvailable !== 'boolean' || typeof proof.log !== 'string' || utf8Bytes(proof.log) > LATEX_LIMITS.logBytes
     || !Array.isArray(proof.diagnostics) || proof.diagnostics.length > 512 || !(proof.data instanceof ArrayBuffer)
     || !isRecord(proof.pdf) || Object.keys(proof.pdf).some((field) => !['id', 'sha256', 'bytes', 'pages'].includes(field)) || typeof proof.pdf.id !== 'string' || typeof proof.pdf.sha256 !== 'string' || !hash.test(proof.pdf.sha256)

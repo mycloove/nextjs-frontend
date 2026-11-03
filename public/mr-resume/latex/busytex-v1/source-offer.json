@@ -1,0 +1,714 @@
+{
+  "version": 1,
+  "binary": {
+    "path": "busytex.wasm",
+    "sha256": "a7785b59bfddb8667e7738443f111430e3ee2bd3ec0c1c26629267849e091415"
+  },
+  "access": "BusyTeX, TeX Live engine/library, Expat and Fontconfig upstream source archives and the application-owned wrapper source/build recipe are offered by equivalent same-origin download access, without login or charge. Concatenate split archive parts in their listed order and verify the whole SHA-256 before extracting. Package source coverage and unavailable original inputs are qualified separately below; raw shipped TeX files are not misrepresented as complete upstream generated-source archives. Keep this offer, all component licenses and source assets alongside every redistribution of the binary.",
+  "archives": [
+    {
+      "name": "busytex-source.tar.gz",
+      "url": "https://codeload.github.com/busytex/busytex/tar.gz/4499aa69fd3cf77ad86a47287d9a5193cf5ad993",
+      "bytes": 45424,
+      "sha256": "b39ad7f7b176a834fd5f17b0136cccde68b7da6ec21f33dd9f0ce74b17e4f844",
+      "parts": [
+        {
+          "path": "sources/busytex-source.tar.gz",
+          "bytes": 45424,
+          "sha256": "b39ad7f7b176a834fd5f17b0136cccde68b7da6ec21f33dd9f0ce74b17e4f844"
+        }
+      ]
+    },
+    {
+      "name": "texlive-source.tar.gz",
+      "url": "https://codeload.github.com/TeX-Live/texlive-source/tar.gz/0d0bb3a2401e8825b4987eee51e8ef469eb8c3fc",
+      "bytes": 107734199,
+      "sha256": "aa53f7069627a20acfaa38b0104aee3ac3e23c5e220a9950e701405497cd00e1",
+      "parts": [
+        {
+          "path": "sources/texlive-source.tar.gz.part-00",
+          "bytes": 33554432,
+          "sha256": "8af5691f9908a91d0a48d1951bf262d9a086105b782a9c1c29742ce0cb6a4fb9"
+        },
+        {
+          "path": "sources/texlive-source.tar.gz.part-01",
+          "bytes": 33554432,
+          "sha256": "d2f6092a2e07ed8e87fb7dfe3c619f651935cccb3119d01c785d9faadac32f74"
+        },
+        {
+          "path": "sources/texlive-source.tar.gz.part-02",
+          "bytes": 33554432,
+          "sha256": "4b280c8f4c4f15c69eb9f6b1f434e144b106d043683c8d11dcbda32a76f64b7e"
+        },
+        {
+          "path": "sources/texlive-source.tar.gz.part-03",
+          "bytes": 7070903,
+          "sha256": "063cdb6a9cf9de235163f1c134404138969fc15f67ba35587ca84f88bfb1570c"
+        }
+      ]
+    },
+    {
+      "name": "expat-source.tar.gz",
+      "url": "https://github.com/libexpat/libexpat/releases/download/R_2_5_0/expat-2.5.0.tar.gz",
+      "bytes": 719235,
+      "sha256": "6b902ab103843592be5e99504f846ec109c1abb692e85347587f237a4ffa1033",
+      "parts": [
+        {
+          "path": "sources/expat-source.tar.gz",
+          "bytes": 719235,
+          "sha256": "6b902ab103843592be5e99504f846ec109c1abb692e85347587f237a4ffa1033"
+        }
+      ]
+    },
+    {
+      "name": "fontconfig-source.tar.gz",
+      "url": "https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.13.96.tar.gz",
+      "bytes": 2133746,
+      "sha256": "dbabc038d41cfc3f14da1b173ae103ba7cc678efb17e091b9e801c6286b3f684",
+      "parts": [
+        {
+          "path": "sources/fontconfig-source.tar.gz",
+          "bytes": 2133746,
+          "sha256": "dbabc038d41cfc3f14da1b173ae103ba7cc678efb17e091b9e801c6286b3f684"
+        }
+      ]
+    }
+  ],
+  "build": {
+    "busytexCommit": "4499aa69fd3cf77ad86a47287d9a5193cf5ad993",
+    "texliveCommit": "0d0bb3a2401e8825b4987eee51e8ef469eb8c3fc",
+    "emscriptenVersion": "3.1.43",
+    "recipe": "The complete BusyTeX archive includes Makefile, busytex.c, emcc_wrapper.py, cosmo_getpass.h and .github/workflows/build-wasm.yml. Use the archived dependency sources in source/{texlive,expat,fontconfig}; apply the Makefile source/texlive.patched target; build native generator prerequisites, then make wasm with Emscripten 3.1.43. The release binary and pdfTeX/XeTeX formats are unmodified; the LuaHB format is rebuilt only at provisioning time with the actual pinned 32-bit WASM engine.",
+    "formatOrigin": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/texlive-basic.tar.gz",
+    "browserFormat": {
+      "bytes": 11870231,
+      "sha256": "8189d4954446de324cfb3182f0c276fa8b4d6a213aef98b53192eea78b08630d",
+      "provenance": "format-provenance.json",
+      "sourceEpoch": 1708041600
+    },
+    "packageSources": "sources/tex-packages-source.tar.gz",
+    "provisioningSources": "sources/browser-provisioning-source.tar.gz",
+    "provision": "Extract provisioningSources into the project root, including the exact Latin Modern license input. From nextjs-frontend, --acquire <absolute-temp-cache> downloads/verifies the pinned inputs; build-format.mjs --generate <cache> executes the pinned WASM engine only to rebuild LuaHB format; provision.mjs --build <cache> repackages them. provision.mjs --manifest or --groups only reads existing local pinned assets and regenerates groups, source coverage, provisioning source archive, notices and final manifest/TS pin; neither mode downloads assets, imports a smoke harness, instantiates WASM or runs TeX. Upstream binary rebuilding separately requires the archived BusyTeX recipe, native generator prerequisites and Emscripten 3.1.43.",
+    "provisioningArchive": {
+      "path": "sources/browser-provisioning-source.tar.gz",
+      "bytes": 46308,
+      "sha256": "e1bbb306c23496d7032eb2f5394614aff6c7b7e72d87a6c521310586246008dc"
+    },
+    "provisioningFiles": [
+      {
+        "path": "nextjs-frontend/features/mr-resume/latex/browser/provision.mjs",
+        "bytes": 60557,
+        "sha256": "5b080c784a164ee8ae936afe59a19bc86e608da9cfb6ce4710dc7321775c8f79"
+      },
+      {
+        "path": "nextjs-frontend/features/mr-resume/latex/browser/build-format.mjs",
+        "bytes": 7394,
+        "sha256": "85fd450027edb0a82d5f426f3e7f67ad7930e7ffc916e593a068806a5d663129"
+      },
+      {
+        "path": "nextjs-frontend/features/mr-resume/latex/browser/smoke.mjs",
+        "bytes": 37741,
+        "sha256": "414a7470a932e7a7fc1f828ae126be8d0619887749a657d2bec6d81b126e16c6"
+      },
+      {
+        "path": "nextjs-frontend/features/mr-resume/latex/browser/smoke-worker.mjs",
+        "bytes": 5525,
+        "sha256": "5eaa4e1a111d99bdf225a070c0c79a61b4633ad69c056a1682c665593b8bfaab"
+      },
+      {
+        "path": "nextjs-frontend/public/mr-resume/latex/busytex-v1/compiler-worker.js",
+        "bytes": 46128,
+        "sha256": "37af1ae5a786b0ed4d3123fa3f2360038e174e03fae4739a0340f36bfb3131d9"
+      },
+      {
+        "path": "nextjs-frontend/features/mr-resume/components/fonts/latin-modern/LICENSE.txt",
+        "bytes": 1405,
+        "sha256": "48a0fbd44f7a98af375bca9903becad5291e23f42105884d1837f8a2a93654b9"
+      }
+    ],
+    "generatedManifestPin": "nextjs-frontend/features/mr-resume/latex/browserManifestPin.ts is generated from final LF manifest bytes; deliberately excluded from provisioning sources and runtime asset lists to avoid a hash cycle.",
+    "smokeHarness": "Archived smoke.mjs/smoke-worker.mjs are not a standalone regression harness. They require the matching application TypeScript modules (templates/project/archive/AltaCV/PDF verification and their dependencies), Mr.Resume/AltaCV_Template.zip, Node type stripping and the frontend npm dependencies pdf-lib, sharp, jszip and pdfjs-dist. Those application/dependency/template inputs are not included in this provisioning archive. Smoke executes real TeX and must be separately authorized; manifest/group finalization does not run it."
+  },
+  "packageCoverage": {
+    "basicSourceSubtree": {
+      "path": "sources/tex-packages-source.tar.gz",
+      "bytes": 7269348,
+      "sha256": "b0e44302fda1831801ffc6515cf4e51bb2ef296f91ef65a426c9343351d0c153"
+    },
+    "supplementalRuntimeSources": {
+      "path": "sources/tex-supplemental-runtime-source.tar.gz",
+      "bytes": 300133,
+      "sha256": "387bd20d62ee39c755c656b52dea417c6d40600ca657aa5aabe5ca1ba7329ad9"
+    },
+    "supplementalInventory": {
+      "path": "sources/tex-supplemental-runtime-index.json",
+      "bytes": 159506,
+      "sha256": "8aab0e7564f18fbfd57c3c263cac8964684715c01519ca57569fe49f461d4760"
+    },
+    "groups": [
+      {
+        "id": "core",
+        "kind": "core",
+        "profiles": [
+          "pdflatex",
+          "xelatex",
+          "lualatex"
+        ],
+        "archive": {
+          "path": "groups/core/texlive.tar.gz",
+          "bytes": 15717965,
+          "sha256": "e47c12ccce75d910644daa76aa0281a81e791434fd19980db68962f66f041b83"
+        },
+        "index": {
+          "path": "groups/core/snapshot-index.json",
+          "bytes": 917278,
+          "sha256": "772403c7656dc20d03bf09a9ae88bb1dfd9fd60563c633fe46695dfc7d0ce3b7"
+        },
+        "files": 2828,
+        "fileBytes": 31085773,
+        "suppliers": [
+          {
+            "source": "generated-from-fixed-snapshot",
+            "files": 1,
+            "fileBytes": 65929,
+            "upstreamInputs": [],
+            "preservedSources": [
+              {
+                "path": "sources/browser-provisioning-source.tar.gz",
+                "bytes": 46308,
+                "sha256": "e1bbb306c23496d7032eb2f5394614aff6c7b7e72d87a6c521310586246008dc"
+              }
+            ],
+            "notices": []
+          },
+          {
+            "source": "texlive-basic.tar.gz",
+            "files": 2814,
+            "fileBytes": 30825238,
+            "upstreamInputs": [
+              {
+                "name": "texlive-basic.tar.gz",
+                "bytes": 70838141,
+                "sha256": "a2d753d927b97b1bd45424366ff86f5a4d60ea61c4e421cb093d9a6533ecbfd1",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/texlive-basic.tar.gz"
+              }
+            ],
+            "preservedSources": [
+              {
+                "path": "sources/tex-packages-source.tar.gz",
+                "bytes": 7269348,
+                "sha256": "b0e44302fda1831801ffc6515cf4e51bb2ef296f91ef65a426c9343351d0c153"
+              }
+            ],
+            "notices": [
+              {
+                "path": "licenses/LICENSE.TL",
+                "bytes": 5267,
+                "sha256": "e8f070b2d1a9bad00af9d6cb94e687f2120591d092c8dab8727249b70adc96d0"
+              },
+              {
+                "path": "licenses/LICENSE.CTAN",
+                "bytes": 2098,
+                "sha256": "380d83c62ec2ae91617b42739699676f23446039f2f88fa092da47e0c49f1eae"
+              },
+              {
+                "path": "licenses/LatinModern-GUST.txt",
+                "bytes": 1405,
+                "sha256": "48a0fbd44f7a98af375bca9903becad5291e23f42105884d1837f8a2a93654b9"
+              }
+            ]
+          },
+          {
+            "source": "ubuntu-texlive-latex-extra.data",
+            "files": 4,
+            "fileBytes": 142733,
+            "upstreamInputs": [
+              {
+                "name": "ubuntu-texlive-latex-extra.js",
+                "bytes": 1398581,
+                "sha256": "a99a68b79e6a93f3ca9d94f46afe8a62e7e06b6d4c5e90a705ec15fc42d8ecda",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-extra.js"
+              },
+              {
+                "name": "ubuntu-texlive-latex-extra.data",
+                "bytes": 49513577,
+                "sha256": "fb4dc0440f4b2bd2d5138dbb5689e6a33cd20c9704934422436cb97af5d623c4",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-extra.data"
+              }
+            ],
+            "preservedSources": [
+              {
+                "path": "sources/tex-supplemental-runtime-source.tar.gz",
+                "bytes": 300133,
+                "sha256": "387bd20d62ee39c755c656b52dea417c6d40600ca657aa5aabe5ca1ba7329ad9"
+              },
+              {
+                "path": "sources/tex-supplemental-runtime-index.json",
+                "bytes": 159506,
+                "sha256": "8aab0e7564f18fbfd57c3c263cac8964684715c01519ca57569fe49f461d4760"
+              }
+            ],
+            "notices": [
+              {
+                "path": "licenses/LICENSE.TL",
+                "bytes": 5267,
+                "sha256": "e8f070b2d1a9bad00af9d6cb94e687f2120591d092c8dab8727249b70adc96d0"
+              },
+              {
+                "path": "licenses/LICENSE.CTAN",
+                "bytes": 2098,
+                "sha256": "380d83c62ec2ae91617b42739699676f23446039f2f88fa092da47e0c49f1eae"
+              }
+            ]
+          },
+          {
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "files": 9,
+            "fileBytes": 51873,
+            "upstreamInputs": [
+              {
+                "name": "ubuntu-texlive-latex-recommended.js",
+                "bytes": 337892,
+                "sha256": "bbd975921a74adae9119988ae8a740ca9f4837db772061d313c67729fba1d9ee",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.js"
+              },
+              {
+                "name": "ubuntu-texlive-latex-recommended.data",
+                "bytes": 9058527,
+                "sha256": "fa9a03f928a0af0e9c5a24e2ce2956e64db9d580dd2c3a7517176aac16dc9006",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.data"
+              }
+            ],
+            "preservedSources": [
+              {
+                "path": "sources/tex-supplemental-runtime-source.tar.gz",
+                "bytes": 300133,
+                "sha256": "387bd20d62ee39c755c656b52dea417c6d40600ca657aa5aabe5ca1ba7329ad9"
+              },
+              {
+                "path": "sources/tex-supplemental-runtime-index.json",
+                "bytes": 159506,
+                "sha256": "8aab0e7564f18fbfd57c3c263cac8964684715c01519ca57569fe49f461d4760"
+              }
+            ],
+            "notices": [
+              {
+                "path": "licenses/LICENSE.TL",
+                "bytes": 5267,
+                "sha256": "e8f070b2d1a9bad00af9d6cb94e687f2120591d092c8dab8727249b70adc96d0"
+              },
+              {
+                "path": "licenses/LICENSE.CTAN",
+                "bytes": 2098,
+                "sha256": "380d83c62ec2ae91617b42739699676f23446039f2f88fa092da47e0c49f1eae"
+              }
+            ]
+          }
+        ],
+        "licenseScope": "Notices are references, not a blanket license for this group. Original per-file/package notices remain in the indexed runtime files and offered package sources; engine GPL/LGPL terms and font/package-specific terms remain applicable."
+      },
+      {
+        "id": "pdflatex",
+        "kind": "profile",
+        "profiles": [
+          "pdflatex"
+        ],
+        "archive": {
+          "path": "groups/pdflatex/texlive.tar.gz",
+          "bytes": 6032608,
+          "sha256": "796d2cbe5d4bce9930c205a0af6cbec889db4179a0f5cffde264495243ecf43f"
+        },
+        "index": {
+          "path": "groups/pdflatex/snapshot-index.json",
+          "bytes": 388,
+          "sha256": "cc6bbf19d4037092979abad2b40d5c4e9392f1bf2b58d4f0073f7bafea37274e"
+        },
+        "files": 1,
+        "fileBytes": 6477564,
+        "suppliers": [
+          {
+            "source": "texlive-basic.tar.gz",
+            "files": 1,
+            "fileBytes": 6477564,
+            "upstreamInputs": [
+              {
+                "name": "texlive-basic.tar.gz",
+                "bytes": 70838141,
+                "sha256": "a2d753d927b97b1bd45424366ff86f5a4d60ea61c4e421cb093d9a6533ecbfd1",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/texlive-basic.tar.gz"
+              }
+            ],
+            "preservedSources": [
+              {
+                "path": "sources/tex-packages-source.tar.gz",
+                "bytes": 7269348,
+                "sha256": "b0e44302fda1831801ffc6515cf4e51bb2ef296f91ef65a426c9343351d0c153"
+              }
+            ],
+            "notices": [
+              {
+                "path": "licenses/LICENSE.TL",
+                "bytes": 5267,
+                "sha256": "e8f070b2d1a9bad00af9d6cb94e687f2120591d092c8dab8727249b70adc96d0"
+              },
+              {
+                "path": "licenses/LICENSE.CTAN",
+                "bytes": 2098,
+                "sha256": "380d83c62ec2ae91617b42739699676f23446039f2f88fa092da47e0c49f1eae"
+              }
+            ]
+          }
+        ],
+        "licenseScope": "Notices are references, not a blanket license for this group. Original per-file/package notices remain in the indexed runtime files and offered package sources; engine GPL/LGPL terms and font/package-specific terms remain applicable."
+      },
+      {
+        "id": "xelatex",
+        "kind": "profile",
+        "profiles": [
+          "xelatex"
+        ],
+        "archive": {
+          "path": "groups/xelatex/texlive.tar.gz",
+          "bytes": 6270766,
+          "sha256": "92db974138236adce295bc16a95b9a2a85c2f1979092b13246a0bb35cf344c3b"
+        },
+        "index": {
+          "path": "groups/xelatex/snapshot-index.json",
+          "bytes": 384,
+          "sha256": "faccaf6420f5a99cdddcfced9695fbaa00150c4ff22545e7dddcfb34d7f5e4f5"
+        },
+        "files": 1,
+        "fileBytes": 8714726,
+        "suppliers": [
+          {
+            "source": "texlive-basic.tar.gz",
+            "files": 1,
+            "fileBytes": 8714726,
+            "upstreamInputs": [
+              {
+                "name": "texlive-basic.tar.gz",
+                "bytes": 70838141,
+                "sha256": "a2d753d927b97b1bd45424366ff86f5a4d60ea61c4e421cb093d9a6533ecbfd1",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/texlive-basic.tar.gz"
+              }
+            ],
+            "preservedSources": [
+              {
+                "path": "sources/tex-packages-source.tar.gz",
+                "bytes": 7269348,
+                "sha256": "b0e44302fda1831801ffc6515cf4e51bb2ef296f91ef65a426c9343351d0c153"
+              }
+            ],
+            "notices": [
+              {
+                "path": "licenses/LICENSE.TL",
+                "bytes": 5267,
+                "sha256": "e8f070b2d1a9bad00af9d6cb94e687f2120591d092c8dab8727249b70adc96d0"
+              },
+              {
+                "path": "licenses/LICENSE.CTAN",
+                "bytes": 2098,
+                "sha256": "380d83c62ec2ae91617b42739699676f23446039f2f88fa092da47e0c49f1eae"
+              }
+            ]
+          }
+        ],
+        "licenseScope": "Notices are references, not a blanket license for this group. Original per-file/package notices remain in the indexed runtime files and offered package sources; engine GPL/LGPL terms and font/package-specific terms remain applicable."
+      },
+      {
+        "id": "lualatex",
+        "kind": "profile",
+        "profiles": [
+          "lualatex"
+        ],
+        "archive": {
+          "path": "groups/lualatex/texlive.tar.gz",
+          "bytes": 8591445,
+          "sha256": "9f88ccaa1dde8583616275042f1a4269760f9f58f288e86214c70c4f877b050d"
+        },
+        "index": {
+          "path": "groups/lualatex/snapshot-index.json",
+          "bytes": 397,
+          "sha256": "042825b1680f6051983e96a794da5f106f65112b27f319f25436bdfb1f6accda"
+        },
+        "files": 1,
+        "fileBytes": 11870231,
+        "suppliers": [
+          {
+            "source": "generated-wasm32-lualatex-format",
+            "files": 1,
+            "fileBytes": 11870231,
+            "upstreamInputs": [
+              {
+                "name": "busytex.wasm",
+                "bytes": 30363063,
+                "sha256": "a7785b59bfddb8667e7738443f111430e3ee2bd3ec0c1c26629267849e091415",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/busytex.wasm"
+              },
+              {
+                "name": "texlive-basic.tar.gz",
+                "bytes": 70838141,
+                "sha256": "a2d753d927b97b1bd45424366ff86f5a4d60ea61c4e421cb093d9a6533ecbfd1",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/texlive-basic.tar.gz"
+              }
+            ],
+            "preservedSources": [
+              {
+                "path": "sources/tex-packages-source.tar.gz",
+                "bytes": 7269348,
+                "sha256": "b0e44302fda1831801ffc6515cf4e51bb2ef296f91ef65a426c9343351d0c153"
+              },
+              {
+                "path": "sources/browser-provisioning-source.tar.gz",
+                "bytes": 46308,
+                "sha256": "e1bbb306c23496d7032eb2f5394614aff6c7b7e72d87a6c521310586246008dc"
+              },
+              {
+                "path": "format-provenance.json",
+                "bytes": 511,
+                "sha256": "97d1f28ac6e730165e8347332c9b0bcb635771425331c6792795efbebc278940"
+              }
+            ],
+            "notices": [
+              {
+                "path": "licenses/LICENSE.TL",
+                "bytes": 5267,
+                "sha256": "e8f070b2d1a9bad00af9d6cb94e687f2120591d092c8dab8727249b70adc96d0"
+              },
+              {
+                "path": "licenses/LICENSE.CTAN",
+                "bytes": 2098,
+                "sha256": "380d83c62ec2ae91617b42739699676f23446039f2f88fa092da47e0c49f1eae"
+              }
+            ]
+          }
+        ],
+        "licenseScope": "Notices are references, not a blanket license for this group. Original per-file/package notices remain in the indexed runtime files and offered package sources; engine GPL/LGPL terms and font/package-specific terms remain applicable."
+      },
+      {
+        "id": "unicode",
+        "kind": "profile",
+        "profiles": [
+          "xelatex",
+          "lualatex"
+        ],
+        "archive": {
+          "path": "groups/unicode/texlive.tar.gz",
+          "bytes": 2933161,
+          "sha256": "f5400e5415b7239ec8ecc630c6b2f0243b9895cad8ceb09cf4165cfa98619b14"
+        },
+        "index": {
+          "path": "groups/unicode/snapshot-index.json",
+          "bytes": 203036,
+          "sha256": "9b1aedd3233f7704788bf91cff35aa9cdda818494671756b541580de265757ad"
+        },
+        "files": 593,
+        "fileBytes": 14715383,
+        "suppliers": [
+          {
+            "source": "NotoSansBengali.ttf",
+            "files": 1,
+            "fileBytes": 463668,
+            "upstreamInputs": [
+              {
+                "name": "NotoSansBengali.ttf",
+                "bytes": 463668,
+                "sha256": "dcd42978094e584a849c84a51450eeac40c8826057d566ea6d4b9627a403a05a",
+                "url": "https://raw.githubusercontent.com/google/fonts/e7db6ca603fd4862010383ff17ffd6cc4ffac1c0/ofl/notosansbengali/NotoSansBengali%5Bwdth%2Cwght%5D.ttf"
+              }
+            ],
+            "preservedSources": [],
+            "notices": [
+              {
+                "path": "licenses/NotoSansBengali-OFL.txt",
+                "bytes": 4383,
+                "sha256": "754f0e221aa7d5a915489f3bf1f20fe53ddc35ab2834a4d91656d78f9622de70"
+              }
+            ]
+          },
+          {
+            "source": "texlive-basic.tar.gz",
+            "files": 312,
+            "fileBytes": 13007037,
+            "upstreamInputs": [
+              {
+                "name": "texlive-basic.tar.gz",
+                "bytes": 70838141,
+                "sha256": "a2d753d927b97b1bd45424366ff86f5a4d60ea61c4e421cb093d9a6533ecbfd1",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/texlive-basic.tar.gz"
+              }
+            ],
+            "preservedSources": [
+              {
+                "path": "sources/tex-packages-source.tar.gz",
+                "bytes": 7269348,
+                "sha256": "b0e44302fda1831801ffc6515cf4e51bb2ef296f91ef65a426c9343351d0c153"
+              }
+            ],
+            "notices": [
+              {
+                "path": "licenses/LICENSE.TL",
+                "bytes": 5267,
+                "sha256": "e8f070b2d1a9bad00af9d6cb94e687f2120591d092c8dab8727249b70adc96d0"
+              },
+              {
+                "path": "licenses/LICENSE.CTAN",
+                "bytes": 2098,
+                "sha256": "380d83c62ec2ae91617b42739699676f23446039f2f88fa092da47e0c49f1eae"
+              },
+              {
+                "path": "licenses/LatinModern-GUST.txt",
+                "bytes": 1405,
+                "sha256": "48a0fbd44f7a98af375bca9903becad5291e23f42105884d1837f8a2a93654b9"
+              }
+            ]
+          },
+          {
+            "source": "ubuntu-texlive-latex-extra.data",
+            "files": 1,
+            "fileBytes": 2296,
+            "upstreamInputs": [
+              {
+                "name": "ubuntu-texlive-latex-extra.js",
+                "bytes": 1398581,
+                "sha256": "a99a68b79e6a93f3ca9d94f46afe8a62e7e06b6d4c5e90a705ec15fc42d8ecda",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-extra.js"
+              },
+              {
+                "name": "ubuntu-texlive-latex-extra.data",
+                "bytes": 49513577,
+                "sha256": "fb4dc0440f4b2bd2d5138dbb5689e6a33cd20c9704934422436cb97af5d623c4",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-extra.data"
+              }
+            ],
+            "preservedSources": [
+              {
+                "path": "sources/tex-supplemental-runtime-source.tar.gz",
+                "bytes": 300133,
+                "sha256": "387bd20d62ee39c755c656b52dea417c6d40600ca657aa5aabe5ca1ba7329ad9"
+              },
+              {
+                "path": "sources/tex-supplemental-runtime-index.json",
+                "bytes": 159506,
+                "sha256": "8aab0e7564f18fbfd57c3c263cac8964684715c01519ca57569fe49f461d4760"
+              }
+            ],
+            "notices": [
+              {
+                "path": "licenses/LICENSE.TL",
+                "bytes": 5267,
+                "sha256": "e8f070b2d1a9bad00af9d6cb94e687f2120591d092c8dab8727249b70adc96d0"
+              },
+              {
+                "path": "licenses/LICENSE.CTAN",
+                "bytes": 2098,
+                "sha256": "380d83c62ec2ae91617b42739699676f23446039f2f88fa092da47e0c49f1eae"
+              }
+            ]
+          },
+          {
+            "source": "ubuntu-texlive-latex-recommended.data",
+            "files": 279,
+            "fileBytes": 1242382,
+            "upstreamInputs": [
+              {
+                "name": "ubuntu-texlive-latex-recommended.js",
+                "bytes": 337892,
+                "sha256": "bbd975921a74adae9119988ae8a740ca9f4837db772061d313c67729fba1d9ee",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.js"
+              },
+              {
+                "name": "ubuntu-texlive-latex-recommended.data",
+                "bytes": 9058527,
+                "sha256": "fa9a03f928a0af0e9c5a24e2ce2956e64db9d580dd2c3a7517176aac16dc9006",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/ubuntu-texlive-latex-recommended.data"
+              }
+            ],
+            "preservedSources": [
+              {
+                "path": "sources/tex-supplemental-runtime-source.tar.gz",
+                "bytes": 300133,
+                "sha256": "387bd20d62ee39c755c656b52dea417c6d40600ca657aa5aabe5ca1ba7329ad9"
+              },
+              {
+                "path": "sources/tex-supplemental-runtime-index.json",
+                "bytes": 159506,
+                "sha256": "8aab0e7564f18fbfd57c3c263cac8964684715c01519ca57569fe49f461d4760"
+              }
+            ],
+            "notices": [
+              {
+                "path": "licenses/LICENSE.TL",
+                "bytes": 5267,
+                "sha256": "e8f070b2d1a9bad00af9d6cb94e687f2120591d092c8dab8727249b70adc96d0"
+              },
+              {
+                "path": "licenses/LICENSE.CTAN",
+                "bytes": 2098,
+                "sha256": "380d83c62ec2ae91617b42739699676f23446039f2f88fa092da47e0c49f1eae"
+              }
+            ]
+          }
+        ],
+        "licenseScope": "Notices are references, not a blanket license for this group. Original per-file/package notices remain in the indexed runtime files and offered package sources; engine GPL/LGPL terms and font/package-specific terms remain applicable."
+      },
+      {
+        "id": "math",
+        "kind": "package",
+        "profiles": [
+          "pdflatex",
+          "xelatex",
+          "lualatex"
+        ],
+        "archive": {
+          "path": "groups/math/texlive.tar.gz",
+          "bytes": 124330,
+          "sha256": "08a122020ab7260249252abb77b79b6d508d11b1f9464003ac34ebe5e75a688e"
+        },
+        "index": {
+          "path": "groups/math/snapshot-index.json",
+          "bytes": 9301,
+          "sha256": "0d65708c9a4c5e9bb8100325cba3fcf234ec027a649d25e61a82647df4e0cdaf"
+        },
+        "files": 30,
+        "fileBytes": 537401,
+        "suppliers": [
+          {
+            "source": "texlive-basic.tar.gz",
+            "files": 30,
+            "fileBytes": 537401,
+            "upstreamInputs": [
+              {
+                "name": "texlive-basic.tar.gz",
+                "bytes": 70838141,
+                "sha256": "a2d753d927b97b1bd45424366ff86f5a4d60ea61c4e421cb093d9a6533ecbfd1",
+                "url": "https://github.com/busytex/busytex/releases/download/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1/texlive-basic.tar.gz"
+              }
+            ],
+            "preservedSources": [
+              {
+                "path": "sources/tex-packages-source.tar.gz",
+                "bytes": 7269348,
+                "sha256": "b0e44302fda1831801ffc6515cf4e51bb2ef296f91ef65a426c9343351d0c153"
+              }
+            ],
+            "notices": [
+              {
+                "path": "licenses/LICENSE.TL",
+                "bytes": 5267,
+                "sha256": "e8f070b2d1a9bad00af9d6cb94e687f2120591d092c8dab8727249b70adc96d0"
+              },
+              {
+                "path": "licenses/LICENSE.CTAN",
+                "bytes": 2098,
+                "sha256": "380d83c62ec2ae91617b42739699676f23446039f2f88fa092da47e0c49f1eae"
+              }
+            ]
+          }
+        ],
+        "licenseScope": "Notices are references, not a blanket license for this group. Original per-file/package notices remain in the indexed runtime files and offered package sources; engine GPL/LGPL terms and font/package-specific terms remain applicable."
+      }
+    ],
+    "limits": "Exact unmodified supplemental runtime files, including source-format TeX/Lua/config/map files and original embedded license lines. These copies are NOT a complete upstream generated-source (.dtx/.ins), documentation or font-development archive. Compiled .tec files retain their shipped .map inputs. The basic package source subtree remains separately offered; file provenance is recorded in each group index."
+  }
+}

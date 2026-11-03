@@ -17,9 +17,19 @@ test('three genuine versioned source templates are independent, with local style
   assert.doesNotMatch(academicSource, /biblatex|backend=biber/u)
   assert.ok(academic.files.some((file) => file.path === 'references.bib' && file.content.includes('@article')))
   assert.match(bangla.files[0].content, /[\u0980-\u09ff]/u)
-  assert.match(bangla.files[0].content, /\\newfontfamily\\bengalifont\[Script=Bengali\]\{NotoSerifBengali-Regular\.ttf\}/u)
-  assert.doesNotMatch(bangla.files[0].content, /Renderer=HarfBuzz/u)
-  for (const project of [career, academic, bangla]) { assert.equal(project.revision, 1); assert.equal(project.templateVersion, 2); assert.equal(project.engine, 'xelatex'); assert.equal(validateLatexProject(project), project) }
+  assert.match(bangla.files[0].content, /Renderer=HarfBuzz/u)
+  for (const project of [career, academic, bangla]) { assert.equal(project.revision, 1); assert.equal(project.templateVersion, project.templateId === 'bangla-source' ? 2 : 1); assert.equal(validateLatexProject(project), project) }
+})
+
+test('Bangla v2 gives reset/heading fonts Bengali coverage without rewriting saved v1 source or writing', () => {
+  const current = createTemplateProject('bangla-source')
+  assert.match(current.files[0].content, /\\setmainfont\[Script=Bengali,Renderer=HarfBuzz\]\{Noto Sans Bengali\}/u)
+  assert.match(current.files[0].content, /\\newfontfamily\\englishfont\{Latin Modern Roman\}/u)
+  const source = current.files[0].content.replace('version 2.', 'version 1.').replace('\\setmainfont[Script=Bengali,Renderer=HarfBuzz]{Noto Sans Bengali}', '\\setmainfont{Latin Modern Roman}').replace('\\newfontfamily\\englishfont{Latin Modern Roman}\n', '')
+  const legacy = { ...current, templateVersion: 1, files: [{ ...current.files[0], content: source }] }
+  assert.equal(validateLatexProject(legacy).files[0].content, source)
+  assert.equal(cloneAsNewProject(legacy).files[0].content, source)
+  assert.equal(legacy.templateVersion, 1)
 })
 
 test('raw TeX, Unicode joiners, spaces, CRLF and plain-text specials are never globally escaped or normalized', () => {
@@ -61,10 +71,31 @@ test('project version/identity/main and alias failures leave their originals unt
   assert.equal(JSON.stringify(future), serialized)
   assert.throws(() => validateLatexProject({ ...original, files: [...original.files, { id: 'alias', path: 'MAIN.tex', content: '' }] }), /case alias/u)
   assert.throws(() => validateLatexProject({ ...original, mainFile: 'missing.tex' }), /existing/u)
+  assert.throws(() => validateLatexProject({ ...original, mainFile: undefined }), /identity/u)
+  assert.throws(() => validateLatexProject({ ...original, mainFile: '' }), /existing/u)
   assert.throws(() => validateLatexProject({ ...original, templateVersion: null }), /identity/u)
   assert.throws(() => validateLatexProject({ ...original, id: 'constructor' }), /identity/u)
   assert.throws(() => validateLatexProject({ ...original, futureMetadata: 'preserve this' }), /unsupported metadata/u)
   assert.throws(() => validateLatexProject({ ...original, files: original.files.map((file) => ({ ...file, futureField: true })) }), /unsupported metadata/u)
+})
+
+test('an unselected draft can edit, rename, delete, copy and checkpoint before choosing a new entry point', async () => {
+  const draft = reviseProject(createTemplateProject(), { mainFile: null })
+  assert.equal(validateLatexProject(draft), draft)
+  const checkpoint = makeCheckpoint(draft, 'Before selecting a main')
+  const renamed = renameProjectFile(draft, draft.files[0].id, 'sections/original.tex')
+  assert.equal(renamed.mainFile, null)
+  const created = addTextFile(renamed, 'my-cv.tex', '\\documentclass{article}\\begin{document}My CV\\end{document}')
+  assert.equal(created.mainFile, null)
+  assert.equal(cloneAsNewProject(created).mainFile, null)
+  assert.equal(deleteProjectFile(created, draft.files[0].id).mainFile, null)
+  const selected = reviseProject(created, { mainFile: 'my-cv.tex' })
+  assert.equal(selected.mainFile, 'my-cv.tex')
+  assert.deepEqual(selected.files, created.files)
+  assert.equal(restoreCheckpointProject(selected, checkpoint).mainFile, null)
+  assert.notEqual(await projectSnapshotHash(draft), await projectSnapshotHash({ ...draft, mainFile: 'main.tex' }))
+  assert.equal(sameProjectSource(created, selected), false)
+  assert.throws(() => reviseProject(created, { mainFile: 'resume.sty' }), /existing/u)
 })
 
 test('source and transport limits use actual UTF-8 and JSON bytes, with no file dropping', () => {
@@ -130,7 +161,8 @@ test('proof freshness changes immediately after source, engine or main-file revi
   const project = createTemplateProject(), proof = { projectId: project.id, revision: project.revision, engine: project.engine } as LatexProof
   assert.equal(isCurrentProof(project, proof), true)
   assert.equal(isCurrentProof(reviseProject(project, { title: 'New revision' }), proof), false)
-  assert.equal(isCurrentProof({ ...project, engine: 'lualatex' }, proof), false)
+  assert.equal(isCurrentProof({ ...project, engine: 'xelatex' }, proof), false)
+  assert.equal(isCurrentProof({ ...project, mainFile: null }, proof), false)
   assert.equal(isCurrentProof(cloneAsNewProject(project), proof), false)
 })
 

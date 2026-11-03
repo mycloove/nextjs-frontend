@@ -1,22 +1,28 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { cancelLatexCompile, compileLatexProject, getLatexCapabilities, recoverLatexProject, LatexTransportError } from './compileTransport.ts'
-import { type LatexCapabilities, type LatexCheckpoint, type LatexDiagnostic, type LatexProject, type LatexProof, unavailableLatexCapabilities } from './types.ts'
-import { cloneAsNewProject, isCurrentProof, isRecord, makeCheckpoint, newLatexId, projectSnapshotHash, reviseProject, sameProjectSource, validateLatexProject } from './project.ts'
+import { cancelLatexCompile, compileLatexProject, getLatexCapabilities, getLatexOperation, LatexTransportError } from './compileTransport.ts'
+import { LATEX_MAIN_FILE_NOTICE, type LatexCapabilities, type LatexCheckpoint, type LatexDiagnostic, type LatexProject, type LatexProof, type LatexRuntime, unavailableLatexCapabilities } from './types.ts'
+import { cloneAsNewProject, isCurrentProof, isRecord, makeCheckpoint, newLatexId, reviseProject, sameProjectSource, validateLatexProject } from './project.ts'
 import { LatexProjectStore, LatexStorageError, LOCAL_LATEX_LIMITS, openLatexProjectStore } from './projectStore.ts'
 import { createTemplateProject } from './templates.ts'
 import { mayAutoCompile, newerProof, recoverableCompileFailure } from './compilePolicy.ts'
-import { compileBrowserLatexProject, getBrowserLatexCapabilities } from './browserCompile.ts'
+import { approveBrowserPackageGroups, BrowserPackageGroupRequiredError, browserLatexCompatibility, cancelBrowserCompile, clearBrowserEngineCache, compileBrowserProject, getBrowserCapabilities, getBrowserEngineCacheSummary, type BrowserPreparation, type LatexCompileProgress } from './browserCompiler.ts'
+import { repairAltaCvBrowserProject } from './altacvBrowser.ts'
+import type { EngineCacheSummary } from './engineAssetStore.ts'
 
 export type LatexSaveState = { kind: 'unsaved' | 'saving' | 'saved' | 'session' | 'conflict'; revision?: number; savedAt?: string; reason?: string }
 export type CompileAttempt = { projectId: string; revision: number; operationKey: string; stage: 'waiting' | 'ready' | 'failed' | 'cancelling' | 'cancelled' | 'recoverable' | 'recovering';
-  message: string; diagnostics: LatexDiagnostic[]; log: string; snapshot: LatexProject; requestId?: string }
-type CompileIntent = { snapshot: LatexProject; operationKey: string; mode: 'manual' | 'auto'; compiler: 'browser' | 'private' }
+  message: string; diagnostics: LatexDiagnostic[]; log: string; snapshot: LatexProject; requestId?: string; runtime: LatexRuntime; progress?: LatexCompileProgress }
+type CompileIntent = { snapshot: LatexProject; operationKey: string; mode: 'manual' | 'auto'; runtime: LatexRuntime }
 type RunningCompile = CompileIntent & { controller: AbortController; cancelled: boolean; stopped: boolean }
 const onlineSnapshot = () => typeof navigator !== 'undefined' && navigator.onLine
 const subscribeOnline = (notify: () => void) => { window.addEventListener('online', notify); window.addEventListener('offline', notify); return () => { window.removeEventListener('online', notify); window.removeEventListener('offline', notify) } }
 const messageOf = (error: unknown) => error instanceof Error ? error.message : 'The operation could not be completed. Your writing is unchanged.'
+export function browserMemoryWarning(memory: unknown): number | null {
+  return typeof memory === 'number' && Number.isFinite(memory) && memory > 0 && memory < 4 ? memory : null
+}
+export type BrowserPreparationRequest = { projectId: string; revision: number; snapshot: LatexProject; memoryGB?: number; packages?: BrowserPreparation }
 
 export default function useLatexWorkspace(active: boolean) {
   const [projects, setProjects] = useState<LatexProject[]>([]), [projectId, setProjectId] = useState<string | null>(null)
@@ -25,16 +31,22 @@ export default function useLatexWorkspace(active: boolean) {
   const [proofSources, setProofSources] = useState<Record<string, LatexProject>>({})
   const [protectedRecords, setProtectedRecords] = useState<string[]>([]), [storageWarning, setStorageWarning] = useState('')
   const [capabilities, setCapabilities] = useState<LatexCapabilities>({ ...unavailableLatexCapabilities, reason: 'Compiler availability has not been checked. Source editing remains local.' })
+  const [runtime, setRuntime] = useState<LatexRuntime>('browser')
   const [capabilitiesLoading, setCapabilitiesLoading] = useState(false), [autoCompile, setAutoCompile] = useState(false)
   const [compilerKind, setCompilerKind] = useState<'browser' | 'private'>('browser')
   const [attempt, setAttempt] = useState<CompileAttempt | null>(null), [queuedRevision, setQueuedRevision] = useState<number | null>(null)
   const [notice, setNotice] = useState('')
+  const [engineCache, setEngineCache] = useState<EngineCacheSummary | null>(null), [engineCacheBusy, setEngineCacheBusy] = useState(false)
+  const [browserPreparation, setBrowserPreparation] = useState<BrowserPreparationRequest | null>(null)
   const online = useSyncExternalStore(subscribeOnline, onlineSnapshot, () => false)
   const store = useRef<LatexProjectStore | null>(null), expected = useRef(new Map<string, number | null>())
   const proofSnapshots = useRef<Record<string, LatexProject>>({})
   const projectsRef = useRef(projects), idRef = useRef(projectId), savesRef = useRef(saves), proofsRef = useRef(proofs)
   // These refs are updated by the canonical actions below, never copied back from a possibly older React render.
   const mounted = useRef(true), activeRef = useRef(active), onlineRef = useRef(online), capabilitiesRef = useRef(capabilities), autoRef = useRef(autoCompile)
+  const runtimeRef = useRef<LatexRuntime>('browser')
+  const memoryAcknowledged = useRef(false), preparationRef = useRef<BrowserPreparationRequest | null>(null)
+  const engineMutation = useRef(false), preparationOperation = useRef<AbortController | null>(null), cacheReadSequence = useRef(0)
   useLayoutEffect(() => { activeRef.current = active; onlineRef.current = online; capabilitiesRef.current = capabilities; autoRef.current = autoCompile }, [active, online, capabilities, autoCompile])
   const channel = useRef<BroadcastChannel | null>(null), saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null), autoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveChain = useRef<Promise<void>>(Promise.resolve()), running = useRef<RunningCompile | null>(null), queued = useRef<CompileIntent | null>(null)
@@ -102,10 +114,15 @@ export default function useLatexWorkspace(active: boolean) {
   useLayoutEffect(() => { flushOnSuspend.current = flushSave })
   function scheduleAuto(project: LatexProject) {
     if (autoTimer.current) clearTimeout(autoTimer.current)
-    if (!mayAutoCompile({ enabled: autoRef.current, active: activeRef.current, online: onlineRef.current, ready: capabilitiesRef.current.ready, retryAt: retryAt.current })) return
+    // A newest incompatible edit still supersedes an older automatic intent.
+    // Explicit manual snapshots remain intentional, even while writing changes.
+    if (queued.current?.mode === 'auto' && queued.current.snapshot.id === project.id) { queued.current = null; setQueuedRevision(null) }
+    const compatible = () => project.mainFile !== null && capabilitiesRef.current.profiles.some((profile) => profile.id === project.engine)
+      && (runtimeRef.current !== 'browser' || !browserLatexCompatibility(project, capabilitiesRef.current.profiles).some((item) => item.severity === 'error'))
+    if (preparationRef.current || engineMutation.current || !compatible() || !mayAutoCompile({ enabled: autoRef.current, active: activeRef.current, online: onlineRef.current, runtime: runtimeRef.current, ready: capabilitiesRef.current.ready, retryAt: retryAt.current })) return
     autoTimer.current = setTimeout(() => {
       autoTimer.current = null
-      if (idRef.current !== project.id || !mayAutoCompile({ enabled: autoRef.current, active: activeRef.current, online: onlineRef.current, ready: capabilitiesRef.current.ready, retryAt: retryAt.current })) return
+      if (preparationRef.current || engineMutation.current || idRef.current !== project.id || !compatible() || !mayAutoCompile({ enabled: autoRef.current, active: activeRef.current, online: onlineRef.current, runtime: runtimeRef.current, ready: capabilitiesRef.current.ready, retryAt: retryAt.current })) return
       enqueueCompile(project, 'auto')
     }, 1800)
   }
@@ -158,7 +175,7 @@ export default function useLatexWorkspace(active: boolean) {
       disposed = true; mounted.current = false
       if (saveTimer.current) clearTimeout(saveTimer.current)
       if (autoTimer.current) clearTimeout(autoTimer.current)
-      running.current?.controller.abort(); capabilitiesRequest.current?.abort()
+      running.current?.controller.abort(); capabilitiesRequest.current?.abort(); preparationOperation.current?.abort()
       void saveChain.current.finally(() => store.current?.close())
     }
   }, [])
@@ -181,9 +198,10 @@ export default function useLatexWorkspace(active: boolean) {
   }, [ready])
 
   useEffect(() => {
-    if (!active || !online || !autoCompile) stopAutoSchedule()
+    if (!active || (runtime === 'native' && !online) || !autoCompile) stopAutoSchedule()
+    if (!active) preparationOperation.current?.abort()
     if (!active && ready) void flushOnSuspend.current()
-  }, [active, online, autoCompile, ready])
+  }, [active, online, autoCompile, ready, runtime])
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
@@ -194,21 +212,17 @@ export default function useLatexWorkspace(active: boolean) {
   }, [])
 
   async function refreshCapabilities(): Promise<LatexCapabilities | null> {
-    if (!activeRef.current || !onlineRef.current) return null
+    const selectedRuntime = runtimeRef.current
+    if (!activeRef.current || (selectedRuntime === 'native' && !onlineRef.current)) return null
     capabilitiesRequest.current?.abort()
     const controller = new AbortController(); capabilitiesRequest.current = controller
     setCapabilitiesLoading(true)
     try {
-      let value: LatexCapabilities | null = null
-      try { value = await getLatexCapabilities(controller.signal) } catch { if (controller.signal.aborted) return null }
-      const kind = value?.enabled && value.ready ? 'private' : 'browser'
-      if (kind === 'browser') value = await getBrowserLatexCapabilities(controller.signal)
-      if (value && !controller.signal.aborted && mounted.current) {
-        compilerRef.current = kind; setCompilerKind(kind); capabilitiesRef.current = value; setCapabilities(value); return value
-      }
+      const value = selectedRuntime === 'browser' ? await getBrowserCapabilities(controller.signal) : await getLatexCapabilities(controller.signal)
+      if (!controller.signal.aborted && mounted.current && runtimeRef.current === selectedRuntime) { capabilitiesRef.current = value; setCapabilities(value); return value }
       return null
     } catch (error) {
-      if (!controller.signal.aborted && mounted.current) {
+      if (!controller.signal.aborted && mounted.current && runtimeRef.current === selectedRuntime) {
         const unavailable = { ...unavailableLatexCapabilities, reason: messageOf(error) }
         capabilitiesRef.current = unavailable; setCapabilities(unavailable)
         return unavailable
@@ -218,10 +232,25 @@ export default function useLatexWorkspace(active: boolean) {
   }
 
   useEffect(() => {
-    if (active && online) void refreshCapabilities()
+    if (active && (runtime === 'browser' || online)) void refreshCapabilities()
     else capabilitiesRequest.current?.abort()
     // Capability checks never upload source or initiate a compile.
-  }, [active, online])
+  }, [active, online, runtime])
+
+  function selectRuntime(next: LatexRuntime) {
+    if (next === runtimeRef.current || (next !== 'browser' && next !== 'native')) return false
+    if (running.current || unresolved.current) { setNotice('Cancel or resolve the current compile before changing runtime. No source was uploaded or converted by this action.'); return false }
+    // Auto/upload consent belongs to one runtime, never to a later selection.
+    stopAutoSchedule(); autoRef.current = false; setAutoCompile(false); capabilitiesRequest.current?.abort()
+    preparationOperation.current?.abort()
+    runtimeRef.current = next; setRuntime(next)
+    preparationRef.current = null; setBrowserPreparation(null)
+    retryAt.current = 0
+    const unavailable = { ...unavailableLatexCapabilities, reason: next === 'browser' ? 'Checking the fixed browser-local engine bundle. No source is uploaded.' : 'Checking the explicitly selected private native compiler.' }
+    capabilitiesRef.current = unavailable; setCapabilities(unavailable); setCapabilitiesLoading(false); setAttempt(null)
+    setNotice(next === 'browser' ? 'Browser-local runtime selected. Source, images, logs and PDFs stay on this device. First use downloads only the fixed engine assets.' : 'Private native runtime selected explicitly. Auto Compile is off; source upload still requires informed compile consent.')
+    return true
+  }
 
   function validateTextChange(fileId: string, text: string) {
     const project = currentProject()
@@ -332,10 +361,31 @@ export default function useLatexWorkspace(active: boolean) {
 
   function enqueueCompile(project: LatexProject, mode: CompileIntent['mode'], operationKey = newLatexId()) {
     try { validateLatexProject(project) } catch (error) { setNotice(messageOf(error)); return }
-    if (!activeRef.current || !onlineRef.current || !capabilitiesRef.current.enabled || !capabilitiesRef.current.ready) { if (mode === 'manual') setNotice(!onlineRef.current ? 'Offline. Keep editing or download your retained proof; new compilation requires the private compiler.' : capabilitiesRef.current.reason); return }
+    if (project.mainFile === null) { if (mode === 'manual') setNotice(LATEX_MAIN_FILE_NOTICE); return }
+    if (engineMutation.current) { if (mode === 'manual') setNotice('Wait for the engine cache action or package consent to finish before compiling. No source was sent.'); return }
+    if (preparationRef.current) { if (mode === 'auto') return; dismissBrowserPreparation() }
+    const selectedRuntime = runtimeRef.current
+    if (!activeRef.current || (selectedRuntime === 'native' && !onlineRef.current) || !capabilitiesRef.current.enabled || !capabilitiesRef.current.ready) { if (mode === 'manual') setNotice(selectedRuntime === 'native' && !onlineRef.current ? 'Offline. Private native compilation is paused; source editing and retained downloads still work.' : capabilitiesRef.current.reason); return }
     if (!capabilitiesRef.current.profiles.some((profile) => profile.id === project.engine)) { setNotice('The selected engine is not a ready compiler profile. Choose a reported supported engine.'); return }
     if (Date.now() < retryAt.current) { if (mode === 'manual') setNotice('The compiler fair-use limit is active. New source was kept; no automatic retry was started.'); return }
-    const intent: CompileIntent = { snapshot: { ...project, files: project.files.map((file) => ({ ...file })), assets: project.assets.map((asset) => ({ ...asset })) }, operationKey, mode, compiler: compilerRef.current }
+    const memoryGB = browserMemoryWarning(typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { deviceMemory?: number }).deviceMemory)
+    if (selectedRuntime === 'browser' && memoryGB !== null && !memoryAcknowledged.current) {
+      const request = { projectId: project.id, revision: project.revision, snapshot: { ...project, files: project.files.map((file) => ({ ...file })), assets: project.assets.map((asset) => ({ ...asset })) }, memoryGB }
+      preparationRef.current = request; setBrowserPreparation(request); stopAutoSchedule()
+      return
+    }
+    if (mode === 'manual' && selectedRuntime === 'browser') {
+      try {
+        const repaired = repairAltaCvBrowserProject(project)
+        if (repaired !== project) {
+          applyProject(repaired, `Before AltaCV font repair r${project.revision}`)
+          project = repaired
+          setNotice("Updated the older browser copy's generated font setup for this engine. A checkpoint preserves the previous source; your writing, images and original AltaCV files are unchanged.")
+        }
+      } catch (error) { setNotice(messageOf(error)); return }
+    }
+    const intent: CompileIntent = { snapshot: { ...project, files: project.files.map((file) => ({ ...file })), assets: project.assets.map((asset) => ({ ...asset })) }, operationKey, mode, runtime: selectedRuntime }
+    preparationRef.current = null; setBrowserPreparation(null)
     if (running.current) {
       if (project.id === running.current.snapshot.id && project.revision === running.current.snapshot.revision && sameProjectSource(project, running.current.snapshot)) {
         queued.current = null; setQueuedRevision(null); if (mode === 'manual') setNotice('This exact source revision is already in flight. No duplicate compile was queued.'); return
@@ -346,33 +396,21 @@ export default function useLatexWorkspace(active: boolean) {
     void executeRef.current(intent)
   }
 
-  async function clearPendingCompile(operationKey: string) {
-    try { await store.current?.clearPendingCompile(operationKey) }
-    catch (error) { if (mounted.current) setStorageWarning(`${messageOf(error)} The recovery identity could not be cleared. Local writing is unchanged.`) }
-  }
-
-  async function execute(intent: CompileIntent, recovering = false) {
+  async function execute(intent: CompileIntent) {
+    if (intent.runtime !== runtimeRef.current || !activeRef.current || (intent.runtime === 'native' && !onlineRef.current)) return
     const slot: RunningCompile = { ...intent, controller: new AbortController(), cancelled: false, stopped: false }
     let terminal = false
     running.current = slot; unresolved.current = null
-    if (mounted.current) setAttempt({ projectId: intent.snapshot.id, revision: intent.snapshot.revision, operationKey: intent.operationKey, stage: recovering ? 'recovering' : 'waiting',
-      message: recovering ? 'Checking the captured operation and verifying its PDF. No source is uploaded and no new build is started.' : intent.compiler === 'browser' ? 'Preparing local XeLaTeX. Your source and images stay on this device.' : 'Saving the captured operation before upload. You can keep editing.', diagnostics: [], log: '', snapshot: intent.snapshot })
+    let lastProgress: LatexCompileProgress | undefined
+    if (mounted.current) setAttempt({ projectId: intent.snapshot.id, revision: intent.snapshot.revision, operationKey: intent.operationKey, stage: 'waiting',
+      message: intent.runtime === 'browser' ? 'Preparing the captured revision for local browser compilation. No source is uploaded.' : 'Uploading this revision and waiting for the private compiler. You can keep editing.', diagnostics: [], log: '', snapshot: intent.snapshot, runtime: intent.runtime })
     try {
-      await flushSave()
-      if (store.current && !recovering && intent.compiler === 'private') {
-        try { await store.current.retainPendingCompile({ operationKey: intent.operationKey, snapshot: intent.snapshot, snapshotHash: await projectSnapshotHash(intent.snapshot), createdAt: new Date().toISOString() }) }
-        catch (error) {
-          if (error instanceof LatexStorageError && ['conflict', 'protected'].includes(error.code)) throw error
-          if (mounted.current) setStorageWarning(`${messageOf(error)} This operation's recovery identity is session-only. Keep this tab open or export your source before closing.`)
+      const proof = intent.runtime === 'browser' ? await compileBrowserProject(intent.snapshot, intent.operationKey, slot.controller.signal, (progress) => {
+        if (mounted.current && running.current === slot && !slot.cancelled && !slot.controller.signal.aborted) {
+          lastProgress = { ...progress }
+          setAttempt((current) => current?.operationKey === intent.operationKey ? { ...current, message: progress.message, progress } : current)
         }
-      }
-      if (slot.cancelled || slot.controller.signal.aborted) throw new LatexTransportError({ error: 'Stopped waiting for the captured operation.', code: 'request_aborted', request_id: 'latex-local', operationKey: intent.operationKey, status: 408 })
-      if (mounted.current && !recovering && intent.compiler === 'private') setAttempt((current) => current?.operationKey === intent.operationKey ? { ...current, message: 'Uploading this revision and waiting for the private compiler. You can keep editing.' } : current)
-      const proof = intent.compiler === 'browser'
-        ? await compileBrowserLatexProject(intent.snapshot, intent.operationKey, slot.controller.signal, (progress) => {
-          if (mounted.current && !slot.cancelled && !slot.stopped) setAttempt((current) => current?.operationKey === intent.operationKey ? { ...current, message: progress.message } : current)
-        })
-        : await (recovering ? recoverLatexProject : compileLatexProject)(intent.snapshot, intent.operationKey, slot.controller.signal)
+      }) : await compileLatexProject(intent.snapshot, intent.operationKey, slot.controller.signal)
       if (slot.cancelled || slot.stopped || !mounted.current) return
       if (proof.projectId !== intent.snapshot.id || proof.revision !== intent.snapshot.revision) throw new Error('Compiler result identity does not match its immutable source snapshot.')
       terminal = true
@@ -380,7 +418,7 @@ export default function useLatexWorkspace(active: boolean) {
       const previousIsCurrent = Boolean(isCurrentProof(latestSource ?? null, previousProof) && sameProjectSource(latestSource, proofSnapshots.current[proof.projectId]))
       const differentSource = latestSource?.revision === proof.revision && !sameProjectSource(latestSource, intent.snapshot)
       setAttempt({ projectId: proof.projectId, revision: proof.revision, operationKey: proof.operationKey, stage: 'ready', snapshot: intent.snapshot,
-        message: differentSource ? `PDF ready for the captured r${proof.revision}, but the stored source at that revision is different. Current writing is unchanged.` : `Typeset PDF ready for revision ${proof.revision}.`, diagnostics: proof.diagnostics, log: proof.log })
+        message: differentSource ? `PDF ready for the captured r${proof.revision}, but the stored source at that revision is different. Current writing is unchanged.` : `${intent.runtime === 'browser' ? 'Verified local' : 'Typeset'} PDF ready for revision ${proof.revision}.`, diagnostics: proof.diagnostics, log: proof.log, runtime: intent.runtime, progress: lastProgress })
       if (newerProof(previousProof, proof) && !(previousIsCurrent && differentSource)) {
         proofSnapshots.current = { ...proofSnapshots.current, [proof.projectId]: intent.snapshot }; setProofSources(proofSnapshots.current)
         proofsRef.current = { ...proofsRef.current, [proof.projectId]: proof }; setProofs(proofsRef.current)
@@ -401,69 +439,133 @@ export default function useLatexWorkspace(active: boolean) {
       }
     } catch (error) {
       if (!mounted.current || slot.cancelled) return
+      if (intent.runtime === 'browser' && error instanceof BrowserPackageGroupRequiredError) {
+        const request = { projectId: intent.snapshot.id, revision: intent.snapshot.revision, snapshot: intent.snapshot, packages: error.preparation }
+        preparationRef.current = request; setBrowserPreparation(request); stopAutoSchedule()
+      }
       const transport = error instanceof LatexTransportError ? error : null
-      const expired = recovering && Boolean(transport && [404, 410].includes(transport.status ?? 0))
-      const serverTerminal = expired || Boolean(transport && ['operation_cancelled', 'operation_failed'].includes(transport.code))
-      const recoverable = intent.compiler === 'private' && (slot.stopped || (recovering && !serverTerminal) || Boolean(transport && recoverableCompileFailure(transport.code, transport.status)))
-      terminal = !recoverable
+      const recoverable = intent.runtime === 'native' && (slot.stopped || Boolean(transport && recoverableCompileFailure(transport.code, transport.status)))
       if (recoverable) unresolved.current = intent
       if (expired) { queued.current = null; setQueuedRevision(null) }
       if (transport?.status === 429) { retryAt.current = Date.now() + (transport.retryAfterSeconds ?? 60) * 1000; stopAutoSchedule() }
-      setAttempt({ projectId: intent.snapshot.id, revision: intent.snapshot.revision, operationKey: intent.operationKey, stage: recoverable ? 'recoverable' : slot.stopped || transport?.code === 'operation_cancelled' ? 'cancelled' : 'failed',
-        message: slot.stopped ? intent.compiler === 'browser' ? 'The local compiler worker was terminated. No source was uploaded; your writing and last PDF are unchanged.' : 'Stopped waiting. Server cancellation has not been acknowledged; admitted work remains deadline-bounded.' : expired ? 'The server no longer has this private operation/result. Local source and retained PDFs are unchanged. Compile again explicitly if needed.' : messageOf(error),
-        diagnostics: transport?.diagnostics ?? [], log: transport?.log ?? '', snapshot: intent.snapshot, requestId: transport?.request_id })
+      setAttempt({ projectId: intent.snapshot.id, revision: intent.snapshot.revision, operationKey: intent.operationKey, stage: transport?.code === 'browser_compile_cancelled' ? 'cancelled' : recoverable ? 'recoverable' : 'failed',
+        message: slot.stopped ? 'Stopped waiting. Server cancellation has not been acknowledged; admitted work remains deadline-bounded.' : messageOf(error),
+        diagnostics: transport?.diagnostics ?? [], log: transport?.log ?? '', snapshot: intent.snapshot, requestId: transport?.request_id, runtime: intent.runtime, progress: lastProgress })
     } finally {
       if (intent.compiler === 'private' && (terminal || slot.cancelled)) await clearPendingCompile(intent.operationKey)
       if (running.current === slot) running.current = null
-      if (!mounted.current || unresolved.current) return
+      if (mounted.current && intent.runtime === 'browser') void refreshEngineCache()
+      if (!mounted.current || unresolved.current || preparationRef.current) return
       const next = queued.current; queued.current = null; setQueuedRevision(null)
-      if (next && activeRef.current && onlineRef.current && (next.mode === 'manual' || mayAutoCompile({ enabled: autoRef.current, active: activeRef.current, online: onlineRef.current, ready: capabilitiesRef.current.ready, retryAt: retryAt.current }))) void executeRef.current(next)
+      if (next && next.runtime === runtimeRef.current && activeRef.current && (next.runtime === 'browser' || onlineRef.current) && (next.mode === 'manual' || mayAutoCompile({ enabled: autoRef.current, active: activeRef.current, online: onlineRef.current, runtime: next.runtime, ready: capabilitiesRef.current.ready, retryAt: retryAt.current }))) void executeRef.current(next)
     }
   }
   executeRef.current = execute
+
+  async function refreshEngineCache() {
+    const sequence = ++cacheReadSequence.current
+    try { const summary = await getBrowserEngineCacheSummary(); if (mounted.current && sequence === cacheReadSequence.current) setEngineCache(summary) }
+    catch (error) { if (mounted.current && sequence === cacheReadSequence.current) setEngineCache({ available: false, bytes: 0, entries: 0, versions: [], reason: messageOf(error) }) }
+  }
+  useEffect(() => { if (active && runtime === 'browser') void refreshEngineCache() }, [active, runtime])
+
+  async function clearEngineCache() {
+    if (running.current || engineMutation.current) { setNotice('Wait for engine preparation or cancel the current local compile before clearing assets. Project writing is unchanged.'); return false }
+    engineMutation.current = true; cacheReadSequence.current++
+    stopAutoSchedule()
+    setEngineCacheBusy(true)
+    try {
+      await clearBrowserEngineCache(); await refreshEngineCache()
+      if (mounted.current) setNotice('Engine asset cache and package permissions cleared. Project sources, checkpoints and PDF proofs are unchanged. The next compile may read its fixed assets from HTTP cache or download them again; offline availability is not promised.')
+      return true
+    } catch (error) { if (mounted.current) setNotice(messageOf(error)); return false }
+    finally { engineMutation.current = false; if (mounted.current) setEngineCacheBusy(false) }
+  }
+  async function continueBrowserPreparation() {
+    if (engineMutation.current) return
+    const request = preparationRef.current
+    const currentRequest = () => {
+      const project = currentProject()
+      return mounted.current && activeRef.current && request && preparationRef.current === request && project && runtimeRef.current === 'browser'
+        && !running.current && !unresolved.current && request.projectId === project.id && request.revision === project.revision && sameProjectSource(request.snapshot, project) ? project : null
+    }
+    if (!request || !currentRequest()) {
+      dismissBrowserPreparation(); setNotice('Source or runtime changed while engine preparation was waiting. Compile the latest revision explicitly.'); return
+    }
+    const controller = new AbortController()
+    preparationOperation.current = controller; engineMutation.current = true
+    let next: LatexProject | null = null
+    setEngineCacheBusy(true)
+    try {
+      if (request.packages) await approveBrowserPackageGroups(request.packages, controller.signal)
+      next = controller.signal.aborted ? null : currentRequest()
+      // Consent authorizes only public group pins, never an old source intent.
+      // Recheck after storage/digest awaits before starting any compiler worker.
+      if (!next) {
+        if (mounted.current && preparationRef.current === request) { dismissBrowserPreparation(); setNotice('Source, runtime or workspace changed during package approval. No compile started; compile the latest revision explicitly.') }
+        return
+      }
+      if (request.memoryGB !== undefined) memoryAcknowledged.current = true
+      preparationRef.current = null; setBrowserPreparation(null)
+      queued.current = null; setQueuedRevision(null)
+    } catch (error) { if (mounted.current && !controller.signal.aborted) setNotice(messageOf(error)) }
+    finally { preparationOperation.current = null; engineMutation.current = false; if (mounted.current) setEngineCacheBusy(false) }
+    if (next) enqueueCompile(next, 'manual')
+  }
+  function dismissBrowserPreparation() { preparationOperation.current?.abort(); preparationRef.current = null; setBrowserPreparation(null); queued.current = null; setQueuedRevision(null); stopAutoSchedule() }
 
   async function cancelCompile() {
     const slot = running.current, intent = slot ?? unresolved.current
     if (!intent) return
     queued.current = null; setQueuedRevision(null); stopAutoSchedule()
-    if (slot?.compiler === 'browser') {
-      slot.stopped = true; slot.controller.abort()
-      return
-    }
-    setAttempt((current) => current?.operationKey === intent.operationKey ? { ...current, stage: 'cancelling', message: 'Requesting server cancellation. Waiting for the sandbox acknowledgment.' } : current)
+    setAttempt((current) => current?.operationKey === intent.operationKey ? { ...current, stage: 'cancelling', message: intent.runtime === 'browser' ? 'Terminating the local compiler worker. Source and the last good PDF are unchanged.' : 'Requesting server cancellation. Waiting for the sandbox acknowledgment.' } : current)
     try {
-      const result = await cancelLatexCompile(intent.operationKey)
+      const result = intent.runtime === 'browser' ? await cancelBrowserCompile(intent.operationKey) : await cancelLatexCompile(intent.operationKey)
       if (result.cancelled) {
         if (slot) { slot.cancelled = true; slot.controller.abort() }
-        if (unresolved.current?.operationKey === intent.operationKey) unresolved.current = null
-        await clearPendingCompile(intent.operationKey)
-        setAttempt((current) => current?.operationKey === intent.operationKey ? { ...current, stage: 'cancelled', message: 'Server acknowledged cancellation of this operation.' } : current)
+        unresolved.current = null
+        setAttempt((current) => current?.operationKey === intent.operationKey ? { ...current, stage: 'cancelled', message: intent.runtime === 'browser' ? 'Local cancellation acknowledged: the compiler worker was terminated. No server work or source upload exists to recover.' : 'Server acknowledged cancellation of this operation.' } : current)
       } else {
         if (result.status === 'failed' && !running.current && unresolved.current?.operationKey === intent.operationKey) { unresolved.current = null; await clearPendingCompile(intent.operationKey) }
         setAttempt((current) => current?.operationKey === intent.operationKey && !['ready', 'failed', 'cancelled'].includes(current.stage)
-          ? { ...current, stage: result.status === 'failed' ? 'failed' : running.current?.operationKey === intent.operationKey ? 'waiting' : 'recoverable', message: `Cancellation was not acknowledged. Server status: ${result.status}.` } : current)
+          ? { ...current, stage: result.status === 'failed' || intent.runtime === 'browser' ? 'failed' : running.current?.operationKey === intent.operationKey ? 'waiting' : 'recoverable', message: intent.runtime === 'browser' ? 'The local attempt already settled; there is no server operation to cancel or recover.' : `Cancellation was not acknowledged. Server status: ${result.status}.` } : current)
       }
     } catch (error) { setAttempt((current) => current?.operationKey === intent.operationKey && !['ready', 'failed', 'cancelled'].includes(current.stage)
-      ? { ...current, stage: running.current?.operationKey === intent.operationKey ? 'waiting' : 'recoverable', message: `Cancellation is unconfirmed. ${messageOf(error)}` } : current) }
+      ? { ...current, stage: intent.runtime === 'browser' ? 'failed' : running.current?.operationKey === intent.operationKey ? 'waiting' : 'recoverable', message: `Cancellation is unconfirmed. ${messageOf(error)}` } : current) }
   }
 
   function stopWaiting() {
     const slot = running.current
     if (!slot) return
+    if (slot.runtime === 'browser') { void cancelCompile(); return }
     slot.stopped = true; queued.current = null; setQueuedRevision(null); stopAutoSchedule(); slot.controller.abort()
   }
 
   async function recoverCompile() {
     const intent = unresolved.current
-    if (!intent || running.current || !onlineRef.current) return
-    await execute(intent, true)
+    if (!intent || intent.runtime !== 'native' || running.current || !onlineRef.current) return
+    setAttempt((current) => current ? { ...current, stage: 'recovering', message: 'Checking the captured operation. Current source is not re-uploaded.' } : current)
+    try {
+      const operation = await getLatexOperation(intent.operationKey)
+      if (operation.status === 'ready') { await executeRef.current(intent); return }
+      if (operation.status === 'running') { setAttempt((current) => current ? { ...current, stage: 'recoverable', message: 'The server still reports this operation as running. No automatic polling or duplicate build was started.' } : current); return }
+      unresolved.current = null
+      setAttempt((current) => current ? { ...current, stage: operation.status === 'cancelled' ? 'cancelled' : 'failed', message: operation.error ?? `Server operation is ${operation.status}.` } : current)
+      const next = queued.current; queued.current = null; setQueuedRevision(null)
+      if (next && next.mode === 'manual' && activeRef.current && onlineRef.current) void executeRef.current(next)
+    } catch (error) {
+      const expired = error instanceof LatexTransportError && [404, 410].includes(error.status ?? 0)
+      if (expired) { unresolved.current = null; queued.current = null; setQueuedRevision(null) }
+      setAttempt((current) => current ? { ...current, stage: expired ? 'failed' : 'recoverable', message: expired ? 'The server no longer has this private operation/result. Local source and retained PDFs are unchanged. Compile again explicitly if needed.' : `Operation recovery is unavailable. ${messageOf(error)}` } : current)
+    }
   }
 
   const project = projects.find((item) => item.id === projectId) ?? null
   const selectedProof = project ? proofs[project.id] ?? null : null
   const proofCurrent = Boolean(isCurrentProof(project, selectedProof) && sameProjectSource(project, project ? proofSources[project.id] : null))
   return { ready, project, projects, saves, saveState: project ? saves[project.id] : undefined, storageWarning, protectedRecords, checkpoints, proofCurrent,
-    proof: selectedProof, capabilities, capabilitiesLoading, compilerKind, online, autoCompile, attempt, queuedRevision, notice,
+    proof: selectedProof, capabilities, capabilitiesLoading, runtime, selectRuntime, online, autoCompile, attempt, queuedRevision, notice,
+    engineCache, engineCacheBusy, browserPreparation, refreshEngineCache, clearEngineCache, continueBrowserPreparation, dismissBrowserPreparation,
     setNotice, setAutoCompile, refreshCapabilities, flushSave, changeText, validateTextChange, applyProject, addProject, selectProject, checkpointNow,
     saveAsNewProject: () => { const current = currentProject(); if (current) addProject(cloneAsNewProject(current)) }, reloadStoredProject, removeProject,
     compile: () => { const current = currentProject(); if (current) { if (autoTimer.current) clearTimeout(autoTimer.current); enqueueCompile(current, 'manual') } }, cancelCompile, stopWaiting, recoverCompile }

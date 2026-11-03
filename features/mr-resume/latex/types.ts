@@ -3,6 +3,7 @@ export const LATEX_PROJECT_VERSION = 1 as const
 export const LATEX_MODE_KEY = 'mr-resume:editor-mode:v1'
 export const LATEX_DATABASE = 'mr-resume:latex:v1'
 export const LATEX_API = '/api/mr-resume/latex'
+export const LATEX_MAIN_FILE_NOTICE = 'Choose any .tex file as main in Project files when you are ready to compile. Editing and source ZIP export work without one.'
 export const LATEX_LIMITS = {
   files: 32,
   sourceBytes: 1024 * 1024,
@@ -15,6 +16,7 @@ export const LATEX_LIMITS = {
 } as const
 
 export type LatexEngine = 'lualatex' | 'xelatex' | 'pdflatex'
+export type LatexRuntime = 'browser' | 'native'
 export type LatexTextFile = { id: string; path: string; content: string }
 export type LatexAsset = { id: string; path: string; mediaType: 'image/png' | 'image/jpeg'; blob: Blob }
 export type LatexProject = {
@@ -22,7 +24,8 @@ export type LatexProject = {
   id: string
   title: string
   revision: number
-  mainFile: string
+  /** An imported source project can remain an editable draft until its entry point is selected. */
+  mainFile: string | null
   engine: LatexEngine
   files: LatexTextFile[]
   assets: LatexAsset[]
@@ -83,7 +86,9 @@ export type LatexCompileResult = {
   syncAvailable: boolean
   createdAt: string
 }
-export type LatexProof = LatexCompileResult & { data: ArrayBuffer }
+// Runtime is local proof metadata, never a native wire or source-project field.
+// Existing v1 proofs without it remain native proofs.
+export type LatexProof = LatexCompileResult & { data: ArrayBuffer; runtime?: LatexRuntime }
 export type LatexCompileFailure = {
   error: string
   code: string

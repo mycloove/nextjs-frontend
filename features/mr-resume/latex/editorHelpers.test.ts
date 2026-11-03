@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { readFileSync } from 'node:fs'
 import { EditorSelection, EditorState } from '@codemirror/state'
 import { environmentFold, latexSnippets, sourceLineSeparator } from './editorHelpers.ts'
 
@@ -41,4 +42,10 @@ test('curated completions use real placeholders and paired environments, with no
   assert.ok(latexSnippets.every((item) => item.template.includes('${1:')))
   const environment = latexSnippets.find((item) => item.label === '\\begin')!
   assert.equal(environment.template.split('${1:environment}').length, 3)
+})
+
+test('compile shortcut takes precedence over the default blank-line editing command', () => {
+  const source = readFileSync(new URL('./CodeMirrorSource.tsx', import.meta.url), 'utf8')
+  const compile = source.indexOf("{ key: 'Mod-Enter', run:")
+  assert.ok(compile > 0 && compile < source.indexOf('...defaultKeymap'))
 })

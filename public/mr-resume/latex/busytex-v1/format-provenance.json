@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "engine": "LuaHBTeX 1.16.0 / TeX Live 2023.0",
+  "binarySHA256": "a7785b59bfddb8667e7738443f111430e3ee2bd3ec0c1c26629267849e091415",
+  "sourceArchiveSHA256": "a2d753d927b97b1bd45424366ff86f5a4d60ea61c4e421cb093d9a6533ecbfd1",
+  "sourceEpoch": 1708041600,
+  "bytes": 11870231,
+  "sha256": "8189d4954446de324cfb3182f0c276fa8b4d6a213aef98b53192eea78b08630d",
+  "method": "actual unmodified pinned WASM luahbtex --ini lualatex.ini; native .fmt files excluded from the provisioning filesystem"
+}

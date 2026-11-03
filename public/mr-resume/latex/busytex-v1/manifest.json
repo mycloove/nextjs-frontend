@@ -1,0 +1,293 @@
+{
+  "version": 1,
+  "profileVersion": "browser-busytex-v1-tl2023-4499aa69-r5",
+  "engines": [
+    {
+      "id": "pdflatex",
+      "name": "pdfLaTeX (browser)",
+      "version": "pdfTeX 1.40.25 / TeX Live 2023.0",
+      "fonts": [
+        "Computer Modern",
+        "Latin Modern Roman"
+      ],
+      "packages": [
+        "article",
+        "geometry",
+        "enumitem",
+        "titlesec",
+        "hyperref",
+        "graphicx",
+        "classic-bibtex",
+        "lmodern"
+      ]
+    },
+    {
+      "id": "xelatex",
+      "name": "XeLaTeX (browser)",
+      "version": "XeTeX 0.999995 / TeX Live 2023.0",
+      "fonts": [
+        "Latin Modern Roman"
+      ],
+      "packages": [
+        "article",
+        "geometry",
+        "enumitem",
+        "titlesec",
+        "hyperref",
+        "graphicx",
+        "classic-bibtex",
+        "fontspec"
+      ]
+    },
+    {
+      "id": "lualatex",
+      "name": "LuaLaTeX / LuaHBTeX (browser)",
+      "version": "LuaHBTeX 1.16.0 / TeX Live 2023.0",
+      "fonts": [
+        "Latin Modern Roman",
+        "Noto Sans Bengali"
+      ],
+      "packages": [
+        "article",
+        "geometry",
+        "enumitem",
+        "titlesec",
+        "hyperref",
+        "graphicx",
+        "classic-bibtex",
+        "fontspec",
+        "polyglossia"
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "path": "busytex.js.bin",
+      "bytes": 295606,
+      "sha256": "f381d9ba816d9a4389d429f54fe85f13396aa2f822973d9b66e1f527ced3434b"
+    },
+    {
+      "path": "busytex.wasm",
+      "bytes": 30363063,
+      "sha256": "a7785b59bfddb8667e7738443f111430e3ee2bd3ec0c1c26629267849e091415"
+    },
+    {
+      "path": "compiler-worker.js",
+      "bytes": 46128,
+      "sha256": "37af1ae5a786b0ed4d3123fa3f2360038e174e03fae4739a0340f36bfb3131d9"
+    },
+    {
+      "path": "snapshot-index.json",
+      "bytes": 1130463,
+      "sha256": "84335a00617818e78df61954beb35016fcdbc4cf1cfac0fb9dd0a7e39322551d"
+    },
+    {
+      "path": "texlive.snapshot.tar.gz",
+      "bytes": 39671195,
+      "sha256": "e3471347b05ead75612493f63322d1e0ba0ef534e1c31f9eb0d0014c5dd202a8"
+    }
+  ],
+  "limitations": [
+    "Fixed, pruned TeX Live 2023 package snapshot. No remote package resolution, native filesystem, or network is available to TeX.",
+    "Grouped loading installs core and every profile group for the selected engine. Optional AMS math packages require explicit same-origin download consent; no missing package is fetched automatically.",
+    "At most three TeX passes and one classic BibTeX8 pass. Biber and biblatex are unsupported; the native Academic CV template is refused without substitution.",
+    "LuaLaTeX explicitly runs the bundled LuaHBTeX luahblatex format. Only the listed fonts and smoke-tested profiles are advertised.",
+    "One compile per worker; cancellation/deadline requires the parent to terminate the worker. The binary reserves 512 MiB of WASM memory.",
+    "The unmodified binary uses a guarded, malloc-owned 8 MiB WASM stack. The LuaHB format is built with the actual WASM engine to avoid incompatible native Lua bytecode; runtime init never generates formats.",
+    "Shell escape and Lua sockets are disabled. External tools, EPS conversion, makeindex, dynamic fonts/packages, and SyncTeX are unsupported.",
+    "Bengali glyph coverage with Noto Sans Bengali/HarfBuzz is supported, but complex Bangla Unicode text extraction/search/ATS fidelity is not guaranteed. No Bengali hyphenation patterns are bundled.",
+    "pdfLaTeX Computer Modern covers the basic text/math profile, not the extra TC/EC outlines. Use explicit \\usepackage{lmodern} for extended symbols/T1; missing font data is refused, never substituted.",
+    "Source is limited to 1 MiB, source plus assets to 3 MiB, 32 files, logs to 128 KiB and final PDF to 3 MiB. Parent validates PDF structure, pages and hash."
+  ],
+  "groups": [
+    {
+      "id": "core",
+      "kind": "core",
+      "profiles": [
+        "pdflatex",
+        "xelatex",
+        "lualatex"
+      ],
+      "packages": [
+        "article",
+        "geometry",
+        "enumitem",
+        "titlesec",
+        "hyperref",
+        "graphicx",
+        "classic-bibtex",
+        "lmodern",
+        "color",
+        "multicol",
+        "etoolbox",
+        "xparse",
+        "fontenc",
+        "iftex"
+      ],
+      "archive": "groups/core/texlive.tar.gz",
+      "index": "groups/core/snapshot-index.json",
+      "assets": [
+        {
+          "path": "groups/core/texlive.tar.gz",
+          "bytes": 15717965,
+          "sha256": "e47c12ccce75d910644daa76aa0281a81e791434fd19980db68962f66f041b83"
+        },
+        {
+          "path": "groups/core/snapshot-index.json",
+          "bytes": 917278,
+          "sha256": "772403c7656dc20d03bf09a9ae88bb1dfd9fd60563c633fe46695dfc7d0ce3b7"
+        }
+      ]
+    },
+    {
+      "id": "pdflatex",
+      "kind": "profile",
+      "profiles": [
+        "pdflatex"
+      ],
+      "packages": [],
+      "archive": "groups/pdflatex/texlive.tar.gz",
+      "index": "groups/pdflatex/snapshot-index.json",
+      "assets": [
+        {
+          "path": "groups/pdflatex/texlive.tar.gz",
+          "bytes": 6032608,
+          "sha256": "796d2cbe5d4bce9930c205a0af6cbec889db4179a0f5cffde264495243ecf43f"
+        },
+        {
+          "path": "groups/pdflatex/snapshot-index.json",
+          "bytes": 388,
+          "sha256": "cc6bbf19d4037092979abad2b40d5c4e9392f1bf2b58d4f0073f7bafea37274e"
+        }
+      ]
+    },
+    {
+      "id": "xelatex",
+      "kind": "profile",
+      "profiles": [
+        "xelatex"
+      ],
+      "packages": [],
+      "archive": "groups/xelatex/texlive.tar.gz",
+      "index": "groups/xelatex/snapshot-index.json",
+      "assets": [
+        {
+          "path": "groups/xelatex/texlive.tar.gz",
+          "bytes": 6270766,
+          "sha256": "92db974138236adce295bc16a95b9a2a85c2f1979092b13246a0bb35cf344c3b"
+        },
+        {
+          "path": "groups/xelatex/snapshot-index.json",
+          "bytes": 384,
+          "sha256": "faccaf6420f5a99cdddcfced9695fbaa00150c4ff22545e7dddcfb34d7f5e4f5"
+        }
+      ]
+    },
+    {
+      "id": "lualatex",
+      "kind": "profile",
+      "profiles": [
+        "lualatex"
+      ],
+      "packages": [],
+      "archive": "groups/lualatex/texlive.tar.gz",
+      "index": "groups/lualatex/snapshot-index.json",
+      "assets": [
+        {
+          "path": "groups/lualatex/texlive.tar.gz",
+          "bytes": 8591445,
+          "sha256": "9f88ccaa1dde8583616275042f1a4269760f9f58f288e86214c70c4f877b050d"
+        },
+        {
+          "path": "groups/lualatex/snapshot-index.json",
+          "bytes": 397,
+          "sha256": "042825b1680f6051983e96a794da5f106f65112b27f319f25436bdfb1f6accda"
+        }
+      ]
+    },
+    {
+      "id": "unicode",
+      "kind": "profile",
+      "profiles": [
+        "xelatex",
+        "lualatex"
+      ],
+      "packages": [
+        "fontspec",
+        "polyglossia",
+        "xunicode",
+        "xltxtra",
+        "luaotfload",
+        "luatexbase",
+        "lualibs",
+        "luacode",
+        "lualatex-math",
+        "ctablestack",
+        "makecmds"
+      ],
+      "archive": "groups/unicode/texlive.tar.gz",
+      "index": "groups/unicode/snapshot-index.json",
+      "assets": [
+        {
+          "path": "groups/unicode/texlive.tar.gz",
+          "bytes": 2933161,
+          "sha256": "f5400e5415b7239ec8ecc630c6b2f0243b9895cad8ceb09cf4165cfa98619b14"
+        },
+        {
+          "path": "groups/unicode/snapshot-index.json",
+          "bytes": 203036,
+          "sha256": "9b1aedd3233f7704788bf91cff35aa9cdda818494671756b541580de265757ad"
+        }
+      ]
+    },
+    {
+      "id": "math",
+      "kind": "package",
+      "profiles": [
+        "pdflatex",
+        "xelatex",
+        "lualatex"
+      ],
+      "packages": [
+        "amsart",
+        "amsbook",
+        "amsbooka",
+        "amsbsy",
+        "amscd",
+        "amsdtx",
+        "amsfonts",
+        "amsgen",
+        "amsldoc",
+        "amsmath",
+        "amsmath-2018-12-01",
+        "amsmidx",
+        "amsopn",
+        "amsproc",
+        "amssymb",
+        "amstex",
+        "amstext",
+        "amsthm",
+        "amsxtra",
+        "cmmib57",
+        "eucal",
+        "eufrak",
+        "euscript",
+        "upref"
+      ],
+      "archive": "groups/math/texlive.tar.gz",
+      "index": "groups/math/snapshot-index.json",
+      "assets": [
+        {
+          "path": "groups/math/texlive.tar.gz",
+          "bytes": 124330,
+          "sha256": "08a122020ab7260249252abb77b79b6d508d11b1f9464003ac34ebe5e75a688e"
+        },
+        {
+          "path": "groups/math/snapshot-index.json",
+          "bytes": 9301,
+          "sha256": "0d65708c9a4c5e9bb8100325cba3fcf234ec027a649d25e61a82647df4e0cdaf"
+        }
+      ]
+    }
+  ]
+}
