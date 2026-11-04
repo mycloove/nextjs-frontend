@@ -5,6 +5,7 @@ import { useDropzone } from 'react-dropzone'
 import { ApiClientError, getApiErrorMessage, toolRequest } from '@/lib/api/client'
 import KineticSphere from '@/components/KineticSphere'
 import { downloadBlob } from '@/lib/download/downloadOutputs'
+import PageThumbnail from '@/features/pdf-to-word/components/PageThumbnail'
 
 /* ─────────────────────────────────────────────────────────────
    PDF → Word — "The Retype"
@@ -29,11 +30,18 @@ import { downloadBlob } from '@/lib/download/downloadOutputs'
      enforced again in the browser for an instant message.
     - Scanned PDFs fall back to OCR in features/pdf_to_word.py.
       Bangla depends on installed language data; layout is not guaranteed.
+      The backend flags OCR output (X-Conversion-Method header) and the
+      proof desk says so instead of overselling the layout.
    - Conversion is indeterminate. No fake percentage exists.
    - The DOCX returned by the server is the same bytes the
      preview reads and the download saves.
+   - OUTLINE lists real Word headings. Most converted files have none
+     (pdf2docx emits direct formatting), and the rail builds honest
+     per-page navigation from the actual preview content instead of
+     inventing a heading hierarchy.
 
-   Everything is scoped to this file via the `p2w-` namespace.
+   Styles stay scoped to this file via the `p2w-` namespace;
+   page thumbnail sizing lives in a PDF-to-Word-only helper.
    Chrome consumes surface-1 tokens; the paper itself is always
    white with fixed ink because that is the material of a Word
    page, in both themes.
@@ -231,7 +239,11 @@ function findBlockEnd(xml: string, from: number, tag: string): number {
   return -1
 }
 
-const hasContent = (segs: Seg[]) => segs.some(s => s.br || (s.text ?? '').trim())
+/* A paragraph counts as content only when it carries real text. Segments
+   that are only <w:br/> runs (pdf2docx's empty spacing rows) render as
+   blank lines; letting them count produced documents whose every block
+   was blank while the panel still claimed a ready preview. */
+const hasContent = (segs: Seg[]) => segs.some(s => (s.text ?? '').trim())
 const plainText = (segs: Seg[]) => segs.map(s => (s.br ? ' ' : s.text ?? '')).join('').replace(/\s+/g, ' ').trim()
 
 function headingInfo(style?: string, outline?: string): { level: number; title: boolean } | undefined {
@@ -789,30 +801,6 @@ function BlockView({ block, measureIndex }: { block: Block; measureIndex?: numbe
   )
 }
 
-function thumbLines(page: Block[]): Array<{ kind: 'line' | 'image' | 'table'; width: number }> {
-  const out: Array<{ kind: 'line' | 'image' | 'table'; width: number }> = []
-  for (const block of page) {
-    if (out.length >= 9) break
-    if (block.kind === 'image') {
-      out.push({ kind: 'image', width: 100 })
-      continue
-    }
-    if (block.kind === 'table') {
-      out.push({ kind: 'table', width: 100 })
-      continue
-    }
-    if (block.kind !== 'p') continue
-    const text = plainText(block.segs)
-    if (!text) continue
-    const lines = Math.min(block.heading ? 1 : 3, Math.max(1, Math.ceil(text.length / 58)))
-    for (let i = 0; i < lines && out.length < 9; i += 1) {
-      const seed = text.length * 7 + i * 13
-      out.push({ kind: 'line', width: block.heading ? 62 : 78 + (seed % 20) })
-    }
-  }
-  return out.length ? out : [{ kind: 'line', width: 80 }]
-}
-
 function PageSheet({ page, index, total, zoom, geometry }: { page: Block[]; index: number; total: number; zoom: number; geometry: Geometry }) {
   return (
     <div className="p2w-page-wrap" data-page={index}>
@@ -980,10 +968,25 @@ export default function PDFToWord() {
         const truncated = scanned.truncated || fullXml.length > XML_READ_LIMIT
         const geometry = parseGeometry(fullXml)
 
+        /* Final race guard: everything above awaited the ZIP read and may
+           have been overtaken by a newer conversion. A stale build must
+           not commit state over the newer preview, and it must revoke
+           only its OWN media URLs — clearPreviewUrls() would destroy the
+           URLs the newer run already handed back to <img>. */
+        if (run !== runIdRef.current) {
+          urls.forEach(url => URL.revokeObjectURL(url))
+          return
+        }
+
+        /* Break-only paragraphs are dropped at parse time; what remains
+           decides whether a proof can be laid out at all. A document
+           whose every paragraph was empty reports honestly instead of
+           showing LAYING OUT PAGES forever. */
+        const usable = scanned.blocks.some(block => block.kind !== 'break')
         clearPreviewUrls()
         objectUrlsRef.current = urls
         setPreview({ blocks: scanned.blocks, truncated, stats, meta, geometry })
-        setPreviewStatus(scanned.blocks.length ? 'ready' : 'unavailable')
+        setPreviewStatus(usable ? 'ready' : 'unavailable')
       } catch {
         if (run === runIdRef.current) setPreviewStatus('unavailable')
       }
@@ -1025,6 +1028,13 @@ export default function PDFToWord() {
       const name = docxNameFor(file.name)
       abortRef.current = null
       setOutput({ blob, name })
+      // The backend reports which engine produced the file; an OCR recovery
+      // must be said out loud so the proofing desk never oversells layout.
+      if (res.headers.get('x-conversion-method') === 'ocr') {
+        setNotice(
+          'Recovered with OCR — this PDF had no text layer, so the text was re-read from the page images. Formatting follows the scan, not the original layout.',
+        )
+      }
       if (autoDownload) downloadBlob(blob, name)
       setPhase('done')
       void buildPreview(blob, run)
@@ -1091,7 +1101,13 @@ export default function PDFToWord() {
         }
         heights.set(index, Math.max(0, advance))
       }
-      setPages(paginate(preview.blocks, heights, preview.geometry.contentH))
+      const built = paginate(preview.blocks, heights, preview.geometry.contentH)
+      setPages(built)
+      /* A ready preview that measured to zero pages (every block was
+         break-only, or packing produced nothing) must not leave the
+         reader on LAYING OUT PAGES — resolve into the honest
+         unavailable state; the download still works. */
+      setPreviewStatus(status => (status === 'ready' && built.length === 0 ? 'unavailable' : status))
     }
 
     const raf = requestAnimationFrame(() => requestAnimationFrame(measure))
@@ -1178,11 +1194,18 @@ export default function PDFToWord() {
     setZoom(value => Math.max(0.4, Math.min(1.6, Math.round((value + delta) * 100) / 100)))
   }
 
+  /* The outline keeps real Word headings (pStyle HeadingN / outlineLvl)
+     as its first-class entries. pdf2docx emits direct formatting, so a
+     valid converted document usually has none — in that case the rail
+     builds honest navigation from the actual preview content instead:
+     one entry per laid-out page, labelled Page N with that page's first
+     meaningful paragraph/table snippet. It never guesses a heading
+     hierarchy or restyles the document to get one. */
   const outline = useMemo(() => {
     if (!preview || !pages.length) return []
     const pageOf = new Map<Block, number>()
     pages.forEach((page, pageIndex) => page.forEach(block => pageOf.set(block, pageIndex)))
-    return preview.blocks
+    const headingEntries = preview.blocks
       .filter((block): block is Extract<Block, { kind: 'p' }> => block.kind === 'p' && block.heading != null)
       .map(block => ({
         text: plainText(block.segs).slice(0, 90),
@@ -1190,8 +1213,41 @@ export default function PDFToWord() {
         page: pageOf.get(block) ?? 0,
       }))
       .filter(item => item.text.length > 0)
-      .slice(0, 40)
+    if (headingEntries.length) return headingEntries.slice(0, 40)
+
+    const pageEntries: Array<{ text: string; level: number; page: number }> = []
+    for (const [pageIndex, page] of pages.entries()) {
+      const first = page.find(block => {
+        if (block.kind === 'p') return plainText(block.segs).length > 0
+        return block.kind === 'table' || block.kind === 'image'
+      })
+      if (!first) continue
+      let snippet = ''
+      if (first.kind === 'p') {
+        snippet = plainText(first.segs).slice(0, 76)
+      } else if (first.kind === 'table') {
+        for (const row of first.rows) {
+          for (const cell of row.cells) {
+            const cellText = plainText(cell.segs)
+            if (cellText) {
+              snippet = cellText.slice(0, 76)
+              break
+            }
+          }
+          if (snippet) break
+        }
+      } else if (first.kind === 'image') {
+        snippet = first.alt !== 'Image from the converted document' ? first.alt.slice(0, 76) : 'Image'
+      }
+      if (!snippet) continue
+      pageEntries.push({ text: `Page ${pageIndex + 1} · ${snippet}`, level: 1, page: pageIndex })
+    }
+    return pageEntries.slice(0, 40)
   }, [preview, pages])
+
+  const hasReadableContent = preview
+    ? preview.stats.words > 0 || preview.stats.tables > 0 || preview.stats.images > 0
+    : false
 
   const sizeMB = file ? (file.size / 1048576).toFixed(1) : '0'
   const targetName = file ? docxNameFor(file.name) : ''
@@ -1768,6 +1824,38 @@ export default function PDFToWord() {
           border-bottom: 1px solid var(--border-base);
         }
         .p2w-proof-id { display: flex; align-items: center; gap: 11px; min-width: 0; flex: 1 1 250px; }
+
+        /* OCR recovery: an honest proofing annotation pinned between the
+           docket bar and the sheets. The desk's one accent (the seam blue)
+           marks it, so it reads as a note on the proof, never as an error. */
+        .p2w-recovery-note {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          margin: 12px 16px 0;
+          padding: 9px 12px;
+          border-left: 2px solid var(--p2w-blue);
+          background: var(--p2w-blue-soft);
+          border-radius: 6px;
+        }
+        .p2w-recovery-mark {
+          flex-shrink: 0;
+          margin-top: 1px;
+          padding: 2px 6px;
+          border: 1px solid var(--p2w-blue);
+          border-radius: 4px;
+          font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+          font-size: 8.5px;
+          font-weight: 600;
+          letter-spacing: 0.08em;
+          color: var(--p2w-blue-solid);
+        }
+        .p2w-recovery-note p {
+          margin: 0;
+          font-size: 12px;
+          line-height: 1.55;
+          color: var(--text-secondary);
+        }
         .p2w-wordmark {
           display: grid;
           place-items: center;
@@ -1870,21 +1958,30 @@ export default function PDFToWord() {
         .p2w-thumb:hover { background: var(--bg-item-hover); }
         .p2w-thumb[aria-current='true'] { border-color: rgba(45, 107, 228, 0.4); background: var(--p2w-blue-soft); }
         .p2w-thumb-page {
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-          width: 92px;
-          aspect-ratio: 1 / 1.414;
-          padding: 10px 9px;
+          --p2w-thumb-size: 132;
+          position: relative;
+          display: block;
+          flex: 0 0 auto;
+          width: calc(var(--p2w-thumb-size) * 1px);
           border-radius: 2px;
-          background: #fff;
+          background: var(--p2w-paper);
           box-shadow: 0 3px 10px rgba(0, 0, 0, 0.24);
           overflow: hidden;
+          pointer-events: none;
         }
-        .p2w-thumb-line { height: 2px; border-radius: 1px; background: rgba(35, 45, 65, 0.18); }
-        .p2w-thumb-line.is-head { height: 4px; background: rgba(35, 45, 65, 0.32); }
-        .p2w-thumb-line.is-image { height: 18px; background: rgba(45, 107, 228, 0.14); }
-        .p2w-thumb-line.is-table { height: 12px; border: 1px solid rgba(35, 45, 65, 0.18); background: transparent; }
+        .p2w-thumb-content {
+          position: absolute;
+          top: 0;
+          left: 0;
+          box-sizing: border-box;
+          background: var(--p2w-paper);
+          color: var(--p2w-ink);
+          text-align: left;
+          font-weight: 400;
+          letter-spacing: normal;
+          transform: scale(calc(var(--p2w-thumb-size) / var(--p2w-thumb-source-width)));
+          transform-origin: top left;
+        }
         .p2w-thumb-num {
           font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
           font-size: 8.5px;
@@ -1913,6 +2010,7 @@ export default function PDFToWord() {
           transition: color 0.14s, background 0.14s;
         }
         .p2w-outline-item:hover { color: var(--text-primary); background: var(--bg-item-hover); }
+        .p2w-outline-item[aria-current='page'] { color: var(--p2w-blue); background: var(--p2w-blue-soft); }
         .p2w-outline-item.is-l2 { padding-left: 15px; }
         .p2w-outline-item.is-l3 { padding-left: 24px; }
         .p2w-outline-empty {
@@ -2180,7 +2278,7 @@ export default function PDFToWord() {
           .p2w-rail-label { display: none; }
           .p2w-thumbs { flex-direction: row; gap: 8px; }
           .p2w-thumb { flex: 0 0 auto; }
-          .p2w-thumb-page { width: 64px; }
+          .p2w-thumb-page { --p2w-thumb-size: 64; }
           .p2w-outline { display: none; }
         }
         @media (max-width: 720px) {
@@ -2454,6 +2552,19 @@ export default function PDFToWord() {
               </div>
             </header>
 
+            {notice && (
+              <div className="p2w-recovery-note" role="status">
+                <span className="p2w-recovery-mark" aria-hidden="true">OCR</span>
+                <p>{notice}</p>
+              </div>
+            )}
+
+            {/* The unavailable state covers two cases: a failed
+                reconstruction, and output whose every paragraph was
+                break-only (found at parse time) or unpaginable (found by
+                the measurement pass, which resolves a ready-but-empty
+                pagination into 'unavailable'). LAYING OUT PAGES shows
+                strictly while work is in flight — never forever. */}
             {previewStatus === 'unavailable' ? (
               <div className="p2w-proof-empty">
                 <span className="p2w-wordmark" aria-hidden="true">W</span>
@@ -2488,15 +2599,11 @@ export default function PDFToWord() {
                         aria-label={`Go to page ${index + 1}`}
                         onClick={() => scrollToPage(index)}
                       >
-                        <span className="p2w-thumb-page" aria-hidden="true">
-                          {thumbLines(page).map((line, i) => (
-                            <span
-                              key={i}
-                              className={`p2w-thumb-line${line.kind === 'image' ? ' is-image' : line.kind === 'table' ? ' is-table' : ''}`}
-                              style={{ width: `${line.width}%` }}
-                            />
-                          ))}
-                        </span>
+                        <PageThumbnail geometry={preview?.geometry ?? DEFAULT_GEOMETRY}>
+                          <div className="p2w-page-body">
+                            {page.map((block, i) => <BlockView key={i} block={block} />)}
+                          </div>
+                        </PageThumbnail>
                         <span className="p2w-thumb-num">{index + 1}</span>
                       </button>
                     ))}
@@ -2511,6 +2618,8 @@ export default function PDFToWord() {
                           type="button"
                           className={`p2w-outline-item is-l${item.level}`}
                           title={item.text}
+                          aria-current={activePage === item.page ? 'page' : undefined}
+                          aria-label={`Go to page ${item.page + 1}: ${item.text}`}
                           onClick={() => scrollToPage(item.page)}
                         >
                           {item.text}
@@ -2518,7 +2627,12 @@ export default function PDFToWord() {
                       ))}
                     </nav>
                   ) : (
-                    <span className="p2w-outline-empty">No headings in this document.</span>
+                    /* A converted document with no real headings gets page
+                       navigation above; this message survives only when the
+                       file genuinely contains no readable content. */
+                    <span className="p2w-outline-empty">
+                      {hasReadableContent ? 'No navigable entries in this document.' : 'No readable content in this document.'}
+                    </span>
                   )}
                 </aside>
 

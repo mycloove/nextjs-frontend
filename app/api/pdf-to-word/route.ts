@@ -42,12 +42,14 @@ export async function POST(request: NextRequest) {
     }
 
     const blob = await response.blob()
+    const conversionMethod = response.headers.get('x-conversion-method')
 
     return quota.apply(new NextResponse(blob, {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'Content-Disposition': 'attachment; filename="mycloove_converted.docx"',
+        ...(conversionMethod ? { 'X-Conversion-Method': conversionMethod } : {}),
       },
     }), { successful: true, fileName: pdfFile.name })
   } catch (error) {
