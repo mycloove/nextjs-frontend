@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "unpackedBytes": 8716288,
+  "files": [
+    {
+      "path": "texlive/texmf-dist/texmf-var/web2c/xetex/xelatex.fmt",
+      "bytes": 8714726,
+      "sha256": "e5add4d4e20d0b592dcea89656a5c92c04f63fc1bc8ab53824222ed119c30a50",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/texmf-var/web2c/xetex/xelatex.fmt"
+    }
+  ]
+}

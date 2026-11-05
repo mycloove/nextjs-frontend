@@ -1,6 +1,6 @@
 import { LATEX_LIMITS, LATEX_PROJECT_VERSION, type LatexAsset, type LatexProject, type RegularLatexSnapshot } from './types.ts'
 import { applyNativeFontChoices, assertLatexPath, isLatexTextPath, LatexProjectError, newLatexId, validateLatexProject } from './project.ts'
-import { decodeSourceBytes, imageDimensions } from './projectArchive.ts'
+import { decodeSourceBytes, imageDimensions, type LatexImportReport, type LatexProjectImportResult } from './projectArchive.ts'
 
 function runArchiveWorker<T>(request: Record<string, unknown>, transfer: Transferable[] = []): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -8,21 +8,29 @@ function runArchiveWorker<T>(request: Record<string, unknown>, transfer: Transfe
     const id = newLatexId()
     const timeout = window.setTimeout(() => { worker.terminate(); reject(new Error('Archive processing timed out. Nothing was imported.')) }, 30_000)
     const finish = () => { window.clearTimeout(timeout); worker.terminate() }
-    worker.onmessage = (event: MessageEvent<{ id: string; error?: string; project?: LatexProject; buffer?: ArrayBuffer }>) => {
+    worker.onmessage = (event: MessageEvent<{ id: string; error?: string; project?: LatexProject; report?: LatexImportReport; buffer?: ArrayBuffer }>) => {
       if (event.data.id !== id) return
       finish()
       if (event.data.error) reject(new LatexProjectError(event.data.error))
-      else resolve((event.data.project ?? event.data.buffer) as T)
+      else resolve((event.data.project ? { project: event.data.project, report: event.data.report } : event.data.buffer) as T)
     }
     worker.onerror = () => { finish(); reject(new Error('The local archive worker could not run. Your current project is unchanged.')) }
     worker.postMessage({ ...request, id }, transfer)
   })
 }
 
-export async function importProjectFile(file: File) {
+export async function importProjectFile(file: File): Promise<LatexProject> {
+  return (await importProjectFileWithReport(file)).project
+}
+
+/** Import-time provenance must cross the worker boundary separately, not be inferred later from a saved engine. */
+export async function importProjectFileWithReport(file: File): Promise<LatexProjectImportResult> {
   if (!/\.(?:tex|zip)$/iu.test(file.name) || file.size > LATEX_LIMITS.uploadBytes) throw new LatexProjectError('Choose a .tex or source ZIP file no larger than 3 MiB.')
   const buffer = await file.arrayBuffer()
-  return validateLatexProject(await runArchiveWorker<LatexProject>({ action: 'import', buffer, filename: file.name }, [buffer]))
+  const result = await runArchiveWorker<LatexProjectImportResult>({ action: 'import', buffer, filename: file.name }, [buffer])
+  const project = validateLatexProject(result.project)
+  if (!result.report || result.report.projectId !== project.id || result.report.revision !== project.revision) throw new LatexProjectError('The local import report does not match the imported project. Your current project is unchanged.')
+  return { project, report: result.report }
 }
 
 export async function exportProjectFile(project: LatexProject) {

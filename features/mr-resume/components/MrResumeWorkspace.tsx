@@ -1,7 +1,8 @@
 'use client'
 
-import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Component, lazy, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
+import { useRouter, useSelectedLayoutSegment } from 'next/navigation'
 import MrResumeStudio, { type RegularStudioBridge } from './MrResumeStudio'
 import { LATEX_MODE_KEY, type LatexImportRequest } from '../latex/types'
 import styles from './MrResumeWorkspace.module.css'
@@ -10,6 +11,7 @@ import theme from './MrResumeTheme.module.css'
 // Neither the editor nor PDF.js enters the Regular editor's initial load path.
 const LatexResumeStudio = lazy(() => import('../latex/LatexResumeStudio'))
 type EditorMode = 'regular' | 'latex'
+const editorPaths = { regular: '/mr-resume/regular-editor', latex: '/mr-resume/latex' }
 
 class LatexBoundary extends Component<{ children: ReactNode; onRegular: () => void }, { failed: boolean }> {
   state = { failed: false }
@@ -21,11 +23,13 @@ class LatexBoundary extends Component<{ children: ReactNode; onRegular: () => vo
 }
 
 export default function MrResumeWorkspace() {
-  // Every visit begins at the chooser. Editors mount only after an explicit
-  // choice, keeping the entry page lightweight and preserving the saved mode key.
-  const [selectedMode, setMode] = useState<EditorMode | null>(null)
-  const mode = selectedMode
-  const [latexVisited, setLatexVisited] = useState(false)
+  const router = useRouter()
+  const segment = useSelectedLayoutSegment()
+  const mode: EditorMode | null = segment === 'regular-editor' ? 'regular' : segment === 'latex' ? 'latex' : null
+  // The URL owns the visible mode. Once opened, editors stay mounted even when
+  // Back returns to the chooser, preserving session-only drafts and copy requests.
+  const [workspaceVisited, setWorkspaceVisited] = useState(mode !== null)
+  const [latexVisited, setLatexVisited] = useState(mode === 'latex')
   const [importRequest, setImportRequest] = useState<LatexImportRequest | null>(null)
   const [notice, setNotice] = useState('')
   const regular = useRef<RegularStudioBridge>(null)
@@ -33,7 +37,16 @@ export default function MrResumeWorkspace() {
   const latexPanel = useRef<HTMLDivElement>(null)
   const importSequence = useRef(0)
 
-  useEffect(() => {
+  if (mode && !workspaceVisited) setWorkspaceVisited(true)
+  if (mode === 'latex' && !latexVisited) setLatexVisited(true)
+
+  useLayoutEffect(() => {
+    // History navigation bypasses the copy/switch guards. Cancel only transient
+    // Regular dialogs so their native modal ownership cannot block the chooser.
+    if (mode !== 'regular') regularPanel.current?.querySelectorAll<HTMLDialogElement>('dialog[open]').forEach((dialog) => {
+      dialog.dispatchEvent(new Event('cancel', { cancelable: true }))
+      if (dialog.open) dialog.close()
+    })
     // Native inert is set via the DOM for React 18 compatibility. Hidden alone
     // is not a sufficient contract for retained focus/print ownership.
     if (regularPanel.current) regularPanel.current.inert = mode !== 'regular'
@@ -50,8 +63,7 @@ export default function MrResumeWorkspace() {
       }
       setNotice(outcome.saveFailed ? 'Regular autosave is unavailable. Its writing is retained in this session; export a backup before reloading.' : '')
     } else setNotice('')
-    if (next === 'latex' || mode === 'latex') setLatexVisited(true)
-    setMode(next)
+    router.push(editorPaths[next], { scroll: false })
     try { window.localStorage.setItem(LATEX_MODE_KEY, next) } catch { /* Session mode remains usable. */ }
   }
 
@@ -61,20 +73,18 @@ export default function MrResumeWorkspace() {
     const outcome = regular.current!.prepareToHide()
     if (outcome.reason) { setNotice(outcome.reason); return }
     setImportRequest({ id: String(++importSequence.current), snapshot })
-    setLatexVisited(true)
-    setMode('latex')
+    if (mode !== 'latex') router.push(editorPaths.latex, { scroll: false })
     setNotice(outcome.saveFailed ? 'The Regular draft could not save locally. This copy uses your current writing; the Regular draft remains in this session.' : '')
     try { window.localStorage.setItem(LATEX_MODE_KEY, 'latex') } catch { /* No draft storage is repurposed. */ }
   }
 
   function chooseMode(next: EditorMode) {
-    setMode(next)
-    if (next === 'latex') setLatexVisited(true)
+    router.push(editorPaths[next], { scroll: false })
     try { window.localStorage.setItem(LATEX_MODE_KEY, next) } catch { /* The chooser remains usable without storage. */ }
   }
 
-  if (!mode) return <div className={`${theme.theme} ${styles.root} ${styles.entryRoot}`}>
-    <main className={styles.entry}>
+  return <div className={`${theme.theme} ${styles.root}${mode ? '' : ` ${styles.entryRoot}`}`} data-editor-mode={mode ?? undefined}>
+    {!mode && <main className={styles.entry}>
       <header className={styles.entryHeader}>
         <Link className={styles.entryBrand} href="/" aria-label="SmilePDF home"><span aria-hidden="true">S</span><span>MR.RESUME <i>by ASTRUM</i></span></Link>
         <span className={styles.entryLabel}>DOCUMENT STUDIO <span aria-hidden="true">·</span> BANGLA + ENGLISH</span>
@@ -99,17 +109,16 @@ export default function MrResumeWorkspace() {
         </article>
       </section>
       <footer className={styles.entryFooter}><span>Separate drafts for each editor.</span><span>Already started? Choose that editor to continue.</span></footer>
-    </main>
-  </div>
-
-  return <div className={`${theme.theme} ${styles.root}`} data-editor-mode={mode}>
-    {notice && <div className={styles.status} role="status"><span>{notice}</span><button type="button" aria-label="Dismiss editor notice" onClick={() => setNotice('')}>Close</button></div>}
-    <div ref={regularPanel} className={styles.panel} id="mr-resume-panel-regular" role="region" aria-label="Regular resume editor" tabIndex={0} hidden={mode !== 'regular'}>
-      <MrResumeStudio embedded workspaceActive={mode === 'regular'} bridgeRef={regular} onCopyToLatex={copyRegular} />
-    </div>
-    <div ref={latexPanel} className={styles.panel} id="mr-resume-panel-latex" role="region" aria-label="LaTeX resume editor" tabIndex={0} hidden={mode !== 'latex'}>
-      {(latexVisited || mode === 'latex') && <LatexBoundary onRegular={() => changeMode('regular')}><Suspense fallback={<div className={styles.loadState} role="status"><b>Opening the typesetting workspace</b><p>Loading the source editor. Your resume is not uploaded.</p></div>}><LatexResumeStudio active={mode === 'latex'} importRequest={importRequest} onImportHandled={(id: string) => setImportRequest((current) => current?.id === id ? null : current)} onCopyRegular={copyRegular} /></Suspense></LatexBoundary>}
-    </div>
-    <p className={styles.printMessage}>Download the compiled PDF from the LaTeX editor to print the typeset document.</p>
+    </main>}
+    {workspaceVisited && <>
+      {mode && notice && <div className={styles.status} role="status"><span>{notice}</span><button type="button" aria-label="Dismiss editor notice" onClick={() => setNotice('')}>Close</button></div>}
+      <div ref={regularPanel} className={styles.panel} id="mr-resume-panel-regular" role="region" aria-label="Regular resume editor" tabIndex={0} hidden={mode !== 'regular'}>
+        <MrResumeStudio embedded workspaceActive={mode === 'regular'} bridgeRef={regular} onCopyToLatex={copyRegular} />
+      </div>
+      <div ref={latexPanel} className={styles.panel} id="mr-resume-panel-latex" role="region" aria-label="LaTeX resume editor" tabIndex={0} hidden={mode !== 'latex'}>
+        {(latexVisited || mode === 'latex') && <LatexBoundary onRegular={() => changeMode('regular')}><Suspense fallback={<div className={styles.loadState} role="status"><b>Opening the typesetting workspace</b><p>Loading the source editor. Your resume is not uploaded.</p></div>}><LatexResumeStudio active={mode === 'latex'} importRequest={importRequest} onImportHandled={(id: string) => setImportRequest((current) => current?.id === id ? null : current)} onCopyRegular={copyRegular} /></Suspense></LatexBoundary>}
+      </div>
+      <p className={styles.printMessage}>Download the compiled PDF from the LaTeX editor to print the typeset document.</p>
+    </>}
   </div>
 }

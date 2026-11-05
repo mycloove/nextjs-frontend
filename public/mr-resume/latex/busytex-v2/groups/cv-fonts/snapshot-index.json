@@ -1,0 +1,1952 @@
+{
+  "version": 1,
+  "unpackedBytes": 13346304,
+  "files": [
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/fontawesome5/fa5brands0.enc",
+      "bytes": 2920,
+      "sha256": "cbefdc5693dda7e034c12a5960641d794a46047fa63e21ca4878b8850fd2e88f",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/fontawesome5/fa5brands0.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/fontawesome5/fa5brands1.enc",
+      "bytes": 2608,
+      "sha256": "050d8cb0fe56fb68cd63b898deef20840d716159acbcfcce16bf2132c07ef329",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/fontawesome5/fa5brands1.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/fontawesome5/fa5free0.enc",
+      "bytes": 3083,
+      "sha256": "e70f5935cf6fb626f992305543d029370cb45289a04570684eb2e10917636e49",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/fontawesome5/fa5free0.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/fontawesome5/fa5free1.enc",
+      "bytes": 3042,
+      "sha256": "9533966b0ab77e2e4fc8971fa65d4f345a35e16ef5d7c17bf9cb8ed60c39a8d0",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/fontawesome5/fa5free1.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/fontawesome5/fa5free2.enc",
+      "bytes": 2906,
+      "sha256": "32fe53e3568c15c27c0a51c139f5103fe504bb4bf986b6fc00916e76fb48da1c",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/fontawesome5/fa5free2.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/fontawesome5/fa5free3.enc",
+      "bytes": 2905,
+      "sha256": "92f4ca9509026fdb2bf7977b5039507e4d1b3081647e345fb20ebff3127bf487",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/fontawesome5/fa5free3.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_25nmxu.enc",
+      "bytes": 3055,
+      "sha256": "f1b8ea78c34d9eb2e51205f1f1380809c7f6c112f1d497b04319e6e243dbc963",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_25nmxu.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_3qgqav.enc",
+      "bytes": 2896,
+      "sha256": "58d214c03d9cbe4cdb571163b4636f54021a3d3ff83ff4e98f994698211f3b48",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_3qgqav.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_4vt5lz.enc",
+      "bytes": 2954,
+      "sha256": "1845b304f8b2942e74609af98ff5387e285830018ddb877f37cf3e16b336ca03",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_4vt5lz.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_5qkav4.enc",
+      "bytes": 3319,
+      "sha256": "2f2a5933fc4c45b2fbd0882166d9b7733e0e2f3650f1f05a183a093e22784ca4",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_5qkav4.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_6aejyg.enc",
+      "bytes": 3410,
+      "sha256": "66d7cad6dba6afb88e510fe53c1023f38aeb5e03673ffc1980dd0e006e4d628b",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_6aejyg.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_6rhh47.enc",
+      "bytes": 3379,
+      "sha256": "b0b1a353ad32b6d29950a8e8620332e6d755fe182dcb0fa770ee0103a9c2be68",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_6rhh47.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_cje5wf.enc",
+      "bytes": 2955,
+      "sha256": "95b6da0e4591928335ea362eafe0e4834bccc049ac7c73fa8828dce670c3245e",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_cje5wf.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_cl4kdn.enc",
+      "bytes": 2908,
+      "sha256": "e85cd49ef625c8ddfdfc3a18a4f5a3e2c1e5622f9289c014d3b4b488e5ec3d6a",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_cl4kdn.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_dakysd.enc",
+      "bytes": 3156,
+      "sha256": "ecfc8fa630820f7ad574df502991dfb3bb04c7e97571f29b42ba7178c8fbd7db",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_dakysd.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_eu4zf2.enc",
+      "bytes": 3206,
+      "sha256": "d12b865c92a78a0ad481f48c0f27aed561912e88f362727c33b9b0a87b79329e",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_eu4zf2.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_ggdek5.enc",
+      "bytes": 3272,
+      "sha256": "b6c3a8fb299dfb6b78f12540afbb6611352168e3a77a8ce8d191a07926753edc",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_ggdek5.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_glk7jc.enc",
+      "bytes": 3041,
+      "sha256": "e56afb478e4a1f229f4694e7a6a015b8ad05967f7a3382df9e43870fffb4f1c5",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_glk7jc.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_gxztqc.enc",
+      "bytes": 2963,
+      "sha256": "61b3bb77aa5044bda35c66900850513399b0b6bf9e78e716ad9069abbaeee040",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_gxztqc.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_hgebqg.enc",
+      "bytes": 3022,
+      "sha256": "c28a22b08d6c6885dccc1e024e16e6120f99cacdba47ccad53f90e47a283a19a",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_hgebqg.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_jdumzv.enc",
+      "bytes": 3107,
+      "sha256": "a6c7f410e04769343f312fc7941166e5986dacf320206de9167eda71b708eb85",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_jdumzv.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_ju6eua.enc",
+      "bytes": 2955,
+      "sha256": "9d8e19f62afa4106600c096deceebc0587096eba0cee675d7963e648bdc00b9c",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_ju6eua.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_jzblmk.enc",
+      "bytes": 3210,
+      "sha256": "54b8f5262f8aa6bc58855ea509903d445aba87023d868a8f91477a3c9e006126",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_jzblmk.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_khaflp.enc",
+      "bytes": 3424,
+      "sha256": "0d579aee55650da75cf922a9c94e1062b6cc571ea06cad40147f255ab0f181fd",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_khaflp.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_l7s2m2.enc",
+      "bytes": 3100,
+      "sha256": "3026adbb4c6b7544ee62e7e083f3117fde3b4dda6da93026a55702656d040bd7",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_l7s2m2.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_lqirpk.enc",
+      "bytes": 3041,
+      "sha256": "cd83c152224c7ebe46895752a3d9cb8eec75bab667898edb336cafae603fce28",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_lqirpk.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_nqwozw.enc",
+      "bytes": 2895,
+      "sha256": "830cf1475041c8ca7c1d0a838f34280d982a1c5cabb0b18fefb82c48d8e9428d",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_nqwozw.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_o6jpkv.enc",
+      "bytes": 2955,
+      "sha256": "f7c352a37869c314e195d4f345c439e2c9e9ef5644207d259d29bdd50e985017",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_o6jpkv.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_oolqad.enc",
+      "bytes": 2896,
+      "sha256": "b715f35ad1d0a3c3f2504ae03574b829c142284cf0f03b3333e22b62fa69a3aa",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_oolqad.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_rt66h3.enc",
+      "bytes": 3345,
+      "sha256": "e71a7bed93c3c563ecf2f2abefe16d462ddf4ac72098d083b3b1e31eecf09e1c",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_rt66h3.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_t3w74u.enc",
+      "bytes": 3267,
+      "sha256": "c75d63e865e8efe815d78affe91edff344339f3216021a81b7da56ab4d9eb978",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_t3w74u.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_t6qg2v.enc",
+      "bytes": 3467,
+      "sha256": "3762770db37c8cc6547205507c4f3ef7ccb188aca5d530ca5a94267d76768d6a",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_t6qg2v.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_v5zdec.enc",
+      "bytes": 2886,
+      "sha256": "5793444d3fa263dc6fd9119d634f9c43d9aa35c373ce9110a048b69812235338",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_v5zdec.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_v7r724.enc",
+      "bytes": 3041,
+      "sha256": "350d7eaa3a875cab151197c671875e406f33e0defac9ee94192a9dd947b23bcd",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_v7r724.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_vc7epu.enc",
+      "bytes": 2837,
+      "sha256": "cfd730fcfebcb73a21241c7e9e4cd4ce68fc6d4c241ef4c20a071bc70c0c9fc2",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_vc7epu.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_vrqych.enc",
+      "bytes": 3100,
+      "sha256": "1af9decff903b6d7dfc386894960e6baa546861643b67c714f9363874e2dc186",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_vrqych.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_wd5mfa.enc",
+      "bytes": 2965,
+      "sha256": "db7e35d16631553fc661dfa423c031c2c271003ae2ae1df928101bf351ace714",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_wd5mfa.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_y2bxm4.enc",
+      "bytes": 2896,
+      "sha256": "0d946eb1e3881c8d2f68ea991f85a58fb7fabcc1bb4ec891a39ef5b77bdb8f19",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_y2bxm4.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_y72t7m.enc",
+      "bytes": 2827,
+      "sha256": "9c56c9d6352091ba0b924deb6aae48ad6a6708668f8853f76783b90b485e53ba",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_y72t7m.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_ycjpon.enc",
+      "bytes": 3013,
+      "sha256": "a27828cbf233da0f3f5cdcab2244edb7fc008e6ef3fdd778e0bc78e1b66f5b7c",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_ycjpon.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_yl3wnd.enc",
+      "bytes": 3126,
+      "sha256": "2dcdbf0b2f7d0cb4f9a66679f6656ff5b2887d8ce207a32e876f9b88a3f3018c",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_yl3wnd.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/lato/a_yoxmuz.enc",
+      "bytes": 3351,
+      "sha256": "d20984dd4e0734e533f6246140c39a181ce77a7f65c18d0903c3a246a7eeb193",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/lato/a_yoxmuz.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_2cs4gp.enc",
+      "bytes": 3325,
+      "sha256": "682e64cbe4a94587ed00e6be9eae5cff4d15e255d9abe4832c51005379f43d37",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_2cs4gp.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_2uubtm.enc",
+      "bytes": 3118,
+      "sha256": "655bf46c8fde3044a8492010a4afec48e2329280e486d87f57b80773b498a37f",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_2uubtm.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_2ylw52.enc",
+      "bytes": 3359,
+      "sha256": "4cc65e1b2d41af44d8686296f45acf9a45caed7bfa2a51a0e8c394a79fa42948",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_2ylw52.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_33jnad.enc",
+      "bytes": 3367,
+      "sha256": "e9d1c0c6146e202c2343f59b098c9ada546c085ce4af3bf4b35b3f3f1cfd2a22",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_33jnad.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_35j2t6.enc",
+      "bytes": 2935,
+      "sha256": "a652c6dfe9450a8f42154e4d8fcb92d5d623f250647eab937e5a860fca9ada31",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_35j2t6.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_4jpen6.enc",
+      "bytes": 3036,
+      "sha256": "c98a3b2cc370ebe6954522a0952c4a7bc02948ddec086d32c4c93f80ccd93e6d",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_4jpen6.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_5au2tj.enc",
+      "bytes": 3008,
+      "sha256": "7db840c87a042870a3c695f1a6fffc2212f4ee173a1aefb58fde06b5518dc4ce",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_5au2tj.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_5wuobl.enc",
+      "bytes": 3415,
+      "sha256": "6a98a9a9b5e0aee493510f15e7235e3940b2110067a1738520fb3c639c068864",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_5wuobl.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_5xgh2b.enc",
+      "bytes": 3167,
+      "sha256": "9523b27d36bcee918d3b708e11c2d483465c6e820242d60dbd54fa7758edd054",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_5xgh2b.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_6i2fao.enc",
+      "bytes": 3010,
+      "sha256": "19cfa97004eac1fbdac195012a48b11f2e3addec53e1de027cf111bcd46f839c",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_6i2fao.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_6rxeh6.enc",
+      "bytes": 3729,
+      "sha256": "ce6aa8113440d88c636c0313fa4a7626c3632682d19430437107a68db2a96c9e",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_6rxeh6.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_7juiin.enc",
+      "bytes": 2937,
+      "sha256": "b5250e85f031dea4cb1b1f91a9f2055566e62b33b0e77f7e820cc587aee180d1",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_7juiin.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_a4rth4.enc",
+      "bytes": 3925,
+      "sha256": "e70bd58a5eba31f96216db1f6529167af1992f5b0f7bde6df23d6158d4ddaf76",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_a4rth4.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_acwfoz.enc",
+      "bytes": 3368,
+      "sha256": "33bac4ab7f51ebef474be1666560c7fcc9f544bd306902cab6590baaa530a05f",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_acwfoz.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_adklll.enc",
+      "bytes": 3526,
+      "sha256": "8c192b2162b651c6dd0c85969632bc65174f0575758a662d496b4dbbdeefc1b7",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_adklll.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_as7fdj.enc",
+      "bytes": 3317,
+      "sha256": "168243634a5c989f4adf0173f3c4d2c62cad8e148dcc62779a8f296db79f9f3a",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_as7fdj.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_b5rac7.enc",
+      "bytes": 3075,
+      "sha256": "ec03bdc59df56de71e0ff4acb49cb73d8c5569f24fae8c6ab55969b706c47f32",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_b5rac7.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_bsqqk2.enc",
+      "bytes": 3086,
+      "sha256": "2ea80936ec438ac7cd6f8c135279a699d089864b1ffff8dc1ad08692f8f79b41",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_bsqqk2.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_bzwjdb.enc",
+      "bytes": 3221,
+      "sha256": "619f61290c81813b09f5875adfdf5c59cb1428fb1895f6795afde91058994334",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_bzwjdb.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_ddkove.enc",
+      "bytes": 2963,
+      "sha256": "42cba0d9104979f80cdb4e0b81ecda5cbb630e2828c6c67f95bb190d9aaf9a44",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_ddkove.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_dfqeeu.enc",
+      "bytes": 3130,
+      "sha256": "5aef809d3d953e9f21507aac049788329275bb3434e39ebc38e009af441a2282",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_dfqeeu.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_dqsbwe.enc",
+      "bytes": 3361,
+      "sha256": "c8116c4cad1cbc11cd9f1a320d59a9899e1dc4acc2e15cde8829f68f533fbe81",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_dqsbwe.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_dwsqhe.enc",
+      "bytes": 2836,
+      "sha256": "c8a24894b0a57c079a9bfbcb4b5f2f77b3a2f098be6ab1fea43cf7d4ccd10899",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_dwsqhe.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_e24joy.enc",
+      "bytes": 2878,
+      "sha256": "021828f96f9a9ad8cbbdec908b0267e8272da3b8d0ec9e096a6c16ac36a65c35",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_e24joy.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_el2qpt.enc",
+      "bytes": 3121,
+      "sha256": "ed1c9ea3168c68b6a3cc7cbf58351b12ea0b1b934864838f41ef9abc64247c47",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_el2qpt.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_epkquw.enc",
+      "bytes": 3180,
+      "sha256": "6115ef5824aaa2546330294533ab30addd90d14aa45b9959ce295301bcddf032",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_epkquw.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_ghuabv.enc",
+      "bytes": 3488,
+      "sha256": "de3becc70369cc5353648a508be0064ea7dbb57bc3f15ec3c3735aced041e21f",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_ghuabv.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_h4xxl2.enc",
+      "bytes": 2976,
+      "sha256": "76444d2312469af79445007dbbc8f6461cda1b91f96141cda8f64412bf768e60",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_h4xxl2.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_h6xohf.enc",
+      "bytes": 2976,
+      "sha256": "91001dfda7092cfb9ec4253a2e9faea96c076540a74c508735325e053c78abec",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_h6xohf.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_hdhu7c.enc",
+      "bytes": 3572,
+      "sha256": "0cf566d8710020b094e264e7b7d1066f953c0af720c6d2002866d05a2987cf58",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_hdhu7c.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_hlrajr.enc",
+      "bytes": 3314,
+      "sha256": "61ea40b71810641efa771390e0fea91f4de95a33f85922cbaf7494d64125a062",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_hlrajr.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_ifem6v.enc",
+      "bytes": 3499,
+      "sha256": "9c16814ec4da517fe27133e505e18f2911df9413ecbb5e45ae933380e2c2e331",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_ifem6v.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_ihpqsf.enc",
+      "bytes": 3128,
+      "sha256": "694b3d03d2947f35c8fcc17d530719a25f5edd285d871eb6c9acfdba191f4ac0",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_ihpqsf.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_imandq.enc",
+      "bytes": 3286,
+      "sha256": "17c830a232a24d92dfed0622b441d3a53a6928c76b7f2ca45d7bd7cb687a6e0f",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_imandq.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_iqgrsz.enc",
+      "bytes": 3272,
+      "sha256": "15819d01a9645626dd8974c2c25e08ec5faa5887131f0cf27d4df5c8325c39ce",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_iqgrsz.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_j2bk2t.enc",
+      "bytes": 3064,
+      "sha256": "3bf35792b81f4b817f9eb5a26bff6413822feccb3eb84676a669aa59f3b46167",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_j2bk2t.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_je7obu.enc",
+      "bytes": 3352,
+      "sha256": "6b1b36e568639d25e29c6d01f97f586d030562140319c01ee94046acf4e100e4",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_je7obu.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_jsccdt.enc",
+      "bytes": 3074,
+      "sha256": "1d7441016e79e08a3ccc6a191fee1204704636f648c0a216091300e65d155878",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_jsccdt.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_ktqtin.enc",
+      "bytes": 3179,
+      "sha256": "2f98caa8177def9379c9120b71a3427cbe28d28d11d897779dc587bfd6d10751",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_ktqtin.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_lbdvpp.enc",
+      "bytes": 2977,
+      "sha256": "6f04bf09e4052dff98f7fd468a9ab3234e01009a232bf77d43b7c620b6531a71",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_lbdvpp.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_lfutjz.enc",
+      "bytes": 3353,
+      "sha256": "948e2b0085b3fe0b1bc63e31dcc360aae89f6c343cb3806eeceee19637950172",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_lfutjz.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_lhlrii.enc",
+      "bytes": 3543,
+      "sha256": "72f180be942f590a04b92e815b93e90cd37833457eefb359ce6e3440abf57afc",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_lhlrii.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_lkebxp.enc",
+      "bytes": 2962,
+      "sha256": "e343dd2956c1ccbd2895e5757a6a08901a83d141d5935f5bfbf93ce77bafbc2f",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_lkebxp.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_meyhpi.enc",
+      "bytes": 3379,
+      "sha256": "9b1a5946c80c5835a18c58fcc764f6ba0cd6b42a7324c880b7ff914fd423caeb",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_meyhpi.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_muuaub.enc",
+      "bytes": 2924,
+      "sha256": "bf4791bc35243f524b87683fdd2d8918081ba8b8e15e15c739efbb764a4cf296",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_muuaub.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_ocbbsb.enc",
+      "bytes": 3314,
+      "sha256": "6c0a00bca8ca467b12681eb251c69dfea266cf84daf61ca559d50bd077af0139",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_ocbbsb.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_ogts26.enc",
+      "bytes": 3565,
+      "sha256": "0c9069f45c3759b5c88467dbcfb737425e2d310003e5e49dc030ed4484892855",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_ogts26.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_pn7nyn.enc",
+      "bytes": 3211,
+      "sha256": "a992c63a24117c014bad3300798910fd18934a9706d274a8a865bf3b978b5296",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_pn7nyn.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_pufewj.enc",
+      "bytes": 3117,
+      "sha256": "4c668ab329f0807aa20b65c19effe468dda8484cf29ecff126c0ba8f81f06b18",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_pufewj.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_q5hjoy.enc",
+      "bytes": 3143,
+      "sha256": "8f9fff4543c40bf403cc444df0282364e56afb4d1ed0fc0cd7b0f6ea6c3615e1",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_q5hjoy.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_qb5szn.enc",
+      "bytes": 3073,
+      "sha256": "64a5a845266d982252a0a32de50f25641c58bd42c29584e62a8f1b48a4908bff",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_qb5szn.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_qhmgos.enc",
+      "bytes": 3599,
+      "sha256": "0d2987253b85ec635c2ae28913deddb265f9265fb6df98f5ac6aa9282f4bc20e",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_qhmgos.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_qi3puo.enc",
+      "bytes": 2961,
+      "sha256": "0a2ccd6b9d0fcc95bd9030c995ee689705102ce88f8398171fcecd84918488b0",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_qi3puo.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_qtf2ec.enc",
+      "bytes": 2972,
+      "sha256": "afa5a33cb2e1ceb1b9f208df6c05f894aedaaee136c251e976cbe2e93f09cb86",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_qtf2ec.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_qulak4.enc",
+      "bytes": 3327,
+      "sha256": "ce6fbd411bc52c39cf5bbd624becce84e6345d3caad5ebc5b525b5690909f5a9",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_qulak4.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_r7pbwp.enc",
+      "bytes": 3097,
+      "sha256": "4791df5a708e10526c60c2af6a97e490d6deadac241ad79a580e3b5db62e7c22",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_r7pbwp.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_rehtu3.enc",
+      "bytes": 3309,
+      "sha256": "53c68c314d3daca41e29143561c6ffb7a464c0710e07c3e0103aba97c7fcaed2",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_rehtu3.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_s5b5bo.enc",
+      "bytes": 3109,
+      "sha256": "c049f86e2119edfcf640305621e6ce8468fd35aa17f0da5cb05bc6c0c7458f37",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_s5b5bo.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_schjax.enc",
+      "bytes": 2974,
+      "sha256": "af89cdc46066ced812e8d43ecf5efe2b082a2a961b50b8e696aca896422f989e",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_schjax.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_shbyjm.enc",
+      "bytes": 3538,
+      "sha256": "71a8e7e1d7d5e381d291fcc264ef893d5ca736624cca46337c620eecd180351d",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_shbyjm.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_swa2hd.enc",
+      "bytes": 3203,
+      "sha256": "d0574192f8db3a5fc0959b262ac47e61da5cbd915a1c2d2589801936e809d8fa",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_swa2hd.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_t46jwv.enc",
+      "bytes": 3169,
+      "sha256": "2908f53a2f708e778f30b3e4577599a5aafc2ac14272a593e949c4cee3c81db8",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_t46jwv.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_t4kqic.enc",
+      "bytes": 3454,
+      "sha256": "a3fe07922e1d0281aa1dd8f0bc9d60977fc4e85f9e1f31e7a27c34893f280f36",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_t4kqic.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_tp43rw.enc",
+      "bytes": 3185,
+      "sha256": "4b9523ae240b61979ef944bd643f1abb8d0f73fda67bfbec1f01f09d9c624a0b",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_tp43rw.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_u4yc4h.enc",
+      "bytes": 3098,
+      "sha256": "408759aefa8923972d6a2241cfa5c6b4d49a3a8eb79e2317d8c7cd28eb8f7c07",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_u4yc4h.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_uf77so.enc",
+      "bytes": 3201,
+      "sha256": "ebd4b92db3de5ca251653c61eed86ab9f6925440d6d345d6552705662651c8b1",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_uf77so.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_wkn3wn.enc",
+      "bytes": 2935,
+      "sha256": "cdae9274d0f0a07d8be5cb6891c30af5f4c049c3aced6bc0428fae1f8146c51b",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_wkn3wn.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_wttfgh.enc",
+      "bytes": 2777,
+      "sha256": "098cc48adecf6e10f163c35303661610dba952d10c42287601ab6e8f788f2622",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_wttfgh.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_wywsyy.enc",
+      "bytes": 3070,
+      "sha256": "64283ed7e36b073660d5104e4e9dc056dbedd0ff5d648af90e23c023734b6bf5",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_wywsyy.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_xzfhjt.enc",
+      "bytes": 3126,
+      "sha256": "afa552e9503d37cb2663d01b1e2975dd7780354c7ea342af72281af66da79cc4",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_xzfhjt.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_z4nc45.enc",
+      "bytes": 3729,
+      "sha256": "4c87613b3bbe9294b2f206368b1b131a6aa9feabb87da4662ca28c43ccaa4070",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_z4nc45.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_zf56p3.enc",
+      "bytes": 3288,
+      "sha256": "ab5afaf57e916ac94568462ffe9caf486b8bca0b8b59ac963605da26fcb68e1b",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_zf56p3.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/roboto/rbto_zfcuyn.enc",
+      "bytes": 3109,
+      "sha256": "022c64d2e0ae39a9489e64dd2fdd6b11083be58fe4670b811eacd36c0211568e",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/roboto/rbto_zfcuyn.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconseight.enc",
+      "bytes": 3630,
+      "sha256": "b2358ffc335a768cfd62d6693b3549df34473e8f00e130d405c250330d616321",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconseight.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconsfive.enc",
+      "bytes": 3894,
+      "sha256": "109e89c8d2e2cbb9d59f6fd81deff185d2589bf483f776f84f4d65a2315e133b",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconsfive.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconsfour.enc",
+      "bytes": 3556,
+      "sha256": "f541003809d6b6b3104fb27d5b611673845faa81b57b1c50cf2f379542c56b53",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconsfour.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconsnine.enc",
+      "bytes": 3580,
+      "sha256": "7496b59975f96ef2a24f33fdaa4aa7b9d11cf1328b6ced53e98bce794cabcaee",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconsnine.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconsone.enc",
+      "bytes": 3860,
+      "sha256": "58af599eb3608d9e745c92991360b978b7114e79b488c771672e76be92102093",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconsone.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconsoneone.enc",
+      "bytes": 3617,
+      "sha256": "edb332aa4e2ed8e15ca8f5926d45119d5cfab0b506efb0188e64c14192926426",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconsoneone.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconsonetwo.enc",
+      "bytes": 3396,
+      "sha256": "4eaa974afee2530fee4c56d46937fcd93b030e6ef5fd075ae2b9ef299146b37c",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconsonetwo.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconsonezero.enc",
+      "bytes": 3726,
+      "sha256": "4371ecc1a710396ced7eb3b15a1c1c17b6d25b14a66cd8a985029a5232fcde89",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconsonezero.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconsseven.enc",
+      "bytes": 3686,
+      "sha256": "e63d047e8519b3c2991e8a7c1d8507eb8bf95a7a4c7689058bb362e1e3e35a9e",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconsseven.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconssix.enc",
+      "bytes": 3520,
+      "sha256": "c389f7a4256569932cbb491fbc28e0fac0aaa458dd72c911e4d20d8193184f9f",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconssix.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconsthree.enc",
+      "bytes": 3684,
+      "sha256": "8f8c8c3df99eeb740a2cd528bd9d274b87971a7c78a9aac1fafde72607b64620",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconsthree.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/enc/dvips/simpleicons/simpleiconstwo.enc",
+      "bytes": 3664,
+      "sha256": "daf7c441e4b6eb8428f1eb297393dc5cf60277eb7843131ab4f6bc3f7692a95e",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/enc/dvips/simpleicons/simpleiconstwo.enc"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/map/dvips/fontawesome5/fontawesome5.map",
+      "bytes": 1082,
+      "sha256": "128cf8cc705cf617ce5e4c4193ef3d6cfa63afd7e8d0c90fed023839b9e45dfb",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/map/dvips/fontawesome5/fontawesome5.map"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/map/dvips/lato/lato.map",
+      "bytes": 73176,
+      "sha256": "3d839335225cdeb02a620f112ff6b0f1a73b434db0710f705f87fbdd48333c0b",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/map/dvips/lato/lato.map"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/map/dvips/roboto/roboto.map",
+      "bytes": 254029,
+      "sha256": "f71a1cfa42191429366205b45cb3edf03ae11d98a557d1914e688f31504a937c",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/map/dvips/roboto/roboto.map"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/map/dvips/simpleicons/simpleicons.map",
+      "bytes": 1353,
+      "sha256": "fdcfda91a3ad7d21acb34a95646fbecb8d7d8c05ff4b66d1d272bd44f7be82d5",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/map/dvips/simpleicons/simpleicons.map"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/opentype/google/roboto/RobotoSlab-Bold.otf",
+      "bytes": 179108,
+      "sha256": "29c7668174752578e0de336755f75a740597151ffdd0b080e396144aab95882b",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/opentype/google/roboto/RobotoSlab-Bold.otf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/opentype/google/roboto/RobotoSlab-Regular.otf",
+      "bytes": 175892,
+      "sha256": "c89cde9ffd67dec03babec06702e936fe6de6667b549cf99ea46f6b3120efa0f",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/opentype/google/roboto/RobotoSlab-Regular.otf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/opentype/public/fontawesome5/FontAwesome5Brands-Regular-400.otf",
+      "bytes": 183524,
+      "sha256": "684a1f2655cdeceb198a9a2aa9da8cce2f0ed1c6b24b715db3b5002ca2a43c38",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/opentype/public/fontawesome5/FontAwesome5Brands-Regular-400.otf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/opentype/public/fontawesome5/FontAwesome5Free-Regular-400.otf",
+      "bytes": 55256,
+      "sha256": "bca39479b396b04a103ebfc4c02092c510dde1251d9bc24431772703fb90328b",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/opentype/public/fontawesome5/FontAwesome5Free-Regular-400.otf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/opentype/public/fontawesome5/FontAwesome5Free-Solid-900.otf",
+      "bytes": 303808,
+      "sha256": "f1fb045e84c8cc504140741f5f543fbc924104a0dda339c725c8e2dd41c84a78",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/opentype/public/fontawesome5/FontAwesome5Free-Solid-900.otf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/opentype/public/simpleicons/SimpleIcons.otf",
+      "bytes": 2407424,
+      "sha256": "18f6730216229f0e334ad1f19006d767585efe588b469c372cfccfbb72f05e4d",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/opentype/public/simpleicons/SimpleIcons.otf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/google/roboto/RobotoSlab-Bold-tlf-t1--base.tfm",
+      "bytes": 1860,
+      "sha256": "2ba84f2b0308d5c0a1b49d29fef1a56bf6cbbb48151d737227f7bee22ab95030",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/tfm/google/roboto/RobotoSlab-Bold-tlf-t1--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/google/roboto/RobotoSlab-Bold-tlf-t1.tfm",
+      "bytes": 19112,
+      "sha256": "10b8162772a148598395451eabff85e023e9a6724f8e7923bdb4f31825225efa",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/tfm/google/roboto/RobotoSlab-Bold-tlf-t1.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/google/roboto/RobotoSlab-Bold-tlf-ts1--base.tfm",
+      "bytes": 1492,
+      "sha256": "50e07154cca367cb5e7c9ab12fbb0abb57d9f005025cbcb8810ca3bd7606b131",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/tfm/google/roboto/RobotoSlab-Bold-tlf-ts1--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/google/roboto/RobotoSlab-Bold-tlf-ts1.tfm",
+      "bytes": 1504,
+      "sha256": "e85db4ff926e3c3a48e0fb0ee65134125cae356c7b0d091fefda28ec9b92b5c3",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/tfm/google/roboto/RobotoSlab-Bold-tlf-ts1.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/google/roboto/RobotoSlab-Regular-tlf-t1--base.tfm",
+      "bytes": 1804,
+      "sha256": "6c6a96ddb01354c174a0fa05e486684b38d3872357631bc4c1202737dfeeb65c",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/tfm/google/roboto/RobotoSlab-Regular-tlf-t1--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/google/roboto/RobotoSlab-Regular-tlf-t1.tfm",
+      "bytes": 18944,
+      "sha256": "f947412206d46a028feeb44c836148e47b97b5016614386ec109a5344fe5d064",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/tfm/google/roboto/RobotoSlab-Regular-tlf-t1.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/google/roboto/RobotoSlab-Regular-tlf-ts1--base.tfm",
+      "bytes": 1496,
+      "sha256": "cc96ec638388e74d3f3944377385109600948ab66b2fff97a64c4922d3b8280a",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/tfm/google/roboto/RobotoSlab-Regular-tlf-ts1--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/google/roboto/RobotoSlab-Regular-tlf-ts1.tfm",
+      "bytes": 1508,
+      "sha256": "66745e27cf93a554f95d55cd03b9549e3eb54a475ced1ca4d382814d1fa765f5",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/tfm/google/roboto/RobotoSlab-Regular-tlf-ts1.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/jknappen/ec/ecrm1000.tfm",
+      "bytes": 3584,
+      "sha256": "6538d396bf70b360a36c6af2ba424f1f25ecb1700fda4a22462a3044e1bce5b4",
+      "source": "ec.tar.xz",
+      "upstreamPath": "fonts/tfm/jknappen/ec/ecrm1000.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/fontawesome5/fa5brands0.tfm",
+      "bytes": 1380,
+      "sha256": "15b18f62d4b5ff5964eeaec330bb39001c928b398dc5d53be1c8504a1a584389",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/tfm/public/fontawesome5/fa5brands0.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/fontawesome5/fa5brands1.tfm",
+      "bytes": 1140,
+      "sha256": "977996f837e63c4ffebf080c275becb0e0e9ef26db6f42146e1d312e1d7fbb19",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/tfm/public/fontawesome5/fa5brands1.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/fontawesome5/fa5free0regular.tfm",
+      "bytes": 1132,
+      "sha256": "d5a3958d7919790420f7a2e00767760aa5e5aa0db6ca8e4cb4056e09a60fc246",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/tfm/public/fontawesome5/fa5free0regular.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/fontawesome5/fa5free0solid.tfm",
+      "bytes": 1328,
+      "sha256": "149c127ada5df9868540ebbdc98bd06b252188b56c36a8df5f36885b8a4b228e",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/tfm/public/fontawesome5/fa5free0solid.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/fontawesome5/fa5free1regular.tfm",
+      "bytes": 1204,
+      "sha256": "e856dbec9057c9a3a229d69038d1189ad0935b3c031fca2ef9e88365a364962e",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/tfm/public/fontawesome5/fa5free1regular.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/fontawesome5/fa5free1solid.tfm",
+      "bytes": 1316,
+      "sha256": "2b2a4b47995a23eeb7f714cd4c986b32f9d43a72245bccad798c878cadeeb7ec",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/tfm/public/fontawesome5/fa5free1solid.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/fontawesome5/fa5free2regular.tfm",
+      "bytes": 1108,
+      "sha256": "423bcad48da307dfd42d0e9307969afee9ca577cb1734cb31b136f73545c5b84",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/tfm/public/fontawesome5/fa5free2regular.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/fontawesome5/fa5free2solid.tfm",
+      "bytes": 1340,
+      "sha256": "e7a72cbf505440e5dcce7759f6759709ad9e5bc1fb0ec340bd3f555088c779a7",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/tfm/public/fontawesome5/fa5free2solid.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/fontawesome5/fa5free3regular.tfm",
+      "bytes": 1080,
+      "sha256": "8a1ae3efa00780a1ddf8ad4246393899c0061e0f56a9335faa8f44a25ec20ca0",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/tfm/public/fontawesome5/fa5free3regular.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/fontawesome5/fa5free3solid.tfm",
+      "bytes": 1236,
+      "sha256": "f6c63c880b3c98ee7225cba5785205936d65daca9a164cfb325b47a9f5a820aa",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/tfm/public/fontawesome5/fa5free3solid.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconseight.tfm",
+      "bytes": 1232,
+      "sha256": "16e2e8823fff3b205cd12ffae24dc8f7ca1b01b19c216509c990f5bcc27bf6ca",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconseight.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsfive.tfm",
+      "bytes": 1232,
+      "sha256": "ced33f6436d08d276e3ec829be51bd515ed4b978029c07aa2e5a3c2c8dc6ec16",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsfive.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsfour.tfm",
+      "bytes": 1232,
+      "sha256": "84bf5dc9b88e08f0e661d8dfdc5b8ebb89decf0aa5af1460978cd3a4c3b914be",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsfour.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsnine.tfm",
+      "bytes": 1236,
+      "sha256": "67d68a763ec4f4d0915136ace4b7dbc19071fbdff9df46e62af9e604c9bef726",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsnine.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsone.tfm",
+      "bytes": 1232,
+      "sha256": "80466725d48188137c093cc3c9cb30c26725e98a6edd098e198415947d792ad0",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsone.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsoneone.tfm",
+      "bytes": 1232,
+      "sha256": "72081e55f5a7f6e7a60badc45e54eacb614ec1565830b2d8a78f93420b43e40f",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsoneone.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsonetwo.tfm",
+      "bytes": 1148,
+      "sha256": "53fabc2a46cd4a759eea2c51fd910c3c756e5c203b0421701de75fa960162a2e",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsonetwo.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsonezero.tfm",
+      "bytes": 1232,
+      "sha256": "7ec676b0720d758507500b9c623f6c7d3472456797f6f86cd7eaeb1aa8af6f3f",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsonezero.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsseven.tfm",
+      "bytes": 1232,
+      "sha256": "b74c8e846f739eb21b3ecb1c0f89c1fd6766acd52be7786bed8edb4ce893f00f",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsseven.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconssix.tfm",
+      "bytes": 1232,
+      "sha256": "c067c9a9bc2e9bc8c914435a9cb86e83f921846fc16d574512562d9d61fdcf65",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconssix.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsthree.tfm",
+      "bytes": 1232,
+      "sha256": "9d76ef1447f744b3e3ad8f9fbd77a3455ae6304521f04ea06dbaf41cc7e6802f",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconsthree.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/public/simpleicons/SimpleIcons--simpleiconstwo.tfm",
+      "bytes": 1232,
+      "sha256": "221b9bf6091335544e867c939db37072a01fb6775b8776ba5485d98d4167c054",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/tfm/public/simpleicons/SimpleIcons--simpleiconstwo.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Bold-T1-TLF--base.tfm",
+      "bytes": 1752,
+      "sha256": "aab0881fb36c8db48ab01ff0007d2adfc3d0ee3d94e0cc78933d201d79766c8d",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Bold-T1-TLF--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Bold-T1-TLF.tfm",
+      "bytes": 87492,
+      "sha256": "6f62cb0a1a3b12217e2d2d3cb9a8b9b53e5fe309cf6ebcc5f79cbeead89dbb5d",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Bold-T1-TLF.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Bold-TS1-TLF--base.tfm",
+      "bytes": 1436,
+      "sha256": "0e1c7221388a18717b43b0a36853a6727625b63e7285a940487cd14555917be7",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Bold-TS1-TLF--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Bold-TS1-TLF.tfm",
+      "bytes": 1468,
+      "sha256": "e9b46ebbd75258e748065cf4e35ee7f10f88657a634f497c68c976d8580b8cb2",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Bold-TS1-TLF.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-BoldItalic-T1-TLF--base.tfm",
+      "bytes": 1924,
+      "sha256": "733b4bdba82984a494bd4b754fdf4302accfdac7fb0cf23c9e355ec1f49bb76a",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-BoldItalic-T1-TLF--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-BoldItalic-T1-TLF.tfm",
+      "bytes": 89888,
+      "sha256": "426a6416f466237af07c85e8a845a612888d53f6075f65a1f2f260ce1f0fa683",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-BoldItalic-T1-TLF.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-BoldItalic-TS1-TLF--base.tfm",
+      "bytes": 1520,
+      "sha256": "d36a2581b08a472deb8934276f36a3cdc8e6d77b4fd0011e5bf948a099c39977",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-BoldItalic-TS1-TLF--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-BoldItalic-TS1-TLF.tfm",
+      "bytes": 1556,
+      "sha256": "8bfcb97d7ebeeaac83e5559b3f6d57609779feddb8e26e9b1d4a8b9204942d48",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-BoldItalic-TS1-TLF.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Italic-T1-TLF--base.tfm",
+      "bytes": 1888,
+      "sha256": "640505d5460a8611b2dbaab674cebdbd7f2bf0715edf7e138b5468e04c742e1d",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Italic-T1-TLF--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Italic-T1-TLF.tfm",
+      "bytes": 89816,
+      "sha256": "152a1ed713e48659775aec4f33fad6191672805666ee38f378d9c9a80dbd72b8",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Italic-T1-TLF.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Italic-TS1-TLF--base.tfm",
+      "bytes": 1504,
+      "sha256": "97a523d927b4c9d3aa2987560af6f342ed3b52b4b0a335c23d74469e8188ff63",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Italic-TS1-TLF--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Italic-TS1-TLF.tfm",
+      "bytes": 1544,
+      "sha256": "afa41ba6df91052bc27e34e14fa63be964e3a055cda9d46c495da454b6815324",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Italic-TS1-TLF.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Regular-T1-TLF--base.tfm",
+      "bytes": 1740,
+      "sha256": "94fa71ee54d4793e85947bd491d82527dfda3d2d75ab3250e8313b5c54335dad",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Regular-T1-TLF--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Regular-T1-TLF.tfm",
+      "bytes": 87408,
+      "sha256": "61fb5095f5a93efa69f294cdc944833630816b36cf9b6b76420cdf05db0bff3d",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Regular-T1-TLF.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Regular-TS1-TLF--base.tfm",
+      "bytes": 1440,
+      "sha256": "06063fb99be24c41c70f27fcbcf180dc508cffaede84000bd8a13aab479ba59c",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Regular-TS1-TLF--base.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/tfm/typoland/lato/Lato-Regular-TS1-TLF.tfm",
+      "bytes": 1476,
+      "sha256": "d01c790a8679e7d686c26ab03cb82a996d1bec1b986c52f98f568bda9a79f582",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/tfm/typoland/lato/Lato-Regular-TS1-TLF.tfm"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/truetype/typoland/lato/Lato-Bold.ttf",
+      "bytes": 657188,
+      "sha256": "bf1b8130069b44b9148eeece35e5423bedac49777ba746615b826b8276574a7b",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/truetype/typoland/lato/Lato-Bold.ttf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/truetype/typoland/lato/Lato-BoldItalic.ttf",
+      "bytes": 699008,
+      "sha256": "e2f9244fdcd20840f2480f91370cea885bf99230c49d153199fa64853ad74b69",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/truetype/typoland/lato/Lato-BoldItalic.ttf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/truetype/typoland/lato/Lato-Italic.ttf",
+      "bytes": 723544,
+      "sha256": "8c863f833b12bc8486671d26e3a58b13b0f9eaff1d6b10398e7c107a9b7ee05a",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/truetype/typoland/lato/Lato-Italic.ttf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/truetype/typoland/lato/Lato-Regular.ttf",
+      "bytes": 657212,
+      "sha256": "6f6940be0835c3ddec9199e5fc42be4cbc61ebcfd58c623fdf719366253f1780",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/truetype/typoland/lato/Lato-Regular.ttf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/type1/google/roboto/RobotoSlab-Bold.pfb",
+      "bytes": 200125,
+      "sha256": "e66692684335144a38c97ba7d217974e70b1c8a2c8bd196bca4be79c516a8580",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/type1/google/roboto/RobotoSlab-Bold.pfb"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/type1/google/roboto/RobotoSlab-Regular.pfb",
+      "bytes": 193341,
+      "sha256": "4de864785768aa8806724d7c7edd07a73b0551b7f4c96349c8ed64db541eb246",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/type1/google/roboto/RobotoSlab-Regular.pfb"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/type1/public/fontawesome5/FontAwesome5Brands-Regular.pfb",
+      "bytes": 204258,
+      "sha256": "d50759dd0f92e71efa78ea01ca8e73886bf7b7884049b310faaa9a21587bc8c7",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/type1/public/fontawesome5/FontAwesome5Brands-Regular.pfb"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/type1/public/fontawesome5/FontAwesome5Free-Regular.pfb",
+      "bytes": 58496,
+      "sha256": "b41265db7592aa1bbb49930593dc9195082e0248a17c67637afcf32c22cca833",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/type1/public/fontawesome5/FontAwesome5Free-Regular.pfb"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/type1/public/fontawesome5/FontAwesome5Free-Solid.pfb",
+      "bytes": 295323,
+      "sha256": "0114b058c76f383d27452105d5031147f809453167e8b8593502d8600ff39f5a",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "fonts/type1/public/fontawesome5/FontAwesome5Free-Solid.pfb"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/type1/public/simpleicons/SimpleIcons.pfb",
+      "bytes": 2228771,
+      "sha256": "34e50ba886395ddd24f29dc9229362a844eee8fd2c78cacb16efb202a4ddbf5b",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "fonts/type1/public/simpleicons/SimpleIcons.pfb"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/type1/typoland/lato/Lato-Bold.pfb",
+      "bytes": 440414,
+      "sha256": "e82b4c486105e7e43d371ed8df6497f8981ae3793edfad4dfbaaf818e13ee889",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/type1/typoland/lato/Lato-Bold.pfb"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/type1/typoland/lato/Lato-BoldItalic.pfb",
+      "bytes": 472710,
+      "sha256": "4d39ede5bbe34d29069b38412c5ea5756f211649e9a672eb8e6fd567f1afd58a",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/type1/typoland/lato/Lato-BoldItalic.pfb"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/type1/typoland/lato/Lato-Italic.pfb",
+      "bytes": 472156,
+      "sha256": "7167599072376d8a27bb0f87f7b0faedd4e300f32ccb134cc31078b922d3a58e",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/type1/typoland/lato/Lato-Italic.pfb"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/type1/typoland/lato/Lato-Regular.pfb",
+      "bytes": 444904,
+      "sha256": "40a5fe752b7457ad656426b09c7fbfbe856e071d646b99d48e4ced51b48d79de",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/type1/typoland/lato/Lato-Regular.pfb"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/google/roboto/RobotoSlab-Bold-tlf-t1.vf",
+      "bytes": 1756,
+      "sha256": "2b65ddfa0c73a4d3127fc15c9ce3c5f717030fce41d7181784df35a61f74cabc",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/vf/google/roboto/RobotoSlab-Bold-tlf-t1.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/google/roboto/RobotoSlab-Bold-tlf-ts1.vf",
+      "bytes": 580,
+      "sha256": "9a057d2093f71f0a6a8d977ed0b94800d64e8c438c5c91d5b5921094618115bd",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/vf/google/roboto/RobotoSlab-Bold-tlf-ts1.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/google/roboto/RobotoSlab-Regular-tlf-t1.vf",
+      "bytes": 1760,
+      "sha256": "7a8f839df6cc38fef6134e87334b256724ff9da22a768363e34a0c2c96c4ab51",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/vf/google/roboto/RobotoSlab-Regular-tlf-t1.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/google/roboto/RobotoSlab-Regular-tlf-ts1.vf",
+      "bytes": 584,
+      "sha256": "34204a76fa814ec78f72eec9499c7fb17df3ce9752b2c487aa6bd1007a87b954",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "fonts/vf/google/roboto/RobotoSlab-Regular-tlf-ts1.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/typoland/lato/Lato-Bold-T1-TLF.vf",
+      "bytes": 1796,
+      "sha256": "26d30e2e0dd198d88856b447cd8bfc4f2d2719b1c303c1881378ed18c5e46431",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/vf/typoland/lato/Lato-Bold-T1-TLF.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/typoland/lato/Lato-Bold-TS1-TLF.vf",
+      "bytes": 2104,
+      "sha256": "d76497d5926b7c13fe2ce9127d15bd5885b903579812485134126deaaeb9ee99",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/vf/typoland/lato/Lato-Bold-TS1-TLF.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/typoland/lato/Lato-BoldItalic-T1-TLF.vf",
+      "bytes": 1804,
+      "sha256": "9b2e81d4ab9adb1aa36a56d7b0ef1550247803f0ff59478ad9d0c9cd0cd75017",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/vf/typoland/lato/Lato-BoldItalic-T1-TLF.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/typoland/lato/Lato-BoldItalic-TS1-TLF.vf",
+      "bytes": 2108,
+      "sha256": "a6b419b7f75e3a98cc05f1af720e1f412fde8254070651dbf3ddaebbaa8a95b3",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/vf/typoland/lato/Lato-BoldItalic-TS1-TLF.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/typoland/lato/Lato-Italic-T1-TLF.vf",
+      "bytes": 1800,
+      "sha256": "ffaf28f0e8cf1f8a6eac44923cda2c1f5f0880c67deba7bdcc26307046d4a763",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/vf/typoland/lato/Lato-Italic-T1-TLF.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/typoland/lato/Lato-Italic-TS1-TLF.vf",
+      "bytes": 2104,
+      "sha256": "6f50661757061afc8de95cb2de86035b944a98b380a2e7c0b97a7c5cc645cd11",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/vf/typoland/lato/Lato-Italic-TS1-TLF.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/typoland/lato/Lato-Regular-T1-TLF.vf",
+      "bytes": 1800,
+      "sha256": "92a9f73f40656e7abe2f88f48bcb71ae037b7ab10d6784071c9e008e4434b8c8",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/vf/typoland/lato/Lato-Regular-T1-TLF.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/fonts/vf/typoland/lato/Lato-Regular-TS1-TLF.vf",
+      "bytes": 2108,
+      "sha256": "5fb25b6f2d64db711dfc9839e86029c8daa77a3a69d932d5e33ef3d1c0a8f8c2",
+      "source": "lato.tar.xz",
+      "upstreamPath": "fonts/vf/typoland/lato/Lato-Regular-TS1-TLF.vf"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/fontawesome5-generic-helper.sty",
+      "bytes": 1796,
+      "sha256": "f3fcf280bd5e54a121ea539737946c195d793ebd07e65e40ee939f2eba9d9a24",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/fontawesome5-generic-helper.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/fontawesome5-mapping.def",
+      "bytes": 107808,
+      "sha256": "975f9f521ab7bef0c68aae67c3c2182e9ce0d5a83371a45fa47f38080de13dd5",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/fontawesome5-mapping.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/fontawesome5-utex-helper.sty",
+      "bytes": 5272,
+      "sha256": "c34c1b2b6d354402905715a0de8a1575368368a8d6264ee3a60ae8f3dca0af95",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/fontawesome5-utex-helper.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/fontawesome5.lua",
+      "bytes": 1878,
+      "sha256": "09179051fc77c301a5af1a21f829d6e32339c41dcb6f1f912bb8380b3c6c5e84",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/fontawesome5.lua"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/fontawesome5.sty",
+      "bytes": 8112,
+      "sha256": "2f390dc7c96a7e27d4aec31a99624553c304a2b8ab05dc115edf4f29f2c6edac",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/fontawesome5.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/tufontawesomebrands.fd",
+      "bytes": 1252,
+      "sha256": "5c1717c8b25888435381c7e6d218dd1b2769d34cdece5d40ef8bbfe077da0e9f",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/tufontawesomebrands.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/tufontawesomefree.fd",
+      "bytes": 1075,
+      "sha256": "92b49ef467e1e3defaf965b60319b600ce555b84abb45502480cf34c80df4ae3",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/tufontawesomefree.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/tufontawesomepro.fd",
+      "bytes": 1361,
+      "sha256": "a34258316be0de8e53d746559756bcb8f2318e8813ea1585851fdcb1c115dde0",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/tufontawesomepro.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/ufontawesomebrands0.fd",
+      "bytes": 1206,
+      "sha256": "c4dcc30c0bb9c350a6a3adc7efe0d38c01b8b5618f535e4418774c58aca97ad1",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/ufontawesomebrands0.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/ufontawesomebrands1.fd",
+      "bytes": 1206,
+      "sha256": "e7827cdc956591c9cecc0ab86d7878709a1161afd1af5db89475c830dda5ff07",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/ufontawesomebrands1.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/ufontawesomefree0.fd",
+      "bytes": 980,
+      "sha256": "cf29a5b6bfa785f929ed6c31655cab38161f51c4bee6d3eb15223e18cffdfef2",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/ufontawesomefree0.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/ufontawesomefree1.fd",
+      "bytes": 980,
+      "sha256": "4ba46398d61c2f8ce61654963d3b1ed76345ba8edba4473449233163f5ff52f1",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/ufontawesomefree1.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/ufontawesomefree2.fd",
+      "bytes": 980,
+      "sha256": "3e53776a2323ae1680c57c14393a5229ada3af0dfa4722d46b30989baa35b1a0",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/ufontawesomefree2.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontawesome5/ufontawesomefree3.fd",
+      "bytes": 980,
+      "sha256": "38ce19a35bf5ddcc02439a541d32346a65f25bd0257495f9d4ed0633b34f93a1",
+      "source": "fontawesome5.tar.xz",
+      "upstreamPath": "tex/latex/fontawesome5/ufontawesomefree3.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/fontaxes/fontaxes.sty",
+      "bytes": 14310,
+      "sha256": "66c883309c07614b72e6d39bc8c33004d7c6f777af3bb6ac91aa880325083d2d",
+      "source": "fontaxes.tar.xz",
+      "upstreamPath": "tex/latex/fontaxes/fontaxes.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/LGRlato-LF.fd",
+      "bytes": 3124,
+      "sha256": "43084b3d2bd70f5ad83b62c192c270e4b5015a45c7c15ecaf5832dc92f103b89",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/LGRlato-LF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/LGRlato-OsF.fd",
+      "bytes": 3188,
+      "sha256": "0a73f6b253736d37a232d3d8cc8e9a42753bd4b17c78762ebbea9f267d20863d",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/LGRlato-OsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/LGRlato-TLF.fd",
+      "bytes": 3188,
+      "sha256": "1fd0b34f21a809f9fa977a0706053cb473844b7fa5b89688daebed7fac45ba38",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/LGRlato-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/LGRlato-TOsF.fd",
+      "bytes": 3252,
+      "sha256": "068ac7005c172101bfbe1b881b293a783d1fb292f3fef9756cb908a38f9b7a3e",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/LGRlato-TOsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/OT1lato-LF.fd",
+      "bytes": 3124,
+      "sha256": "8fe714ea05890db2194ac8690f1aab1c1a9d1bfd93d1c2444fe358054d761e4d",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/OT1lato-LF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/OT1lato-OsF.fd",
+      "bytes": 3188,
+      "sha256": "37885faf84f8198fc3970f5558bcd85ee58cd4acddcc477635ba2482129eb0c5",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/OT1lato-OsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/OT1lato-TLF.fd",
+      "bytes": 3188,
+      "sha256": "1b4ddea02913d1be5625f48676fa5b9fffd0f81a3f65a0eda2b8a91fe2e19e2c",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/OT1lato-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/OT1lato-TOsF.fd",
+      "bytes": 3252,
+      "sha256": "c5a31ecb51297a8488a6dcd1d9b31a73a71d33e35d53cd8da9ed639b4c983fd5",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/OT1lato-TOsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T1lato-LF.fd",
+      "bytes": 3072,
+      "sha256": "390bc2b33b2ac77a035df642c7b479bba0807a82c46a328ec0825fb1048eaa47",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T1lato-LF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T1lato-OsF.fd",
+      "bytes": 3136,
+      "sha256": "adf6870bb67fc4477949fe8f20351d471742560eb4233bcb6fbb4ac9891f200c",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T1lato-OsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T1lato-TLF.fd",
+      "bytes": 3136,
+      "sha256": "89d5e03c423dd7e7bce9e98b2cdbc80f3096712acff2b1ca4dca42cf39d102fc",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T1lato-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T1lato-TOsF.fd",
+      "bytes": 3200,
+      "sha256": "4770dbdde61f5ea9b5d411474c0f6644d29f5b1d0e2fb4bda9a57c8bf986c44f",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T1lato-TOsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Alato-LF.fd",
+      "bytes": 3124,
+      "sha256": "ddfd88dc89a66745ea77698eca64abe66904a539011b48a4ac4a1daea2a65b8b",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Alato-LF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Alato-OsF.fd",
+      "bytes": 3188,
+      "sha256": "a1de0acc4d2c3b910b118684e063adc77499b52ab2d52366c1a92a12a2b9ab15",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Alato-OsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Alato-TLF.fd",
+      "bytes": 3188,
+      "sha256": "87e3c3402ed33823281455866e36c0d329838da1db808290ef68a31f62f4088e",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Alato-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Alato-TOsF.fd",
+      "bytes": 3252,
+      "sha256": "19ce4feefe9bf1c0c7696619fb2ad5a36efee5d87e81bc4ed6268ebd84a4d171",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Alato-TOsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Blato-LF.fd",
+      "bytes": 3124,
+      "sha256": "51304461a6cb0385ce3ffa2b564f88237417fdc24cf4e23f0acd21a8ff3ebce1",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Blato-LF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Blato-OsF.fd",
+      "bytes": 3188,
+      "sha256": "2f085a23382555eb401dd5ea735ce5a0bb7e2957add70040b973d5b1e791580b",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Blato-OsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Blato-TLF.fd",
+      "bytes": 3188,
+      "sha256": "b69969c0ab0a27308f3605da06d55d696a3c1890f75a44d9adb9bc6641d10923",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Blato-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Blato-TOsF.fd",
+      "bytes": 3252,
+      "sha256": "e2839be1f8ed4bed3c96c138a5dc29c50b4a2ebf74d0d77f3aef2b9d7b886454",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Blato-TOsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Clato-LF.fd",
+      "bytes": 3124,
+      "sha256": "fe6de370e945a8ed56e53995e04a71142d0fbb11093c7fd66034e8cbf611ef81",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Clato-LF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Clato-OsF.fd",
+      "bytes": 3188,
+      "sha256": "67319a1123b61cb21637d8fcc8c771ee8f55ed0bab8360c0d623ddc52bf0e218",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Clato-OsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Clato-TLF.fd",
+      "bytes": 3188,
+      "sha256": "52b48299cdd847f7e7f9f3e72b24ebaed45c0d48d5e4c9e9160644c00388c960",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Clato-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/T2Clato-TOsF.fd",
+      "bytes": 3252,
+      "sha256": "8dc7c6fb08f0abdd0dd2787283d65bb2244766eb6421d94b499acd269bcea034",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/T2Clato-TOsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/TS1lato-LF.fd",
+      "bytes": 3124,
+      "sha256": "33303239b15c67bb0921ee7d9362256180daeba1dd24a3282786a49f49485bb8",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/TS1lato-LF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/TS1lato-OsF.fd",
+      "bytes": 3188,
+      "sha256": "bd994fb129a20db3ca59d160e14cc628f477010035af5c1c2a3fa2d4e96f4a29",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/TS1lato-OsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/TS1lato-TLF.fd",
+      "bytes": 3188,
+      "sha256": "19b1f59cb44b9ad748726404cb62617590a48cd69f8b46882ec5a1efb92d2e8b",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/TS1lato-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/TS1lato-TOsF.fd",
+      "bytes": 3252,
+      "sha256": "84f839bfbaf7de35c28df9d31e54677eda4baa4dfae8a0b1f0dbb3accbc682a2",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/TS1lato-TOsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/X2lato-LF.fd",
+      "bytes": 3072,
+      "sha256": "68c02c4a0a43fac41b1136735be061e24f706de8b36daed1bf934e810c545b6a",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/X2lato-LF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/X2lato-OsF.fd",
+      "bytes": 3136,
+      "sha256": "1054aac6f9ed5c41b9528fafebeef0c1e4a3079e8a24c363861b0b0755150e1d",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/X2lato-OsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/X2lato-TLF.fd",
+      "bytes": 3136,
+      "sha256": "5475c723adfb798d9eee49a3375bda789a8e873d4f0403edace45d11f785283a",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/X2lato-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/X2lato-TOsF.fd",
+      "bytes": 3200,
+      "sha256": "473e5b6ade65b876d2145048d6567c886b653d7ead8e1e0d8e274d7f799eafdd",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/X2lato-TOsF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/lato/lato.sty",
+      "bytes": 4549,
+      "sha256": "ce5190863cd8f152714bc672395577bad19e879946888c5f2a2a245c05d026d7",
+      "source": "lato.tar.xz",
+      "upstreamPath": "tex/latex/lato/lato.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/mweights/mweights.sty",
+      "bytes": 4953,
+      "sha256": "174cf004438bb6872d670d4971206ccda329a8c7e8939720fae80de545d90cf3",
+      "source": "mweights.tar.xz",
+      "upstreamPath": "tex/latex/mweights/mweights.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/roboto/OT1RobotoSlab-TLF.fd",
+      "bytes": 2688,
+      "sha256": "114ac1f85b6f1049fd8d2ea9512c0e4dc2d0fa30e2a1bd2876f6be35cc2c2601",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "tex/latex/roboto/OT1RobotoSlab-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/roboto/T1RobotoSlab-TLF.fd",
+      "bytes": 2659,
+      "sha256": "2a949fbd5d015d40779c911f4e4687f2dc26aba7291d084b530b288e313b18d6",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "tex/latex/roboto/T1RobotoSlab-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/roboto/TS1RobotoSlab-TLF.fd",
+      "bytes": 1769,
+      "sha256": "6e7c9fdedfbd421f43f999cd9a64aaca5f0e64c6b60d652984d9275d84dcfaff",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "tex/latex/roboto/TS1RobotoSlab-TLF.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/roboto/roboto.sty",
+      "bytes": 14933,
+      "sha256": "9235e58779efd54af74af1290163e22e2c253344f40f65f09034eba48abe7611",
+      "source": "roboto.tar.xz",
+      "upstreamPath": "tex/latex/roboto/roboto.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/simpleicons.sty",
+      "bytes": 1632,
+      "sha256": "7bd04bce20ae4a06d51ee0d66b74a453fca7290490b320a446489102894a3716",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/simpleicons.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/simpleiconsglyphs-pdftex.tex",
+      "bytes": 293938,
+      "sha256": "fdfa22271ec3167e8f1915778bcfa6fadc962c6742c8beae6db7ea406eb7e086",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/simpleiconsglyphs-pdftex.tex"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/simpleiconsglyphs-xeluatex.tex",
+      "bytes": 287406,
+      "sha256": "40bcb75384d8344dd42143320cd208c984e2cc91219b6b541835a981f044d646",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/simpleiconsglyphs-xeluatex.tex"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconseight.fd",
+      "bytes": 264,
+      "sha256": "35e800a07db680808c4949ad8d58fea2a9074c0007693f674d569ea51d64de4e",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconseight.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconsfive.fd",
+      "bytes": 259,
+      "sha256": "5335c4e0ab35f0418aff13b816d330f127f499e3d8ab9c5306578cf95271f8e0",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconsfive.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconsfour.fd",
+      "bytes": 259,
+      "sha256": "789a1abc64fa3de57207b12f8ae4636176d2001a95d3a9a1219d6c9cb9068d3a",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconsfour.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconsnine.fd",
+      "bytes": 259,
+      "sha256": "ad172245ab6754754ecf3ba40af99eaf501b7d840a606ff129f3d7c12e1b9bc6",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconsnine.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconsone.fd",
+      "bytes": 254,
+      "sha256": "b6cc6e16f3a58134b782df565c2ef4afcb37b7183101910d8b517000fd68eeaf",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconsone.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconsoneone.fd",
+      "bytes": 269,
+      "sha256": "784d7dd7be084b61f922720bc51165de7ac55ed6586d47be8b42dd8795437777",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconsoneone.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconsonetwo.fd",
+      "bytes": 269,
+      "sha256": "e099067487af3a537b7a679eb67e122b7c62f7e6678e817a0d4b02e9e9495ecf",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconsonetwo.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconsonezero.fd",
+      "bytes": 274,
+      "sha256": "bf6ced5db3ab9d47231ef200e69d0422639c81addc3fab2b82087c0b7c31af2a",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconsonezero.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconsseven.fd",
+      "bytes": 264,
+      "sha256": "26f04be8ef58ed607944ae93a3548aab5245393d105a53a5474062c70b5471bf",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconsseven.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconssix.fd",
+      "bytes": 254,
+      "sha256": "6b5770111e3dee48afaecc002f4eb1b020c1399a92f533fd99a3d35ec42e8178",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconssix.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconsthree.fd",
+      "bytes": 264,
+      "sha256": "618af986b90f93edad853671501d01071e8e2db05afcd30629783912cae57aa4",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconsthree.fd"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/simpleicons/usimpleiconstwo.fd",
+      "bytes": 254,
+      "sha256": "169d647e36c510710151e8d90a4ca14c09342055229774e38054d4a69e3da5f8",
+      "source": "simpleicons.tar.xz",
+      "upstreamPath": "tex/latex/simpleicons/usimpleiconstwo.fd"
+    }
+  ]
+}

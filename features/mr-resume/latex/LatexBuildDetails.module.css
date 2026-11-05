@@ -1,0 +1,25 @@
+.details { min-width: 0; color: var(--rs-ink); background: var(--rs-panel); font-size: 12px; line-height: 1.7; }
+.heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px; padding-bottom: 12px; }
+.heading h3 { margin: 0; font-size: 14px; font-weight: 650; }
+.heading p { margin: 4px 0 0; }
+.heading button { min-height: 40px; padding: 8px 12px; border: 1px solid var(--rs-control-line); border-radius: 6px; color: var(--rs-ink); background: var(--rs-raised); font: inherit; cursor: pointer; }
+.heading button:hover { background: var(--rs-soft); }
+.details :is(button, summary):focus-visible { outline: 2px solid var(--rs-focus); outline-offset: 2px; }
+.facts { margin: 0; font-variant-numeric: tabular-nums; }
+.facts > div { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(0, 3fr); gap: 8px 16px; padding: 8px 0; border-top: 1px solid var(--rs-line); }
+.facts dt { font-weight: 600; }
+.facts dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.facts dd > span, .facts dd > code { display: block; }
+.facts dd > span { color: var(--rs-muted); }
+.details code { font: 11px/1.7 ui-monospace, monospace; overflow-wrap: anywhere; }
+.disclosure { border-top: 1px solid var(--rs-line); }
+.disclosure summary { min-height: 40px; padding: 8px 0; font-weight: 600; cursor: pointer; font-variant-numeric: tabular-nums; }
+.disclosure p { margin: 0 0 12px; }
+.disclosure ul { display: grid; gap: 12px; margin: 0 0 16px; padding: 0 0 0 16px; }
+.disclosure li { min-width: 0; overflow-wrap: anywhere; }
+.disclosure li > :is(strong, span, code) { display: block; }
+.disclosure pre { margin: 0 0 16px; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.7 ui-monospace, monospace; }
+.qualification, .empty { margin: 12px 0; color: var(--rs-ink); font-size: 12px; line-height: 1.7; }
+@media (max-width: 900px) { .heading button, .disclosure summary { min-height: 44px; } }
+@media (max-width: 640px) { .facts > div { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+@media (prefers-reduced-motion: reduce) { .details * { scroll-behavior: auto; } }

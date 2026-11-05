@@ -1,0 +1,78 @@
+{
+  "name": "multi-file-xelatex",
+  "engine": "xelatex",
+  "profileVersion": "browser-busytex-v2-tl2023-4499aa69-altacv-synctex-r2",
+  "worker": {
+    "path": "compiler-worker.js",
+    "bytes": 63107,
+    "sha256": "6279d2e78a3930b38a4c07ffba1e56e3b1d764bc8af1a0095fcb12e4c3bf8213"
+  },
+  "wasm": {
+    "path": "busytex.wasm",
+    "bytes": 30363063,
+    "sha256": "a7785b59bfddb8667e7738443f111430e3ee2bd3ec0c1c26629267849e091415"
+  },
+  "parser": {
+    "path": "tools/synctex/synctex-parser.wasm",
+    "bytes": 164146,
+    "sha256": "db1afe3c6442c23077840c467ad4710d90cffda444cb7b118c5b867339cb65d6"
+  },
+  "sources": [
+    {
+      "path": "main.tex",
+      "content": "\\documentclass{article}\n\\usepackage[paperwidth=400pt,paperheight=500pt,margin=50pt]{geometry}\n\\pagestyle{empty}\n\\begin{document}\n\\noindent FIRSTMARKER one.\\par\n\\input{sections/body.tex}\n\\noindent THIRDMARKER three.\\par\n\\end{document}\n"
+    },
+    {
+      "path": "sections/body.tex",
+      "content": "\\noindent SECONDMARKER two.\\par\n"
+    }
+  ],
+  "pdfSha256": "8b1bfba341c7f4d2723eb97293199005cc7413da2483f4b5e14c9f7201d4caec",
+  "synctexSha256": "7047ca83a30f91162272e4384b9d6a47e7e6c0a431004050c5ec4df69c8b7f36",
+  "pdfBase64": "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",
+  "synctexBase64": "H4sIAAAAAAAAA42Uy46bMBSG936KzC6VCPh+YdtVF9VU6kVTVbMgYDJuuETYiZJWfffahBDKdJQICczx//3H+Bz8+dTkX/TT4pvurGmbFIEPzW7vUpQmP9t1Eid1ZprY6eMQx2niXypz0OFZl6vCWBeGSZWF+zqzOsk6Z/JKx3llB4zcg1nzSyPoqXag6A1qo9tau+40DmLrTgPLbrFdtnsxuU22+nTIqgnJ3yQ3utGdyRNThjdTHvxjAoq7wX85eWOpFVln+VY3xXW0OurgUehy8FD3bLCzKK+7uCwuRYaXKludO19+m6zb4tSX+3HvguRYHMDHbNOY0uSZ6zsEQgi+Nsbj4GnxWJZW+0oJwrEU4Ps88L5tnG5cCh44EuA3Aj9QJFMYYS4wVIqmSGKICKJjJIJnzQpRpqjkE6niHEoIIwI5ZAThV9IVgUpIya9SITklQbi8IfQXeLlD8w48z9dHBaMKTdaHOUaUBiCkZRNLCSnCE0fKFSYy8mq/O5ugJYJxhtlFCrYhOG7SaECwUIypMzOf9otcIhihSWIk+HQHZ3mDljImIYGD1OcNwavzYIApxRCqgZlN93kjcU0ruBREvv25IiWKcQrVoAxfK66uFxxzSBlRZ2I22xdkeaNhXhf3/5rg9exbVRLwZzwJx6Ow7X+JONsfwQNh4FNrXVavK536Lt/7HicUPGDaxxc278zO7esU/AWVs51sYgUAAA==",
+  "geometries": [
+    {
+      "page": 1,
+      "view": [
+        0,
+        0,
+        398.51,
+        498.13
+      ],
+      "rotate": 0
+    }
+  ],
+  "expected": [
+    {
+      "text": "FIRSTMARKER",
+      "query": {
+        "page": 1,
+        "x": 51.813,
+        "y": 441.6768666666667
+      },
+      "file": "main.tex",
+      "line": 5
+    },
+    {
+      "text": "SECONDMARKER",
+      "query": {
+        "page": 1,
+        "x": 51.813,
+        "y": 429.7218666666667
+      },
+      "file": "sections/body.tex",
+      "line": 1
+    },
+    {
+      "text": "THIRDMARKER",
+      "query": {
+        "page": 1,
+        "x": 51.813,
+        "y": 417.7668666666667
+      },
+      "file": "main.tex",
+      "line": 7
+    }
+  ]
+}

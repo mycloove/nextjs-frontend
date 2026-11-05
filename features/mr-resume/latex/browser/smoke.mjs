@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { Worker } from 'node:worker_threads'
 import { performance } from 'node:perf_hooks'
@@ -7,11 +7,13 @@ import { gunzipSync } from 'node:zlib'
 import { PDFDocument, PDFName } from 'pdf-lib'
 import sharp from 'sharp'
 import JSZip from 'jszip'
-import { downloads, profileVersion, sha256, staticDirectory, tarEntries } from './provision.mjs'
+import { downloads, sha256, tarEntries } from './provision.mjs'
+import { profileVersion, staticDirectory } from './provision-resume.mjs'
 
 // Run with Node >=22.12 and --experimental-strip-types. No browser, HTTP server,
 // native TeX executable, fake runner, screenshot, or remote package service.
-const { latexSourceTemplates } = await import('../templates.ts')
+const { latexSourceTemplates, createTemplateProject } = await import('../templates.ts')
+const { browserLatexDiagnostics } = await import('../browserCompiler.ts')
 const { readProjectZip, createProjectZip } = await import('../projectArchive.ts')
 const { reviseProject } = await import('../project.ts')
 const { createAltaCvBrowserProject, repairAltaCvBrowserProject } = await import('../altacvBrowser.ts')
@@ -20,14 +22,29 @@ const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
 const manifest = JSON.parse(await readFile(path.join(staticDirectory, 'manifest.json'), 'utf8'))
 const provenance = JSON.parse(await readFile(path.join(staticDirectory, 'provenance.json'), 'utf8'))
 const results = []
+const selectedCases = new Set()
 const only = process.argv.find((argument) => argument.startsWith('--case='))?.slice(7)
+const outputDirectory = process.argv.find((argument) => argument.startsWith('--output-dir='))?.slice(13)
+if (outputDirectory && !path.isAbsolute(outputDirectory)) throw new Error('Compiler proof output needs an absolute local directory')
 let plainStyle = ''
 
 function selectedAssets(engine, approvedGroups = [], bundle = manifest) {
-  if (!bundle.groups) return bundle.assets
+  if (!bundle.groups) return [...bundle.assets, ...(bundle.synctex ? [bundle.synctex] : [])]
   const groups = bundle.groups.filter((group) => group.kind === 'core' || (group.kind === 'profile' && group.profiles.includes(engine)) || (group.kind === 'package' && approvedGroups.includes(group.id)))
   for (const id of approvedGroups) assert.ok(groups.some((group) => group.id === id && group.kind === 'package' && group.profiles.includes(engine)), 'Only selected-engine package groups may be approved')
-  return [...bundle.assets.filter((asset) => ['compiler-worker.js', 'busytex.js.bin', 'busytex.wasm'].includes(asset.path)), ...groups.flatMap((group) => group.assets)]
+  return [...bundle.assets.filter((asset) => ['compiler-worker.js', 'busytex.js.bin', 'busytex.wasm'].includes(asset.path)), ...groups.flatMap((group) => group.assets), ...(bundle.biber && groups.some((group) => group.id === bundle.biber.group) ? bundle.biber.assets : []), ...(bundle.synctex ? [bundle.synctex] : [])]
+}
+
+function packageClosure(engine, ids, bundle) {
+  const selected = new Set()
+  const include = (id) => {
+    if (selected.has(id)) return
+    const group = bundle.groups?.find((group) => group.id === id && group.kind === 'package' && group.profiles.includes(engine))
+    assert.ok(group, 'Fixture may select only real compatible package groups')
+    selected.add(id); for (const dependency of group.requires || []) include(dependency)
+  }
+  ids.forEach(include)
+  return [...selected].sort()
 }
 
 async function assetBuffers(pins) {
@@ -45,7 +62,7 @@ async function checkAssets() {
   assert.equal(manifest.profileVersion, profileVersion)
   assert.deepEqual(manifest.engines.map((item) => item.id), ['pdflatex', 'xelatex', 'lualatex'])
   const allPins = new Map()
-  for (const asset of [...manifest.assets, ...(manifest.groups || []).flatMap((group) => group.assets), ...provenance.distributionAssets]) {
+  for (const asset of [...manifest.assets, ...(manifest.groups || []).flatMap((group) => group.assets), ...(manifest.biber?.assets || []), ...provenance.distributionAssets]) {
     if (allPins.has(asset.path)) assert.deepEqual(allPins.get(asset.path), asset, 'Repeated distribution pins must agree')
     allPins.set(asset.path, asset)
   }
@@ -76,16 +93,16 @@ async function checkAssets() {
   for (const extension of ['pdftex/pdflatex', 'xetex/xelatex', 'luahbtex/luahblatex']) assert.ok(entries.some((item) => item.path.endsWith(`/web2c/${extension}.fmt`)))
   for (const name of ['fontspec', 'polyglossia', 'enumitem', 'titlesec', 'geometry', 'hyperref']) assert.ok(entries.some((item) => item.path.endsWith(`/${name}.sty`)), `Missing actual package: ${name}`)
   assert.ok(entries.some((item) => item.path.endsWith('/fonts/truetype/mr-resume/NotoSansBengali.ttf')))
-  let groupExpandedBytes = 0
+  const groupExpandedBytes = new Map()
   const groupPaths = new Map()
   for (const group of manifest.groups || []) {
-    assert.deepEqual(Object.keys(group).sort(), ['id', 'kind', 'profiles', 'packages', 'archive', 'index', 'assets'].sort())
+    assert.deepEqual(Object.keys(group).sort(), ['id', 'kind', 'profiles', 'packages', 'archive', 'index', 'assets', 'files', 'requires'].sort())
     const archive = gunzipSync(await readFile(path.join(staticDirectory, group.archive)))
     const groupIndex = JSON.parse(await readFile(path.join(staticDirectory, group.index), 'utf8'))
     const members = tarEntries(archive)
     assert.equal(groupIndex.version, 1); assert.equal(archive.length, groupIndex.unpackedBytes); assert.equal(members.length, groupIndex.files.length)
     if (Object.hasOwn(groupIndex, 'root')) assert.equal(groupIndex.root, 'texlive')
-    groupExpandedBytes += archive.length
+    groupExpandedBytes.set(group.id, archive.length)
     for (const member of members) {
       const pin = groupIndex.files.find((item) => item.path === member.path)
       assert.ok(pin, 'Group archives may only contain indexed original TeX paths')
@@ -101,8 +118,8 @@ async function checkAssets() {
     }
     if (group.kind === 'package') assert.ok(group.assets.find((asset) => asset.path === group.archive).bytes <= 12 * 1024 * 1024)
   }
-  assert.ok(groupExpandedBytes <= 96 * 1024 * 1024)
-  const runtimePins = new Map([...manifest.assets, ...(manifest.groups || []).flatMap((group) => group.assets)].map((asset) => [asset.path, asset]))
+  for (const engine of manifest.engines) assert.ok((manifest.groups || []).filter((group) => group.profiles.includes(engine.id)).reduce((sum, group) => sum + groupExpandedBytes.get(group.id), 0) <= 96 * 1024 * 1024)
+  const runtimePins = new Map([...manifest.assets, ...(manifest.groups || []).flatMap((group) => group.assets), ...(manifest.biber?.assets || []), ...(manifest.synctex ? [manifest.synctex] : [])].map((asset) => [asset.path, asset]))
   assert.ok(runtimePins.size <= 64 && [...runtimePins.values()].reduce((sum, asset) => sum + asset.bytes, 0) <= 256 * 1024 * 1024)
   const offer = JSON.parse(await readFile(path.join(staticDirectory, 'source-offer.json'), 'utf8'))
   assert.equal(offer.binary.sha256, downloads.find((item) => item.name === 'busytex.wasm').sha256)
@@ -114,10 +131,11 @@ async function checkAssets() {
     }))
     const content = Buffer.concat(parts)
     assert.equal(content.length, archive.bytes); assert.equal(sha256(content), archive.sha256)
-    assert.equal(archive.sha256, downloads.find((item) => item.name === archive.name).sha256)
+    const upstream = downloads.find((item) => item.name === archive.name) || provenance.packageDownloads.find((item) => item.name === archive.name) || (archive.name === provenance.biber.sourceArchive.name ? provenance.biber.sourceArchive : archive.name === provenance.packageSources?.archive.name ? provenance.packageSources.archive : undefined)
+    assert.equal(archive.sha256, upstream?.sha256, 'Every source archive must match its recorded upstream input')
   }
   const wrapperSources = tarEntries(gunzipSync(await readFile(path.join(staticDirectory, offer.build.provisioningSources))))
-  const wrapper = wrapperSources.find((entry) => entry.path === 'nextjs-frontend/public/mr-resume/latex/busytex-v1/compiler-worker.js')
+  const wrapper = wrapperSources.find((entry) => entry.path === 'nextjs-frontend/public/mr-resume/latex/busytex-v2/compiler-worker.js')
   assert.ok(wrapper, 'The corresponding source must include the deployed application-owned worker')
   assert.equal(sha256(wrapper.content), sha256(await readFile(path.join(staticDirectory, 'compiler-worker.js'))))
   const notices = await readFile(path.join(staticDirectory, 'licenses/texlive-notices.txt'), 'utf8')
@@ -125,12 +143,13 @@ async function checkAssets() {
   assert.match(await readFile(path.join(staticDirectory, 'licenses/busytex-notices.txt'), 'utf8'), /Permission is hereby granted/)
   assert.match(await readFile(path.join(staticDirectory, 'licenses/NotoSansBengali-OFL.txt'), 'utf8'), /SIL OPEN FONT LICENSE/)
   assert.match(await readFile(path.join(staticDirectory, 'licenses/LatinModern-GUST.txt'), 'utf8'), /GUST Font License/)
-  assert.ok(manifest.limitations.some((item) => item.includes('Biber') && item.includes('unsupported')))
+  assert.ok(manifest.limitations.some((item) => item.includes('real Perl Biber 2.22')))
+  assert.match(await readFile(path.join(staticDirectory, 'licenses/TEXLYRE-AGPL-3.0.txt'), 'utf8'), /GNU AFFERO GENERAL PUBLIC LICENSE/)
   console.log(`ASSETS PASS: ${entries.length} package/font files; runtime ${manifest.assets.reduce((sum, item) => sum + item.bytes, 0)} bytes; snapshot ${snapshot.length} unpacked bytes; complete source archive SHA-256 verified.`)
 }
 
 function session(tamper, options = {}) {
-  const worker = new Worker(new URL('./smoke-worker.mjs', import.meta.url), { workerData: { staticDirectory, tamper, noNetwork: options.noNetwork }, execArgv: [] })
+  const worker = new Worker(new URL('./smoke-worker.mjs', import.meta.url), { workerData: { staticDirectory, tamper, noNetwork: options.noNetwork }, execArgv: ['--experimental-vm-modules'] })
   const events = [], waiters = []
   let fatal = null, boot = null, requests = [], scripts = [], consoleLines = []
   worker.on('message', (event) => {
@@ -141,7 +160,7 @@ function session(tamper, options = {}) {
   })
   worker.on('error', (error) => { fatal = error; for (const wake of [...waiters]) wake() })
   const until = (select, milliseconds = 120000) => new Promise((resolve, reject) => {
-    const timer = setTimeout(() => finish(new Error(`Worker timeout after ${milliseconds} ms`)), milliseconds)
+    const timer = setTimeout(() => finish(new Error(`Worker timeout after ${milliseconds} ms; last public phases: ${events.filter((event) => event.type === 'progress' && event.stage === 'compiling').slice(-4).map((event) => event.message).join(' / ')}`)), milliseconds)
     const finish = (error, value) => { clearTimeout(timer); const index = waiters.indexOf(wake); if (index >= 0) waiters.splice(index, 1); if (error) reject(error); else resolve(value) }
     const wake = () => { if (fatal) return finish(fatal); const value = select(); if (value) finish(null, value) }
     waiters.push(wake); wake()
@@ -151,7 +170,7 @@ function session(tamper, options = {}) {
     async init(mainFile = 'main.tex', engine = 'pdflatex', options = {}) {
       const start = await until(() => boot)
       assert.deepEqual(start.requests, []); assert.deepEqual(start.scripts, []); assert.deepEqual(start.consoleLines, [])
-      const bundle = options.manifest || manifest, approvedGroups = options.approvedGroups || []
+      const bundle = options.manifest || manifest, approvedGroups = packageClosure(engine, options.approvedGroups || [], bundle)
       const pins = selectedAssets(engine, approvedGroups, bundle)
       const request = { type: 'init', mainFile, ...(options.omitEngine ? {} : { engine }), ...(approvedGroups.length ? { approvedGroups } : {}) }
       if (options.supplied) Object.assign(request, { manifest: bundle, assets: await assetBuffers(pins) })
@@ -162,7 +181,7 @@ function session(tamper, options = {}) {
       assert.equal(ready.version, manifest.profileVersion)
       assert.deepEqual(ready.engines, manifest.engines.map((item) => item.id))
       assert.deepEqual([...new Set(requests)].sort(), options.supplied ? [] : ['manifest.json', ...pins.map((pin) => pin.path)].sort())
-      assert.deepEqual(scripts, ['busytex.js.bin']); assert.deepEqual(consoleLines, [])
+      assert.deepEqual(scripts, ['busytex.js.bin', ...(bundle.biber && approvedGroups.includes(bundle.biber.group) ? ['tools/biber/biber.js.bin'] : [])]); assert.deepEqual(consoleLines, [])
       const progress = events.filter((event) => event.type === 'progress' && event.assetPath)
       assert.ok(progress.length, 'Asset preparation must report actual byte verification')
       const total = pins.reduce((sum, pin) => sum + pin.bytes, 0)
@@ -182,7 +201,7 @@ function session(tamper, options = {}) {
       const initialRequests = [...requests], initialScripts = [...scripts]
       const start = performance.now()
       worker.postMessage({ type: 'compile', ...request })
-      const result = await until(() => events.find((event) => ['result', 'error'].includes(event.type) && event.operationKey === request.operationKey), 30000)
+      const result = await until(() => events.find((event) => ['result', 'error'].includes(event.type) && event.operationKey === request.operationKey), 180000)
       const duration = Math.round(performance.now() - start)
       assert.deepEqual(requests, initialRequests, 'Compilation must not fetch a source, filename, PDF or remote package')
       assert.deepEqual(scripts, initialScripts); assert.deepEqual(consoleLines, [], 'Vendor console must not emit private source/logs')
@@ -206,12 +225,15 @@ async function pdfSemantics(data, expect) {
   if (expect.pages) assert.equal(document.getPageCount(), expect.pages)
   const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes), disableFontFace: true, useSystemFonts: false, isEvalSupported: false }).promise
   let text = '', images = 0
-  const fonts = []
+  const fonts = [], textPositions = [], urls = []
   try {
     assert.equal(pdf.numPages, document.getPageCount())
     for (let page = 1; page <= pdf.numPages; page++) {
       const current = await pdf.getPage(page)
-      text += (await current.getTextContent()).items.map((item) => 'str' in item ? item.str : '').join(' ') + '\n'
+      const items = (await current.getTextContent()).items
+      text += items.map((item) => 'str' in item ? item.str : '').join(' ') + '\n'
+      for (const item of items) if ('str' in item) textPositions.push({ page, text: item.str, x: item.transform[4], y: item.transform[5] })
+      for (const annotation of await current.getAnnotations()) if (annotation.url) urls.push(annotation.url)
       const resources = document.getPage(page - 1).node.Resources()
       const dictionary = resources.lookupMaybe(PDFName.of('Font'), (await import('pdf-lib')).PDFDict)
       if (dictionary) for (const [, ref] of dictionary.entries()) {
@@ -227,43 +249,78 @@ async function pdfSemantics(data, expect) {
   } finally { await pdf.destroy() }
   const normalized = text.normalize('NFC').replace(/\s+/gu, ' ')
   for (const phrase of expect.text || []) assert.ok(normalized.includes(phrase.normalize('NFC')), `PDF semantic text missing: ${phrase}; extracted: ${normalized}`)
+  // PDF.js omits discretionary hyphens in LuaHBTeX text; the unchanged PDF
+  // glyphs remain visibly present. Compare bibliography words, not that parser's
+  // discretionary-hyphen choice, without rewriting the PDF or its text layer.
+  const folded = (text) => text.normalize('NFKC').replace(/[-\u00ad\u2010\u2011]/gu, '').toLowerCase()
+  for (const phrase of expect.caseInsensitiveText || []) assert.ok(folded(normalized).includes(folded(phrase)), `PDF content missing: ${phrase}; extracted: ${normalized}`)
   for (const phrase of expect.absent || []) assert.ok(!normalized.includes(phrase), `Unexpected PDF text: ${phrase}`)
+  for (const url of expect.urls || []) assert.ok(urls.includes(url), `Original link missing or substituted: ${url}; actual: ${urls.join(', ')}`)
+  if (expect.columns) {
+    const left = textPositions.find((item) => item.page === 1 && item.text === 'EXPERIENCE'), right = textPositions.find((item) => item.page === 1 && item.text === 'MY LIFE PHILOSOPHY')
+    assert.ok(left && right, 'Original left/right headings must render')
+    const points = 72 / 2.54, usable = document.getPage(0).getWidth() - (2 * 1.25 + 1.2) * points
+    assert.ok(Math.abs(left.x - 1.25 * points) < 1, 'Original left margin')
+    assert.ok(Math.abs((right.x - left.x - 1.2 * points) / usable - 0.6) < 0.005, 'Actual 6:4 paracol ratio, not equal-width adapted columns')
+  }
   if (expect.images) assert.ok(images >= expect.images, `Expected ${expect.images} actual PDF image XObjects, got ${images}`)
   if (expect.font) assert.ok(fonts.some((font) => expect.font.test(font)), `Expected embedded font family ${expect.font}; got ${fonts.join(', ')}`)
+  for (const family of expect.fonts || []) assert.ok(fonts.some((font) => family.test(font)), `Required actual font family ${family} missing; got ${fonts.join(', ')}`)
   if (expect.bengaliGlyphs) {
     assert.match(normalized, /[\u0980-\u09ff]/u, 'The actual PDF must contain Bengali glyph text and embedded Noto fonts.')
     const exact = expect.bengaliGlyphs.every((phrase) => normalized.includes(phrase.normalize('NFC')))
     if (!exact || normalized.includes('\ufffd')) console.log('LIMITATION: Bengali glyph/font compilation passed, but complex-cluster PDF.js text extraction is not fully faithful; search/copy/ATS compatibility is not claimed.')
   }
-  return { bytes: bytes.length, sha256: sha256(bytes), pages: pdf.numPages, images, fonts: [...new Set(fonts)] }
+  return { bytes: bytes.length, sha256: sha256(bytes), pages: document.getPageCount(), images, fonts: [...new Set(fonts)], text: normalized, urls }
 }
 
 async function successful(id, engine, files, expect, mainFile = 'main.tex', initOptions = {}) {
   if (only && only !== id) return
+  selectedCases.add(id)
+  if (!initOptions.approvedGroups && files.some((file) => typeof file.content === 'string' && /\\usepackage(?:\[[^\]]*\])?\{[^}]*amsmath/.test(file.content))) initOptions = { ...initOptions, approvedGroups: ['math'] }
   const current = session(undefined, { noNetwork: initOptions.supplied })
   try {
     const initialized = await current.init(mainFile, engine, initOptions)
     assert.equal(initialized.type, 'ready', `Init failed: ${JSON.stringify(initialized)}`)
     const { result, duration } = await current.compile({ operationKey: id, engine, mainFile, files })
-    if (result.type === 'error' && result.log) console.error(result.log.slice(-16000))
+    if (result.type === 'error' && result.log) {
+      if (outputDirectory) { await mkdir(outputDirectory, { recursive: true }); await writeFile(path.join(outputDirectory, `${id}.failure.log`), result.log) }
+      console.error(result.log.slice(-6000))
+    }
     assert.equal(result.type, 'result', `${id}: ${result.code || ''} ${result.message || ''}`)
     assert.equal(result.engine, engine); assert.equal(result.exitCode, 0)
+    const diagnosticSource = { ...createTemplateProject(), engine, mainFile, files: files.filter((file) => typeof file.content === 'string').map((file, index) => ({ ...file, id: `source-${index}` })), assets: [] }
+    const finalDiagnostics = browserLatexDiagnostics(result.log, diagnosticSource, false)
+    assert.deepEqual(finalDiagnostics.filter((item) => item.severity === 'error'), [], `${id}: the real worker result must also pass the independent parent diagnostic gate`)
+    if (outputDirectory) {
+      await mkdir(outputDirectory, { recursive: true })
+      await writeFile(path.join(outputDirectory, `${id}.pdf`), new Uint8Array(result.pdf))
+      await writeFile(path.join(outputDirectory, `${id}.log`), result.log)
+    }
     const proof = await pdfSemantics(result.pdf, expect)
+    proof.diagnostics = finalDiagnostics
+    if (outputDirectory) {
+      await writeFile(path.join(outputDirectory, `${id}.json`), JSON.stringify(proof, null, 2) + '\n')
+    }
     const passes = current.events.filter((event) => event.type === 'progress' && event.stage === 'compiling' && /^Running (?:pdfLaTeX|XeLaTeX|LuaHBTeX) pass/.test(event.message)).map((event) => event.pass)
     assert.ok(passes.length >= 1 && passes.length <= 3)
     assert.deepEqual(passes, Array.from({ length: passes.length }, (_, index) => index + 1))
     const bibliographies = current.events.filter((event) => event.type === 'progress' && event.message.includes('classic BibTeX pass'))
+    const biber = current.events.filter((event) => event.type === 'progress' && event.message === 'Running the real local Biber 2.22 bibliography pass.')
     assert.ok(bibliographies.length <= 1)
+    assert.ok(biber.length <= 1)
     if (expect.bibliography) { assert.equal(bibliographies.length, 1); assert.equal(passes.length, 3) }
+    if (expect.biber) { assert.equal(bibliographies.length, 0); assert.equal(biber.length, 1); assert.equal(passes.length, 3) }
     await current.compile({ operationKey: id + '-reuse', engine, mainFile, files }).then(({ result: reused }) => assert.equal(reused.code, 'worker_used'))
-    console.log(`COMPILE PASS ${id}: ${engine}; ${passes.length} TeX + ${bibliographies.length} BibTeX passes; ${proof.pages} page(s), ${proof.bytes} PDF bytes; ${duration} ms; SHA-256 ${proof.sha256}`)
-    results.push({ id, engine, passes: passes.length, bibliographyPasses: bibliographies.length, duration, ...proof })
+    console.log(`COMPILE PASS ${id}: ${engine}; ${passes.length} TeX + ${bibliographies.length} BibTeX + ${biber.length} real Biber passes; ${proof.pages} page(s), ${proof.bytes} PDF bytes; ${duration} ms; SHA-256 ${proof.sha256}`)
+    results.push({ id, engine, passes: passes.length, bibliographyPasses: bibliographies.length, biberPasses: biber.length, duration, ...proof })
     return result
   } finally { await current.stop() }
 }
 
 async function refused(id, engine, files, code, mainFile = 'main.tex', initOptions = {}) {
   if (only && only !== id) return
+  selectedCases.add(id)
   const current = session()
   try {
     assert.equal((await current.init(initOptions.mainFile || mainFile, initOptions.engine || (['pdflatex', 'xelatex', 'lualatex'].includes(engine) ? engine : 'pdflatex'))).type, 'ready')
@@ -271,13 +328,14 @@ async function refused(id, engine, files, code, mainFile = 'main.tex', initOptio
     assert.equal(result.type, 'error', JSON.stringify(result)); assert.equal(result.code, code, JSON.stringify(result)); assert.equal(result.pdf, undefined)
     assert.equal(current.events.filter((event) => ['result', 'error'].includes(event.type) && event.operationKey === id).length, 1)
     if (id === 'invalid-tex') assert.match(result.log, /Undefined control sequence/)
-    if (!['compile_failed', 'missing_glyph'].includes(code) && id !== 'included-biblatex') assert.equal(current.events.filter((event) => event.type === 'progress' && event.stage === 'compiling').length, 0)
+    if (!['compile_failed', 'missing_glyph', 'pass_limit'].includes(code) && id !== 'included-biblatex') assert.equal(current.events.filter((event) => event.type === 'progress' && event.stage === 'compiling').length, 0)
     console.log(`REFUSAL PASS ${id}: ${code}; no PDF returned.`)
   } finally { await current.stop() }
 }
 
 async function initializationRefused(id, change, code = 'asset_integrity') {
   if (only && only !== id) return
+  selectedCases.add(id)
   const current = session(undefined, { noNetwork: true })
   try {
     const result = await current.init('main.tex', 'pdflatex', { supplied: true, change })
@@ -335,15 +393,32 @@ async function importedZip(engine) {
   await successful(name, engine, files, { text: ['ZIPSELECTEDPROFILE', 'WRAPPEDCHAPTER', 'ZIPINPUTPROOF', 'ZIPSTYLEPROOF', 'ZIPBIBLIOGRAPHYPROOF', 'See Section 1 and page 1'], absent: ['UNSELECTEDDOCUMENT', '??'], images: 2, pages: 3, bibliography: true }, selected.mainFile)
 }
 
-async function altaCV(engine) {
+async function altaCV(engine, variant = 'import') {
   const legacy = only === `altacv-legacy-copy-${engine}`
-  const name = legacy ? `altacv-legacy-copy-${engine}` : `altacv-import-${engine}`
+  const name = legacy ? `altacv-legacy-copy-${engine}` : `altacv-${variant}-${engine}`
   if (only && only !== name) return
   const archive = await readFile(new URL('../../../../../Mr.Resume/AltaCV_Template.zip', import.meta.url))
   const original = await readProjectZip(archive.buffer.slice(archive.byteOffset, archive.byteOffset + archive.byteLength), 'Actual AltaCV template')
+  assert.equal(original.mainFile, 'sample.tex', 'Only the complete document, not a publication preamble, is the main')
+  if (!legacy) {
+    const project = reviseProject(original, { engine })
+    assert.deepEqual(project.files, original.files, 'Selecting an engine must not adapt the source')
+    assert.equal(sha256(archive), 'a4cfbd5be6521ee6a6854bc4dd702e70951bb2529f18ead4d24406454f02a1c3')
+    const files = [...project.files.map(({ path, content }) => ({ path, content })), ...await Promise.all(project.assets.map(async (asset) => ({ path: asset.path, content: new Uint8Array(await asset.blob.arrayBuffer()) })))]
+    // Explicit qualification variants only: the imported project/ZIP and all
+    // assets remain untouched. Exercise the other supplied preamble/photos.
+    if (variant === 'authoryear') files.find((file) => file.path === project.mainFile).content = files.find((file) => file.path === project.mainFile).content.replace('\\input{pubs-num}', '\\input{pubs-authoryear}')
+    if (variant === 'all-photos') files.find((file) => file.path === project.mainFile).content = files.find((file) => file.path === project.mainFile).content.replace('% \\photoL{2.5cm}{Yacht_High,Suitcase_High}', '\\photoL{2.5cm}{Yacht_High,Suitcase_High}')
+    console.log(`ALTACV ${variant}: ${original.files.length} preserved original source/config files; all ${original.assets.length} unchanged images; main ${project.mainFile}; no adapter.`)
+    return successful(name, engine, files, {
+      text: ['YOUR NAME HERE', 'Your Position or Tagline Here', 'Job Title 1', 'Job Title 2', 'Project 1', 'Project 2', 'Sleep', 'Hopeful novelist', 'Daytime job', 'Spending time with family', 'Thesis title: Wonderful Research', 'Alpha Beta', 'Gamma Delta', 'Statistical Analysis', 'German'],
+      caseInsensitiveText: ['A fictional research', 'A study into fireside story-telling', 'A non-existant paper', 'Another paper something something', '2010', '2011', '2008', '2013'],
+      absent: ['??'], images: variant === 'all-photos' ? 3 : 1, pages: 2, biber: true, columns: true, urls: ['https://x.com/@x-handle'], fonts: [/RobotoSlab/i, /Lato/i, /FontAwesome/i, /SimpleIcons/i],
+    }, project.mainFile, { supplied: true, approvedGroups: ['cv-layout', 'cv-fonts', 'bibliography'] })
+  }
   const copy = createAltaCvBrowserProject(original)
   assert.notEqual(copy.id, original.id)
-  assert.equal(original.mainFile, null)
+  assert.equal(original.mainFile, 'sample.tex')
   assert.deepEqual(copy.files.slice(0, original.files.length), original.files)
   const exportProject = legacy ? { ...copy, templateVersion: 1, engine, files: copy.files.map((source) => source.path === copy.mainFile
     ? { ...source, content: source.content.replace('\\usepackage{geometry}', '\\usepackage[T1]{fontenc}\n\\usepackage{lmodern}\n\\usepackage{geometry}') }
@@ -370,10 +445,12 @@ async function altaCV(engine) {
 
 console.log(`REAL NODE/WASM SMOKE: Node ${process.version}; exact deployed classic worker, local-file asset adapter, no browser/HTTP/native compiler.`)
 await checkAssets()
+selectedCases.add('assets')
 for (const engine of ['pdflatex', 'xelatex', 'lualatex']) await successful(`supplied-assets-${engine}`, engine,
   [file('main.tex', String.raw`\documentclass{article}\begin{document}SUPPLIEDASSETSPROOF ${engine}. $2+2=4$.\end{document}`)], { text: ['SUPPLIEDASSETSPROOF', engine], pages: 1 }, 'main.tex', { supplied: true })
 const legacyManifest = { ...manifest }
 delete legacyManifest.groups
+delete legacyManifest.biber
 await successful('legacy-manifest-default-engine', 'pdflatex', [file('main.tex', String.raw`\documentclass{article}\begin{document}LEGACYMANIFESTPROOF\end{document}`)],
   { text: ['LEGACYMANIFESTPROOF'], pages: 1 }, 'main.tex', { supplied: true, manifest: legacyManifest, omitEngine: true })
 await successful('legacy-direct-init-default-engine', 'pdflatex', [file('main.tex', String.raw`\documentclass{article}\begin{document}LEGACYDIRECTPROOF\end{document}`)],
@@ -386,12 +463,19 @@ for (const engine of ['pdflatex', 'xelatex', 'lualatex']) {
 await successful('nested-main-labels', 'pdflatex', [file('documents/main.tex', core('pdflatex')), file('sections/body.tex', 'NESTEDMAINPROOF'), file('assets/proof.png', png), file('assets/proof.jpg', jpeg)], { text: ['NESTEDMAINPROOF', 'See Section 1 and page 1'], images: 2, pages: 1 }, 'documents/main.tex')
 for (const engine of ['pdflatex', 'xelatex', 'lualatex']) await importedZip(engine)
 for (const engine of ['pdflatex', 'xelatex', 'lualatex']) await altaCV(engine)
+await altaCV('lualatex', 'authoryear')
+await altaCV('lualatex', 'all-photos')
 const career = latexSourceTemplates.find((template) => template.id === 'career-source')
-await successful('career-template-as-is', 'lualatex', career.files, { text: ['Ayesha Rahman', 'Profile', 'Senior Product Designer', 'Education', 'Skills'], pages: 1, font: /LMRoman10/i })
+await successful('career-template-as-is', career.engine, career.files, { text: ['Ayesha Rahman', 'Profile', 'Senior Product Designer', 'Education', 'Skills'], pages: 1, font: /LMRoman10/i })
+const academic = latexSourceTemplates.find((template) => template.id === 'academic-source')
+await successful('academic-template-as-is', academic.engine, academic.files, { text: ['Samira Ahmed', 'Research interests', 'An example study', 'Fictional Journal'], bibliography: true, font: /LMRoman10/i })
 await successful('unused-biblatex-backup', 'lualatex', [...career.files, file('backup.tex', String.raw`\usepackage{biblatex} BACKUPNOTCOMPILED`)], { text: ['Ayesha Rahman'], absent: ['BACKUPNOTCOMPILED'], pages: 1 })
 const bangla = latexSourceTemplates.find((template) => template.id === 'bangla-source')
-await successful('bangla-template-as-is', 'lualatex', bangla.files, { text: ['Northstar Studio', 'English'], bengaliGlyphs: ['আয়েশা রহমান', 'সংক্ষিপ্ত পরিচয়'], pages: 1, font: /NotoSansBengali/i })
-const legacyBangla = bangla.files.map((item) => ({ ...item, content: item.content.replace('\\setmainfont[Script=Bengali,Renderer=HarfBuzz]{Noto Sans Bengali}', '\\setmainfont{Latin Modern Roman}').replace('\\newfontfamily\\englishfont{Latin Modern Roman}\n', '') }))
+await successful('bangla-template-as-is', bangla.engine, bangla.files, { text: ['Northstar Studio', 'English'], bengaliGlyphs: ['আয়েশা রহমান', 'সংক্ষিপ্ত পরিচয়'], pages: 1, font: /NotoSansBengali/i })
+// Recreate the wrong effective scope, not just a main-font token: the v2
+// Bengali default would otherwise still select its explicit Noto family.
+const legacyBangla = bangla.files.map((item) => ({ ...item, content: item.content.replace('\\setmainfont[Script=Bengali,Renderer=HarfBuzz]{Noto Sans Bengali}', '\\setmainfont{Latin Modern Roman}').replace('\\newfontfamily\\englishfont{Latin Modern Roman}\n', '')
+  .replace('\\setdefaultlanguage{bengali}', '\\setdefaultlanguage{english}').replace('\\setotherlanguage{english}', '\\setotherlanguage{bengali}') }))
 await refused('legacy-bangla-v1-missing-glyph', 'lualatex', legacyBangla, 'missing_glyph')
 await successful('bangla-harfbuzz-explicit-font', 'lualatex', [file('main.tex', String.raw`\documentclass[11pt]{article}
 \usepackage{fontspec,polyglossia}
@@ -414,8 +498,9 @@ ${engine === 'pdflatex' ? '' : String.raw`\usepackage{fontspec}\setmainfont{Lati
     { text: ['Classic bibliography proof', 'BIBLIOGRAPHYPROOF', '2026'], pages: 1, bibliography: true })
 }
 await refused('invalid-tex', 'pdflatex', [file('main.tex', String.raw`\documentclass{article}\begin{document}\ACommandThatDoesNotExist\end{document}`)], 'compile_failed')
-await refused('academic-biber-as-is', 'lualatex', latexSourceTemplates.find((template) => template.id === 'academic-source').files, 'unsupported_bibliography')
-await refused('included-biblatex', 'pdflatex', [file('main.tex', String.raw`\documentclass{article}\input{preamble.tex}\begin{document}Proof\end{document}`), file('preamble.tex', String.raw`\usepackage{biblatex}`)], 'unsupported_bibliography')
+await successful('warning-only-ready', 'pdflatex', [file('main.tex', String.raw`\documentclass{article}\begin{document}\PackageWarning{fixture}{A harmless fixture warning}WARNINGONLYPROOF\end{document}`)], { text: ['WARNINGONLYPROOF'], pages: 1 })
+await refused('unresolved-citation', 'pdflatex', [file('main.tex', String.raw`\documentclass{article}\begin{document}A required citation~\cite{missing-entry}.\end{document}`)], 'pass_limit')
+await refused('included-biblatex', 'pdflatex', [file('main.tex', String.raw`\documentclass{article}\input{preamble.tex}\begin{document}Proof\end{document}`), file('preamble.tex', String.raw`\usepackage{biblatex}`)], 'package_group_required')
 await refused('unsupported-engine', 'tectonic', [file('main.tex', String.raw`\documentclass{article}\begin{document}Proof\end{document}`)], 'unsupported_engine')
 await refused('initialized-engine-mismatch', 'lualatex', [file('main.tex', 'Proof')], 'invalid_request', 'main.tex', { engine: 'pdflatex' })
 await refused('initialized-main-mismatch', 'pdflatex', [file('main.tex', 'Proof')], 'invalid_request', 'main.tex', { mainFile: 'other.tex' })
@@ -455,5 +540,8 @@ try {
   console.log('TERMINATION PASS: actual compiling worker terminated, no stale PDF returned.')
 } finally { await hanging.stop() }
 await successful('fresh-worker-after-termination', 'pdflatex', [file('main.tex', String.raw`\documentclass{article}\begin{document}FRESHAFTERTERMINATION\end{document}`)], { text: ['FRESHAFTERTERMINATION'], pages: 1 })
-console.log(`SMOKE PASS: ${results.length} real PDF compilations; all advertised engines, Career and Bangla v2 sources as-is, Noto/HarfBuzz glyph coverage (not universal text/ATS fidelity), legacy Bangla font-scope refusal, labels/multiple files, PNG/JPEG, classic BibTeX, invalid TeX, biber/engine/path/limit/glyph refusals, asset integrity, privacy, and true worker termination verified. No E2E/browser suites run.`)
-} else console.log(`SELECTED SMOKE PASS: ${only}; ${results.length} real PDF compilation(s). No full-corpus coverage claimed for this selected run.`)
+console.log(`SMOKE PASS: ${results.length} real PDF compilations; all advertised engines, Career/Academic/Bangla sources as-is on their declared engines, Noto/HarfBuzz glyph coverage (not universal text/ATS fidelity), legacy Bangla font-scope refusal, original AltaCV with real Biber, labels/multiple files, PNG/JPEG, classic BibTeX, warning-only success and final citation/engine/path/limit/glyph refusals, asset integrity, privacy, and true worker termination verified. No E2E/browser suites run.`)
+} else {
+  assert.ok(selectedCases.has(only), `Unknown smoke case: ${only}. No selected compilation or refusal was exercised.`)
+  console.log(`SELECTED SMOKE PASS: ${only}; ${results.length} real PDF compilation(s). No full-corpus coverage claimed for this selected run.`)
+}

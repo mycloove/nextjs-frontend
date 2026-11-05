@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { runInNewContext } from 'node:vm'
 import test from 'node:test'
 import ts from 'typescript'
 
@@ -35,6 +36,10 @@ test('Regular is retained rather than conditionally unmounted, with a separate m
   assert.match(host, /\.inert = mode !== 'latex'/u)
   assert.match(host, /LATEX_MODE_KEY/u)
   assert.doesNotMatch(host, /mr-resume:draft|setFormat\(/u)
+  assert.match(host, /workspaceVisited && <>/u)
+  assert.match(host, /if \(mode && !workspaceVisited\) setWorkspaceVisited\(true\)/u)
+  assert.match(host, /if \(mode === 'latex' && !latexVisited\) setLatexVisited\(true\)/u)
+  assert.doesNotMatch(host, /if \(!mode\) return/u)
 })
 
 test('editor panels remain named regions and inactive panels cannot print', () => {
@@ -44,6 +49,37 @@ test('editor panels remain named regions and inactive panels cannot print', () =
   assert.match(css, /\.panel\[hidden\]\s*\{\s*display: none !important/u)
   assert.match(css, /data-editor-mode="latex"[^}]+display: none !important/u)
   assert.match(css, /prefers-reduced-motion/u)
+})
+
+test('history navigation cancels retained Regular dialogs before relinquishing focus ownership', () => {
+  const source = ts.createSourceFile('workspace.tsx', host, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  let effect: ts.ArrowFunction | undefined
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node) && node.expression.getText(source) === 'useLayoutEffect' && ts.isArrowFunction(node.arguments[0])) effect = node.arguments[0]
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  assert.ok(effect)
+  const javascript = ts.transpileModule(`(${effect.getText(source)})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+  // Execute the production lifecycle callback with DOM doubles, not browser E2E.
+  for (const mode of [null, 'regular', 'latex']) {
+    const events: string[] = []
+    const dialog = {
+      open: true,
+      dispatchEvent(event: Event) { assert.equal(event.type, 'cancel'); assert.equal(event.cancelable, true); events.push('cancel'); event.preventDefault(); return false },
+      close() { this.open = false; events.push('close') },
+    }
+    const regularElement = {
+      querySelectorAll(selector: string) { assert.equal(selector, 'dialog[open]'); return [dialog] },
+      set inert(value: boolean) { events.push(`inert:${value}`) },
+    }
+    const latexElement = { inert: false }
+    const apply = runInNewContext(javascript, { Event, mode, regularPanel: { current: regularElement }, latexPanel: { current: latexElement } }) as () => void
+    apply()
+    assert.deepEqual(events, mode === 'regular' ? ['inert:false'] : ['cancel', 'close', 'inert:true'])
+    assert.equal(dialog.open, mode === 'regular')
+    assert.equal(latexElement.inert, mode !== 'latex')
+  }
 })
 
 test('Regular exposes the separate LaTeX copy beside source export, with the existing round-trip handler', () => {
@@ -63,24 +99,52 @@ test('LaTeX header omits the editor-brand and cross-editor mode switcher', () =>
   assert.match(latex, /className=\{styles\.primaryActions\}/u)
 })
 
-test('availability check sits beside Compile and reports its result as a temporary toast', () => {
+test('availability check remains beside Compile and uses the isolated typed feedback presenter', () => {
   assert.match(latex, /styles\.primaryButton[\s\S]*?styles\.availabilityButton/u)
   assert.match(latex, /Check availability/u)
   assert.match(latex, /const ready = result\.enabled && result\.ready/u)
-  assert.match(latex, /message: ready \? 'Private LaTeX compilation is available\.' : result\.reason/u)
-  assert.match(latex, /className=\{styles\.availabilityToast\}[^>]*role="status" aria-live="polite"/u)
-  assert.match(latex, /setAvailabilityToast\(null\), 5000\)/u)
+  assert.match(latex, /Private LaTeX compilation is available\./u)
+  assert.match(latex, /workspace.notify\(ready \? 'success' : 'action', 'runtime', 'availability'/u)
+  assert.match(latex, /<LatexReceipt fact=\{receipt\} active=\{active\}/u)
+  assert.match(latex, /<LatexAnnouncements attention=\{attention.primary\}/u)
+  assert.doesNotMatch(regular, /LatexFeedback|feedbackReducer|LatexReceipt/u)
   assert.doesNotMatch(latex, /capabilityTopbar/u)
-  for (const name of ['availabilityButton', 'availabilityToast', 'availabilityToastMark']) assert.match(latexCss, new RegExp(`\\.${name}(?![\\w-])`, 'u'))
+  for (const name of ['availabilityButton', 'receiptAnchor']) assert.match(latexCss, new RegExp(`\\.${name}(?![\\w-])`, 'u'))
+  assert.doesNotMatch(latexCss, /availabilityToast|statusStack/u)
 })
 
-test('the entry chooser is the first state and each editor mounts only after its explicit choice', () => {
-  assert.match(host, /useState<EditorMode \| null>\(null\)/u)
-  assert.match(host, /if \(!mode\) return[\s\S]*?Choose how you want to build/u)
+test('the route selects the chooser or editor without restoring a conflicting mode preference', () => {
+  assert.match(host, /const segment = useSelectedLayoutSegment\(\)/u)
+  assert.match(host, /segment === 'regular-editor' \? 'regular' : segment === 'latex' \? 'latex' : null/u)
+  assert.match(host, /useState\(mode !== null\)/u)
+  assert.match(host, /useState\(mode === 'latex'\)/u)
+  assert.match(host, /!mode && <main[\s\S]*?Choose how you want to build/u)
   assert.match(host, /onClick=\{\(\) => chooseMode\('regular'\)\}/u)
   assert.match(host, /onClick=\{\(\) => chooseMode\('latex'\)\}/u)
   assert.match(host, /Your projects stay separate/u)
-  assert.match(host, /return <div className=\{`\$\{theme\.theme\} \$\{styles\.root\}`\} data-editor-mode=\{mode\}/u)
+  assert.match(host, /data-editor-mode=\{mode \?\? undefined\}/u)
+  assert.doesNotMatch(host, /getItem\(LATEX_MODE_KEY\)|setMode\(/u)
+})
+
+test('chooser, copy, and fallback navigation use the dedicated editor routes', () => {
+  assert.match(host, /regular: '\/mr-resume\/regular-editor', latex: '\/mr-resume\/latex'/u)
+  for (const name of ['chooseMode', 'changeMode']) {
+    assert.match(host, new RegExp(`function ${name}\\(next: EditorMode\\)[\\s\\S]*?router\\.push\\(editorPaths\\[next\\], \\{ scroll: false \\}\\)`, 'u'))
+  }
+  assert.match(host, /if \(mode !== 'latex'\) router\.push\(editorPaths\.latex, \{ scroll: false \}\)/u)
+})
+
+test('all Mr. Resume entry routes share one persistent feature host and unchanged metadata', () => {
+  const layout = read('../../../app/mr-resume/layout.tsx')
+  assert.match(layout, /import MrResumeWorkspace from '@\/features\/mr-resume'/u)
+  assert.match(layout, /<MrResumeWorkspace \/>\{children\}/u)
+  assert.match(layout, /robots: \{ index: false, follow: false \}/u)
+  for (const route of ['page.tsx', 'regular-editor/page.tsx', 'latex/page.tsx']) {
+    const page = read(`../../../app/mr-resume/${route}`)
+    assert.match(page, /export default function/u)
+    assert.match(page, /return null/u)
+    assert.doesNotMatch(page, /import|redirect\(/u)
+  }
 })
 
 test('new host markup references only existing module-scoped style classes', () => {

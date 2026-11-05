@@ -1,12 +1,38 @@
 import JSZip from 'jszip'
-import { LATEX_LIMITS, LATEX_PROJECT_VERSION, type LatexAsset, type LatexProject } from './types.ts'
+import { LATEX_LIMITS, LATEX_PROJECT_VERSION, type LatexAsset, type LatexEngine, type LatexProject } from './types.ts'
 import { assertLatexPath, isLatexTextPath, isRecord, LatexProjectError, newLatexId, requiredNativeFonts, sha256, utf8Bytes, validateLatexProject } from './project.ts'
+import { findLatexDocumentRoots } from './projectAssessment.ts'
 import { latexSourceTemplates, templateNotice } from './templates.ts'
 
 const manifestName = 'smilepdf-project.json'
 const requirementsNotice = 'Native fonts and TeX packages are not bundled. Build in a compatible offline TeX environment. Raw TeX must run in an isolated sandbox.'
 const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
 export type ZipEntryPolicy = { path: string; directory: boolean; expandedBytes: number; crc32: number }
+
+/** Session-only import evidence, never a project, checkpoint or portable v1 manifest field. */
+export type LatexImportReport = {
+  projectId: string
+  revision: number
+  format: 'zip' | 'tex'
+  sourceCount: number
+  imageCount: number
+  sourcePaths: string[]
+  imagePaths: string[]
+  main: {
+    selected: string | null
+    origin: 'manifest' | 'single-document' | 'single-tex' | 'tex-file' | 'ambiguous' | 'not-determined'
+    /** Complete literal documents, not every .tex fragment. The compiler is still authoritative. */
+    candidates: string[]
+  }
+  engine: {
+    selected: LatexEngine
+    origin: 'manifest' | 'tex-program' | 'altacv-recommendation' | 'default'
+    file?: string
+    line?: number
+  }
+  inertConfigPaths: string[]
+}
+export type LatexProjectImportResult = { project: LatexProject; report: LatexImportReport }
 
 function fail(message: string, code = 'invalid_archive'): never { throw new LatexProjectError(message, code) }
 function archivePath(path: string, directory: boolean) {
@@ -45,6 +71,7 @@ export function inspectProjectZip(bytes: Uint8Array): ZipEntryPolicy[] {
     || count === 0xffff || centralSize === 0xffffffff || centralStart === 0xffffffff || count > 96 || count === 0
     || centralStart + centralSize !== end) fail('Multi-disk, ZIP64, empty or oversized ZIP directories are unsupported.')
   const entries: ZipEntryPolicy[] = [], aliases = new Set<string>(), ranges: [number, number][] = []
+  const prefixes = new Map<string, { path: string; directory: boolean }>()
   const unsupported: string[] = []
   let offset = centralStart, expanded = 0, source = 0, fileCount = 0
   for (let i = 0; i < count; i++) {
@@ -62,6 +89,15 @@ export function inspectProjectZip(bytes: Uint8Array): ZipEntryPolicy[] {
     const alias = (directory ? path.slice(0, -1) : path).toLowerCase()
     if (aliases.has(alias)) fail(`Duplicate ZIP entry or case alias: ${path}`, 'duplicate_path')
     aliases.add(alias)
+    // Folders can be implicit. Checking only complete names misses A/x.tex vs
+    // a/y.tex and a.tex vs a.tex/part.tex, which cannot be materialized safely.
+    const parts = (directory ? path.slice(0, -1) : path).split('/')
+    for (let length = 1; length <= parts.length; length++) {
+      const prefix = parts.slice(0, length).join('/'), folder = length < parts.length || directory
+      const previous = prefixes.get(prefix.toLowerCase())
+      if (previous && (previous.path !== prefix || previous.directory !== folder)) fail(`ZIP path case alias or file/folder collision: ${path}`, 'duplicate_path')
+      prefixes.set(prefix.toLowerCase(), { path: prefix, directory: folder })
+    }
     try { archivePath(path, directory) } catch (error) {
       if (error instanceof LatexProjectError && error.code === 'unsupported_file') unsupported.push(path)
       else throw error
@@ -170,6 +206,10 @@ export function imageDimensions(bytes: Uint8Array, mediaType: LatexAsset['mediaT
 }
 
 export async function readProjectZip(buffer: ArrayBuffer, title = 'Imported project'): Promise<LatexProject> {
+  return (await readProjectZipWithReport(buffer, title)).project
+}
+
+export async function readProjectZipWithReport(buffer: ArrayBuffer, title = 'Imported project'): Promise<LatexProjectImportResult> {
   const entries = inspectProjectZip(new Uint8Array(buffer))
   // checkCRC32:true makes JSZip eagerly inflate everything. CRC is instead checked on each bounded stream.
   const zip = await JSZip.loadAsync(buffer, { checkCRC32: false, createFolders: false })
@@ -196,6 +236,12 @@ export async function readProjectZip(buffer: ArrayBuffer, title = 'Imported proj
     const allowed = ['format', 'version', 'sourceProjectId', 'title', 'mainFile', 'engine', 'templateId', 'templateVersion', 'files', 'assets', 'nativeFonts', 'requirements', 'templateNotice']
     if (Object.keys(manifest).some((key) => !allowed.includes(key))) fail('The ZIP manifest has unsupported fields. Nothing was discarded or imported.', 'unsupported_entries')
     if (manifest.format !== 'smilepdf-latex' || manifest.version !== 1 || !Array.isArray(manifest.files) || !Array.isArray(manifest.assets)) fail('Unsupported project manifest format or version.', 'unsupported_version')
+    for (const [kind, fields] of [['files', ['id', 'path']], ['assets', ['id', 'path', 'mediaType', 'bytes', 'sha256']]] as const) {
+      for (const item of manifest[kind] as unknown[]) {
+        if (!isRecord(item) || typeof item.id !== 'string' || typeof item.path !== 'string') fail('Invalid project manifest file identity.')
+        if (Object.keys(item).some((key) => !(fields as readonly string[]).includes(key))) fail('A ZIP manifest file entry has unsupported fields. Nothing was discarded or imported.', 'unsupported_entries')
+      }
+    }
     if ((manifest.templateNotice !== undefined && manifest.templateNotice !== templateNotice) || (manifest.requirements !== undefined && manifest.requirements !== requirementsNotice)) fail('Unsupported manifest license/requirements text. Preserve it in a supported source file or use its original archive; nothing was imported or discarded.', 'unsupported_entries')
     if (manifest.files.length + manifest.assets.length !== entries.filter((entry) => !entry.directory && entry.path !== manifestName).length) fail('The project manifest does not list every ZIP file.')
   }
@@ -216,23 +262,41 @@ export async function readProjectZip(buffer: ArrayBuffer, title = 'Imported proj
     }
   }
   const tex = files.filter((file) => /\.tex$/iu.test(file.path))
-  // Entry-point ambiguity is a build setting, not a reason to refuse source import.
-  // An exported explicit null must also survive re-import, even if main.tex exists.
-  const main = manifest && Object.hasOwn(manifest, 'mainFile') ? manifest.mainFile
-    : tex.find((file) => file.path === 'main.tex')?.path ?? (tex.length === 1 ? tex[0].path : null)
+  const documents = findLatexDocumentRoots(files)
+  // A conventional filename cannot outweigh a complete document or resolve two
+  // roots. An explicit manifest choice (including null) remains authoritative.
+  const explicitMain = Boolean(manifest && Object.hasOwn(manifest, 'mainFile'))
+  const main = explicitMain ? manifest!.mainFile : documents.length === 1 ? documents[0].path : tex.length === 1 ? tex[0].path : null
   const mainSource = main === null ? undefined : files.find((file) => file.path === main)
-  // The manifest engine stays authoritative; an archive without one honors the main document's % !TeX program directive.
-  const engine = (typeof manifest?.engine === 'string' ? manifest.engine
-    : mainSource ? declaredPdfEngine(mainSource.content) ?? 'lualatex' : 'lualatex') as LatexProject['engine']
+  const engine = importEngineEvidence(mainSource, documents.find((file) => file.path === main)?.className, manifest)
   const now = new Date().toISOString()
-  return validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title: manifest?.title ?? title, revision: 1, mainFile: main, engine,
+  const project = validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title: manifest?.title ?? title, revision: 1, mainFile: main, engine: engine.selected,
     files, assets, templateId: manifest?.templateId ?? null, templateVersion: manifest?.templateVersion ?? null, createdAt: now, updatedAt: now })
+  return { project, report: importReport(project, 'zip', { selected: project.mainFile, candidates: documents.map((file) => file.path),
+    origin: explicitMain ? 'manifest' : documents.length === 1 ? 'single-document' : tex.length === 1 ? 'single-tex' : documents.length > 1 ? 'ambiguous' : 'not-determined' }, engine) }
 }
 
-/** The universal `% !TeX program = …` directive stays the truth for imported sources; unknown names are ignored. */
-function declaredPdfEngine(content: string) {
-  const declared = /(?:^|[\r\n])[ \t\uFEFF]*%[ \t]*!TeX[ \t]+(?:TS-)?program[ \t]*=[ \t]*([A-Za-z][A-Za-z0-9_-]*)/iu.exec(content)?.[1]?.toLowerCase()
-  return declared === 'lualatex' || declared === 'xelatex' || declared === 'pdflatex' ? declared : null
+function importEngineEvidence(main: LatexProject['files'][number] | undefined, className?: string | null, manifest?: Record<string, unknown> | null): LatexImportReport['engine'] {
+  if (manifest && Object.hasOwn(manifest, 'engine')) {
+    if (manifest.engine !== 'lualatex' && manifest.engine !== 'xelatex' && manifest.engine !== 'pdflatex') fail('The project manifest has an unsupported engine. No fallback was applied.')
+    return { selected: manifest.engine, origin: 'manifest', file: manifestName }
+  }
+  if (main) {
+    const lines = main.content.split(/\r\n|\n|\r/u)
+    for (const [index, line] of lines.entries()) {
+      const declared = /^[ \t\uFEFF]*%[ \t]*!TeX[ \t]+(?:TS-)?program[ \t]*=[ \t]*([A-Za-z][A-Za-z0-9_-]*)[ \t]*(?:%.*)?$/iu.exec(line)?.[1]?.toLowerCase()
+      if (declared === 'lualatex' || declared === 'xelatex' || declared === 'pdflatex') return { selected: declared, origin: 'tex-program', file: main.path, line: index + 1 }
+    }
+    // A product recommendation for original AltaCV, never a detected Overleaf setting.
+    if (className === 'altacv') return { selected: 'xelatex', origin: 'altacv-recommendation', file: main.path }
+  }
+  return { selected: 'lualatex', origin: 'default' }
+}
+
+function importReport(project: LatexProject, format: LatexImportReport['format'], main: LatexImportReport['main'], engine: LatexImportReport['engine']): LatexImportReport {
+  return { projectId: project.id, revision: project.revision, format, sourceCount: project.files.length, imageCount: project.assets.length,
+    sourcePaths: project.files.map((file) => file.path), imagePaths: project.assets.map((asset) => asset.path), main, engine,
+    inertConfigPaths: project.files.filter((file) => /(?:^|\/)latexmkrc$/iu.test(file.path)).map((file) => file.path) }
 }
 
 export async function createProjectZip(project: LatexProject) {
@@ -259,12 +323,19 @@ export async function createProjectZip(project: LatexProject) {
 }
 
 export function readTexProject(bytes: Uint8Array, path: string, title: string): LatexProject {
+  return readTexProjectWithReport(bytes, path, title).project
+}
+
+export function readTexProjectWithReport(bytes: Uint8Array, path: string, title: string): LatexProjectImportResult {
   assertLatexPath(path, 'text')
   if (!/\.tex$/iu.test(path) || bytes.length > LATEX_LIMITS.sourceBytes) fail('Import a .tex source no larger than 1 MiB.', 'source_too_large')
   let content: string
   try { content = decoder.decode(bytes) } catch { return fail('The .tex file is not valid UTF-8. Its original bytes were not changed.', 'invalid_unicode') }
   const now = new Date().toISOString()
-  return validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title, revision: 1, mainFile: path, engine: declaredPdfEngine(content) ?? 'lualatex', files: [{ id: newLatexId(), path, content }], assets: [], templateId: null, templateVersion: null, createdAt: now, updatedAt: now })
+  const files = [{ id: newLatexId(), path, content }], documents = findLatexDocumentRoots(files)
+  const engine = importEngineEvidence(files[0], documents[0]?.className)
+  const project = validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title, revision: 1, mainFile: path, engine: engine.selected, files, assets: [], templateId: null, templateVersion: null, createdAt: now, updatedAt: now })
+  return { project, report: importReport(project, 'tex', { selected: path, origin: 'tex-file', candidates: documents.map((file) => file.path) }, engine) }
 }
 
 export function decodeSourceBytes(bytes: Uint8Array) {

@@ -1,0 +1,1098 @@
+{
+  "version": 1,
+  "unpackedBytes": 2717184,
+  "files": [
+    {
+      "path": "texlive/texmf-dist/tex/generic/xstring/xstring.sty",
+      "bytes": 123,
+      "sha256": "6b2fdbe2c3a1f873a6c19fc8da67001e269580be2827040b152cc59216b022c4",
+      "source": "xstring.tar.xz",
+      "upstreamPath": "tex/generic/xstring/xstring.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/generic/xstring/xstring.tex",
+      "bytes": 49397,
+      "sha256": "5cfb52e795a80a1e8f06280a8f968046a6fa05d5dae2313933d36b8e6eaf8c35",
+      "source": "xstring.tar.xz",
+      "upstreamPath": "tex/generic/xstring/xstring.tex"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/american-apa6.lbx",
+      "bytes": 5283,
+      "sha256": "8fbb2916798e2146c06921d52dd7de8601945b0d714dd3ac0040c1fac17b4739",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/american-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/apa6.bbx",
+      "bytes": 66210,
+      "sha256": "b3d38a0fa152c3301a774fb68ce418ad99f95a930ac5eff8f5d3c21eba100042",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/apa6.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/apa6.cbx",
+      "bytes": 20251,
+      "sha256": "2474d552e62f19101412321c8f5e7ac80b1ecb0a8f52ce39a437a2c704494b51",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/apa6.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/apa6.dbx",
+      "bytes": 2086,
+      "sha256": "9f24e256660bf54c3d744e96263f3322197d6d3eed258225e05985d25cfc29db",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/apa6.dbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/austrian-apa6.lbx",
+      "bytes": 8217,
+      "sha256": "93cb0b197afe391d3a13b3ebd0351ff354e0dbe1dc317a74e2bd3f0c20a23a00",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/austrian-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/brazilian-apa6.lbx",
+      "bytes": 4970,
+      "sha256": "ba43901f96c33b84a9414de26b58bfe67a8111fa74b217c0140b1e9a057ec28a",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/brazilian-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/british-apa6.lbx",
+      "bytes": 5156,
+      "sha256": "53d8a5a6265a49cf8ed77f005a55762ed58482c47d311f3ada2b077be54d08ab",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/british-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/danish-apa6.lbx",
+      "bytes": 5395,
+      "sha256": "7b538a1dc2eda4d389d82ac594353188b53db30539989f96758c272e45ccc065",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/danish-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/dutch-apa6.lbx",
+      "bytes": 5075,
+      "sha256": "9a16bd9f7b327b757d578b1ab1b69dc55c48e7b5d8ca030e0b63eca615db5e28",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/dutch-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/english-apa6.lbx",
+      "bytes": 5282,
+      "sha256": "59b99298f7789e344be6b2fcdda79d9c540acc875193916edc000ed8db6226c9",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/english-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/french-apa6.lbx",
+      "bytes": 5378,
+      "sha256": "3e60dc59834c6c27791a92a6536f6a9c7b00ebdded221d8633423564466f5045",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/french-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/galician-apa6.lbx",
+      "bytes": 5987,
+      "sha256": "3a92ea501df119a1fa6ce8c2cba5641075b7eaceb8bb2016f283b464855f4840",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/galician-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/german-apa6.lbx",
+      "bytes": 8192,
+      "sha256": "ae1e6f98f3bba41d90c2d60a9bd21b9319c820b6af7f0c410e53e0a7212aa2dd",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/german-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/greek-apa6.lbx",
+      "bytes": 6355,
+      "sha256": "0f769b4b85655ca5882660c8ef70816a80e16819c15f6ee80c0d08b73b79f0d0",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/greek-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/italian-apa6.lbx",
+      "bytes": 5312,
+      "sha256": "7c9295588e4498873dc95e93d1533bfc01ebcb32fd9e094ac627905af36f5c6f",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/italian-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/naustrian-apa6.lbx",
+      "bytes": 8231,
+      "sha256": "e5342bbfa18fab3d274022328b2d918a02b2103513d24b1db05167a56b6d1bcf",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/naustrian-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/ngerman-apa6.lbx",
+      "bytes": 8332,
+      "sha256": "bcc75818b5bc4165a774f3fddb664fbe35dadd7df366378c801c2dd18c144d05",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/ngerman-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/norsk-apa6.lbx",
+      "bytes": 5077,
+      "sha256": "9b09e873c3af65d3d735b21fd586ba687594e94775b0f4e47ea7943ef96067f8",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/norsk-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/norwegian-apa6.lbx",
+      "bytes": 5077,
+      "sha256": "9f73f79e830484bd12b124b07408ca86890ad30d3acbc9c8f592205073d22ea7",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/norwegian-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/nswissgerman-apa6.lbx",
+      "bytes": 8243,
+      "sha256": "2c2cbfff3dd84f04789a6d15b7a7694d436bc2fe197b7a47f72e73a9cc645933",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/nswissgerman-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/nynorsk-apa6.lbx",
+      "bytes": 5093,
+      "sha256": "085e315a82244b9e99479ddd945b9bc75fff718e5bf24086694531a8d449bdda",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/nynorsk-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/portuguese-apa6.lbx",
+      "bytes": 4844,
+      "sha256": "13de039b915aa6c1840b2f0ace52abf54fdb84ed9aa95e86f6cf171263e6487d",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/portuguese-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/russian-apa6.lbx",
+      "bytes": 5737,
+      "sha256": "8f2fa55043169f2ee27e2771329cb179e3d2dbb3126ce0d42bd9098c0042d6f3",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/russian-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/slovene-apa6.lbx",
+      "bytes": 5649,
+      "sha256": "da881a3bb2a4467f41635706347300e3fff4ba1927d8223ac243945a837a6229",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/slovene-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/spanish-apa6.lbx",
+      "bytes": 6023,
+      "sha256": "d19a299dded484b2f426614ce81a8bbe441d5ab7d485a5364d4b6183931ed12c",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/spanish-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/swedish-apa6.lbx",
+      "bytes": 4874,
+      "sha256": "c341db04c3df8d1bfd76165d0d7bc11b76846ce933e286d1b95d9da65ae71c12",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/swedish-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-apa6/swissgerman-apa6.lbx",
+      "bytes": 8239,
+      "sha256": "35473355c210db79636c952cd5c99d9c82a0beffc37084e4dbfafe4dc5693cb6",
+      "source": "biblatex-apa6.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-apa6/swissgerman-apa6.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-ieee/ieee-alphabetic.bbx",
+      "bytes": 2757,
+      "sha256": "615deb15a655b5e4e052df4c13a279950545af512014be81651c49254bd823cb",
+      "source": "biblatex-ieee.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-ieee/ieee-alphabetic.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-ieee/ieee-alphabetic.cbx",
+      "bytes": 2252,
+      "sha256": "dc2db858c193db2540acc548221eff9661d7ea4c08fdb15dad6edb31fdd775ac",
+      "source": "biblatex-ieee.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-ieee/ieee-alphabetic.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-ieee/ieee.bbx",
+      "bytes": 20021,
+      "sha256": "0baf8571db6120b6f2ea139c3d4ced55d1e3721a4f31aa3ca08e5cc6c30a82c4",
+      "source": "biblatex-ieee.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-ieee/ieee.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-ieee/ieee.cbx",
+      "bytes": 4682,
+      "sha256": "20e35e923f9f94dc5ebfc1c37342573780f9cd83ec2f61555407183abf965b73",
+      "source": "biblatex-ieee.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-ieee/ieee.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex-ieee/magyar-ieee.lbx",
+      "bytes": 2265,
+      "sha256": "02426d4922f34cbe60b15e6658c6d1cc0ce7b7c5afbdad285b67176ea868b504",
+      "source": "biblatex-ieee.tar.xz",
+      "upstreamPath": "tex/latex/biblatex-ieee/magyar-ieee.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/alphabetic-verb.bbx",
+      "bytes": 98,
+      "sha256": "bce0c0573111e83bbfd8aa6368ec6e2a00fc8970bcf26e2911573602a206a0a8",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/alphabetic-verb.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/alphabetic.bbx",
+      "bytes": 1731,
+      "sha256": "792e216d530f186440443c8ae8637cdcc69d3d47c4011903ce825ac0ff779e80",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/alphabetic.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authortitle-comp.bbx",
+      "bytes": 100,
+      "sha256": "ee64c241edceb31b15d2ff32a95e6c9e91654523732ccccb9e0aa310e6bd8845",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authortitle-comp.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authortitle-ibid.bbx",
+      "bytes": 100,
+      "sha256": "5455d5bdeb5d182aca2fe0245a7e11c4c37633e8d1b99e3067503f26f062cfa4",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authortitle-ibid.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authortitle-icomp.bbx",
+      "bytes": 101,
+      "sha256": "14391f2e25a27c30d3c671f5b3efbea26274abf8a5d424c2b3643ddaa9926536",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authortitle-icomp.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authortitle-tcomp.bbx",
+      "bytes": 101,
+      "sha256": "2e9d775a28f0572dc90de7080d4b15d35ef22c30a0d3bc2acc98e81f46ac4853",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authortitle-tcomp.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authortitle-terse.bbx",
+      "bytes": 101,
+      "sha256": "c3f2641ed109753668038b092bf7bc10dc2c9768f37a294f49dec86919dbe589",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authortitle-terse.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authortitle-ticomp.bbx",
+      "bytes": 102,
+      "sha256": "26cf5d86a801f6e4455ecd357a7c8a9b322da501d960fa5e230b8c75a395c855",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authortitle-ticomp.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authortitle.bbx",
+      "bytes": 3437,
+      "sha256": "e65263aa74bf61df9287cfaac52ff142d5fc72acade1f5fa990bf3d2a14792cd",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authortitle.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authoryear-comp.bbx",
+      "bytes": 98,
+      "sha256": "566e548829b936918fc30909f129877aedb67d7ddffdf52f59ecef03883038a7",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authoryear-comp.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authoryear-ibid.bbx",
+      "bytes": 98,
+      "sha256": "1e72988b33f6045a408eecce0be828c0eb4d39daf61cb97a297b08b7de81e24f",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authoryear-ibid.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authoryear-icomp.bbx",
+      "bytes": 99,
+      "sha256": "31e2073b702c90347495999bf5213fb101020cb9386207087c27d3e7a3cc5518",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authoryear-icomp.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/authoryear.bbx",
+      "bytes": 8023,
+      "sha256": "07b1c6843d8f8e1adc742fa51e5d3c8f0d00cfc6d680b7d07fa05ef065e5ec62",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/authoryear.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/debug.bbx",
+      "bytes": 4032,
+      "sha256": "d245b82c4eb7bc17fc343a03605767fb8291fe03bc3e48705effa849eb2a03e7",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/debug.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/draft.bbx",
+      "bytes": 1160,
+      "sha256": "6ec1767f717d9369abaa66ce1a602c10ef4c9399bd4c9fb20219c6f4c28d5804",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/draft.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/numeric-comp.bbx",
+      "bytes": 92,
+      "sha256": "8eeb309af937722e46f426679c82ff230236cbf99145ef54672a04d1aee43088",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/numeric-comp.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/numeric-verb.bbx",
+      "bytes": 92,
+      "sha256": "4d700fd5c122488e0749561e447ba2fd680fd713b271494dc47eee1f13e3cd07",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/numeric-verb.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/numeric.bbx",
+      "bytes": 1818,
+      "sha256": "eed345c5ccf88395c6db9790fe0808ac4adfac38e023ea96b6282b21f1b1bc15",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/numeric.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/reading.bbx",
+      "bytes": 4611,
+      "sha256": "39552f0b15ae0019295dbe9ab8befbbd8c9d2a2e346eea9c333dc696a1ef0d84",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/reading.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/standard.bbx",
+      "bytes": 25680,
+      "sha256": "ad4af059ea275ff4f8a82328b6390ef7ab9fddd97376e1d1abb08cc2fb9477ed",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/standard.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/verbose-ibid.bbx",
+      "bytes": 96,
+      "sha256": "1f98efa3b283c053c666d35db63b02d33082a282ce0a7eeb895a2fd49d74b3cf",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/verbose-ibid.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/verbose-inote.bbx",
+      "bytes": 97,
+      "sha256": "dd268dcc624d01804f2e98374c6bb204773cfcf62638f395278b1b1385a562c8",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/verbose-inote.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/verbose-note.bbx",
+      "bytes": 96,
+      "sha256": "30fc4c80f96e7312bb2798bf36e976c50e08587d2efa1e77233d14199c190ffc",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/verbose-note.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/verbose-trad1.bbx",
+      "bytes": 97,
+      "sha256": "7c393be9f459d15613acb24cf9b21ee19dca6608b2cf28c94277ef9eb877f530",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/verbose-trad1.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/verbose-trad2.bbx",
+      "bytes": 97,
+      "sha256": "25e27f23c4f4f1fcd49250066e045893c50f40665d7453cb73d98e0ea00490cd",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/verbose-trad2.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/verbose-trad3.bbx",
+      "bytes": 97,
+      "sha256": "7244966aa1871bcf9cac082ad3eba0764efef6cd14773ec341beccb4189a7a23",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/verbose-trad3.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/bbx/verbose.bbx",
+      "bytes": 91,
+      "sha256": "64ff06baddb922119376ce3bbfd2618114dc595c88b6370d5f4d2b4ed2e6e075",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/bbx/verbose.bbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/biblatex.cfg",
+      "bytes": 69,
+      "sha256": "2f6e01efbb466a252120f07c8e12d38a34e747b01ba0b9ba2b7d66b4386bb5b4",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/biblatex.cfg"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/biblatex.def",
+      "bytes": 96839,
+      "sha256": "ef81ea8b415e8f7d31279d311a78b127e2870e207618d954e2aa899d2605acf0",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/biblatex.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/biblatex.sty",
+      "bytes": 538551,
+      "sha256": "2a803d1bad5713f028249fde518c79d145b0addb8eb370136193e5fb2e8bcabb",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/biblatex.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/blx-bibtex.def",
+      "bytes": 24631,
+      "sha256": "e545401d0168ca4fb7e72bbe87b6ccd2c4b4df0f2ff6bec6e2cb24b78954b571",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/blx-bibtex.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/blx-case-expl3.sty",
+      "bytes": 10115,
+      "sha256": "c7f48586e09ea615e818a25688a3b85a28ab871334f0cfc8d039afb349807370",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/blx-case-expl3.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/blx-case-latex2e.sty",
+      "bytes": 8363,
+      "sha256": "7402b005dce7c445170307af8e97488f11ba70ad1bd035396702d8c044473044",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/blx-case-latex2e.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/blx-compat.def",
+      "bytes": 13919,
+      "sha256": "c1c50e4da35cbe865379e2084f65d5cb705759520f1c213329330fc67b604389",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/blx-compat.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/blx-dm.def",
+      "bytes": 32761,
+      "sha256": "caa6b7c0c6db33402fd93d00c01e9f99717f5e80fdf8be2a841c4a987771b115",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/blx-dm.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/blx-mcite.def",
+      "bytes": 2126,
+      "sha256": "9b0cc231e6dc4af876b29d09be45debc23ac0afb7eba057a25325092c4a79c30",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/blx-mcite.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/blx-natbib.def",
+      "bytes": 2190,
+      "sha256": "d0eef72c409d69049bef603ba0706146971c13277ab7f275f4eb11b7fcd7b4ee",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/blx-natbib.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/blx-unicode.def",
+      "bytes": 3826,
+      "sha256": "049500c5fafd8407cb3220b7a2e9d9fcfa197999e0d8addb6c666a5fe47e5965",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/blx-unicode.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/alphabetic-verb.cbx",
+      "bytes": 2257,
+      "sha256": "51a31698d420eed8b66d17058caf93b5410c88a5887fd0fe83d1c5a58716f15f",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/alphabetic-verb.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/alphabetic.cbx",
+      "bytes": 4359,
+      "sha256": "a26ce5027e45e79d4ccbb64218c45225f5f16bae6b0ba1fbf3890efda098869a",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/alphabetic.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authortitle-comp.cbx",
+      "bytes": 5759,
+      "sha256": "78079f32c742f40ff8a7e11ea299bcb4324fa93f3c485911af55aaed33bcb310",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authortitle-comp.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authortitle-ibid.cbx",
+      "bytes": 3900,
+      "sha256": "128b55248833c2d11aad1cd5a3108a58f8c3f73f9935c06fc9d398d3f5534069",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authortitle-ibid.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authortitle-icomp.cbx",
+      "bytes": 6791,
+      "sha256": "be4664aca18bbdc97fbadd9736f54ee941e2c8689a5462f25a8337436b73ef4b",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authortitle-icomp.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authortitle-tcomp.cbx",
+      "bytes": 3011,
+      "sha256": "ba69b4e3d0f0ac59f316e3c7ad798e4d21804124e1ed5cd5033688a7aa5f29bb",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authortitle-tcomp.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authortitle-terse.cbx",
+      "bytes": 1354,
+      "sha256": "ecc6f8c6d2622059cde5839c998af54f039f33f0d4160602163aab37c499358b",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authortitle-terse.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authortitle-ticomp.cbx",
+      "bytes": 3606,
+      "sha256": "a5a88386f3432ea172ee27c5e4bab683331eec7494c00da6a7eff2cef5a97d02",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authortitle-ticomp.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authortitle.cbx",
+      "bytes": 2893,
+      "sha256": "bbbb4d2410e71db1afe6355aa097332128d32b748ca7f30555fe97361e184548",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authortitle.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authoryear-comp.cbx",
+      "bytes": 9050,
+      "sha256": "66ecf02c335740772278d6076849c0525b7266327379f81f5a5e2f30647899a7",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authoryear-comp.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authoryear-ibid.cbx",
+      "bytes": 5216,
+      "sha256": "a1c2d89448df591817633ddad10480aab9e527964f909823f7a8d0b2cd4c02f7",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authoryear-ibid.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authoryear-icomp.cbx",
+      "bytes": 10223,
+      "sha256": "9f211f29fc1bbf1a3aa4bc8c6dbc1c9305647cb7026f68d6112ec63f4565b00a",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authoryear-icomp.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/authoryear.cbx",
+      "bytes": 4008,
+      "sha256": "c2e27c28efcf7a854e34d97968ece8aadd261e546894c20ad7449fc6046f2f9e",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/authoryear.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/debug.cbx",
+      "bytes": 2388,
+      "sha256": "37528fabe72859c97adbb37469144d8617c3545c80ec6123e5a43a91a8be079d",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/debug.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/draft.cbx",
+      "bytes": 1808,
+      "sha256": "bd0fbe061a4e5a0cc085dc942b451df3a0b5ed0d80fdf419f809a242f771b2fb",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/draft.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/numeric-comp.cbx",
+      "bytes": 10471,
+      "sha256": "e2aa0a2f2194ebbb9f4012ee5f330e80b8d85df458e28b2aac1146cb7b0199b3",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/numeric-comp.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/numeric-verb.cbx",
+      "bytes": 2572,
+      "sha256": "fec1743386d36f0894685fe73ddb88f7e7c943bec52ed3898896214d853ddfe9",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/numeric-verb.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/numeric.cbx",
+      "bytes": 4676,
+      "sha256": "8368f59fbcf27881b8bae17a42c552955d304e8535c40a88826ab972eaa1744a",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/numeric.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/reading.cbx",
+      "bytes": 87,
+      "sha256": "52334372cb9c9287ea23d60fab27344683558be10bfc66a4e33a3a1cda017077",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/reading.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/verbose-ibid.cbx",
+      "bytes": 7847,
+      "sha256": "278694efa631e1a6078a64c727df5d9256c93227d514cca06d973b7b35e6e35b",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/verbose-ibid.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/verbose-inote.cbx",
+      "bytes": 9696,
+      "sha256": "25b7db44c48491d54160dda4d51bba4cf734a552ce615538c4ad59623baec9b5",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/verbose-inote.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/verbose-note.cbx",
+      "bytes": 8734,
+      "sha256": "f6fa712a5525e979a1a073971e51713926193a7b4811bc43c46f7ac75a41b0ab",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/verbose-note.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/verbose-trad1.cbx",
+      "bytes": 9142,
+      "sha256": "99b477613b0c2bf31c08dcb27bc5e0727b81699cb2f0babc1a3f772efeaf56f2",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/verbose-trad1.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/verbose-trad2.cbx",
+      "bytes": 8835,
+      "sha256": "46ebedaab6b56a2299acb4609b76997e9815919be061b843420d7ce0d3cfbf14",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/verbose-trad2.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/verbose-trad3.cbx",
+      "bytes": 7982,
+      "sha256": "4de15f8b416f1fa785442e21ecd99490acaaafff48a033100ebd4439b020d866",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/verbose-trad3.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/cbx/verbose.cbx",
+      "bytes": 7046,
+      "sha256": "7090f91b65b1726255943a692d695ce27750e4fa4942c66a0f29fd9fd7312d98",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/cbx/verbose.cbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/UKenglish.lbx",
+      "bytes": 127,
+      "sha256": "e21c071f8c868131ecf4d33522ee6f818fc6f180a19daba2103d97d8c9c8a469",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/UKenglish.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/USenglish.lbx",
+      "bytes": 129,
+      "sha256": "2b5a4828e767aa7e473554defdbe4f83202b5a73f156b26b5ee8e12333c6827f",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/USenglish.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/american.lbx",
+      "bytes": 169,
+      "sha256": "2719bd1378bf9394704ba50d34c22fcccf4deb7e91df892ceba70de6c8ecf2bd",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/american.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/australian.lbx",
+      "bytes": 806,
+      "sha256": "9b5b443ae5a6a643b3a4715cc5cb6a8ddb2d6890c5be4b8aa4aae7220b7d24ab",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/australian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/austrian.lbx",
+      "bytes": 201,
+      "sha256": "ab82db77b7c0811a52f88512e1db92171bc35362751821d48a43d02ad2eb7cf6",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/austrian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/basque.lbx",
+      "bytes": 34158,
+      "sha256": "a928468803f6f1be362e126bf51cdff3eaa71770088c5b972818856036c89789",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/basque.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/brazil.lbx",
+      "bytes": 128,
+      "sha256": "9ca9cc5e35f9200545aa04f1430d41c569812d154d00db9082a0bcbe5693ac58",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/brazil.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/brazilian.lbx",
+      "bytes": 29978,
+      "sha256": "1898c7b12c8f90b95a2f44c18d2b6eb95c3f78691526ad56300b3d6db4d01735",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/brazilian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/british.lbx",
+      "bytes": 2973,
+      "sha256": "e67e582c263bcbeea87d6aac4da6f6e870bd46ec17ff147461bac98d78b0e516",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/british.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/bulgarian.lbx",
+      "bytes": 45307,
+      "sha256": "96ef3a52d3d097d89b01dd681dd632b8fa4497868026c3eaa67e65bd176bb6aa",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/bulgarian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/canadian.lbx",
+      "bytes": 163,
+      "sha256": "1f3eb6c127430f5ced2cc7e2fd464bdba6c19d8f159e8c95edfc81cd5a86b5d7",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/canadian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/catalan.lbx",
+      "bytes": 37200,
+      "sha256": "8cb3edff841dd659bb49343406e1960b026088be42446a6988b3e15f437d19d4",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/catalan.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/croatian.lbx",
+      "bytes": 29903,
+      "sha256": "28b41498a362311d0258d91e57fc79eb267d10922ac45bd1da2ebb4c8133aa2b",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/croatian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/czech.lbx",
+      "bytes": 33845,
+      "sha256": "0ea0d30b9f9abcc469ee99b7fae17e7aba82a64545b5203d70693b9871906047",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/czech.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/danish.lbx",
+      "bytes": 32335,
+      "sha256": "b94c7cc40f18ee8d4ff75b2356a2b1711e9ffe7bcc6d0666423697723a0d1c92",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/danish.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/dutch.lbx",
+      "bytes": 31936,
+      "sha256": "0bd1d056c305f6b1c60f4c38de4bc70746b63498884ad817457930029a9e2ff2",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/dutch.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/english.lbx",
+      "bytes": 40021,
+      "sha256": "e9997cc6ad9c21b7ba6835cd5b6b9c9cb7b318ef7a628eb38c28afba42ad822d",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/english.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/estonian.lbx",
+      "bytes": 36584,
+      "sha256": "3e74a32463cf5545c5eacec4f1c65449b9ba725f3b3d1881ecc4b427268787b5",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/estonian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/finnish.lbx",
+      "bytes": 37453,
+      "sha256": "9a8f34f27baaa44d9e6c040b62132d5f5d4a5f4d467e70cbb314d8b19a36e29e",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/finnish.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/french.lbx",
+      "bytes": 35160,
+      "sha256": "688e5b64b58b532e5c1d37df3fecaa6b3ad143096db6a170dc0a403f1bb81aac",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/french.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/galician.lbx",
+      "bytes": 29499,
+      "sha256": "f400b3577edefe9961407814f208c21943a9716098eb43a264518a279a256828",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/galician.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/german.lbx",
+      "bytes": 34038,
+      "sha256": "c3706ec62c58109766c4127e4529c404b757bc1f3e941c09e96cca491a8df6a5",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/german.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/greek.lbx",
+      "bytes": 46160,
+      "sha256": "b2c7cb9c701a2b97c6ec462900797f297e815fdd594314faaf800cd36d7f2860",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/greek.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/hungarian.lbx",
+      "bytes": 125,
+      "sha256": "9b166a2002ff89a17a49adafdfe974bb354c9e6bc928f522e8ff08d8afe6fc0e",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/hungarian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/icelandic.lbx",
+      "bytes": 26448,
+      "sha256": "ee3b712047733e7102e6ab1ab51229b30f2d137d9dc7744dd4fed75e271ccdc0",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/icelandic.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/italian.lbx",
+      "bytes": 29926,
+      "sha256": "8fd9082a183fddee62920ce2ec7fa8cba44b86e359d45d97abaa55e32c91eb54",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/italian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/latvian.lbx",
+      "bytes": 43887,
+      "sha256": "5e94651a4c7095881426536c0fc6111660a17c06ea6728fa49ed690d5a5dc40d",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/latvian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/lithuanian.lbx",
+      "bytes": 45737,
+      "sha256": "9d63a96d741e425c97b62505b83afd851fbbb85978908a59ac76e40a950c6082",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/lithuanian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/magyar.lbx",
+      "bytes": 39313,
+      "sha256": "e917260f22aab376bd811b6b06af5f6b047f5474bd7cea727060fb6b1d34dfd2",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/magyar.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/marathi.lbx",
+      "bytes": 35801,
+      "sha256": "3bd1cc627a1c38a2bbd08111c9b7ec47ce47654cb51eacf61f490e4ad80211b0",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/marathi.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/naustrian.lbx",
+      "bytes": 496,
+      "sha256": "248f9924ae5a77971099d8b6f78b1f72961b8e3f95454f60a843468f16a6b4a7",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/naustrian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/newzealand.lbx",
+      "bytes": 880,
+      "sha256": "286af6c87c69bf729d628f44123e948f68c88b1f0c9005459f9f6bc943f89b9e",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/newzealand.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/ngerman.lbx",
+      "bytes": 445,
+      "sha256": "c99e131cbb77d44700f51db873d5cecf30b2957376324d89e0ef3f02d80d22e6",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/ngerman.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/norsk.lbx",
+      "bytes": 30086,
+      "sha256": "bf6fc7df3448941bf1fb813af29a39be6fa1e56ee38de12907e97e379eba782f",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/norsk.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/nswissgerman.lbx",
+      "bytes": 694,
+      "sha256": "9b93fbdff58eb8846d4900dc6b0b3346611bbd3ae2e3a16d0e43d81dbbc2fccb",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/nswissgerman.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/nynorsk.lbx",
+      "bytes": 20546,
+      "sha256": "aea68b753469fc834033b8b1f28e8184b1c1cde336ae3ab61394fe7436a545b2",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/nynorsk.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/polish.lbx",
+      "bytes": 30495,
+      "sha256": "95f85cd66329f49fc95e76c9b2117243af4c159fb5529844ef0d7656913da9f2",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/polish.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/portuges.lbx",
+      "bytes": 132,
+      "sha256": "12a4afb9c90016a63f8adc9accb9eaf4bf32882ee1ea3323645953ece510e032",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/portuges.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/portuguese.lbx",
+      "bytes": 30220,
+      "sha256": "38ebc99e0e57a65e576334b506f8e0dccc8bc6a156e1be7cf2c0ba847b9aad25",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/portuguese.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/romanian.lbx",
+      "bytes": 35832,
+      "sha256": "ef67d80da10fc87385679a34c829e85e6234bcb9fc17f64adce3320f3f2dc37d",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/romanian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/russian.lbx",
+      "bytes": 45909,
+      "sha256": "040adab59ffb2209186663d49aa306210867bafe3ff7d02ecfa5332611e6309b",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/russian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/serbian.lbx",
+      "bytes": 24693,
+      "sha256": "cc0bded0c725cd0b31d960309127e103ebd3a0daa34547073c2ba29c17ddec33",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/serbian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/serbianc.lbx",
+      "bytes": 33917,
+      "sha256": "29626295245ad5351bd1be14a1c4065df405ed42309106b16fbfe7aebabb1501",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/serbianc.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/slovak.lbx",
+      "bytes": 32937,
+      "sha256": "2380244ce308c5588572ba1e49b3d00592760149df3936b84435f413e7926c6f",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/slovak.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/slovene.lbx",
+      "bytes": 32104,
+      "sha256": "eea2631f95433d370abe57632dd847097ad2b82741e212549d1df835061a14bc",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/slovene.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/slovenian.lbx",
+      "bytes": 127,
+      "sha256": "1a247797ce1dd2f26dce49f8cd5960fbb7fa6f1748fb7bcebed4341fa07d2014",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/slovenian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/spanish.lbx",
+      "bytes": 47926,
+      "sha256": "ce4549e715b33be6da07a311a3a44b397ec6c8e5316107f384268fdba5d2bc71",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/spanish.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/swedish.lbx",
+      "bytes": 28134,
+      "sha256": "ea5853a22700c6785c3575bf5c336c6a6363918343a9f2c510df4ad034551c66",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/swedish.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/swissgerman.lbx",
+      "bytes": 399,
+      "sha256": "cda38e7f5d1493c7a12635d35562f85b131c192c4d815c5be8fa4334df056eb0",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/swissgerman.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/turkish.lbx",
+      "bytes": 32805,
+      "sha256": "62c5049b1cfb8e76f290a9e128086eb534c8360aa473da32b917a344c8e3c5b4",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/turkish.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/biblatex/lbx/ukrainian.lbx",
+      "bytes": 44996,
+      "sha256": "b9f37e2639a903d881ace9abb7a69dfccdfd02acaf8c2fb33382d58d569da523",
+      "source": "biblatex-3.22-source.tar.gz",
+      "upstreamPath": "tex/latex/biblatex/lbx/ukrainian.lbx"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/csquotes/csq-compat.def",
+      "bytes": 3753,
+      "sha256": "4c2980689832f8d4c5652c2dc6e9174248c0066935054e02eb98fe326be9b5d2",
+      "source": "csquotes.tar.xz",
+      "upstreamPath": "tex/latex/csquotes/csq-compat.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/csquotes/csquotes.cfg",
+      "bytes": 7068,
+      "sha256": "6c4c4d52a8117e65570915c88318609bfc01ff47ef7fc00f49c9bfc8fa798296",
+      "source": "csquotes.tar.xz",
+      "upstreamPath": "tex/latex/csquotes/csquotes.cfg"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/csquotes/csquotes.def",
+      "bytes": 21994,
+      "sha256": "ba199974775247917dd85541e1bc1f2ebeae976d326c3ef7a5e1dbaa0b6fa98b",
+      "source": "csquotes.tar.xz",
+      "upstreamPath": "tex/latex/csquotes/csquotes.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/csquotes/csquotes.sty",
+      "bytes": 62761,
+      "sha256": "64ae07b68cae48a9bc45a3253b379c73b074b1b971d90b5504cf9664cd52dd90",
+      "source": "csquotes.tar.xz",
+      "upstreamPath": "tex/latex/csquotes/csquotes.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/logreq/logreq.def",
+      "bytes": 1620,
+      "sha256": "2ccca8b208712b148c6edd438c52acf7cc821f90cb546321bdd5d491cf5e668f",
+      "source": "logreq.tar.xz",
+      "upstreamPath": "tex/latex/logreq/logreq.def"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/logreq/logreq.sty",
+      "bytes": 6187,
+      "sha256": "e52f653389f5ee50c05ea2361822e4edf994f2829a0bac26d3764eeb675bb8a9",
+      "source": "logreq.tar.xz",
+      "upstreamPath": "tex/latex/logreq/logreq.sty"
+    },
+    {
+      "path": "texlive/texmf-dist/tex/latex/xpatch/xpatch.sty",
+      "bytes": 8314,
+      "sha256": "1ef00dcd1657efdcec02398201ca7769054815eda93b1ee40e413d7894b4f17e",
+      "source": "xpatch.tar.xz",
+      "upstreamPath": "tex/latex/xpatch/xpatch.sty"
+    }
+  ]
+}

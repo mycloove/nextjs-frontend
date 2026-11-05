@@ -18,7 +18,7 @@ test('three genuine versioned source templates are independent, with local style
   assert.ok(academic.files.some((file) => file.path === 'references.bib' && file.content.includes('@article')))
   assert.match(bangla.files[0].content, /[\u0980-\u09ff]/u)
   assert.match(bangla.files[0].content, /Renderer=HarfBuzz/u)
-  for (const project of [career, academic, bangla]) { assert.equal(project.revision, 1); assert.equal(project.templateVersion, project.templateId === 'bangla-source' ? 2 : 1); assert.equal(validateLatexProject(project), project) }
+  for (const project of [career, academic, bangla]) { assert.equal(project.revision, 1); assert.equal(project.templateVersion, 2); assert.equal(validateLatexProject(project), project) }
 })
 
 test('Bangla v2 gives reset/heading fonts Bengali coverage without rewriting saved v1 source or writing', () => {
@@ -161,7 +161,7 @@ test('proof freshness changes immediately after source, engine or main-file revi
   const project = createTemplateProject(), proof = { projectId: project.id, revision: project.revision, engine: project.engine } as LatexProof
   assert.equal(isCurrentProof(project, proof), true)
   assert.equal(isCurrentProof(reviseProject(project, { title: 'New revision' }), proof), false)
-  assert.equal(isCurrentProof({ ...project, engine: 'xelatex' }, proof), false)
+  assert.equal(isCurrentProof({ ...project, engine: 'lualatex' }, proof), false)
   assert.equal(isCurrentProof({ ...project, mainFile: null }, proof), false)
   assert.equal(isCurrentProof(cloneAsNewProject(project), proof), false)
 })

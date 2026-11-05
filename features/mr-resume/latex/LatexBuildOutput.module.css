@@ -1,0 +1,22 @@
+.output { position: relative; display: flex; height: 100%; min-width: 0; min-height: 0; flex-direction: column; color: var(--rs-ink); }
+.toolbar { display: flex; min-width: 0; flex: 0 0 auto; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--rs-line); }
+.toolbar :is(button, select, input), .errorLinks button, .newOutput { min-width: 0; min-height: 32px; padding: 4px 8px; border: 1px solid var(--rs-control-line); border-radius: 6px; color: var(--rs-ink); background: var(--rs-panel); font: inherit; font-size: 11px; }
+.toolbar button, .errorLinks button, .newOutput { cursor: pointer; }
+.toolbar button:hover:not(:disabled), .errorLinks button:hover:not(:disabled), .newOutput:hover { background: var(--rs-soft); }
+.output :is(button, select, input, [tabindex]):focus-visible { outline: 2px solid var(--rs-focus); outline-offset: -2px; }
+.find { display: flex; min-width: 0; flex: 1 1 160px; align-items: center; gap: 8px; color: var(--rs-muted); font-size: 11px; }
+.find input { width: 100%; min-width: 64px; }
+.context { flex: 0 0 auto; padding: 8px 12px; margin: 0; color: var(--rs-muted); font-size: 11px; overflow-wrap: anywhere; }
+.errorLinks { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 8px; padding: 0 12px 8px; }
+.errorLinks button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scroll { min-width: 0; min-height: 0; flex: 1; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.log { padding: 8px 12px 16px; margin: 0; color: var(--rs-ink); background: var(--rs-bg); font: 12px/1.65 ui-monospace, Consolas, 'Liberation Mono', 'Noto Sans Bengali', monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.activity { padding: 0 12px 16px; margin: 0; list-style: none; }
+.activity li { padding: 8px 0; border-bottom: 1px solid var(--rs-line); overflow-wrap: anywhere; }
+.activity li > span { color: var(--rs-muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+.activity li p { margin: 4px 0 0; font-size: 12px; }
+.activity li[data-severity='error'] > span { color: var(--rs-danger); }
+.newOutput { position: absolute; right: 16px; bottom: 8px; color: var(--rs-on-primary); background: var(--rs-primary); box-shadow: var(--rs-dropdown-shadow); }
+.newOutput:hover { color: var(--rs-ink); }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 900px), (pointer: coarse) { .toolbar :is(button, select, input), .errorLinks button, .newOutput { min-height: 44px; } .find input { font-size: 16px; } }

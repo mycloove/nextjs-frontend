@@ -69,14 +69,32 @@ function entrySource(file: LatexTextFile) {
   return { code, items: scanned.items, balanced: scanned.balanced, declaration, className, begin: boundaries[0], end: boundaries[1] }
 }
 
-/** Preamble fragments and commented examples are not document entry points. */
+/** Identify original source, including the source retained by an older simplified copy. */
 export function findAltaCvEntry(project: LatexProject): LatexTextFile | null {
-  if (project.templateId === 'altacv-browser') return null
   const selected = project.files.find((file) => file.path === project.mainFile)
+  const originals: LatexTextFile[] = []
   for (const file of selected ? [selected, ...project.files.filter((item) => item !== selected)] : project.files) {
-    try { if (entrySource(file)) return file } catch (error) { if (!(error instanceof LatexProjectError)) throw error }
+    try { if (entrySource(file)) originals.push(file) } catch (error) { if (!(error instanceof LatexProjectError)) throw error }
   }
-  return null
+  if (project.templateId === 'altacv-browser') {
+    const sourcePath = selected && /^% SmilePDF browser-compatible COPY of (.+?); original files and license are retained unchanged\.\r?$/mu.exec(selected.content)?.[1]
+    // A recorded original must still exist. Never guess a different CV or merge
+    // writing from the simplified main into a structurally different document.
+    if (sourcePath) return originals.find((file) => file.path === sourcePath) ?? null
+    return originals.find((file) => file === selected) ?? (originals.length === 1 ? originals[0] : null)
+  }
+  return originals[0] ?? null
+}
+
+/** Explicit recovery only: all sources/assets survive, and the saved simplified project is not edited. */
+export function createAltaCvOriginalProject(project: LatexProject): LatexProject {
+  validateLatexProject(project)
+  const entry = findAltaCvEntry(project)
+  if (project.templateId !== 'altacv-browser' || !entry) {
+    throw new LatexProjectError('The original AltaCV main could not be identified. Select it in Build settings or re-import the original ZIP; the current files have not changed.', 'missing_altacv_original')
+  }
+  const copy = cloneAsNewProject(project, `Original AltaCV: ${Array.from(project.title).slice(0, 200).join('')}`)
+  return validateLatexProject({ ...copy, mainFile: entry.path, engine: 'xelatex', templateId: null, templateVersion: null })
 }
 
 function replace(source: string, edits: Edit[]) {

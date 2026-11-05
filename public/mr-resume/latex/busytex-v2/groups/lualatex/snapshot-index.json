@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "unpackedBytes": 11872256,
+  "files": [
+    {
+      "path": "texlive/texmf-dist/texmf-var/web2c/luahbtex/luahblatex.fmt",
+      "bytes": 11870231,
+      "sha256": "8189d4954446de324cfb3182f0c276fa8b4d6a213aef98b53192eea78b08630d",
+      "source": "generated-wasm32-lualatex-format",
+      "upstreamPath": "texlive/texmf-dist/tex/generic/tex-ini-files/lualatex.ini"
+    }
+  ]
+}

@@ -46,18 +46,19 @@ test('worker progress belongs only to the live captured intent and local errors 
 
 test('local compile does not ask for upload consent and local source-map actions cannot call the native service', () => {
   assert.match(ui, /function compile\(\)[\s\S]*?if \(localRuntime\) \{ workspace.compile\(\); return \}/u)
-  assert.match(ui, /const canSync = Boolean\(!localRuntime && proof\?\.runtime !== 'browser'/u)
-  assert.match(ui, /Browser compilation does not provide SyncTeX navigation/u)
+  assert.match(hookSource, /syncArtifact: project && selectedProof && browserMaps\[project.id\]\?\.identity === proofActionIdentity\(selectedProof\)/u)
+  assert.doesNotMatch(ui, /Browser compilation does not provide SyncTeX navigation/u)
   assert.match(ui, /Project source, images, build logs and PDF bytes are not uploaded/u)
   assert.match(ui, /value=\{workspace.runtime\}/u)
   assert.match(ui, /Cancel local compile/u)
-  assert.match(ui, /data-progress=\{workspace.attempt.progress\?\.phase\}/u)
+  assert.match(ui, /data-progress=\{workspace.attempt\?\.progress\?\.phase\}/u)
 })
 
 test('browser support copy reports bounded packages, cache limits and original-byte proofs without universal compatibility claims', () => {
   assert.match(ui, /not universal TeX compatibility/u)
   assert.match(ui, /offline use needs cached assets/u)
-  assert.match(ui, /academic Biber workflow needs the private native runtime/u)
+  assert.match(ui, /assessment\?\.bibliography.capabilities.biber/u)
+  assert.doesNotMatch(ui, /requires native Biber|academic Biber workflow needs the private native runtime/u)
   assert.match(ui, /External commands and arbitrary remote package resolution are disabled/u)
   assert.match(ui, /new Blob\(\[proof.data\], \{ type: 'application\/pdf' \}\)/u)
 })
@@ -80,6 +81,18 @@ test('unselected drafts block manual, keyboard and automatic compilation without
   assert.match(ui, /disabled=\{!workspace.autoCompile && \(!project\?\.mainFile/u)
 })
 
+test('AltaCV UI offers explicit original-source recovery rather than a new lossy conversion', () => {
+  assert.doesNotMatch(ui, /createAltaCvBrowserProject|Create simplified copy/u)
+  assert.match(ui, /project\?\.templateId === 'altacv-browser'/u)
+  assert.match(ui, /Open original with XeLaTeX/u)
+  assert.match(ui, /createAltaCvOriginalProject\(project\)/u)
+  assert.match(ui, /workspace\.setAutoCompile\(false\); workspace\.addProject\(copy\)/u)
+  assert.match(ui, /kept separately, not merged/u)
+  assert.match(ui, /Installing Windows fonts or TeX Live does not change the pinned browser runtime/u)
+  assert.match(ui, /latexmkrc<\/code> is preserved as source data, not executed/u)
+  assert.match(ui, /Imported \$\{imported.files.length \+ imported.assets.length\} files/u)
+})
+
 test('legacy generated fonts repair only on an explicit local compile, with a checkpoint before snapshot capture', () => {
   const enqueue = action('enqueueCompile')
   assert.match(enqueue, /mode === 'manual' && selectedRuntime === 'browser'/u)
@@ -98,21 +111,22 @@ function injectedAction(name: string, environment: Record<string, unknown>) {
 function preparationFixture() {
   const source = createTemplateProject()
   let project: LatexProject = source
-  const request = { projectId: source.id, revision: source.revision, snapshot: source, memoryGB: 2, packages: { profileVersion: 'browser-unit', groups: [], downloadBytes: 0 } }
-  const events = { busy: [] as boolean[], notices: [] as string[], compiled: [] as LatexProject[], queued: [] as (number | null)[] }
+  const request = { projectId: source.id, revision: source.revision, snapshot: source, operationKey: 'prepare-one', memoryGB: 2, packages: { profileVersion: 'browser-unit', groups: [], downloadBytes: 0 } }
+  const events = { busy: [] as boolean[], notices: [] as string[], compiled: [] as LatexProject[], compileGroups: [] as string[][], queued: [] as (number | null)[] }
   const state = {
     preparationRef: { current: request as typeof request | null }, preparationOperation: { current: null as AbortController | null },
-    engineMutation: { current: false }, mounted: { current: true }, activeRef: { current: true }, runtimeRef: { current: 'browser' },
+    dependencyOperation: { current: null as AbortController | null },
+    engineMutation: { current: false }, mounted: { current: true }, activeRef: { current: true }, runtimeRef: { current: 'browser' }, selectionEpoch: { current: 0 },
     running: { current: null }, unresolved: { current: null }, memoryAcknowledged: { current: false }, queued: { current: { mode: 'manual' } as object | null },
   }
   let release!: () => void, entered!: () => void, approvals = 0
   const waiting = new Promise<void>((resolve) => { release = resolve }), started = new Promise<void>((resolve) => { entered = resolve })
   const environment = {
     ...state, currentProject: () => project, sameProjectSource,
-    setBrowserPreparation: () => {}, setNotice: (notice: string) => events.notices.push(notice), setEngineCacheBusy: (busy: boolean) => events.busy.push(busy),
+    setBrowserPreparation: () => {}, setDependencyCheck: () => {}, setAttempt: () => {}, notify: (_kind: string, _category: string, _code: string, notice: string) => events.notices.push(notice), setEngineCacheBusy: (busy: boolean) => events.busy.push(busy),
     setQueuedRevision: (revision: number | null) => events.queued.push(revision), stopAutoSchedule: () => {}, messageOf: (error: Error) => error.message, dismissBrowserPreparation: () => {},
     approveBrowserPackageGroups: async (_preparation: unknown, signal: AbortSignal) => { approvals++; assert.equal(signal.aborted, false); entered(); await waiting },
-    enqueueCompile: (snapshot: LatexProject) => { assert.equal(state.engineMutation.current, false); events.compiled.push(snapshot) },
+    enqueueCompile: (snapshot: LatexProject, _mode: string, _operation: string, guarded: boolean, groups: string[]) => { assert.equal(state.engineMutation.current, false); assert.equal(guarded, true); events.compiled.push(snapshot); events.compileGroups.push([...groups]) },
   }
   environment.dismissBrowserPreparation = injectedAction('dismissBrowserPreparation', environment) as () => void
   return { state, events, environment, started, release: () => release(), approvals: () => approvals, changeProject: (next: LatexProject) => { project = next }, source }
@@ -128,10 +142,10 @@ test('device-memory warnings are finite reported values only, never a fabricated
 test('changing local auto mode to native resets auto opt-in before the new runtime can schedule any upload', () => {
   const autoValues: boolean[] = [], runtimes: string[] = [], controller = new AbortController()
   const environment = {
-    running: { current: null }, unresolved: { current: null }, runtimeRef: { current: 'browser' }, autoRef: { current: true },
+    running: { current: null }, unresolved: { current: null }, runtimeRef: { current: 'browser' }, autoRef: { current: true }, selectionEpoch: { current: 0 },
     capabilitiesRequest: { current: controller }, preparationOperation: { current: null }, preparationRef: { current: null }, queued: { current: { mode: 'auto' } as object | null },
     capabilitiesRef: { current: unavailableLatexCapabilities }, retryAt: { current: 1 }, unavailableLatexCapabilities,
-    setNotice: () => {}, stopAutoSchedule: () => { environment.queued.current = null }, setAutoCompile: (value: boolean) => autoValues.push(value), setBrowserPreparation: () => {},
+    notify: () => {}, stopAutoSchedule: () => { environment.queued.current = null }, setAutoCompile: (value: boolean) => autoValues.push(value), setBrowserPreparation: () => {},
     setRuntime: (value: string) => { assert.equal(environment.autoRef.current, false); runtimes.push(value) }, setAttempt: () => {}, setCapabilities: () => {}, setCapabilitiesLoading: () => {}, setQueuedRevision: () => {},
   }
   assert.equal(injectedAction('selectRuntime', environment)('native'), true)
@@ -172,6 +186,94 @@ test('an unchanged consented revision compiles once, only after the engine mutat
   assert.equal(fixture.state.preparationRef.current, null)
   assert.equal(fixture.state.queued.current, null)
   assert.deepEqual(fixture.events.busy, [true, false])
+  assert.deepEqual(fixture.events.compileGroups, [[]])
+})
+
+test('reviewed package groups survive consent and enter the captured compile intent without restarting metadata checks', async () => {
+  const fixture = preparationFixture()
+  Object.assign(fixture.state.preparationRef.current!.packages, { groups: [{ id: 'cv-layout' }, { id: 'math' }] })
+  const pending = injectedAction('continueBrowserPreparation', fixture.environment)()
+  await fixture.started; fixture.release(); await pending
+  assert.deepEqual(fixture.events.compileGroups, [['cv-layout', 'math']])
+  assert.deepEqual(fixture.events.compiled, [fixture.source])
+})
+
+test('later dependency approvals and memory review retain the earlier selected groups without duplicates', async () => {
+  const fixture = preparationFixture()
+  Object.assign(fixture.state.preparationRef.current!, { packageGroups: ['cv-fonts', 'math'] })
+  Object.assign(fixture.state.preparationRef.current!.packages, { groups: [{ id: 'cv-layout' }, { id: 'math' }] })
+  const pending = injectedAction('continueBrowserPreparation', fixture.environment)()
+  await fixture.started; fixture.release(); await pending
+  assert.deepEqual(fixture.events.compileGroups, [['cv-fonts', 'math', 'cv-layout']])
+  assert.equal(fixture.state.memoryAcknowledged.current, true)
+  assert.match(action('enqueueCompile'), /memoryGB, packageGroups: \[\.\.\.packageGroups\]/u)
+  assert.match(action('execute'), /packages: error.preparation, packageGroups: intent.packageGroups/u)
+})
+
+function dependencyFixture() {
+  const source = createTemplateProject()
+  let project: LatexProject = source, release!: () => void, entered!: () => void
+  const waiting = new Promise<void>((resolve) => { release = resolve }), started = new Promise<void>((resolve) => { entered = resolve })
+  const reports: { status: string; snapshot: LatexProject; preparation?: unknown; error?: string }[] = []
+  const state = { mounted: { current: true }, activeRef: { current: true }, runtimeRef: { current: 'browser' }, engineMutation: { current: false },
+    selectionEpoch: { current: 1 }, dependencyOperation: { current: null as AbortController | null } }
+  const preparation = { profileVersion: 'fixed-catalogue', groups: [{ id: 'cv-layout' }, { id: 'math' }], downloadBytes: 4096 }
+  const environment = { ...state, currentProject: () => project,
+    sourceIsCurrent: (snapshot: LatexProject, epoch: number) => state.activeRef.current && epoch === state.selectionEpoch.current
+      && project.id === snapshot.id && project.revision === snapshot.revision && sameProjectSource(project, snapshot),
+    setDependencyCheck: (value: typeof reports[number]) => reports.push(value), messageOf: (error: Error) => error.message,
+    getBrowserPreparation: async (_snapshot: LatexProject, signal: AbortSignal) => { assert.equal(signal.aborted, false); entered(); await waiting; return preparation },
+    compileBrowserProject: () => assert.fail('Checking metadata must not compile'), approveBrowserPackageGroups: () => assert.fail('Checking metadata must not grant consent') }
+  return { source, state, environment, reports, preparation, started, release: () => release(), changeProject: (next: LatexProject) => { project = next } }
+}
+
+test('template checks capture source and suggest exact package metadata without download or compile side effects', async () => {
+  const fixture = dependencyFixture()
+  const pending = injectedAction('inspectBrowserDependencies', fixture.environment)()
+  await fixture.started
+  assert.deepEqual(fixture.reports.map((report) => report.status), ['checking'])
+  fixture.release(); await pending
+  assert.deepEqual(fixture.reports.map((report) => report.status), ['checking', 'ready'])
+  assert.equal(sameProjectSource(fixture.reports[1].snapshot, fixture.source), true)
+  assert.notEqual(fixture.reports[1].snapshot.files, fixture.source.files)
+  assert.equal(fixture.reports[1].preparation, fixture.preparation)
+  assert.equal(fixture.state.dependencyOperation.current, null)
+})
+
+test('abandoned template checks cannot publish old suggestions after source forks, selection round trips or closure', async () => {
+  for (const change of ['source', 'fork', 'project', 'selection', 'runtime', 'hidden', 'unmounted', 'aborted']) {
+    const fixture = dependencyFixture(), pending = injectedAction('inspectBrowserDependencies', fixture.environment)()
+    await fixture.started
+    if (change === 'source') fixture.changeProject(reviseProject(fixture.source, { mainFile: null }))
+    if (change === 'fork') fixture.changeProject({ ...fixture.source, files: fixture.source.files.map((file) => ({ ...file, content: file.content + '\n% same-revision fork' })) })
+    if (change === 'project') fixture.changeProject({ ...fixture.source, id: 'another-project' })
+    if (change === 'selection') fixture.state.selectionEpoch.current++
+    if (change === 'runtime') fixture.state.runtimeRef.current = 'native'
+    if (change === 'hidden') fixture.state.activeRef.current = false
+    if (change === 'unmounted') fixture.state.mounted.current = false
+    if (change === 'aborted') fixture.state.dependencyOperation.current!.abort()
+    fixture.release(); await pending
+    assert.deepEqual(fixture.reports.map((report) => report.status), ['checking'], change)
+  }
+})
+
+test('unavailable dependency metadata stays a truthful check failure and does not fabricate a ready inventory', async () => {
+  const fixture = dependencyFixture()
+  fixture.environment.getBrowserPreparation = async () => { throw new Error('Pinned catalogue is unavailable offline') }
+  await injectedAction('inspectBrowserDependencies', fixture.environment)()
+  assert.deepEqual(fixture.reports.map((report) => report.status), ['checking', 'failed'])
+  assert.match(fixture.reports[1].error!, /unavailable offline/u)
+  assert.equal(fixture.reports[1].preparation, undefined)
+  assert.equal(fixture.state.dependencyOperation.current, null)
+})
+
+test('automatic checks follow project/main/engine selection, while explicit package imports can request a fresh check', () => {
+  assert.match(hookSource, /\[ready, active, runtime, project\?\.id, project\?\.mainFile, project\?\.engine\]/u)
+  assert.match(ui, /inspectBrowserDependencies\(\)/u)
+  assert.match(ui, /Review package downloads/u)
+  assert.match(ui, /Download and compile/u)
+  assert.match(ui, /Permission is not proof that package bytes are cached/u)
+  assert.match(action('execute'), /packageGroups: intent.packageGroups/u)
 })
 
 test('dismissing consent aborts its operation and removes queued intents without compiling or switching runtime', async () => {
@@ -193,11 +295,12 @@ test('a failed cache clear cannot return success or announce cleared assets', as
   const notices: string[] = [], busy: boolean[] = []
   const environment = {
     running: { current: null }, engineMutation: { current: false }, cacheReadSequence: { current: 0 }, mounted: { current: true }, stopAutoSchedule: () => {},
-    setNotice: (notice: string) => notices.push(notice), setEngineCacheBusy: (value: boolean) => busy.push(value), messageOf: (error: Error) => error.message,
+    dependencyOperation: { current: null }, setDependencyCheck: () => {}, inspectDependenciesRef: { current: async () => null },
+    notify: (_kind: string, _category: string, _code: string, notice: string) => notices.push(notice), setEngineCacheBusy: (value: boolean) => busy.push(value), messageOf: (error: Error) => error.message,
     clearBrowserEngineCache: async () => { throw new Error('Engine storage could not commit the clear.') }, refreshEngineCache: async () => assert.fail('No successful refresh after failed clear'),
   }
-  assert.equal(await injectedAction('clearEngineCache', environment)(), false)
-  assert.deepEqual(notices, ['Engine storage could not commit the clear.'])
+  await assert.rejects(Promise.resolve(injectedAction('clearEngineCache', environment)()), /Engine storage could not commit the clear/u)
+  assert.deepEqual(notices, [], 'The modal receives the failure instead of an outside success/error toast')
   assert.deepEqual(busy, [true, false])
   assert.equal(environment.engineMutation.current, false)
   assert.ok(/modal.kind === 'engine-cache' && !await workspace.clearEngineCache\(\)\)\s*\{\s*setCacheClearError/u.test(ui))
@@ -233,16 +336,16 @@ test('cache/progress/consent controls preserve truthful labels, keyboard scroll 
   assert.ok(/@media \(prefers-reduced-motion: reduce\)/u.test(css))
 })
 
-test('ready-notice source supports per-attempt dismissal and reopening truthful engine details', () => {
+test('typed receipts replace the banner stack while truthful engine details stay reopenable', () => {
   assert.match(hookSource, /PDF ready\. Revision \$\{proof\.revision\} was compiled and verified on this device\./u)
-  assert.match(ui, /dismissedReadyAttempt === readyBrowserAttempt\.operationKey/u)
-  assert.match(ui, /setDismissedReadyAttempt\(readyBrowserAttempt\.operationKey\)/u)
-  assert.match(ui, /aria-label="Dismiss PDF ready message"/u)
-  assert.match(ui, /totalBytes !== undefined && !readyBrowserAttempt/u)
-  assert.equal(ui.match(/View engine files/gu)?.length, 2, 'Both the ready notice and Build panel can open the latest audit')
+  assert.match(ui, /<LatexReceipt fact=\{receipt\} active=\{active\}/u)
+  assert.match(ui, /onDismiss=\{workspace.dismissFeedback\} onExpire=\{workspace.expireReceipt\}/u)
+  assert.doesNotMatch(ui, /statusStack|availabilityToast|dismissedReadyAttempt|setNotice/u)
+  assert.match(ui, /totalBytes !== undefined && compiling/u)
+  assert.equal(ui.match(/View engine files/gu)?.length, 1, 'Build details retain the audit without a second persistent success banner')
   assert.match(ui, /\{ kind: 'engine-assets'; operationKey: string \}/u)
   assert.match(ui, /modal\?\.kind === 'engine-assets' && !engineAssetAttempt/u)
-  assert.match(ui, /modal\?\.kind === 'engine-assets' \? <button type="button" className=\{styles\.primaryButton\} onClick=\{\(\) => setModal\(null\)\}>Done<\/button>/u)
+  assert.match(ui, /modal\?\.kind === 'engine-assets' \? <button type="button" className=\{styles\.primaryButton\} onClick=\{\(\) => closeModal\(\)\}>Done<\/button>/u)
   assert.match(ui, /IndexedDB reuse — verified local engine cache/u)
   assert.match(ui, /Fetch response received — HTTP cache may have been used/u)
   assert.match(ui, /not a view of current cache contents or a network-traffic report/u)

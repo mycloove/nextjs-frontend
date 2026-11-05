@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createAltaCvBrowserProject, findAltaCvEntry, repairAltaCvBrowserProject } from './altacvBrowser.ts'
-import { LatexProjectError, validateLatexProject } from './project.ts'
+import { createAltaCvBrowserProject, createAltaCvOriginalProject, findAltaCvEntry, repairAltaCvBrowserProject } from './altacvBrowser.ts'
+import { LatexProjectError, reviseProject, validateLatexProject } from './project.ts'
 import { LATEX_PROJECT_VERSION, type LatexProject } from './types.ts'
 
 // Actual v1.7.4 sample.tex preamble and writing; explanatory comments are shortened.
@@ -310,8 +310,49 @@ test('an independent marked copy preserves all 13 entries, original IDs, exact s
   }
   assert.equal(validateLatexProject(copy), copy)
   assert.ok(mainSource(copy).startsWith('\ufeff%%%%%%%%%%%%%%%%%\r\n'))
-  assert.equal(findAltaCvEntry(copy), null)
+  assert.equal(findAltaCvEntry(copy)?.path, 'sample.tex')
   assert.throws(() => createAltaCvBrowserProject(copy), LatexProjectError)
+})
+
+test('opening original AltaCV preserves later simplified writing and every original source and asset', async () => {
+  const original = fixture(), simplified = createAltaCvBrowserProject(original)
+  const edited = reviseProject(simplified, { files: simplified.files.map((file) => file.path === simplified.mainFile
+    ? { ...file, content: file.content.replace('Your Name Here', 'Writing added after simplification') } : file) })
+  const before = structuredClone(edited), recovered = createAltaCvOriginalProject(edited)
+  assert.notEqual(recovered.id, edited.id)
+  assert.equal(recovered.revision, 1)
+  assert.equal(recovered.mainFile, 'sample.tex')
+  assert.equal(recovered.engine, 'xelatex')
+  assert.equal(recovered.templateId, null)
+  assert.equal(recovered.templateVersion, null)
+  assert.match(recovered.title, /^Original AltaCV:/u)
+  assert.deepEqual(recovered.files, edited.files)
+  assert.deepEqual(recovered.files.find((file) => file.path === 'sample.tex'), original.files.find((file) => file.path === 'sample.tex'))
+  assert.match(recovered.files.find((file) => file.path === simplified.mainFile)!.content, /Writing added after simplification/u)
+  for (const [index, asset] of recovered.assets.entries()) {
+    assert.equal(asset.id, edited.assets[index].id)
+    assert.equal(asset.path, edited.assets[index].path)
+    assert.equal(asset.blob, edited.assets[index].blob)
+    assert.deepEqual(await asset.blob.arrayBuffer(), await edited.assets[index].blob.arrayBuffer())
+  }
+  assert.deepEqual(edited, before)
+})
+
+test('original recovery follows the recorded main and refuses missing or ambiguous originals instead of guessing', () => {
+  const project = fixture()
+  project.files.push({ id: 'other-main', path: 'z/cv.tex', content: '\\documentclass{altacv}\\begin{document}Another original\\end{document}' })
+  project.mainFile = 'z/cv.tex'
+  const simplified = createAltaCvBrowserProject(project)
+  assert.equal(findAltaCvEntry(simplified)?.path, 'z/cv.tex')
+  assert.equal(createAltaCvOriginalProject(simplified).mainFile, 'z/cv.tex')
+  const missing = reviseProject(simplified, { files: simplified.files.filter((file) => file.path !== 'z/cv.tex') })
+  assert.equal(findAltaCvEntry(missing), null)
+  assert.throws(() => createAltaCvOriginalProject(missing), /original AltaCV main could not be identified/u)
+  const ambiguous = reviseProject(simplified, { files: simplified.files.map((file) => file.path === simplified.mainFile
+    ? { ...file, content: file.content.replace(/^% SmilePDF browser-compatible COPY of .+\n/mu, '') } : file) })
+  assert.equal(findAltaCvEntry(ambiguous), null)
+  assert.throws(() => createAltaCvOriginalProject(ambiguous), /original AltaCV main could not be identified/u)
+  assert.throws(() => createAltaCvOriginalProject(project), /original AltaCV main could not be identified/u)
 })
 
 test('new main and style paths avoid existing case-insensitive file and asset namespace collisions', () => {

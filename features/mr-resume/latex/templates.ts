@@ -169,3 +169,26 @@ export function createTemplateProject(id = 'career-source', now = new Date().toI
   return validateLatexProject({ version: LATEX_PROJECT_VERSION, id: newLatexId(), title: template.name, revision: 1, mainFile: 'main.tex', engine: template.engine,
     files: template.files.map((file) => ({ ...file, id: newLatexId() })), assets: [], templateId: template.id, templateVersion: template.version, createdAt: now, updatedAt: now })
 }
+
+// Qualification describes the unchanged bundled starter, never an edited user
+// project. Tests invalidate these records if its source or pinned runtime moves.
+const qualifiedBrowserBuild = {
+  checkedAt: '2026-11-04', runtime: 'browser',
+  profileVersion: 'browser-busytex-v2-tl2023-4499aa69-altacv-r1',
+  manifestSha256: '4a0cca5dcea6b297df5cc6caf0bbfa932267502e68f3c19d0dc9b44a55634196',
+  workerSha256: 'a8ac2cece2aa5c4ab93a69fcb4cdfa9fcb77e12344b0b55abaf1e93813e2c8b5',
+} as const
+export const latexTemplateQualifications = [
+  { ...qualifiedBrowserBuild, id: 'career-source', templateVersion: 2, engine: 'xelatex', fixture: 'career-template-as-is',
+    sourceSha256: 'dacbe296f9656ce8b2d7a07200b59173ea8452e429346e4d9b0e86f3a85fbac4',
+    checks: 'Unchanged English starter: real XeLaTeX, one-page PDF, heading text and embedded Latin Modern font checks.',
+    limitation: 'This checks the bundled starter, not arbitrary edits, visual equality with Overleaf or an ATS score.' },
+  { ...qualifiedBrowserBuild, id: 'academic-source', templateVersion: 2, engine: 'xelatex', fixture: 'academic-template-as-is',
+    sourceSha256: '3468207ff11ee91e602c7a6aca23a4c33c28432821576141657b3574aad3b9d7',
+    checks: 'Unchanged academic starter: real XeLaTeX, three TeX passes, one classic BibTeX pass and extracted publication text.',
+    limitation: 'Classic BibTeX sentence casing is expected. This starter check is not qualification of every biblatex style or native deployment.' },
+  { ...qualifiedBrowserBuild, id: 'bangla-source', templateVersion: 2, engine: 'lualatex', fixture: 'bangla-template-as-is',
+    sourceSha256: '4fe5a840bc41eb18de50a055c01e60afd45b7c81304ba663269bfe99a1ef77d3',
+    checks: 'Unchanged Bangla/English starter: real LuaHBTeX, one-page PDF and Noto Sans Bengali glyph/font coverage.',
+    limitation: 'Complex Bangla cluster extraction in PDF.js is not fully faithful. Copy, search, reading-order and ATS compatibility are not certified.' },
+] as const

@@ -6,8 +6,8 @@ import { createTemplateProject, latexSourceTemplates } from './templates.ts'
 import { reviseProject } from './project.ts'
 import type { LatexProof } from './types.ts'
 
-test('new source templates use real browser XeLaTeX without rewriting stored projects', () => {
-  for (const item of latexSourceTemplates) {
+test('XeLaTeX templates remain compatible with the legacy Xe-only adapter without rewriting stored projects', () => {
+  for (const item of latexSourceTemplates.filter((item) => item.engine === 'xelatex')) {
     const project = createTemplateProject(item.id)
     assert.equal(project.engine, 'xelatex')
     assert.equal(item.version, 2)
@@ -16,6 +16,9 @@ test('new source templates use real browser XeLaTeX without rewriting stored pro
   const lua = reviseProject(createTemplateProject(), { engine: 'lualatex' })
   assert.match(browserSourceRefusal(lua)!, /Switch the engine explicitly/u)
   assert.equal(lua.engine, 'lualatex')
+  const bangla = createTemplateProject('bangla-source')
+  assert.equal(bangla.engine, 'lualatex')
+  assert.match(browserSourceRefusal(bangla)!, /Switch the engine explicitly/u)
 })
 
 test('browser source refuses Lua, Biber and Lua-only renderer while preserving input', () => {

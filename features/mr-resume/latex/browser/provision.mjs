@@ -125,7 +125,7 @@ async function packageEntries(cache, name) {
   })
 }
 
-function createTar(entries) {
+export function createTar(entries) {
   const parts = []
   for (const entry of entries) {
     const header = Buffer.alloc(512)
@@ -144,7 +144,7 @@ function createTar(entries) {
   return Buffer.concat([...parts, Buffer.alloc(1024)])
 }
 
-function filenameDatabase(files) {
+export function filenameDatabase(files) {
   const directories = new Map([['', new Set(['ls-R'])]])
   for (const file of files.filter((item) => item.path.startsWith('texlive/texmf-dist/'))) {
     const parts = file.path.slice('texlive/texmf-dist/'.length).split('/')
@@ -224,16 +224,29 @@ export function tarEntries(data) {
   return result
 }
 
-async function acquire(cache) {
+export async function acquireInput(cache, name) {
+  const item = downloads.find((input) => input.name === name)
+  if (!item || !path.isAbsolute(cache)) throw new Error('Select a recorded input and an absolute temporary cache')
   await mkdir(cache, { recursive: true })
-  for (const item of downloads) {
     const target = path.join(cache, item.name)
     let data
     try { data = await readFile(target) } catch (error) { if (error.code !== 'ENOENT') throw error }
     if (!data) {
       const response = await fetch(item.url || `${base}/${item.name}`, { signal: AbortSignal.timeout(300000) })
       if (!response.ok) throw new Error(`Pinned asset ${item.name}: HTTP ${response.status}`)
-      data = Buffer.from(await response.arrayBuffer())
+      const reader = response.body.getReader(), parts = []
+      let bytes = 0
+      try {
+        for (;;) {
+          const part = await reader.read()
+          if (part.done) break
+          bytes += part.value.byteLength
+          if (item.bytes && bytes > item.bytes) throw new Error(`Upstream size bound exceeded: ${item.name}`)
+          parts.push(part.value)
+        }
+      } catch (error) { await reader.cancel().catch(() => {}); throw error }
+      finally { reader.releaseLock() }
+      data = Buffer.concat(parts)
       if (item.bytes && data.length !== item.bytes) throw new Error(`Incorrect upstream size: ${item.name}`)
       if (item.sha256 && sha256(data) !== item.sha256) throw new Error(`Incorrect upstream hash: ${item.name}`)
       await writeFile(target, data)
@@ -241,7 +254,10 @@ async function acquire(cache) {
     if (item.bytes && data.length !== item.bytes) throw new Error(`Incorrect cached size: ${item.name}`)
     if (item.sha256 && sha256(data) !== item.sha256) throw new Error(`Incorrect cached hash: ${item.name}`)
     console.log(JSON.stringify({ name: item.name, bytes: data.length, sha256: sha256(data) }))
-  }
+}
+
+async function acquire(cache) {
+  for (const item of downloads) await acquireInput(cache, item.name)
 }
 
 async function saveAsset(relative, content) {
@@ -609,6 +625,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   if (command === '--normalize-checkout') await normalizeCheckout()
   else if (command === '--groups') await refreshGroups()
   else if (command === '--acquire') await acquire(cache)
+  else if (command === '--acquire-one') await acquireInput(cache, process.argv[4])
   else if (command === '--inventory') await inventory(cache)
   else if (command === '--build') await build(cache)
   else if (command === '--manifest') await refreshManifest()
@@ -624,5 +641,5 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       for (let index = 0; index < lines.length; index++) if (/actual.?text|ToUnicode|unicode.*cluster/i.test(lines[index])) console.log(`${entry.path}:${index + 1}\n${lines.slice(Math.max(0, index - 4), index + 6).join('\n')}`)
     }
   }
-  else throw new Error('Use --acquire, --inventory, --build, --groups, --manifest, --normalize-checkout, --wasm-info or --font-info')
+  else throw new Error('Use --acquire, --acquire-one <cache> <recorded-input-name>, --inventory, --build, --groups, --manifest, --normalize-checkout, --wasm-info or --font-info')
 }

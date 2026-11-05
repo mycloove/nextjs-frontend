@@ -1,0 +1,21 @@
+== {{int:filedesc}} ==
+{{Information
+|Description={{en|1=Illustration from 1911 Encyclopædia Britannica, article BASILICA.
+
+Fig. 5.—Section of the Basilica of Maxentius or Constantine (Temple of Peace).
+}}
+|Source=Encyclopædia Britannica, 1911
+|Author=Project Gutenberg Distributed Proofreaders
+|Date=1911
+|Permission=
+|other_versions=
+}}
+
+== {{int:license-header}} ==
+{{PD-Britannica}}
+{{PD-Gutenberg}}
+
+[[Category:Basilica of Maxentius and Constantine (Rome) in art|1911]]
+[[Category:Reconstruction drawings of ancient Roman buildings in Rome|Basilica Maxentius]]
+[[Category:Architecture images from Encyclopædia Britannica]]
+[[Category:Basilica of Maxentius and Constantine (Rome) - Interior view]]

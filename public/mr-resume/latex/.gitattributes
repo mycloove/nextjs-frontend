@@ -1,3 +1,5 @@
 # Byte-pinned compiler assets must not change with Windows checkout line endings.
 busytex-v1/** -text
 busytex-v1/licenses/** whitespace=cr-at-eol
+busytex-v2/** -text
+busytex-v2/licenses/** whitespace=cr-at-eol

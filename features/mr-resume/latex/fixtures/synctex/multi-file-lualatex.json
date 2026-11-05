@@ -1,0 +1,82 @@
+{
+  "name": "multi-file-lualatex",
+  "engine": "lualatex",
+  "profileVersion": "browser-busytex-v2-tl2023-4499aa69-altacv-synctex-r2",
+  "worker": {
+    "path": "compiler-worker.js",
+    "bytes": 63107,
+    "sha256": "6279d2e78a3930b38a4c07ffba1e56e3b1d764bc8af1a0095fcb12e4c3bf8213"
+  },
+  "wasm": {
+    "path": "busytex.wasm",
+    "bytes": 30363063,
+    "sha256": "a7785b59bfddb8667e7738443f111430e3ee2bd3ec0c1c26629267849e091415"
+  },
+  "parser": {
+    "path": "tools/synctex/synctex-parser.wasm",
+    "bytes": 164146,
+    "sha256": "db1afe3c6442c23077840c467ad4710d90cffda444cb7b118c5b867339cb65d6"
+  },
+  "sources": [
+    {
+      "path": "main.tex",
+      "content": "\\documentclass{article}\n\\usepackage[paperwidth=400pt,paperheight=500pt,margin=50pt]{geometry}\n\\pagestyle{empty}\n\\begin{document}\n\\noindent FIRSTMARKER one.\\par\n\\input{sections/body.tex}\n\\noindent THIRDMARKER three.\\par\n\\end{document}\n"
+    },
+    {
+      "path": "sections/body.tex",
+      "content": "\\noindent SECONDMARKER two.\\par\n"
+    }
+  ],
+  "pdfSha256": "08600efd0d24068c7b9b59c512a326196ec7be0718361518cef8c445b0c39120",
+  "synctexSha256": "cc149102206088540a51a4cf18c747df962a9912cc53a07d2809ff0e85320e18",
+  "pdfBase64": "JVBERi0xLjUKJczVwdTF2NDExgozIDAgb2JqCjw8IC9GaWx0ZXIgL0ZsYXRlRGVjb2RlIC9MZW5ndGggMTYyID4+ICAgICAgICAKc3RyZWFtCnjajY87DgIxDET7PYUvQBjHjkkktBILuwV1OkRLx/1bHCI+EkKgFGNPknmaqQ7rhROVUCyaUr0MTPDDpCVkFlLJQZJRvdJpC4gBykBaAHO17PsO4Kl7mvzN/X5ciYj/SL7pwd3ocx7P9fiBiBYU/EC02BYRPdbToHuf518YK2PMrpvYtWG/4FiD6rNRayDzq9U/KHdaf/RWb83mOtwA2KJFdQplbmRzdHJlYW0KZW5kb2JqCjkgMCBvYmoKPDwgL0ZpbHRlciAvRmxhdGVEZWNvZGUgL0xlbmd0aCAyMyA+PiAgICAgICAgIApzdHJlYW0KeNpjYGAQYFBKYnbROdB44IACABI1A+kKZW5kc3RyZWFtCmVuZG9iagoxMCAwIG9iago8PCAvU3VidHlwZSAvQ0lERm9udFR5cGUwQyAvRmlsdGVyIC9GbGF0ZURlY29kZSAvTGVuZ3RoIDI2MDcgPj4gICAgICAgCnN0cmVhbQp42qVXe1QTVxqfEGYGKtJqjC0ZOzMqtSryUEvR1kfxVeQoKkKrrlUQQkBCgnkI1ILhHXKT8A6CyqOEh6MSX63Vra9t99Qux1Y9291qn2xpt9tqbWntN/Gye3YCantO6/6z88ednDvf3Pv9ft/v/r6JjPD3J2QyWUjymvVrk+PCVq1O1Oek6mZHhSeqNWZtqsH3cIU4WZyCglhxEiE+LhNZP5GTi7w/nhYkPx7kP7wEvz6JrLqDyccJQrb3Yd94eRzQQVOkX0FrgkJ9ExeDniAC/AgZEUKwxE3iPzJaNlY2XqZ60LZzIqKinlqqzy0wZGkyTfycqKi5s3zjfH5JBB+fmpatzzNmZ/GpunQ+PoJfHcEn6POk2Sx+ul7Hb1NnpmozeH0Gn6TewJuNaoOR1xj05lzjjAg+KTPLyOfpDdm8dDeotepUozqdN+vS1QbelKnmn09en8Sv0OtM/KqsNLXOqObDw3neqFbzmSZT7jORkSazJkJv0ERmSDHGSO1okDHS9174ijUJSeGrVi5dnrB+eYQp38Rn6A18utqUmqU1RvwG5P2JBL0hJ1Ubm67fpl6ZrtaZskwFhHQxxEwigphNzCGeJhYRi4lYYjkRT6wiVhNriXXEBmIrkUKkEplEFmGQS9RK16PEoz6S/Yk84hvZC7J+v9l+gnyZ/Iz/GP8j5DLyAhVDWal/0TR9ISAs4PPAxMDOh1bDoWBvCRJgoyC+lCfzpk4UCug1hXWHLBzWeklyT0VV3S5ml7W8sILDacPfFGxIeyXZFqKlf3ACbSUFeqPB3eW0N9od3Cl4lAREncfhpL3SUV6pylmPclkt7fRcQUcZPAEalNhMgT9cI4O9GWbBGy7I3hoScw/IveFQqGxEdUUWVF5sY/HUUn4+ljEJeMNhOAvn4MXDF0E2GIWntXGFDmRtZvYiZzsHxfQ+VGeprES7S9mNsaQnY8OZMAavwdF4Lk7BafA0ng0JEHMTOAjggr01SPDKBBmwA2/egqJbcu+LMKiERMzAbLyYHfbTdlIfOiwabriT1lRZFrFGrehHwQJgYTqs5Z6ciOX5azSb2Ny8xHXTmGnU5qq6Q5x4lD7kqDvN3qLevWxedpZ7fW1D9EJVsHehxOg7woAAMdKGkwZhkxvC3E633MuDS2mgcITBtAQ/x+CQ0WWg7Uv6hiv7ac4N+w1UtEU7k50NZdTI0qCkILw7CXN7OTelBzM5/M79TNvvZ/oBFSyutbghpx2WdMh6PoWSS3JxLoxRNpY6Kkqqykur2NDM2aiY2Zh24IiJy/kjuuRRwUGqw4nav0u+gcfhgMhQaVT9NBNoCH4D5K3cSghR4mIKZtR+5j7MDDViJl2icbIE7bQAp4TxErC0weuDBjdMdSuOiD+Lf1CO5Hfqt/lRCruz7xo6xpz4Clk9nLCdViTOQnv6OLAN0N823kMeU7w9jI2GWkoxYxR7EAUz3esxu5cbVem7AhweZfTcoNybMlEw0ouqXB5O7KQ9DteHbKdAWTNjkZpRP4ecmZy2kx5JBBfhc1D0P0N+qTrl7PtAEuzRvyFrH3dvA2iBc7jld0OCxfNIEEM6IEPQvjYe/C6D+rLir+LBiQL9ogEdsHGwnh5AgtbD7ivc3raOidm6RrOLs8H3lOIGDrWQWvpKfdkmbngfvcWC4qQDA6QT/H1nK86C3uBgFf3j1bf6/+JKTmRx4a9iyGD4911JTxqUw8BEYQe9wHqXDKfrOtvlQ7pAQpq+YARpF33deRep1bKA3eGDcV2Ccez6CAxv6y+reU1S9sk7q0/mcHgXfA1xEFtff/7sx/YQgbbuyEa5jCYRObM4LX3cVmsqUe0qLi4tY/ElfI6Eq/8Xz0tpCAA/WInbydqShqLdqpx0lOdzkT6fiwTfmXE3Sb4HWnqg+GP5HfnvqAAvpHYgW0EZh/XD7+Ac8W2yo8SKTAxeeF+bVjoXbQ71URnohEAf3aHodDcneuw0lP/bjyyqqSlpZFzOele1pFLvWNI+fJW6n/qR9yUxH3sPWY+MKnOUuB5xfo8kSy+vFGgcaMWBTqm6Q2hzLje8mMa3xb1kU4nNns/gRdpeqqXNZmvhXrXabfmq4dYHZLOPrqmw26rLxVnDNx7b3WC31THNqK6VE9+ku9HpIXZUfKRg6binvN4HK2/J5pTVeu4nWnEZT76vO9z+QN0peh+kPG+rucs7z+3z761Dcq8a/qmEFBwmWW48fh6H46fwNpwKETgKVkA8hMFc2MKGNivxfvx4TGQYVn0BzdAE097/9B8wdRlukGBYLW4xasS5DnwqF7NhuxImPHkbj8XjZmKZZEzKH8MgEMZ+fxMU7Lx6pQYlm7eyW8xbdRuZlK3tp3I5w0l00aM6hi50nmRPdZ9uP86cfN2c0sV1paB1alUwCOi2bOC2HJLOK3uNnTqd0ajTdRp7ezs7e9lgr8ncIdnL+Q44J4zvG0IDaGhCsKLVm/uFsha5pL5UUmZjl5VnFhiYTaVnvy7kij4q6N90KKk15EbntYvXVN9i6jP8JIvf+1UTUejuq8Vz1aeWqyPWd0/otUDTe19DWX3cUQ3SxqniUdoJNas4qznxp/IDzLV9n/Rw2CzOVa4wPoOns1gOTdSrqKnDyToae1Eb8yX4V+InJPOZdK/+ty/dHlDwIiGOUx7U9qYs0cSlFLLg56s293vVppzk8dPIepwTdtKxIylF0Irp3702+Pc6B7I5WKstb/cOlb79lY797qaDPqWZBVguwGLhogDP9Mje6n+vH1b1y8VKSFDeWvlJTBuLJwjk6pb0C39WXblw8Ro824Hnbally+2o3MXsQTWtHLw00rPLbLbdZWxmItmbs+3EHAbLY+ZOnnd+ybVczlV5dveVl7vLDpT1ZAS072jcvl21bOPSGN3imjdfYNddsPbbPAGNtlJkZYpQWQGHN9MvozJXnd3hqmORs/rQeTZL6NcMMhD40U3wk85mhkRPwk54QZB53FA/CPXuCZO8seIGZb6vVQGVj82km4Lo5pZDEMbs70JVjVx7JbKYVFIJs1DhFDZNKuCJH9Ap5tQQsp7ghDR6Cmo+7DObNtS8v5p1uLpRKwNhLdtxdLNUkBCpDT+bB6UCrMob/+NlqT2q3Io78Dk8onzbkETH5qgz4tBX+1gQYKqAp/rO2VMGyjY/h59RGWCmFcLnuJfCD3+923O152q/pM2Mxp2iTGgRZPu9sXLvejFUcpcqs85mZiJ8/uKxdRToVOWoqqKIjcIN0+EgWdlkc9Souo+hNlagp1rJHJ3dkSOZ9ZG9VUWNXE25K6cuPxpXPDYL2siKJuSovheLZdaRNc80WbObOBiPfyYLa5yle5g9jtrmGu578PyAj5CW6pEpZ0OjZI2B8PH+M8KePntIsO/fwiMiEzRN+uYnon3f/2njzR3i0n2gc9V2UGx8kjYyKBAFjREeujymw+6wOxz2OofDeTEoyH3CWeuodTqdNbXVQWP/C4sUu+wKZW5kc3RyZWFtCmVuZG9iagoxMSAwIG9iago8PCAvRmlsdGVyIC9GbGF0ZURlY29kZSAvTGVuZ3RoIDQ2MyA+PiAgICAgICAgCnN0cmVhbQp42oWTTW+jMBCG7/wK9xApPVAMCaStIqTmS0Vqmyikq70Se5K1FGxk4JB/X9tjWmm10SKBeJj3HY/Hw+huV4YvXB0hnDxQsodW9ZpBuHyvmmA0WinW1yC7DwAOfIi2z2SnFSuhI+NlsSqk6O6NuJDs0nMYVP8WLeAs5I/ErkPGB/gdfm7L3edr+Pa+V3UlYxru4dxfKh1SazuI7mLk/1ESEya3wsQl+gW6FUo+k/iBUmo+rCVfqtpusg0iXyiJhtJPQnLtqyVHW3sQJ4QL1nlyT1abbllzeW07qAt5UsF8TiKzsmg7fXV13wfRVnPQQp7J+FaRRlT2TXMBWxChQZ4TDieT2/Tpo6qBRLYDBTdR0V1vtuLHdLg2QBLHMZbMFIe2qRjoSp4hmJs20JzMN+bKA5D8rzhF1/GEaATDa5IMIfan0jZRvDCJKJ3GuaXkBWmCtEaaOprESClS4ijzlGEsQ/K+R6QNKpGmPssTUoq0QPKrr5CWSGukFWZBSinGNkiYM/P06CjxSlw9TRxl6Jt5Ql+Ku83Ql+JusydUIs1wt7NZjt103bONt1P0fdCs19qcshs1d5L2DIWE72lsVGNd7nZjPPxVlrab4AvOJhntCmVuZHN0cmVhbQplbmRvYmoKMTQgMCBvYmoKPDwgL1Byb2R1Y2VyIChMdWFUZVgtMS4xNi4wKSAvQ3JlYXRvciAoVGVYKSAvQ3JlYXRpb25EYXRlIChEOjIwMjYxMTA1MTEzNTUwKzA2JzAwJykgL01vZERhdGUgKEQ6MjAyNjExMDUxMTM1NTArMDYnMDAnKSAvVHJhcHBlZCAvRmFsc2UgL1BURVguRnVsbEJhbm5lciAoVGhpcyBpcyBMdWFIQlRlWCwgVmVyc2lvbiAxLjE2LjAgKFRlWCBMaXZlIDIwMjNfYnVzeXRleHdhc20pKSA+PgplbmRvYmoKNiAwIG9iago8PCAvVHlwZSAvT2JqU3RtIC9OIDggL0ZpcnN0IDQ3IC9GaWx0ZXIgL0ZsYXRlRGVjb2RlIC9MZW5ndGggNTM3ID4+ICAgICAgICAKc3RyZWFtCnjajVNdi9swEHzvr9jHO0oqyZJsGY6DfDQktNcLyaUthHvQ2aprcKxgK3D59921nfRSKO1LsiPvzs7sShFwEJCmkIDQERiQWoACneBxBAk3oMGkCCSkUr+7uwP2dDo4YCtb4O/U18HVoQWJPGtga9f6Y5O5Fkm7gweXl3biX2GHmINMzQfNY1D4L2QEz0TUIAO2ofz7+67FHGmhC4RGNf0XTG18tnEBudhqNkcl7jUgBRbtIErwONEcsYoojIhdxRTGisIUw9igO0VQK4JaYhhHQ6nWMUGNUMaCQqpJEoNhQvmpSCiMr/INH5I0p+7GAKmhmpSYEhmj7WhIFlwN4qRJCQt1Efv8Zrw0gZlrs6Y8BN/0+Ivd45ft42a1Xbz//LD2e1sLPlq74lhZyqls0eK4uuRJP/SRkhxGEW1QoXghInLAxm1GQ+8gm9rDwpXFz4DjkcCoLX3sqtgy2KrMxnVROdwD2wS3/4pXAdj3oUZJ0Xecl5WTaLBf/HQ5o1Wlb9f62xoSHV9CB+kQiT/Wmc/LusCOOXYvw2m0ADaxrevz/26715tbVODpKu7o5lJX9Pnkt3WJxA6t/lMJSqaTQdD/tP5jS6a3/g0f02UGpxYntqx/+O4+Y2XZhuYEN+Pcv7hbYI9N7hryfXP2fUuSDofK7WkLnG7+lWp6eS3Q2zvSCoF9KnNyfTZ9lTy1uD9fnKsur+wXhywRzgplbmRzdHJlYW0KZW5kb2JqCjE1IDAgb2JqCjw8IC9UeXBlIC9YUmVmIC9JbmRleCBbIDAgMTYgXSAvU2l6ZSAxNiAvVyBbIDEgMiAxIF0gL1Jvb3QgMTMgMCBSIC9JbmZvIDE0IDAgUiAvSUQgWyA8OEVEN0RDNEJFQzA5QTNBMkI1NjI3MDA2RTVDRDhENjQ+IDw4RUQ3REM0QkVDMDlBM0EyQjU2MjcwMDZFNUNEOEQ2ND4gXSAvRmlsdGVyIC9GbGF0ZURlY29kZSAvTGVuZ3RoIDU3ID4+ICAgICAgICAgCnN0cmVhbQp42hXJwQ2AIABD0f9R8GIgJq7geI7jvFgOL21aYBaagdwk92iOsXqJTfP54lnXVuOwP3h9/GBBAvQKZW5kc3RyZWFtCmVuZG9iagpzdGFydHhyZWYKNDUwMQolJUVPRgo=",
+  "synctexBase64": "H4sIAAAAAAAAA42Uy27bMBBF9/wKe9cAisThm9x21UWRAn0gRZGFLFMOa1kyJDqIW/TfS8p6OEVcBwZE3vG55Iw41OdjXXyx94tvtu1cUxtAH+r9wRsw2c9mlaXZLnd16u3zECcmC6JyTzaOu/J27Tofp1mVx+cq72yWt94VlU2Lqhts9C22zv2ygIOrGVzsimtjm5317XGapJ0/Dl5+zdvm+0dXdNnWHp/y6swpLjo3tratKzJXRuXKpzCcGeWbjS996kqqFV3lxdbW63l2Wx3iX+nalsMi+i1v2HdQ7Nq0XI+njMdj7mzhw/l32apZH/vzvjv4iOzXJfqYb2pXuiL3fYtgjNHX2gU7ul/clWVnvcHo+zx939Te1t6gpcAC/Qb0AxJlmKSCKJEMowFFMFBgCRGSYK1Zgk8gJVIojBPFQQtlwkPgqCkWmFMg1zipBKORendOgaCKYTxj4YcerxI36OHlbsM4U0QQYCzicUM+g5oSEGcgE5pQlQQYFHqOKCcCCI3OXioiGZc8yE0vmSYKpoVOjBZcYYZHhhBNpZh3uxC9CamFAqfcmATFNbmYW2QZD6fHT8lFHRSRlE9aYxm9fSa9JppR4OPaI8VDFf0qW0kSIIz9C5pbUJT35am+uRiWwyuJmmnO9bzLVNq4zYVwrDiRU8GcY44Ju3wY0nAmAOBUX5CKScbE8KKDDLzQfFzoxACmNHQljNCUxUi9Ho099aI3wy3gkqj/NefrSFzpAS2VBPRn+nRP3+6mv8JpfnhGS8rRp6bz+W5VWRNu6CHczxBbhnRifNEVrdv7w86gv1xEmLQTBgAA",
+  "geometries": [
+    {
+      "page": 1,
+      "view": [
+        0,
+        0,
+        398.506,
+        498.132
+      ],
+      "rotate": 0
+    }
+  ],
+  "expected": [
+    {
+      "text": "FIRSTMARKER",
+      "query": {
+        "page": 1,
+        "x": 51.813,
+        "y": 441.67688
+      },
+      "file": "main.tex",
+      "line": 5,
+      "refused": true
+    },
+    {
+      "text": "SECONDMARKER",
+      "query": {
+        "page": 1,
+        "x": 51.813,
+        "y": 429.72188
+      },
+      "file": "sections/body.tex",
+      "line": 1,
+      "refused": true
+    },
+    {
+      "text": "THIRDMARKER",
+      "query": {
+        "page": 1,
+        "x": 51.813,
+        "y": 417.76688
+      },
+      "file": "main.tex",
+      "line": 7,
+      "refused": true
+    }
+  ],
+  "refusal": "This LuaHBTeX map has zero-Y glyph boundaries; safe source navigation is unavailable for this proof."
+}

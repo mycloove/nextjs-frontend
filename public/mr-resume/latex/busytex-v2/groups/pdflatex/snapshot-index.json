@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "unpackedBytes": 6479360,
+  "files": [
+    {
+      "path": "texlive/texmf-dist/texmf-var/web2c/pdftex/pdflatex.fmt",
+      "bytes": 6477564,
+      "sha256": "3e3486ce4f2253735097b45d18d4b0a214de68da20f05ab0d197db8eb91b9b0f",
+      "source": "texlive-basic.tar.gz",
+      "upstreamPath": "build/texlive-basic/texmf-dist/texmf-var/web2c/pdftex/pdflatex.fmt"
+    }
+  ]
+}

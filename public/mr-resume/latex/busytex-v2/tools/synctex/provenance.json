@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "parser": "Upstream TeX Live SyncTeX 1.21 C parser; decoding and forward/inverse query algorithms are unmodified.",
+  "asset": {
+    "path": "tools/synctex/synctex-parser.wasm",
+    "bytes": 164146,
+    "sha256": "db1afe3c6442c23077840c467ad4710d90cffda444cb7b118c5b867339cb65d6"
+  },
+  "upstream": {
+    "archive": "texlive-source.tar.gz",
+    "sha256": "aa53f7069627a20acfaa38b0104aee3ac3e23c5e220a9950e701405497cd00e1",
+    "files": [
+      {
+        "path": "texk/web2c/synctexdir/synctex_parser.c",
+        "bytes": 340863,
+        "sha256": "4ec9eb68a8e3080c65344391dfb18fd77c8b3ad646f12f7d71491adabc22a66c"
+      },
+      {
+        "path": "texk/web2c/synctexdir/synctex_parser.h",
+        "bytes": 19251,
+        "sha256": "ac9fbbef013962d79f1f1fb40eec642103e152a471c5feed964515292ae6cb2c"
+      },
+      {
+        "path": "texk/web2c/synctexdir/synctex_parser_advanced.h",
+        "bytes": 20535,
+        "sha256": "edcad2c96f1c5e48fbd20923bf2dd3868914e566ccab82bfffc520f802345dd8"
+      },
+      {
+        "path": "texk/web2c/synctexdir/synctex_parser_utils.c",
+        "bytes": 19481,
+        "sha256": "01330fbb682ca18c044af8d831de03874726dda53172f892d40d6fa0a330cf25"
+      },
+      {
+        "path": "texk/web2c/synctexdir/synctex_parser_utils.h",
+        "bytes": 6385,
+        "sha256": "474ac7145eb5c415a875f1050646576fd66274654111de245ebc46dcbd405561"
+      },
+      {
+        "path": "texk/web2c/synctexdir/synctex_version.h",
+        "bytes": 2072,
+        "sha256": "02762a33566a97b189b9f5f824e53a5d9e13265008c84cceef74f4924cc62c45"
+      }
+    ]
+  },
+  "adapter": {
+    "sources": [
+      "features/mr-resume/latex/browser/build-synctex.mjs",
+      "features/mr-resume/latex/browser/synctex-adapter.c",
+      "features/mr-resume/latex/browser/synctex-memory.h"
+    ],
+    "description": "Only the zlib read interface is adapted to a pre-decompressed bounded memory buffer. The parser has no host filesystem or network. Browser DecompressionStream enforces compressed/expanded byte caps before C runs."
+  },
+  "toolchain": {
+    "zig": "0.13.0",
+    "target": "wasm32-wasi",
+    "windowsArchive": "https://ziglang.org/download/0.13.0/zig-windows-x86_64-0.13.0.zip",
+    "windowsArchiveSha256": "d859994725ef9402381e557c60bb57497215682e355204d754ee3df75ee3c158",
+    "source": "https://ziglang.org/download/0.13.0/zig-0.13.0.tar.xz",
+    "sourceSha256": "06c73596beeccb71cc073805bdb9c0e05764128f16478fa53bf17dfabc1d4318",
+    "options": [
+      "-O2",
+      "-mexec-model=reactor",
+      "--strip-all"
+    ],
+    "initialMemory": 2097152,
+    "maximumMemory": 67108864,
+    "stackBytes": 1048576
+  },
+  "notices": [
+    {
+      "path": "tools/synctex/SYNCTEX-LICENSE.txt",
+      "bytes": 1923,
+      "sha256": "d52d1b61b4a09d7c8ca62c89a46e746977cf41bbf7d62677e63610f129c9e818"
+    },
+    {
+      "path": "tools/synctex/WASI-LICENSE.txt",
+      "bytes": 831,
+      "sha256": "673f577e363e80e0058bd78214683f045d1d0c63930969a87f01a1d87d7cf1d6"
+    },
+    {
+      "path": "tools/synctex/WASI-LICENSE-MIT.txt",
+      "bytes": 1023,
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "path": "tools/synctex/WASI-LICENSE-APACHE.txt",
+      "bytes": 10847,
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "path": "tools/synctex/WASI-LICENSE-APACHE-LLVM.txt",
+      "bytes": 12243,
+      "sha256": "268872b9816f90fd8e85db5a28d33f8150ebb8dd016653fb39ef1f94f2686bc5"
+    },
+    {
+      "path": "tools/synctex/MUSL-COPYRIGHT.txt",
+      "bytes": 6204,
+      "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af"
+    },
+    {
+      "path": "tools/synctex/CLOUDLIBC-LICENSE.txt",
+      "bytes": 1292,
+      "sha256": "c8b789cf5a746611e6300a0cc7750dbf92b61912a709d04e639245f7290656d0"
+    }
+  ]
+}

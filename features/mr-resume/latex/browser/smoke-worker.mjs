@@ -7,7 +7,7 @@ import { parentPort, workerData } from 'node:worker_threads'
 // This is an asset adapter, not a compiler substitute. The exact deployed
 // classic worker and unmodified Emscripten/WASM run in a worker-only VM: no
 // process, require, Node filesystem or network APIs are exposed to TeX.
-const root = '/mr-resume/latex/busytex-v1/'
+const root = `/mr-resume/latex/${path.basename(workerData.staticDirectory)}/`
 const origin = 'https://mr-resume.invalid'
 const manifest = JSON.parse(readFileSync(path.join(workerData.staticDirectory, 'manifest.json'), 'utf8'))
 const profileVersion = manifest.profileVersion
@@ -24,6 +24,10 @@ for (const group of manifest.groups || []) {
       || !Number.isSafeInteger(asset.bytes) || asset.bytes <= 0 || !/^[0-9a-f]{64}$/.test(asset.sha256) || pinnedPaths.has(asset.path)) throw new Error('Unsafe or duplicate pinned smoke group asset')
     pinnedPaths.add(asset.path)
   }
+}
+for (const asset of manifest.biber?.assets || []) {
+  if (!/^tools\/biber\/(?:biber\.(?:js\.bin|wasm|data)|biber-index\.json)$/.test(asset.path) || pinnedPaths.has(asset.path)) throw new Error('Unsafe pinned Biber asset')
+  pinnedPaths.add(asset.path)
 }
 const requests = [], scripts = [], consoleLines = []
 const blobs = new Map()
@@ -48,7 +52,7 @@ const sandbox = {
   location: { origin, href: 'blob:' + origin + '/checked-worker-bootstrap' },
   URL: AssetURL, TextEncoder, TextDecoder, Blob: AssetBlob, Response, DecompressionStream,
   Uint8Array, Int8Array, Uint16Array, Int16Array, Uint32Array, Int32Array, Float32Array, Float64Array, ArrayBuffer, DataView,
-  WebAssembly, crypto: webcrypto, performance, setTimeout, clearTimeout,
+  WebAssembly, crypto: webcrypto, performance, setTimeout, clearTimeout, WorkerGlobalScope: class WorkerGlobalScope {},
   console: Object.fromEntries(['log', 'error', 'warn', 'info', 'debug', 'trace', 'assert'].map((name) => [name, (...values) => consoleLines.push(values.map(String).join(' '))])),
   fetch: async (input, options) => {
     if (workerData.noNetwork) throw new Error('Supplied-asset initialization must not fetch any asset')
@@ -75,7 +79,18 @@ sandbox.importScripts = (...inputs) => {
     vm.runInContext(blob.sourceBytes.toString('utf8'), context, { filename: 'busytex.js.bin' })
   }
 }
-vm.runInContext(readFileSync(path.join(workerData.staticDirectory, 'compiler-worker.js'), 'utf8'), context, { filename: 'compiler-worker.js' })
+vm.runInContext(readFileSync(path.join(workerData.staticDirectory, 'compiler-worker.js'), 'utf8'), context, {
+  filename: 'compiler-worker.js',
+  importModuleDynamically: async (input) => {
+    const blob = blobs.get(input)
+    if (!blob || blob.type !== 'text/javascript' || !blob.sourceBytes.equals(readFileSync(path.join(workerData.staticDirectory, 'tools/biber/biber.js.bin')))) throw new Error('Only the exact pinned Biber ESM may be imported')
+    const biberModule = new vm.SourceTextModule(blob.sourceBytes.toString('utf8'), { context, initializeImportMeta: (meta) => { meta.url = input }, importModuleDynamically: () => { throw new Error('Biber may not import Node or other host modules') } })
+    await biberModule.link(() => { throw new Error('Biber may not link unpinned modules') })
+    await biberModule.evaluate()
+    scripts.push('tools/biber/biber.js.bin')
+    return biberModule
+  },
+})
 parentPort.postMessage({ kind: 'boot', requests: [...requests], scripts: [...scripts], consoleLines: [...consoleLines] })
 parentPort.on('message', async (data) => {
   try { await context.onmessage({ data }) }

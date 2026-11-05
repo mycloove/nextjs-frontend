@@ -1,0 +1,7 @@
+Mr. Resume browser TeX and Biber distribution
+
+The BusyTeX/TeX Live engine remains the separately licensed unmodified v1 binary, with its upstream sources and original notices. v2 adds original TeX package/font files and authentic Perl Biber 2.22. Individual package/font license headers remain in source/runtime archives; no blanket MIT-only license applies.
+
+Biber: Artistic-2.0. Corca SDK: MIT. Perl/CPAN/Unicode: individual terms in the corresponding-source archive. TeXlyre-derived bootstrap: AGPL-3.0, explicitly identified in licenses/TEXLYRE-AGPL-3.0.txt and the complete corresponding-source archive. Runtime assets, sources and notices are a separate vendor distribution; the surrounding application is not relicensed by this notice. Host distribution obligations require review. No deterministic clean Biber toolchain rebuild is claimed.
+
+The pinned ESM factory, WASM and Perl/Biber data are unmodified. Our worker supplies only local in-memory job files, denies network and JS eval imports, and returns the real BBL/BLG. It never substitutes BibTeX, fonts, icons or the imported CV source. Source archives are offered by equivalent same-origin access in source-offer.json and are not downloaded during compilation.
