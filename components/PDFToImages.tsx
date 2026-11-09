@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { useDropzone, type FileRejection } from 'react-dropzone'
 import { ApiClientError, getApiErrorMessage, toolRequest } from '@/lib/api/client'
 import KineticSphere from '@/components/KineticSphere'
+import { describePages, parsePageRange } from '@/features/pdf-to-images/pageRange'
 
 /* ═══════════════════════════════════════════════════════════════════
    The Contact Sheet
@@ -130,7 +131,9 @@ const FORMAT_OPTIONS: { value: 'png' | 'jpg'; label: string; sub: string }[] = [
 type Frame = { url: string; name: string; code: string }
 
 const IMAGE_NAME = /\.png$|\.jpe?g$/i
-const PAGE_NO  = /page[_-]?(\d+)/i
+/* The engine names frames `<document>_page_<NN>.<ext>`; anchor on the end so a
+   document that is itself called "page_7 scan" still numbers correctly. */
+const PAGE_NO  = /page[_-]?(\d+)\.(?:png|jpe?g)$/i
 
 const streamToBytes = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
   const reader = stream.getReader()
@@ -210,24 +213,26 @@ const parseZipImages = async (blob: Blob): Promise<Frame[] | null> => {
   }
 }
 
-/* ── Page range parser ─────────────────────────────────────── */
-const parsePageRange = (input: string, total: number): number[] | null => {
-  if (!input.trim() || input.trim().toLowerCase() === 'all') return null
-  const pages: Set<number> = new Set()
-  const parts = input.split(',').map(s => s.trim())
-  for (const part of parts) {
-    if (part.includes('-')) {
-      const [a, b] = part.split('-').map(Number)
-      if (isNaN(a) || isNaN(b)) return null
-      for (let i = Math.max(1, a); i <= Math.min(total, b); i++) pages.add(i)
-    } else {
-      const n = Number(part)
-      if (isNaN(n)) return null
-      if (n >= 1 && n <= total) pages.add(n)
-    }
+/* ── Page count ───────────────────────────────────────────────
+   Read in the browser so the range is checked against the real document
+   before upload. A file pdf.js cannot open (password, damage) leaves the
+   count unknown; the engine still validates and names the problem. */
+const readPageCount = async (file: File): Promise<number | null> => {
+  try {
+    const pdfjs = await import('pdfjs-dist')
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+    const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+    const count = doc.numPages
+    void doc.destroy()
+    return count
+  } catch {
+    return null
   }
-  return [...pages].sort((a, b) => a - b)
 }
+
+const isPdf = (f: File) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')
+
+const stem = (name: string) => name.replace(/\.pdf$/i, '').trim() || 'document'
 
 /* ─────────────────────────────────────────────────────────────
    Component
@@ -238,7 +243,12 @@ export default function PDFToImages() {
   const [file, setFile]     = useState<File | null>(null)
   const [phase, setPhase]   = useState<Phase>('table')
   const [error, setError]   = useState('')
-  const [result, setResult] = useState<{ url: string; name: string; size: string } | null>(null)
+  /* What the engine actually produced — read from its response headers, so
+     the receipt reports real pages and settings, never the request. */
+  const [result, setResult] = useState<{
+    url: string; name: string; size: string
+    pages: number | null; totalPages: number | null; dpi: string; format: string
+  } | null>(null)
   /* The print session: real frames read back out of the archive's own
      bytes — a frame per page, an optional lightbox, and one deliberate
      ZIP download. Never a mock preview. */
@@ -251,10 +261,17 @@ export default function PDFToImages() {
   const [format, setFormat]   = useState<'png' | 'jpg'>('png')
   const [quality, setQuality] = useState(95)
 
-  // Page range
-  const [pageRange, setPageRange]           = useState('')
-  const [pageRangeError, setPageRangeError] = useState('')
-  const [totalPages, setTotalPages]         = useState<number>(0)   // 0 = unknown
+  // Page range — validated with the engine's own grammar against the real
+  // page count (0 = still counting / unreadable in the browser).
+  const [pageRange, setPageRange]   = useState('')
+  const [totalPages, setTotalPages] = useState<number>(0)
+  const countRunRef = useRef(0)
+  /* Unknown count: check the shape only (a generous ceiling keeps "8-"
+     finite); the engine names a page past the end once it knows. */
+  const rangeCheck = parsePageRange(pageRange, totalPages || 10_000)
+  const pageRangeError =
+    !rangeCheck.ok && (totalPages > 0 || rangeCheck.code === 'invalid_range') ? rangeCheck.error : ''
+  const selectedPages = rangeCheck.ok && totalPages > 0 ? rangeCheck.pages : null
 
   const locked = phase === 'developing'
   const abortRef = useRef<AbortController | null>(null)
@@ -274,8 +291,13 @@ export default function PDFToImages() {
      opening the file picker. The idle stage and the Replace button call
      open() explicitly — same pattern as the Image→PDF module. */
   const onDrop = useCallback((accepted: File[]) => {
-    const pdf = accepted.find(f => f.type === 'application/pdf')
-    if (!pdf) return
+    // Some browsers/OSes send a PDF with an empty MIME type — the name is
+    // the second signal (it used to be dropped without a word).
+    const pdf = accepted.find(isPdf)
+    if (!pdf) {
+      if (accepted.length) setError('The table only takes PDF files.')
+      return
+    }
     if (result) URL.revokeObjectURL(result.url)
     // one pass: nothing from the last print session survives a new sheet
     runIdRef.current++
@@ -286,8 +308,12 @@ export default function PDFToImages() {
     setError('')
     setFile(pdf)
     setPageRange('')
-    setPageRangeError('')
+    setTotalPages(0)
     setPhase('loaded')
+    const myCount = ++countRunRef.current
+    void readPageCount(pdf).then(count => {
+      if (countRunRef.current === myCount && count) setTotalPages(count)
+    })
   }, [result])
 
   const onDropRejected = useCallback((rejections: FileRejection[]) => {
@@ -334,19 +360,8 @@ export default function PDFToImages() {
     }
   }, [view, frames.length])
 
-  // ── Page range validation ──
-  const validatePageRange = (val: string) => {
-    setPageRange(val)
-    if (!val.trim() || val.trim().toLowerCase() === 'all') {
-      setPageRangeError(''); return
-    }
-    const parsed = parsePageRange(val, totalPages || 9999)
-    if (!parsed || parsed.length === 0) {
-      setPageRangeError('Invalid range — use "1-5, 8, 10-12" or leave blank for all')
-    } else {
-      setPageRangeError('')
-    }
-  }
+  // ── Page range — validity is derived above from the engine's grammar ──
+  const validatePageRange = (val: string) => setPageRange(val)
 
   const triggerDownload = (url: string, name: string) => {
     const a = Object.assign(document.createElement('a'), { href: url, download: name })
@@ -373,7 +388,7 @@ export default function PDFToImages() {
     setResult(null)
     setFile(null)
     setPageRange('')
-    setPageRangeError('')
+    countRunRef.current++
     setError('')
     setPhase('table')
     setTotalPages(0)
@@ -398,7 +413,8 @@ export default function PDFToImages() {
       formData.append('dpi', dpi.toString())
       formData.append('format', format)
       formData.append('quality', quality.toString())
-      if (pageRange.trim() && pageRange.trim().toLowerCase() !== 'all') {
+      // A range that already covers every page is sent as "all pages".
+      if (rangeCheck.ok && !rangeCheck.all) {
         formData.append('pageRange', pageRange.trim())
       }
 
@@ -411,9 +427,19 @@ export default function PDFToImages() {
         return
       }
       const blob = await res.blob()
-      const name = `mycloove_images_${Date.now()}.zip`
+      const name = `mycloove_${stem(file.name)}_images.zip`
       const url = URL.createObjectURL(blob)
-      setResult({ url, name, size: (blob.size / 1024 / 1024).toFixed(2) })
+      const headerInt = (key: string) => {
+        const value = Number.parseInt(res.headers.get(key) ?? '', 10)
+        return Number.isFinite(value) ? value : null
+      }
+      setResult({
+        url, name, size: (blob.size / 1024 / 1024).toFixed(2),
+        pages: headerInt('X-Page-Count'),
+        totalPages: headerInt('X-Total-Pages'),
+        dpi: res.headers.get('X-Dpi') ?? String(dpi),
+        format: (res.headers.get('X-Image-Format') ?? format).toUpperCase(),
+      })
       setPhase('done')
 
       /* No surprise auto-download any more: the printed sheet IS the
@@ -763,6 +789,7 @@ export default function PDFToImages() {
         .p2i-range:focus { border-color: color-mix(in srgb, var(--accent-start) 50%, var(--border-base)); }
         .p2i-range.error { border-color: color-mix(in srgb, var(--brand-red) 55%, var(--border-base)); }
         .p2i-range-hint { font-size: 11px; color: var(--text-faint); margin-top: 5px; line-height: 1.5; }
+        .p2i-range-hint strong { color: var(--text-primary); font-weight: 650; font-variant-numeric: tabular-nums; }
         .p2i-range-hint code {
           background: var(--bg-item); border: 1px solid var(--border-base);
           padding: 1px 5px; border-radius: 4px; font-family: inherit;
@@ -1100,7 +1127,9 @@ export default function PDFToImages() {
               </div>
               <div style={{ minWidth: 0, flex: '1 1 150px' }}>
                 <p className="p2i-edge-name">{file.name}</p>
-                <p className="p2i-edge-meta">{fileSizeMB} MB · PDF Document</p>
+                <p className="p2i-edge-meta">
+                  {fileSizeMB} MB · {totalPages > 0 ? `${totalPages} ${totalPages === 1 ? 'page' : 'pages'}` : 'PDF Document'}
+                </p>
               </div>
               <button
                 type="button"
@@ -1210,20 +1239,32 @@ export default function PDFToImages() {
 
                 {/* Page range */}
                 <div>
-                  <span className="p2i-label">
+                  <span className="p2i-label" id="p2i-range-label">
                     Page Range <span style={{ fontWeight: 400, opacity: 0.6, textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
                   </span>
                   <input
                     type="text"
                     className={`p2i-range ${pageRangeError ? 'error' : ''}`}
-                    placeholder='e.g. 1-5, 8, 10-12 — or leave blank for all pages'
+                    placeholder={totalPages > 0
+                      ? `e.g. 1-3, 5, 8- — or leave blank for all ${totalPages} pages`
+                      : 'e.g. 1-3, 5, 8- — or leave blank for all pages'}
                     value={pageRange}
                     onChange={e => validatePageRange(e.target.value)}
                     readOnly={locked}
+                    aria-labelledby="p2i-range-label"
+                    aria-invalid={pageRangeError ? true : undefined}
+                    aria-describedby="p2i-range-note"
+                    inputMode="text"
+                    autoComplete="off"
+                    spellCheck={false}
                   />
                   {pageRangeError
-                    ? <p className="p2i-range-error">{pageRangeError}</p>
-                    : <p className="p2i-range-hint">Use commas and dashes · example: <code>1-3, 5, 8-10</code></p>
+                    ? <p className="p2i-range-error" id="p2i-range-note" role="alert">{pageRangeError}</p>
+                    : <p className="p2i-range-hint" id="p2i-range-note" aria-live="polite">
+                        {selectedPages && pageRange.trim() && !(rangeCheck.ok && rangeCheck.all)
+                          ? <>Developing <strong>{selectedPages.length} of {totalPages}</strong> pages · {describePages(selectedPages)}</>
+                          : <>Commas and dashes · <code>8-</code> runs to the last page · example: <code>1-3, 5, 8-</code></>}
+                      </p>
                   }
                 </div>
 
@@ -1253,7 +1294,9 @@ export default function PDFToImages() {
                 <span className="p2i-ticket-item">
                   {Ic.page}
                   <span>Pages: <span className="p2i-ticket-val">
-                    {pageRange.trim() && pageRange.trim().toLowerCase() !== 'all' ? pageRange.trim() : 'All'}
+                    {selectedPages
+                      ? (rangeCheck.ok && rangeCheck.all ? `All ${totalPages}` : `${selectedPages.length} of ${totalPages}`)
+                      : (pageRange.trim() && pageRange.trim().toLowerCase() !== 'all' ? pageRange.trim() : 'All')}
                   </span></span>
                 </span>
                 <span className="p2i-ticket-item">
@@ -1303,9 +1346,13 @@ export default function PDFToImages() {
               <div style={{ minWidth: 0 }}>
                 <p className="p2i-receipt-title">Contact sheet developed</p>
                 <p className="p2i-receipt-meta">
-                  {frames.length > 0
-                    ? `${frames.length} ${frames.length === 1 ? 'frame' : 'frames'} · ${result.size} MB archive`
-                    : `${result.name} · ${result.size} MB archive`}
+                  {[
+                    result.pages !== null
+                      ? `${result.pages} ${result.pages === 1 ? 'frame' : 'frames'}${result.totalPages && result.totalPages !== result.pages ? ` of ${result.totalPages} pages` : ''}`
+                      : frames.length > 0 ? `${frames.length} ${frames.length === 1 ? 'frame' : 'frames'}` : result.name,
+                    `${result.dpi} DPI ${result.format}`,
+                    `${result.size} MB archive`,
+                  ].join(' · ')}
                 </p>
               </div>
               <div className="p2i-receipt-actions">
