@@ -1,4 +1,5 @@
 import { PDFDocument } from 'pdf-lib'
+import { finalizeCopiedPages, prepareSourceForCopy } from '../../../lib/pdf/pageCopy.ts'
 
 /**
  * Merge engine (server-only) — one half of the old 4-in-1 pdf-tools module,
@@ -35,9 +36,10 @@ export async function mergePdfs(files: File[]): Promise<MergeResult> {
   }
 
   const merged = await PDFDocument.create()
-  for (const file of files) {
+  for (const [index, file] of files.entries()) {
     try {
       const src = await PDFDocument.load(await file.arrayBuffer())
+      prepareSourceForCopy(src, index)
       const pages = await merged.copyPages(src, src.getPageIndices())
       pages.forEach((page) => merged.addPage(page))
     } catch {
@@ -47,5 +49,8 @@ export async function mergePdfs(files: File[]): Promise<MergeResult> {
       )
     }
   }
+  // Without this, every internal link drags a duplicate of its source's
+  // whole page tree into the output (lib/pdf/pageCopy.ts).
+  finalizeCopiedPages(merged)
   return { bytes: await merged.save({ useObjectStreams: true }), sourceCount: files.length }
 }

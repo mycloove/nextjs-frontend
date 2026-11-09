@@ -44,7 +44,7 @@ export const tools: readonly ToolDefinition[] = [
   { id: 'merge-pdf', href: '/merge-pdf', label: 'Merge PDF', description: 'Combine multiple PDFs into one document, in your order.', group: 'Convert', apiEndpoint: '/api/merge-pdf', icon: '🔗' },
   { id: 'split-pdf', href: '/split-pdf', label: 'Split PDF', description: 'Cut one PDF into parts by page ranges.', group: 'Convert', apiEndpoint: '/api/split-pdf', icon: '✂️' },
   { id: 'rotate-pdf', href: '/rotate-pdf', label: 'Rotate PDF', description: 'Turn pages by a quarter-turn, all or a range.', group: 'Convert', apiEndpoint: '/api/rotate-pdf', icon: '🔄' },
-  { id: 'compress-pdf', href: '/compress-pdf', label: 'Compress PDF', description: 'Shrink a PDF structurally — no image re-encoding.', group: 'Convert', apiEndpoint: '/api/compress-pdf', icon: '🗜️' },
+  { id: 'compress-pdf', href: '/compress-pdf', label: 'Compress PDF', description: 'Shrink a PDF by resampling heavy images — text, links and forms kept.', group: 'Convert', apiEndpoint: '/api/compress-pdf', icon: '🗜️' },
 ] as const
 
 export const toolGroups = ['Convert', 'Extract', 'AI', 'Advanced'] as const

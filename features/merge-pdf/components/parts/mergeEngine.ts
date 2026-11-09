@@ -1,4 +1,5 @@
 import { PDFArray, PDFDict, PDFDocument, PDFName, PDFNumber, type PDFPage } from 'pdf-lib'
+import { finalizeCopiedPages, prepareSourceForCopy } from '../../../../lib/pdf/pageCopy.ts'
 
 /**
  * Browser merge engine for the Merge PDF studio. Pure and dependency-free
@@ -176,17 +177,11 @@ async function loadSource(source: MergeSource): Promise<PDFDocument> {
       source.name,
     )
   }
-  /* An annotation's optional /P points back at its page. Copying it would
-     drag that page — and, through form-field trees, every other page of the
-     document — into the output as invisible dead weight. */
-  for (const page of doc.getPages()) {
-    const annots = page.node.Annots()
-    if (!annots) continue
-    for (let i = 0; i < annots.size(); i++) {
-      const annot = annots.lookup(i)
-      if (annot instanceof PDFDict) annot.delete(PDFName.of('P'))
-    }
-  }
+  /* Tag pages, inline named destinations and cut the annotation /P and bead
+     /B back-references that would drag unselected pages — and, through their
+     /Parent, the whole page tree — into the output as invisible dead weight.
+     See lib/pdf/pageCopy.ts. */
+  prepareSourceForCopy(doc, String(source.key))
   return doc
 }
 
@@ -248,5 +243,8 @@ export async function mergeSheets(
   }
 
   if (options.title) output.setTitle(options.title)
+  // Links between kept pages now land on the real pages; links into pages
+  // the user left out are removed; unreachable copies are deleted.
+  finalizeCopiedPages(output)
   return output.save({ useObjectStreams: true })
 }

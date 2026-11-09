@@ -68,6 +68,11 @@ const fmtSize = (b: number) =>
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
 
+/** "page 3" for a single sheet, "pages 3–5" for a run. */
+const pagesLabel = (from: number, to: number) => (from === to ? `page ${from}` : `pages ${from}–${to}`)
+
+const bundleCount = (n: number) => `${n} ${n === 1 ? 'bundle' : 'bundles'}`
+
 /** "1-3, 5, 8-" — exactly the grammar the engine and its tests pin. */
 function bundlesToRanges(bundles: Array<[number, number]>) {
   return bundles.map(([from, to]) => (from === to ? `${from}` : `${from}-${to}`)).join(', ')
@@ -139,6 +144,8 @@ export default function SplitPdfTool() {
   const [blankPages, setBlankPages] = useState<ReadonlySet<number>>(new Set())
   const [pdfDocument, setPdfDocument] = useState<PDFDocumentProxy | null>(null)
   const [tickets, setTickets] = useState<Ticket[] | null>(null)
+  /** The range spec the tray's tickets were cut with. */
+  const [ticketsSpec, setTicketsSpec] = useState<string | null>(null)
   const [trayNote, setTrayNote] = useState<string | null>(null)
   const [preview, setPreview] = useState<{
     blob?: Blob
@@ -202,6 +209,11 @@ export default function SplitPdfTool() {
   }, [pageCount, mode, picked, activeCuts])
 
   const rangesSpec = useMemo(() => bundlesToRanges(bundles), [bundles])
+  /* Results are only offered while the cuts still match the ones they were
+     made with. Moving a blade after a split used to leave each card paired
+     with the old file at the same index — a card reading "pages 1–3" could
+     download the old pages 1–5. */
+  const fresh = phase === 'done' && tickets !== null && ticketsSpec === rangesSpec
 
     // One mat, one document: the newest drop replaces whatever lay here.
   const addFiles = useCallback((list: File[]) => {
@@ -265,12 +277,21 @@ export default function SplitPdfTool() {
           if (outline?.length) {
             const pages = new Set<number>()
             for (const entry of outline.slice(0, 50)) {
-              if (typeof entry.dest !== 'string') continue
-              const index = typeof entry.dest === 'string'
-                ? await doc.getDestination(entry.dest).then(
-                    (name) => (name ? doc.getPageIndex(name[0]) : null),
-                  ).catch(() => null)
-                : null
+              /* Outlines carry either a named destination (string) or an
+                 explicit one ([pageRef, …]) — most real files use the latter,
+                 which this loop used to skip, leaving bookmark mode empty. */
+              let explicit: unknown[] | null = null
+              if (typeof entry.dest === 'string') {
+                explicit = await doc.getDestination(entry.dest).catch(() => null)
+              } else if (Array.isArray(entry.dest)) {
+                explicit = entry.dest
+              }
+              const target = explicit?.[0]
+              let index: number | null = null
+              if (typeof target === 'number') index = target
+              else if (target && typeof target === 'object') {
+                index = await doc.getPageIndex(target as Parameters<typeof doc.getPageIndex>[0]).catch(() => null)
+              }
               if (index === null || index === undefined) continue
               pages.add(index + 1)
             }
@@ -288,6 +309,10 @@ export default function SplitPdfTool() {
             if (cancelled) return
             const page = await doc.getPage(n).catch(() => null)
             if (!page || !ctx) continue
+            /* A 24-px probe cannot see small type, so a light text page (a
+               contents page) used to be called blank. Real text means not blank. */
+            const text = await page.getTextContent().catch(() => null)
+            if (text?.items.some((item) => 'str' in item && item.str.trim() !== '')) continue
             try {
               /* pdfjs 5.x: `canvas` alone — the legacy canvasContext pair is deprecated. */
               await page.render({
@@ -348,27 +373,34 @@ export default function SplitPdfTool() {
       if (outName.endsWith('.zip') || bundles.length > 1) {
         const { default: JSZip } = await import('jszip')
         const zip = await JSZip.loadAsync(blob)
+        const entries = Object.values(zip.files).filter((f) => !f.dir)
         const produced: Ticket[] = []
         for (let i = 0; i < bundles.length; i += 1) {
           const [from, to] = bundles[i]
-          const entry = Object.values(zip.files).find((f) => !f.dir && f.name.includes(`pages_${from}-${to}`))
-            ?? Object.values(zip.files).find((f) => !f.dir)
-          if (!entry) continue
+          /* The engine names part i exactly `…_pages_<from>-<to>_part<i+1>.pdf`.
+             Match that whole suffix: a loose `includes` matched the wrong part
+             whenever the file's own name contained "pages_…", and the old
+             fall-back to "the first entry" silently shipped the wrong pages. */
+          const suffix = `_pages_${from}-${to}_part${i + 1}.pdf`
+          const entry = entries.find((f) => f.name.endsWith(suffix))
+          if (!entry) throw new Error(`Part ${i + 1} (${pagesLabel(from, to)}) is missing from the result — please split again.`)
           produced.push({
-            name: `mycloove_${base}_part${produced.length + 1}_pages_${from}-${to}.pdf`,
+            name: `mycloove_${base}_part${i + 1}_pages_${from}-${to}.pdf`,
             blob: await entry.async('blob'),
             from,
             to,
           })
         }
         setTickets(produced)
+        setTicketsSpec(rangesSpec)
         setTrayNote(`${produced.length} parts produced — download individually or all as one ZIP.`)
         addRecentConversion({ toolId: 'split-pdf', label: 'Split PDF', filename: `mycloove_${base}_split.zip`, sizeBytes: blob.size })
       } else {
         const [from, to] = bundles[0]
         const single: Ticket = { name: outName, blob, from, to }
         setTickets([single])
-        setTrayNote(`One part produced — pages ${from}–${to}.`)
+        setTicketsSpec(rangesSpec)
+        setTrayNote(`One part produced — ${pagesLabel(from, to)}.`)
         addRecentConversion({ toolId: 'split-pdf', label: 'Split PDF', filename: outName, sizeBytes: blob.size })
       }
       setPhase('done')
@@ -410,7 +442,7 @@ export default function SplitPdfTool() {
   }, [])
 
   const downloadAll = useCallback(async () => {
-    if (!tickets?.length) return
+    if (!fresh || !tickets?.length) return
     if (tickets.length === 1) {
       downloadBlob(tickets[0].blob, tickets[0].name)
       return
@@ -420,7 +452,7 @@ export default function SplitPdfTool() {
     for (const ticket of tickets) zip.file(ticket.name, ticket.blob)
     const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' })
     downloadBlob(blob, `mycloove_${file?.file.name.replace(/\.pdf$/i, '') ?? 'split'}_parts.zip`)
-  }, [tickets, file])
+  }, [tickets, file, fresh])
 
   return (
     <div className="spl-page">
@@ -611,14 +643,14 @@ export default function SplitPdfTool() {
             <div className="spl-trayhead">
               <h2>Output tray</h2>
               <span className="spl-count">
-                {phase === 'done' && tickets ? `${tickets.length} bundles in the tray` : `${bundles.length} bundles ready`}
+                {fresh && tickets ? `${bundleCount(tickets.length)} in the tray` : `${bundleCount(bundles.length)} ready`}
               </span>
             </div>
 
             <div className="spl-tray">
               {bundles.map(([from, to], i) => {
                 const count = to - from + 1
-                const doneTicket = phase === 'done' ? tickets?.[i] : undefined
+                const doneTicket = fresh ? tickets?.find((t) => t.from === from && t.to === to) : undefined
                 const estBytes = count * (file.file.size / Math.max(pageCount, 1))
                 return (
                   <article className="spl-ticket" key={`${from}-${to}`}>
@@ -631,7 +663,7 @@ export default function SplitPdfTool() {
                       {file.file.name.replace(/\.pdf$/i, '')}_part{i + 1}.pdf
                       {doneTicket && <span className="spl-ticket-ok">{Icon.check}</span>}
                     </div>
-                    <div className="spl-ticket-sub">pages {from}–{to} · {count} sheet{count > 1 ? 's' : ''}</div>
+                    <div className="spl-ticket-sub">{pagesLabel(from, to)} · {count} sheet{count > 1 ? 's' : ''}</div>
                     <div className="spl-ticket-row">
                       <span className="spl-ticket-size">{doneTicket ? fmtSize(doneTicket.blob.size) : `~${(estBytes / 1048576).toFixed(1)} MB`}</span>
                       <span className="spl-ticket-actions">
@@ -674,15 +706,18 @@ export default function SplitPdfTool() {
                 <button type="button" className="spl-ghost small" onClick={cancelRun}>Cancel</button>
               )}
 
-              {trayNote && phase === 'done' && (
+              {trayNote && fresh && (
                 <div className="spl-note" role="status">{Icon.check}<span>{trayNote}</span></div>
+              )}
+              {phase === 'done' && !fresh && (
+                <div className="spl-note" role="status">{Icon.alert}<span>The cuts changed — split again to refresh the tray.</span></div>
               )}
               {error && (
                 <div className="spl-err" role="alert">{Icon.alert}<span>{error}</span></div>
               )}
               {phase !== 'running' && creditState.snapshot?.prices['split-pdf']?.enabled !== false && <div className="spl-credit-cost"><CreditCost toolId="split-pdf" creditState={creditState} /></div>}
               <div className="spl-actions">
-                <button type="button" className="spl-ghost" onClick={downloadAll} disabled={phase !== 'done' || !tickets?.length}>
+                <button type="button" className="spl-ghost" onClick={downloadAll} disabled={!fresh || !tickets?.length}>
                   Download all (.zip)
                 </button>
                 <button

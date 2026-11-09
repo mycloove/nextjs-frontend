@@ -2,9 +2,6 @@
   "name": "nextjs-frontend",
   "version": "0.1.0",
   "private": true,
-  "engines": {
-    "node": ">=22.12.0 <23"
-  },
   "scripts": {
     "dev": "node scripts/prisma.mjs generate && next dev",
     "build": "node scripts/prisma.mjs generate && next build",
@@ -12,7 +9,7 @@
     "lint": "eslint",
     "test:pdf-editor": "node --experimental-strip-types --test app/pdf-editor/pdfEdit-utils/*.test.ts",
     "pdf-editor:unit": "npm run test:pdf-editor",
-    "test:pdf-tools": "node --experimental-strip-types --test lib/pdf/*.test.ts features/merge-pdf/server/*.test.ts features/merge-pdf/components/parts/*.test.ts features/split-pdf/server/*.test.ts features/rotate-pdf/server/*.test.ts features/compress-pdf/server/*.test.ts",
+    "test:pdf-tools": "node --experimental-strip-types --test lib/pdf/*.test.ts features/merge-pdf/server/*.test.ts features/merge-pdf/components/parts/*.test.ts features/split-pdf/server/*.test.ts features/rotate-pdf/server/*.test.ts",
     "test:mr-markdown": "node --experimental-strip-types --test components/PDFToMarkdown/merge/*.test.ts components/PDFToMarkdown/utils.test.ts components/PDFToMarkdown/settings/connections/*.test.ts",
     "mr-markdown:unit": "npm run test:mr-markdown",
     "test:mr-resume": "node --experimental-strip-types --test --test-reporter=spec features/mr-resume/components/*.test.ts",

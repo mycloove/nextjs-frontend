@@ -50,7 +50,7 @@ const tools: AboutTool[] = [
   { href: '/merge-pdf', label: 'Merge PDF', desc: 'Bring separate documents together in the right order.', group: 'Convert' },
   { href: '/split-pdf', label: 'Split PDF', desc: 'Keep the pages you need. Give them a file of their own.', group: 'Convert' },
   { href: '/rotate-pdf', label: 'Rotate PDF', desc: 'Put the whole document, or selected pages, the right way up.', group: 'Convert' },
-  { href: '/compress-pdf', label: 'Compress PDF', desc: 'Reduce a PDF structurally without rasterizing its text.', group: 'Convert' },
+  { href: '/compress-pdf', label: 'Compress PDF', desc: 'Reduce a PDF by resampling heavy images, without rasterizing its text.', group: 'Convert' },
   { href: '/image-to-text', label: 'Image to Text', desc: 'Recover usable words from photographs and scans.', group: 'Extract' },
   { href: '/bijoy-converter', label: 'Bijoy to Unicode', desc: 'Bring legacy Bangla text into a modern, searchable script.', group: 'Extract' },
   { href: '/pdf-editor', label: 'PDF Editor', desc: 'Work on the document itself, then preview your export.', group: 'Edit' },

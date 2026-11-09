@@ -1,4 +1,4 @@
-import { PDFDocument, degrees } from 'pdf-lib'
+import { PDFDocument, PDFName, degrees } from 'pdf-lib'
 import { parsePageRanges, PdfPageRangeError } from '../../../lib/pdf/pdfUtils.ts'
 
 /**
@@ -79,17 +79,25 @@ export async function rotatePdf(
   return { bytes: await doc.save({ useObjectStreams: true }), rotated }
 }
 
+/* Page attributes a leaf may inherit from its parent node (PDF 32000 §7.7.3.4).
+   Re-parenting a page loses them unless they are written onto the leaf first. */
+const INHERITABLE = ['Resources', 'MediaBox', 'CropBox', 'Rotate'].map((name) => PDFName.of(name))
+
 /**
  * Apply the page-bench plan. The plan lists every original page exactly once,
- * in its desired final order, and carries its extra clockwise rotation. The
- * source pages are copied in their chosen order, retaining their visual
- * content and page annotations while making the requested ordering explicit.
+ * in its desired final order, and carries its extra clockwise rotation.
+ *
+ * Pages are reordered and turned *in place* inside the uploaded document —
+ * never copied into a fresh one. Copying used to drop everything that lives
+ * outside the pages (bookmarks, form fields, named destinations, document
+ * metadata) and left in-document links pointing at invisible duplicates; a
+ * rotate is not allowed to cost the user any of that.
  */
 export async function rotatePdfPagePlan(
   file: File,
   plan: RotatePdfPagePlanItem[],
 ): Promise<{ bytes: Uint8Array; rotated: number }> {
-  const doc = await PDFDocument.load(await file.arrayBuffer()).catch(() => {
+  const doc = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false }).catch(() => {
     throw new RotatePdfValidationError(
       `"${file.name}" could not be read — it may be encrypted or corrupted`,
       'unreadable_pdf',
@@ -110,16 +118,26 @@ export async function rotatePdfPagePlan(
     originals.add(item.originalIndex)
   }
 
-  const output = await PDFDocument.create()
-  const copiedPages = await output.copyPages(doc, plan.map((item) => item.originalIndex))
-  copiedPages.forEach((page) => output.addPage(page))
-
+  const pages = doc.getPages()
   let rotated = 0
-  plan.forEach((item, index) => {
-    if (item.rotation === 0) return
-    const page = output.getPage(index)
+  for (const item of plan) {
+    if (item.rotation === 0) continue
+    const page = pages[item.originalIndex]
     page.setRotation(degrees((page.getRotation().angle + item.rotation) % 360))
     rotated += 1
-  })
-  return { bytes: await output.save({ useObjectStreams: true }), rotated }
+  }
+
+  const reordered = plan.some((item, index) => item.originalIndex !== index)
+  if (reordered) {
+    for (const page of pages) {
+      for (const key of INHERITABLE) {
+        if (page.node.get(key) !== undefined) continue
+        const inherited = page.node.getInheritableAttribute(key)
+        if (inherited !== undefined) page.node.set(key, inherited)
+      }
+    }
+    for (let index = pageCount - 1; index >= 0; index -= 1) doc.removePage(index)
+    for (const item of plan) doc.addPage(pages[item.originalIndex])
+  }
+  return { bytes: await doc.save({ useObjectStreams: true }), rotated }
 }

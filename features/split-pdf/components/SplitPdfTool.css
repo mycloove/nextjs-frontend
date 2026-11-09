@@ -166,6 +166,12 @@ html[data-theme="light"] .spl-page {
 .spl-ticket-preview { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 8px; color: var(--spl-ink-muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; background: transparent; border: 1px solid var(--spl-line); }
 .spl-ticket-preview:hover:not(:disabled) { color: var(--spl-brass); border-color: var(--spl-brass); }
 .spl-ticket-preview:disabled { opacity: .45; cursor: not-allowed; }
+/* Touch: the tray's per-part actions are the most-used buttons after a split;
+   28/30 px is below a reliable fingertip target. */
+@media (pointer: coarse) {
+  .spl-ticket-dl { width: 40px; height: 40px; }
+  .spl-ticket-preview { min-height: 40px; padding-inline: 12px; }
+}
 .spl-actions { display: flex; align-items: stretch; flex-wrap: nowrap; gap: 8px; }
 .spl-actions .spl-brass { flex: 1 1 auto; min-width: 0; }
 .spl-actiondock { position: sticky; bottom: 12px; z-index: 8; display: flex; flex-direction: column; gap: 10px; padding: 12px; margin: 8px 0 4px; background: linear-gradient(180deg, color-mix(in srgb, var(--spl-panel) 76%, transparent), color-mix(in srgb, var(--spl-panel) 54%, transparent)); border: 1px solid color-mix(in srgb, var(--spl-ink) 11%, transparent); border-radius: var(--spl-r-lg); box-shadow: var(--spl-sh-2), inset 0 1px 0 color-mix(in srgb, #fff 12%, transparent); backdrop-filter: blur(18px) saturate(1.5); -webkit-backdrop-filter: blur(18px) saturate(1.5); }

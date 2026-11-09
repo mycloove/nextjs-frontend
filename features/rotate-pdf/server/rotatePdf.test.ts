@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
-import { PDFDocument } from 'pdf-lib'
+import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName } from 'pdf-lib'
 import { parseRotatePdfPagePlan, rotatePdf, rotatePdfPagePlan, RotatePdfValidationError } from './rotatePdf.ts'
 
 /**
@@ -67,6 +67,53 @@ test('page plan reorders sheets and keeps their individual rotations', async () 
   assert.equal(out.getPage(0).getRotation().angle, 90)
   assert.equal(out.getPage(1).getRotation().angle, 0)
   assert.equal(out.getPage(2).getRotation().angle, 270)
+})
+
+test('page plan reorders in place: bookmarks, form fields, metadata and inherited attributes survive', async () => {
+  const source = await PDFDocument.create()
+  source.setTitle('Q3 Report')
+  for (const width of [300, 400, 500]) source.addPage([width, 200])
+  // Page 2 inherits its MediaBox from the page tree, as real producers do.
+  const tree = source.catalog.Pages()
+  tree.set(PDFName.of('MediaBox'), source.context.obj([0, 0, 612, 792]))
+  source.getPage(1).node.delete(PDFName.of('MediaBox'))
+  // A bookmark onto the third page, and a filled form field on the first.
+  const ctx = source.context
+  const outlinesRef = ctx.nextRef()
+  const itemRef = ctx.nextRef()
+  ctx.assign(itemRef, ctx.obj({
+    Title: PDFHexString.fromText('Chapter 3'),
+    Parent: outlinesRef,
+    Dest: [source.getPage(2).ref, 'Fit'],
+  }))
+  ctx.assign(outlinesRef, ctx.obj({ Type: 'Outlines', First: itemRef, Last: itemRef, Count: 1 }))
+  source.catalog.set(PDFName.of('Outlines'), outlinesRef)
+  const field = source.getForm().createTextField('approver')
+  field.setText('Rahim')
+  field.addToPage(source.getPage(0), { x: 10, y: 10, width: 120, height: 20 })
+  const file = new File([new Uint8Array(await source.save())], 'report.pdf', { type: 'application/pdf' })
+
+  const { bytes } = await rotatePdfPagePlan(file, [
+    { originalIndex: 2, rotation: 90 },
+    { originalIndex: 1, rotation: 0 },
+    { originalIndex: 0, rotation: 0 },
+  ])
+  const out = await PDFDocument.load(bytes)
+
+  assert.equal(out.getTitle(), 'Q3 Report')
+  assert.equal(out.getForm().getTextField('approver').getText(), 'Rahim')
+  assert.deepEqual(out.getPages().map((page) => page.getWidth()), [500, 612, 300])
+
+  // The bookmark still lands on the real (now first) page, not a copy of it.
+  const outlines = out.catalog.lookup(PDFName.of('Outlines'), PDFDict)
+  const item = outlines.lookup(PDFName.of('First'), PDFDict)
+  const dest = item.lookup(PDFName.of('Dest'), PDFArray)
+  assert.equal(dest.get(0), out.getPage(0).ref)
+
+  // No invisible duplicate pages hiding in the file.
+  const pageObjects = out.context.enumerateIndirectObjects().filter(([, object]) =>
+    object instanceof PDFDict && object.get(PDFName.of('Type')) === PDFName.of('Page'))
+  assert.equal(pageObjects.length, 3)
 })
 
 test('page plan rejects duplicate source pages with a stable code', async () => {

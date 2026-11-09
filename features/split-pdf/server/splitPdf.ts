@@ -1,5 +1,6 @@
 import { PDFDocument } from 'pdf-lib'
 import { parsePageRanges, PdfPageRangeError, stripPdfExtension } from '../../../lib/pdf/pdfUtils.ts'
+import { finalizeCopiedPages, prepareSourceForCopy } from '../../../lib/pdf/pageCopy.ts'
 
 /**
  * Split engine (server-only) — one half of the old 4-in-1 pdf-tools module,
@@ -52,6 +53,9 @@ export async function splitPdf(file: File, rangeSpec: string): Promise<SplitResu
   }
 
   const base = stripPdfExtension(file.name)
+  // Tags the throwaway source once so every part can re-point its own
+  // internal links and shed pages it does not contain (lib/pdf/pageCopy.ts).
+  prepareSourceForCopy(src, 'src')
   const parts: SplitResult['parts'] = []
   for (let i = 0; i < ranges.length; i += 1) {
     const [from, to] = ranges[i]
@@ -59,6 +63,7 @@ export async function splitPdf(file: File, rangeSpec: string): Promise<SplitResu
     const indices = Array.from({ length: to - from + 1 }, (_, offset) => from - 1 + offset)
     const pages = await out.copyPages(src, indices)
     pages.forEach((page) => out.addPage(page))
+    finalizeCopiedPages(out)
     const suffix = ranges.length > 1 ? `_part${i + 1}` : ''
     parts.push({
       name: `${base}_pages_${from}-${to}${suffix}.pdf`,

@@ -24,13 +24,13 @@ import './CompressPdfTool.css'
  * engine modes and a live terminal on the right. The instrument concept is a
  * containment gauge — you watch the document's mass shrink as you pick a mode.
  *
- * Honesty (mycloove doctrine 5, and compressPdf.ts's own contract): the engine
- * repacks the PDF skeleton and, at higher levels, drops metadata and optional
- * catalog trees. It never re-encodes images, so the copy says exactly that
- * instead of promising pixel downsampling the engine cannot do. The mass
- * shows the real source bytes, and after a run the real compressed bytes.
- * Predicted sizes on the mode cards are labelled "~" and derived from the
- * source size; they are estimates, not progress.
+ * Honesty (mycloove doctrine 5): the engine (pdf-microservice
+ * features/compress_pdf.py) trades image fidelity only — text, links, forms,
+ * bookmarks and attachments survive every level, and a file that cannot get
+ * smaller comes back unchanged with outcome `already_optimal`. So the mode
+ * cards state what each level does to images instead of predicting a size
+ * (savings depend entirely on how image-heavy the document is), and after a
+ * run the mass is scaled to the real before/after ratio.
  */
 
 type Phase = 'idle' | 'running' | 'done'
@@ -48,11 +48,10 @@ interface ModeConfig {
   level: 'light' | 'strong' | 'aggressive'
   title: string
   desc: string
-  /** Visual mass scale in the gauge — the mockup's 0.9 / 0.6 / 0.35. */
+  /** What happens to images — shown where a fake size estimate used to be. */
+  tag: string
+  /** Visual mass scale in the gauge before a run. */
   scale: number
-  danger: boolean
-  /** Rough estimate multiplier for the card's "~ size" hint. */
-  estimate: number
   logs: string[]
 }
 
@@ -60,46 +59,43 @@ const MODES: ModeConfig[] = [
   {
     id: 'structural',
     level: 'light',
-    title: 'Structural (Lossless)',
-    desc: 'Packs the document skeleton with object streams. Keeps every metadata field. No image re-encoding.',
+    title: 'Lossless',
+    desc: 'Cleans and repacks the file structure. Every pixel stays exactly as it is — best for text documents and forms.',
+    tag: 'Pixel-perfect',
     scale: 0.9,
-    danger: false,
-    estimate: 0.92,
     logs: [
-      '> Target: structural repack',
-      '> Object streams enabled',
-      '> Metadata preserved',
-      '> Image streams left untouched',
+      '> Target: lossless repack',
+      '> Unused objects removed, duplicates merged',
+      '> Streams re-deflated',
+      '> Images left untouched',
     ],
   },
   {
     id: 'optimal',
     level: 'strong',
-    title: 'Optimal (Recommended)',
-    desc: 'Repacks the skeleton and drops title/author/subject metadata. Text stays selectable; images are never re-encoded.',
+    title: 'Recommended',
+    desc: 'Images above 200 dpi resampled to 150 dpi; fonts trimmed to the characters used. Sharp on screen and in print.',
+    tag: '150 dpi',
     scale: 0.6,
-    danger: false,
-    estimate: 0.68,
     logs: [
-      '> Target: optimal balance',
-      '> Object streams enabled',
-      '> Dropping title / author / subject',
-      '> Image streams left untouched',
+      '> Target: best balance',
+      '> Images > 200 dpi → 150 dpi, JPEG q75',
+      '> Fonts subset to used glyphs',
+      '> Text, links, forms, bookmarks kept',
     ],
   },
   {
     id: 'aggressive',
     level: 'aggressive',
-    title: 'Aggressive (Lossy)',
-    desc: 'Also removes bookmarks, named destinations, embedded files, scripts and page annotations. Smallest file; those extras are lost.',
+    title: 'Smallest',
+    desc: 'Images resampled to 110 dpi at lower JPEG quality — for email and upload limits. Text stays crisp and selectable.',
+    tag: '110 dpi',
     scale: 0.35,
-    danger: true,
-    estimate: 0.45,
     logs: [
-      '> Target: maximum shrink',
-      '> WARNING: optional data is discarded',
-      '> Dropping bookmarks and named destinations',
-      '> Dropping annotations and embedded files',
+      '> Target: smallest file',
+      '> Images > 130 dpi → 110 dpi, JPEG q60',
+      '> Fonts subset to used glyphs',
+      '> Text, links, forms, bookmarks kept',
     ],
   },
 ]
@@ -165,6 +161,16 @@ interface CompressedResult {
   before: number
   after: number
   pct: number
+  /** Engine verdict; `already_optimal` means the original bytes came back. */
+  outcome: 'compressed' | 'already_optimal'
+  /** Mode the result was produced with — a mode change invalidates it. */
+  mode: ModeId
+}
+
+/** Gauge scale from a real byte ratio; area tracks bytes, hence the sqrt. */
+function massScale(before: number, after: number): number {
+  if (before <= 0) return 0.9
+  return Math.min(0.9, Math.max(0.22, 0.9 * Math.sqrt(after / before)))
 }
 
 export default function CompressPdfTool() {
@@ -181,6 +187,7 @@ export default function CompressPdfTool() {
   const abortRef = useRef<AbortController | null>(null)
   const logIdRef = useRef(0)
   const terminalRef = useRef<HTMLDivElement>(null)
+  const replayTimersRef = useRef<number[]>([])
 
   const addLog = useCallback((text: string, kind: LogLine['kind'] = 'dim') => {
     setLogs((prev) => [...prev, { id: ++logIdRef.current, text, kind }])
@@ -216,8 +223,9 @@ export default function CompressPdfTool() {
     setLogs([{ id: logIdRef.current, text: '> Mode plan — applied only when you press Initialize.', kind: 'dim' }])
     const config = MODES.find((m) => m.id === mode) ?? MODES[1]
     const timers = config.logs.map((line, index) =>
-      window.setTimeout(() => addLog(line, config.danger && line.includes('WARNING') ? 'warn' : 'dim'), (index + 1) * 280),
+      window.setTimeout(() => addLog(line, 'dim'), (index + 1) * 280),
     )
+    replayTimersRef.current = timers
     return () => timers.forEach((timer) => window.clearTimeout(timer))
   }, [mode, file, addLog])
 
@@ -234,6 +242,10 @@ export default function CompressPdfTool() {
       return
     }
     const config = MODES.find((m) => m.id === mode) ?? MODES[1]
+    // A run owns the terminal: a mode-plan replay still ticking from a fresh
+    // drop must not interleave its lines with the run's real output.
+    replayTimersRef.current.forEach((timer) => window.clearTimeout(timer))
+    replayTimersRef.current = []
 
     setPhase('running')
     setError(null)
@@ -245,13 +257,22 @@ export default function CompressPdfTool() {
 
     const abort = new AbortController()
     abortRef.current = abort
+    // Upload progress ends at 100% long before a heavy file is done — the
+    // engine still has every image to resample. Say so once, in the log.
+    let uploadAnnounced = false
     try {
       const formData = new FormData()
       formData.append('files', file)
       formData.append('level', config.level)
 
       const res = await uploadWithProgress('/api/compress-pdf', formData, {
-        onProgress: setProgress,
+        onProgress: (percent) => {
+          setProgress(percent)
+          if (percent >= 100 && !uploadAnnounced) {
+            uploadAnnounced = true
+            addLog(`> Upload complete (${fmtSize(file.size)}). Engine working…`, 'dim')
+          }
+        },
         signal: abort.signal,
       })
       if (!res.ok) throw new Error(await getApiErrorMessage(res, 'The compression failed'))
@@ -260,17 +281,38 @@ export default function CompressPdfTool() {
       const match = /filename="([^"]+)"/.exec(disposition)
       const outName = match ? decodeURIComponent(match[1]) : 'mycloove_compressed.pdf'
       const blob = await res.blob()
-      downloadBlob(blob, outName)
 
       const before = Number(res.headers.get('X-Original-Bytes') ?? String(file.size))
       const after = Number(res.headers.get('X-Compressed-Bytes') ?? String(blob.size))
-      const pct = before > 0 ? Math.max(0, Math.round((1 - after / before) * 100)) : 0
-      setResult({ name: outName, blob, before, after, pct })
-      addRecentConversion({ toolId: 'compress-pdf', label: 'Compress PDF', filename: outName, sizeBytes: blob.size })
+      const outcome = res.headers.get('X-Compression-Outcome') === 'already_optimal' || after >= before
+        ? 'already_optimal' as const
+        : 'compressed' as const
+      const pct = outcome === 'compressed' && before > 0 ? Math.max(1, Math.round((1 - after / before) * 100)) : 0
+      // An unchanged copy is not worth an unasked-for download; the user can
+      // still take it from the button, or try a stronger level.
+      if (outcome === 'compressed') {
+        downloadBlob(blob, outName)
+        addRecentConversion({ toolId: 'compress-pdf', label: 'Compress PDF', filename: outName, sizeBytes: blob.size })
+      }
+      setResult({ name: outName, blob, before, after, pct, outcome, mode: config.id })
+      /* Facts the engine verified on the output bytes — reported as such, not
+         replayed from the mode plan. */
+      const pages = Number(res.headers.get('X-Page-Count') ?? '')
+      if (Number.isFinite(pages) && pages > 0) {
+        addLog(`> Verified: ${pages} page${pages === 1 ? '' : 's'}, text identical to the original.`, 'dim')
+      }
+      if (outcome === 'compressed' && config.level !== 'light') {
+        addLog(
+          res.headers.get('X-Images-Rewritten') === '1'
+            ? '> Images resampled and re-encoded.'
+            : '> No image needed resampling — savings are structural.',
+          'dim',
+        )
+      }
       addLog(
-        pct > 0
+        outcome === 'compressed'
           ? `> DONE. ${fmtSize(before)} → ${fmtSize(after)} (${pct}% smaller).`
-          : `> DONE. No further structural savings — file written (${fmtSize(after)}).`,
+          : `> DONE. Already optimized at this level — original kept (${fmtSize(before)}).`,
         'dim',
       )
       setPhase('done')
@@ -307,17 +349,32 @@ export default function CompressPdfTool() {
     setLogs([])
   }, [])
 
+  // A result belongs to the level that produced it. Picking another level
+  // returns the bench to "ready" so the button can never hand back a file
+  // compressed at a level the user has since moved away from.
+  const selectMode = useCallback((next: ModeId) => {
+    setMode(next)
+    setResult((current) => (current && current.mode !== next ? null : current))
+    setPhase((current) => (current === 'done' ? 'idle' : current))
+  }, [])
+
   const config = MODES.find((m) => m.id === mode) ?? MODES[1]
-  const tone = config.danger ? 'var(--acx-danger)' : 'var(--acx-accent)'
+  const tone = 'var(--acx-accent)'
+  const done = result !== null && phase === 'done'
+  const mass = done ? massScale(result.before, result.after) : config.scale
 
   const sizeText =
-    result && phase === 'done' ? fmtSize(result.after)
+    done ? fmtSize(result.after)
     : file ? fmtSize(file.size)
     : '—'
 
+  // Upload finished, response not yet back: the server is doing the work.
+  const engineWorking = phase === 'running' && progress === 100
+
   const sizeSub =
-    result && phase === 'done' ? `Saved ${result.pct}%`
-    : phase === 'running' ? 'Compressing…'
+    done ? (result.outcome === 'compressed' ? `Saved ${result.pct}%` : 'Already optimized')
+    : engineWorking ? 'Compressing…'
+    : phase === 'running' ? 'Uploading…'
     : file ? 'Original Size'
     : 'Awaiting document'
 
@@ -349,17 +406,17 @@ export default function CompressPdfTool() {
           <div className="acx-core">
             <div className="acx-ring acx-ring-1" aria-hidden="true" />
             <div className="acx-ring acx-ring-2" aria-hidden="true" />
+            {/* After a run, the original's mass stays as an outline so the
+                shrink reads as before → after, not as a lone dot. */}
+            {done && <div className="acx-mass-ghost" aria-hidden="true" />}
             <div
               className="acx-mass"
-              style={{
-                transform: `scale(${config.scale})`,
-                borderColor: tone,
-                background: config.danger ? 'var(--acx-danger-glow)' : 'var(--acx-accent-glow)',
-                boxShadow: config.danger
-                  ? '0 0 40px var(--acx-danger-glow), inset 0 0 20px var(--acx-danger-glow)'
-                  : '0 0 40px var(--acx-accent-glow), inset 0 0 20px var(--acx-accent-glow)',
-              }}
-            >
+              style={{ transform: `scale(${mass})`, borderColor: tone }}
+              aria-hidden="true"
+            />
+            {/* The readout sits above the disc, never inside its transform —
+                a 99% reduction used to shrink the result itself to a speck. */}
+            <div className="acx-readout">
               <div className="acx-size" key={sizeText}>{sizeText}</div>
               <div className="acx-size-sub" style={{ color: tone }}>{sizeSub}</div>
             </div>
@@ -406,15 +463,13 @@ export default function CompressPdfTool() {
                 type="button"
                 role="radio"
                 aria-checked={mode === m.id}
-                className={`acx-mode${mode === m.id ? ' active' : ''}${m.danger ? ' danger' : ''}`}
-                onClick={() => setMode(m.id)}
+                className={`acx-mode${mode === m.id ? ' active' : ''}`}
+                onClick={() => selectMode(m.id)}
                 disabled={phase === 'running'}
               >
                 <div className="acx-mode-head">
                   <div className="acx-mode-title">{m.title}</div>
-                  <div className="acx-mode-reduction">
-                    {file ? `~ ${fmtSize(Math.round(file.size * m.estimate))}` : '—'}
-                  </div>
+                  <div className="acx-mode-reduction">{m.tag}</div>
                 </div>
                 <div className="acx-mode-desc">{m.desc}</div>
               </button>
@@ -435,18 +490,32 @@ export default function CompressPdfTool() {
 
           {phase === 'running' && progress !== null && (
             <div className="acx-runbar">
-              <div className="acx-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-                <div className="acx-progress-fill" style={{ width: `${progress}%` }} />
-              </div>
-              <span className="acx-pct">{progress}%</span>
+              {engineWorking ? (
+                /* Indeterminate on purpose: the engine reports no progress, so
+                   the bar must not pretend to a percentage it does not have. */
+                <div className="acx-progress working" role="progressbar" aria-label="Compressing on the server" aria-valuetext="Compressing">
+                  <div className="acx-progress-fill" />
+                </div>
+              ) : (
+                <div className="acx-progress" role="progressbar" aria-label="Uploading" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+                  <div className="acx-progress-fill" style={{ width: `${progress}%` }} />
+                </div>
+              )}
+              <span className="acx-pct">{engineWorking ? 'Compressing' : `Uploading ${progress}%`}</span>
               <button type="button" className="acx-cancel" onClick={cancelRun}>Cancel</button>
             </div>
           )}
 
-          {result && phase === 'done' && (
+          {done && (
             <div className="acx-note" role="status">
               {Icon.check}
-              <span>{fmtSize(result.before)} → {fmtSize(result.after)} ({result.pct}% smaller). Saved to your downloads.</span>
+              <span>
+                {result.outcome === 'compressed'
+                  ? `${fmtSize(result.before)} → ${fmtSize(result.after)} (${result.pct}% smaller). Saved to your downloads.`
+                  : result.mode === 'aggressive'
+                    ? 'This PDF is already as small as it can get without damaging it — nothing was changed.'
+                    : 'Already optimized at this level — nothing was changed. Try Smallest for image-heavy files.'}
+              </span>
             </div>
           )}
           {error && (
@@ -459,14 +528,14 @@ export default function CompressPdfTool() {
           {phase === 'idle' && creditState.snapshot?.prices['compress-pdf']?.enabled !== false && <div className="acx-credit-cost"><CreditCost toolId="compress-pdf" creditState={creditState} /></div>}
           <button
             type="button"
-            className={`acx-btn${result && phase === 'done' ? ' success' : ''}`}
-            onClick={result && phase === 'done' ? downloadResult : run}
+            className={`acx-btn${done && result.outcome === 'compressed' ? ' success' : ''}`}
+            onClick={done ? downloadResult : run}
             disabled={!file || phase === 'running'}
           >
             {phase === 'running' ? (
               <>{Icon.spinner}Processing…</>
-            ) : result && phase === 'done' ? (
-              <>{Icon.download}Download Result</>
+            ) : done ? (
+              <>{Icon.download}{result.outcome === 'compressed' ? 'Download Result' : 'Download Copy'}</>
             ) : (
               <>{Icon.bolt}Initialize Compression</>
             )}

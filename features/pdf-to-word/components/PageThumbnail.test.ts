@@ -74,6 +74,6 @@ test('proof rail renders every block with the real sheet renderer and keeps resp
   assert.match(parent, /page\.map\(\(block, i\) => <BlockView key=\{i\} block=\{block\} \/>\)/)
   assert.doesNotMatch(parent, /thumbLines|p2w-thumb-line/)
   assert.match(parent, /--p2w-thumb-size: 64/)
-  assert.match(parent, /\.p2w-thumb-content\s*\{[^}]*text-align: left;/s)
+  assert.match(parent, /\.p2w-thumb-content\s*\{[^}]*text-align: left;/)
   assert.match(parent, /aria-current=\{activePage === item\.page \? 'page' : undefined\}/)
 })

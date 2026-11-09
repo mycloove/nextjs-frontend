@@ -232,11 +232,8 @@ html[data-theme="light"] .acx-page {
 }
 
 .acx-mass {
-  position: relative;
+  position: absolute;
   z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   width: 50%;
   height: 50%;
   border: 2px solid var(--acx-accent);
@@ -244,6 +241,30 @@ html[data-theme="light"] .acx-page {
   background: var(--acx-accent-glow);
   box-shadow: 0 0 40px var(--acx-accent-glow), inset 0 0 20px var(--acx-accent-glow);
   transition: transform 0.8s var(--acx-spring), background 0.5s, border-color 0.5s, box-shadow 0.5s;
+}
+
+/* The original's footprint (the pre-run 0.9 scale), kept as a dashed outline
+   once the real result is in. */
+.acx-mass-ghost {
+  position: absolute;
+  z-index: 9;
+  width: 50%;
+  height: 50%;
+  border: 1.5px dashed var(--acx-accent-border);
+  border-radius: 50%;
+  transform: scale(0.9);
+  animation: acx-fade-in 0.5s ease;
+}
+
+.acx-readout {
+  position: relative;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  pointer-events: none;
 }
 
 .acx-size {
@@ -256,12 +277,15 @@ html[data-theme="light"] .acx-page {
 }
 
 .acx-size-sub {
-  position: absolute;
-  bottom: -32px;
   color: var(--acx-text-muted);
   font-size: 13px;
   white-space: nowrap;
   transition: color 0.5s;
+}
+
+/* The dark glow that lifts the number off the dark panel smudges it on paper. */
+html[data-theme="light"] .acx-size {
+  text-shadow: none;
 }
 
 @keyframes acx-fade-in {
@@ -564,6 +588,21 @@ html[data-theme="light"] .acx-page {
   font-family: var(--acx-mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Engine stage: a short segment travels the track — work is happening, but
+   no fake percentage is claimed. */
+.acx-progress.working .acx-progress-fill {
+  width: 38%;
+  background: linear-gradient(90deg, transparent, var(--acx-accent), transparent);
+  transition: none;
+  animation: acx-sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes acx-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(265%); }
 }
 
 .acx-cancel {
@@ -714,10 +753,36 @@ html[data-theme="light"] .acx-page {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  /* Without the sweep, a stopped segment would read as "38% done". Fill the
+     track at low intensity instead: busy, with no position claimed. */
+  .acx-progress.working .acx-progress-fill {
+    width: 100%;
+    opacity: 0.45;
+    background: var(--acx-accent);
+    animation: none !important;
+  }
 }
 
 @media (max-width: 560px) {
   .acx-site-separator, .acx-site-brand { display: none; }
   .acx-sitebar-inner { gap: 10px; padding-inline: 16px; }
   .acx-site-actions { gap: 8px; }
+
+  /* Phones: the gauge is a readout, not the task — keep it short so the drop
+     zone and the modes sit above the fold. */
+  .acx-main { gap: 18px; padding: 16px 14px 32px; }
+  .acx-visualizer { min-height: 220px; }
+  .acx-core { width: 176px; height: 176px; }
+  .acx-core-label { top: 14px; left: 16px; font-size: 11px; }
+  .acx-size { font-size: 18px; }
+  .acx-size-sub { font-size: 12px; }
+  .acx-terminal { height: 92px; }
+}
+
+/* Short landscape viewports: same compaction, side-by-side layout kept. */
+@media (max-height: 640px) and (min-width: 861px) {
+  .acx-main { padding-block: 20px; }
+  .acx-visualizer { min-height: 0; }
+  .acx-core { width: 240px; height: 240px; }
 }
