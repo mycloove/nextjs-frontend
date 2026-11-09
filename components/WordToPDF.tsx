@@ -191,7 +191,7 @@ const Ic = {
    as major tiles; the other two stay compact rows. */
 const SURVIVORS = [
   { key: 'typ', icon: Ic.font,  label: 'Typography & headings', major: true,
-    note: 'Heading levels and weights are carried into the PDF from the document styles.' },
+    note: 'Heading levels carry into the PDF — and become its clickable bookmarks.' },
   { key: 'img', icon: Ic.image, label: 'Embedded images', major: true,
     note: 'Images travel through at their places in the document flow.' },
   { key: 'mar', icon: Ic.layout, label: 'Margins & page size', major: false },
@@ -206,11 +206,27 @@ type Phase = 'bed' | 'set' | 'pressing' | 'proof'
 /* the honest budget denominator — the bed takes up to 50 MB */
 const BED_BYTES = 50 * 1024 * 1024
 
+/* Everything the engine can read (it sniffs the real format from the bytes).
+   Browsers often send .doc/.rtf with an empty or generic type, so the
+   extension list carries the weight. */
+const ACCEPT = {
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/msword': ['.doc'],
+  'application/vnd.oasis.opendocument.text': ['.odt'],
+  'application/rtf': ['.rtf'],
+  'text/rtf': ['.rtf'],
+}
+const DOC_EXT = /\.(docx|doc|odt|rtf)$/i
+const FORMAT_LABEL: Record<string, string> = {
+  docx: 'Word Document', doc: 'Word 97–2003 Document', odt: 'OpenDocument Text', rtf: 'Rich Text Document',
+}
+const extOf = (name: string) => (DOC_EXT.exec(name)?.[1] ?? 'docx').toLowerCase()
+
 export default function WordToPDF() {
   const [file, setFile]     = useState<File | null>(null)
   const [phase, setPhase]   = useState<Phase>('bed')
   const [error, setError]   = useState('')
-  const [result, setResult] = useState<{ url: string; size: string } | null>(null)
+  const [result, setResult] = useState<{ url: string; size: string; pages: number | null } | null>(null)
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const isMounted = useRef(true)
@@ -245,14 +261,14 @@ export default function WordToPDF() {
   const onDropRejected = useCallback((rejections: FileRejection[]) => {
     const code = rejections[0]?.errors?.[0]?.code
     if (code === 'file-too-large') setError('That file is over 50 MB — the bed takes up to 50 MB per document.')
-    else if (code === 'file-invalid-type') setError('The press only takes .docx files.')
+    else if (code === 'file-invalid-type') setError('The press takes Word (.docx, .doc), OpenDocument (.odt) or Rich Text (.rtf) files.')
     else setError('That file could not be accepted.')
   }, [])
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     onDropRejected,
-    accept: { 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'] },
+    accept: ACCEPT,
     maxFiles: 1,
     maxSize: 50 * 1024 * 1024,
     noClick: true,
@@ -305,7 +321,8 @@ export default function WordToPDF() {
       if (!isMounted.current) return
       const url = URL.createObjectURL(blob)
       triggerDownload(url, outName)
-      setResult({ url, size: (blob.size / 1024 / 1024).toFixed(2) })
+      const pages = Number.parseInt(res.headers.get('X-Page-Count') ?? '', 10)
+      setResult({ url, size: (blob.size / 1024 / 1024).toFixed(2), pages: Number.isFinite(pages) ? pages : null })
       setPhase('proof')
     } catch (e) {
       if (!isMounted.current) return
@@ -322,7 +339,7 @@ export default function WordToPDF() {
   }
 
   const fileSizeMB = file ? (file.size / 1024 / 1024).toFixed(2) : '0'
-  const outName = file ? `mycloove_${file.name.replace(/\.docx$/i, '')}.pdf` : ''
+  const outName = file ? `mycloove_${file.name.replace(DOC_EXT, '')}.pdf` : ''
   const zoneClass = `w2p-zone${isDragActive ? ' is-over' : ''}${file && phase !== 'bed' ? ' is-collapsed' : ''}`
   const ri = (n: number) => ({ '--ri': n }) as CSSProperties
 
@@ -942,9 +959,9 @@ export default function WordToPDF() {
                   {isDragActive ? 'Release to set.' : 'Drop your draft. Take back the final.'}
                 </p>
                 <p className="w2p-zone-sub">
-                  or click to browse — .docx only, one document per pressing
+                  or click to browse — Word, OpenDocument or RTF, one document per pressing
                 </p>
-                <p className="w2p-spec">DOCX · MAX 50 MB · PDF OUT</p>
+                <p className="w2p-spec">DOCX · DOC · ODT · RTF · MAX 50 MB · PDF OUT</p>
               </div>
             </div>
           </div>
@@ -956,7 +973,7 @@ export default function WordToPDF() {
               </div>
               <div style={{ minWidth: 0, flex: '1 1 150px' }}>
                 <p className="w2p-spine-name">{file.name}</p>
-                <p className="w2p-spine-meta">{fileSizeMB} MB · Word Document</p>
+                <p className="w2p-spine-meta">{fileSizeMB} MB · {FORMAT_LABEL[extOf(file.name)]}</p>
                 {/* the REAL bytes against the 50 MB bed — no invented numbers */}
                 <div className={`w2p-budget${budgetTight ? ' is-tight' : ''}`} aria-hidden="true">
                   <div className="w2p-budget-track">
@@ -993,7 +1010,7 @@ export default function WordToPDF() {
             <div className={`w2p-stage w2p-reveal${locked ? ' is-pressing' : ''}`} style={ri(1)}>
               <div className="w2p-stage-side">
                 <div className="w2p-bench-plate w2p-bench-draft" aria-hidden="true">
-                  <span className="w2p-bench-plate-mark">DOCX</span>
+                  <span className="w2p-bench-plate-mark">{extOf(file.name).toUpperCase()}</span>
                   <div className="w2p-bench-lines">
                     <i style={{ width: '86%' }} />
                     <i style={{ width: '100%' }} />
@@ -1123,7 +1140,9 @@ export default function WordToPDF() {
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <p className="w2p-receipt-title">The proof is ready</p>
-                  <p className="w2p-receipt-meta">{outName} · {result.size} MB</p>
+                  <p className="w2p-receipt-meta">
+                    {outName} · {result.pages !== null ? `${result.pages} ${result.pages === 1 ? 'page' : 'pages'} · ` : ''}{result.size} MB
+                  </p>
                 </div>
               </div>
               <div className="w2p-receipt-lines">
