@@ -95,6 +95,7 @@ export function MergedTraySection({
                 key={item.id}
                 item={item}
                 index={index}
+                total={tray.length}
                 source={source}
                 aspectRatio={`${width} / ${height}`}
                 isCurrent={index === currentPreviewIndex}

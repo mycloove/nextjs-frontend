@@ -5,7 +5,7 @@
  *
  * One job of the former 4-in-1 "PDF Tools" workbench, promoted to its own
  * focused tool with its own URL (/merge-pdf). Everything runs in the browser:
- * pages are embedded with pdf-lib, never rasterised, so text stays selectable
+ * pages are copied with pdf-lib, never rasterised, so text stays selectable
  * and the file never leaves the device.
  *
  * The page is a priority stack, top to bottom:
@@ -19,7 +19,10 @@
  * Per-source selection (`selectedPages` + `rangeInput`) lives on the source
  * record, so switching between documents never loses the user's choices.
  * `TrayItem` is the single source of truth for output order, which is why the
- * tray and the source selection are kept in step by the handlers below.
+ * tray and the source selection are kept in step by the handlers below. Every
+ * tray mutation goes through `parts/trayOrder.ts` (tested), so a re-selected
+ * page returns to its natural place instead of jumping to the end, and the
+ * binder (`parts/mergeEngine.ts`, tested) writes the tray order verbatim.
  *
  * Styling is a colocated CSS module in the `am-` namespace so this module
  * cannot leak rules into its siblings (CLAUDE.md §0.2).
@@ -50,6 +53,17 @@ import { MergedTraySection } from './parts/MergedTraySection'
 import { MergeActionBar } from './parts/MergeActionBar'
 import { PageViewer } from './parts/PageViewer'
 import { getPdfjs } from './parts/pdfjs'
+import {
+  groupBySource,
+  isGroupedBySource,
+  makeTrayId,
+  moveTrayItem,
+  orderBlocksBySource,
+  setSourcePages,
+  sortFilesByName,
+  toggleSourcePage,
+} from './parts/trayOrder'
+import { mergeSheets, type MergeSheet } from './parts/mergeEngine'
 
 export default function MergePdfTool() {
   const [sources, setSources] = useState<SourcePdfFile[]>([])
@@ -72,6 +86,29 @@ export default function MergePdfTool() {
   const thumbnailCache = useRef<Map<string, string>>(new Map())
   const previewCloseRef = useRef<HTMLButtonElement>(null)
   const previewReturnFocusRef = useRef<HTMLElement | null>(null)
+  /* Imports run one batch at a time, in the order they were started. Two
+     quick drops used to race, and whichever parsed first was committed first
+     — a small second file could land ahead of a large first one. */
+  const importChainRef = useRef<Promise<void>>(Promise.resolve())
+  const pendingImportsRef = useRef<number>(0)
+  /* Current rail order for the tray-order rules inside state updaters. */
+  const sourceOrderRef = useRef<number[]>([])
+
+  useEffect(() => {
+    sourceOrderRef.current = sources.map((s) => s.id)
+  }, [sources])
+
+  /* A finished file describes the stack it was built from. Once the stack,
+     its page size, orientation or name changes, that file no longer matches
+     what the user sees, so it is withdrawn rather than offered for download. */
+  useEffect(() => {
+    setLastMergedResult(null)
+  }, [tray, pageSizeChoice, orientation, outputName])
+
+  /* Keep the preview cursor on a real sheet when sheets are removed. */
+  useEffect(() => {
+    setCurrentPreviewIndex((index) => (tray.length === 0 ? 0 : Math.min(index, tray.length - 1)))
+  }, [tray.length])
 
   const renderPageToDataUrl = useCallback(
     async (sourceId: number, pageNumber: number, width: number): Promise<string | null> => {
@@ -108,78 +145,95 @@ export default function MergePdfTool() {
   )
 
 
+  const importFiles = useCallback(async (pdfFiles: File[]) => {
+    const pdfjs = await getPdfjs()
+    const newSources: SourcePdfFile[] = []
+    const newTrayAdditions: TrayItem[] = []
+    const failed: string[] = []
+
+    for (const file of sortFilesByName(pdfFiles)) {
+      try {
+        const buffer = await file.arrayBuffer()
+        const doc = await pdfjs.getDocument({ data: buffer.slice(0) }).promise
+        const pageSizes: Array<[number, number]> = []
+
+        for (let p = 1; p <= doc.numPages; p++) {
+          const page = await doc.getPage(p)
+          const vp = page.getViewport({ scale: 1 })
+          pageSizes.push([vp.width, vp.height])
+        }
+
+        const currentId = nextSourceIdRef.current++
+        const colorIndex = (currentId - 1) % SOURCE_COLORS.length
+        const letter = String.fromCharCode(65 + ((currentId - 1) % 26))
+
+        const initialSelected = new Set<number>()
+        for (let i = 1; i <= doc.numPages; i++) {
+          initialSelected.add(i)
+          newTrayAdditions.push({ id: makeTrayId(currentId, i), sourceId: currentId, pageNumber: i })
+        }
+
+        newSources.push({
+          id: currentId,
+          file,
+          name: file.name,
+          size: file.size,
+          doc,
+          pageCount: doc.numPages,
+          sizes: pageSizes,
+          selectedPages: initialSelected,
+          rangeInput: compressRange(Array.from(initialSelected)),
+          color: SOURCE_COLORS[colorIndex],
+          letterBadge: letter,
+        })
+      } catch {
+        failed.push(file.name)
+      }
+    }
+
+    if (failed.length) {
+      setErrorMessage(
+        failed.length === 1
+          ? `"${failed[0]}" could not be opened. It may be password-protected or damaged.`
+          : `${failed.length} files could not be opened (${failed.join(', ')}). They may be password-protected or damaged.`
+      )
+    }
+
+    if (newSources.length > 0) {
+      // New documents join the end of the rail, so their sheets join the end of the stack.
+      setSources((prev) => [...prev, ...newSources])
+      setActiveSourceId((prev) => prev ?? newSources[0].id)
+      setTray((prev) => [...prev, ...newTrayAdditions])
+    }
+  }, [])
+
   const handleAddFiles = useCallback(
-    async (filesToAdd: File[]) => {
+    (filesToAdd: File[]) => {
       const pdfFiles = filesToAdd.filter(
         (f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')
       )
       if (!pdfFiles.length) {
         setErrorMessage('Please upload valid PDF files.')
-        return
+        return Promise.resolve()
       }
 
       setErrorMessage(null)
       setNoticeMessage(null)
+      pendingImportsRef.current += 1
       setIsImporting(true)
-      try {
-        const pdfjs = await getPdfjs()
-        const newSources: SourcePdfFile[] = []
-        const newTrayAdditions: TrayItem[] = []
-
-        for (const file of pdfFiles) {
-          try {
-            const buffer = await file.arrayBuffer()
-            const doc = await pdfjs.getDocument({ data: buffer.slice(0) }).promise
-            const pageSizes: Array<[number, number]> = []
-
-            for (let p = 1; p <= doc.numPages; p++) {
-              const page = await doc.getPage(p)
-              const vp = page.getViewport({ scale: 1 })
-              pageSizes.push([vp.width, vp.height])
-            }
-
-            const currentId = nextSourceIdRef.current++
-            const colorIndex = (currentId - 1) % SOURCE_COLORS.length
-            const letter = String.fromCharCode(65 + ((currentId - 1) % 26))
-
-            const initialSelected = new Set<number>()
-            for (let i = 1; i <= doc.numPages; i++) {
-              initialSelected.add(i)
-              newTrayAdditions.push({
-                id: `${currentId}_p${i}_${Math.random().toString(36).substring(2, 7)}`,
-                sourceId: currentId,
-                pageNumber: i,
-              })
-            }
-
-            newSources.push({
-              id: currentId,
-              file,
-              name: file.name,
-              size: file.size,
-              doc,
-              pageCount: doc.numPages,
-              sizes: pageSizes,
-              selectedPages: initialSelected,
-              rangeInput: compressRange(Array.from(initialSelected)),
-              color: SOURCE_COLORS[colorIndex],
-              letterBadge: letter,
-            })
-          } catch {
-            setErrorMessage(`"${file.name}" could not be opened. It may be encrypted or corrupted.`)
-          }
-        }
-
-        if (newSources.length > 0) {
-          setSources((prev) => [...prev, ...newSources])
-          setActiveSourceId((prev) => prev ?? newSources[0].id)
-          setTray((prev) => [...prev, ...newTrayAdditions])
-        }
-      } finally {
-        setIsImporting(false)
-      }
+      const run = importChainRef.current
+        .then(() => importFiles(pdfFiles))
+        .catch(() => {
+          setErrorMessage('The PDF reader could not start. Reload the page and try again.')
+        })
+        .finally(() => {
+          pendingImportsRef.current -= 1
+          if (pendingImportsRef.current === 0) setIsImporting(false)
+        })
+      importChainRef.current = run
+      return run
     },
-    []
+    [importFiles]
   )
 
   usePasteFiles(handleAddFiles, true)
@@ -202,49 +256,47 @@ export default function MergePdfTool() {
     }
   }, [activeSourceId, sources])
 
-  const handleMoveSource = useCallback((index: number, direction: -1 | 1) => {
-    setSources((prev) => {
-      const targetIndex = index + direction
-      if (targetIndex < 0 || targetIndex >= prev.length) return prev
-      const updated = [...prev]
-      const temp = updated[index]
-      updated[index] = updated[targetIndex]
-      updated[targetIndex] = temp
-      return updated
-    })
-  }, [])
-
   /* A true "move to position": dragging source C above source A must put C
      first, not swap C one step. Adjacent-only swapping silently produced the
-     wrong document order for multi-step drags. */
-  const handleMoveSourceTo = useCallback((fromIndex: number, toIndex: number) => {
-    setSources((prev) => {
-      if (fromIndex === toIndex) return prev
-      if (fromIndex < 0 || fromIndex >= prev.length) return prev
-      if (toIndex < 0 || toIndex >= prev.length) return prev
-      const next = [...prev]
+     wrong document order for multi-step drags.
+
+     The rail order is the document order the user sees, so the stack follows
+     it: whole document blocks move together. Only when the user has
+     interleaved sheets by hand is the stack left alone — re-sorting it would
+     silently undo their arrangement — and a notice says so. */
+  const handleMoveSourceTo = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (fromIndex === toIndex) return
+      if (fromIndex < 0 || fromIndex >= sources.length) return
+      if (toIndex < 0 || toIndex >= sources.length) return
+      const next = [...sources]
       const [moved] = next.splice(fromIndex, 1)
       next.splice(toIndex, 0, moved)
-      return next
-    })
-  }, [])
+      const order = next.map((s) => s.id)
+      sourceOrderRef.current = order
+      setSources(next)
+      if (isGroupedBySource(tray)) {
+        setTray(orderBlocksBySource(tray, order))
+        setNoticeMessage(null)
+      } else {
+        setNoticeMessage(
+          'Your merged stack has a custom page arrangement, so it was kept as is. Use “Group by source” to follow the new document order.'
+        )
+      }
+    },
+    [sources, tray]
+  )
 
+  const handleMoveSource = useCallback(
+    (index: number, direction: -1 | 1) => handleMoveSourceTo(index, index + direction),
+    [handleMoveSourceTo]
+  )
 
   const handleGroupTrayBySources = useCallback(() => {
-    setTray((prev) => {
-      const sourceOrderMap = new Map<number, number>()
-      sources.forEach((s, idx) => sourceOrderMap.set(s.id, idx))
-
-      const sorted = [...prev].sort((a, b) => {
-        const orderA = sourceOrderMap.get(a.sourceId) ?? 999
-        const orderB = sourceOrderMap.get(b.sourceId) ?? 999
-        if (orderA !== orderB) return orderA - orderB
-        return a.pageNumber - b.pageNumber
-      })
-      return sorted
-    })
+    setTray((prev) => groupBySource(prev, sourceOrderRef.current))
+    setNoticeMessage(null)
     setCurrentPreviewIndex(0)
-  }, [sources])
+  }, [])
 
   const handleTogglePage = useCallback((sourceId: number, pageNumber: number) => {
     setSources((prev) =>
@@ -264,21 +316,7 @@ export default function MergePdfTool() {
       })
     )
 
-    setTray((prev) => {
-      const existsIndex = prev.findIndex((t) => t.sourceId === sourceId && t.pageNumber === pageNumber)
-      if (existsIndex >= 0) {
-        return prev.filter((_, idx) => idx !== existsIndex)
-      } else {
-        return [
-          ...prev,
-          {
-            id: `${sourceId}_p${pageNumber}_${Math.random().toString(36).substring(2, 7)}`,
-            sourceId,
-            pageNumber,
-          },
-        ]
-      }
-    })
+    setTray((prev) => toggleSourcePage(prev, sourceOrderRef.current, sourceId, pageNumber))
   }, [])
 
   const applyPagesToSource = useCallback((sourceId: number, targetPages: number[]) => {
@@ -295,21 +333,10 @@ export default function MergePdfTool() {
       })
     )
 
-    setTray((prev) => {
-      const otherSourcesPages = prev.filter((t) => t.sourceId !== sourceId)
-      const thisSourceKept = prev.filter((t) => t.sourceId === sourceId && targetSet.has(t.pageNumber))
-      const keptPageNumbers = new Set(thisSourceKept.map((t) => t.pageNumber))
-
-      const newlyAdded: TrayItem[] = targetPages
-        .filter((p) => !keptPageNumbers.has(p))
-        .map((p) => ({
-          id: `${sourceId}_p${p}_${Math.random().toString(36).substring(2, 7)}`,
-          sourceId,
-          pageNumber: p,
-        }))
-
-      return [...otherSourcesPages, ...thisSourceKept, ...newlyAdded]
-    })
+    /* Kept sheets stay exactly where they are; new ones go to their natural
+       place. Rebuilding the stack as "other documents, then this one" is what
+       used to push the first document behind the second. */
+    setTray((prev) => setSourcePages(prev, sourceOrderRef.current, sourceId, targetPages))
   }, [])
 
   const handleApplyRangeInput = useCallback(
@@ -429,15 +456,10 @@ export default function MergePdfTool() {
   }, [])
 
   const handleMoveTrayItem = useCallback((fromIndex: number, toIndex: number) => {
-    setTray((prev) => {
-      if (toIndex < 0 || toIndex >= prev.length) return prev
-      const next = [...prev]
-      const [item] = next.splice(fromIndex, 1)
-      next.splice(toIndex, 0, item)
-      return next
-    })
+    if (toIndex < 0 || toIndex >= tray.length || fromIndex === toIndex) return
+    setTray(moveTrayItem(tray, fromIndex, toIndex))
     setCurrentPreviewIndex(toIndex)
-  }, [])
+  }, [tray])
 
   const computeTargetDimensions = useCallback(
     (item: TrayItem): [number, number] => {
@@ -564,46 +586,29 @@ export default function MergePdfTool() {
     setLastMergedResult(null)
 
     try {
-      const { PDFDocument } = await import('pdf-lib')
-      const mergedPdf = await PDFDocument.create()
+      /* Snapshot the stack as it is right now: this exact order is what gets
+         written, and it is what the success box will describe. */
+      const plannedSheets: MergeSheet[] = tray.map((item) => ({
+        sourceKey: item.sourceId,
+        pageNumber: item.pageNumber,
+        target: pageSizeChoice === 'orig' ? null : computeTargetDimensions(item),
+      }))
+      const usedIds = new Set(tray.map((item) => item.sourceId))
+      const mergeSources = await Promise.all(
+        sources
+          .filter((s) => usedIds.has(s.id))
+          .map(async (s) => ({ key: s.id, name: s.name, bytes: await s.file.arrayBuffer() }))
+      )
 
-      const loadedDocsMap = new Map<number, Awaited<ReturnType<typeof PDFDocument.load>>>()
-
-      for (let i = 0; i < tray.length; i++) {
-        const item = tray[i]
-        const src = sources.find((s) => s.id === item.sourceId)
-        if (!src) continue
-
-        let srcPdfDoc = loadedDocsMap.get(src.id)
-        if (!srcPdfDoc) {
-          const bytes = await src.file.arrayBuffer()
-          srcPdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true })
-          loadedDocsMap.set(src.id, srcPdfDoc)
-        }
-
-        const [embeddedPage] = await mergedPdf.embedPages([srcPdfDoc.getPage(item.pageNumber - 1)])
-        const [targetWidth, targetHeight] = computeTargetDimensions(item)
-
-        const scale = Math.min(targetWidth / embeddedPage.width, targetHeight / embeddedPage.height)
-        const fittedWidth = embeddedPage.width * scale
-        const fittedHeight = embeddedPage.height * scale
-        const xOffset = (targetWidth - fittedWidth) / 2
-        const yOffset = (targetHeight - fittedHeight) / 2
-
-        const newPage = mergedPdf.addPage([targetWidth, targetHeight])
-        newPage.drawPage(embeddedPage, {
-          x: xOffset,
-          y: yOffset,
-          width: fittedWidth,
-          height: fittedHeight,
-        })
-
-        setProgressPercent(Math.round(((i + 1) / tray.length) * 100))
-        await new Promise((r) => setTimeout(r, 8))
-      }
-
-      const mergedBytes = await mergedPdf.save({ useObjectStreams: true })
       const cleanBaseName = (outputName.trim() || 'mycloove_merged-document').replace(/\.pdf$/i, '')
+      const mergedBytes = await mergeSheets(mergeSources, plannedSheets, {
+        title: cleanBaseName,
+        onProgress: async (done, total) => {
+          setProgressPercent(Math.round((done / total) * 100))
+          // Yield so the progress fill can paint on long stacks.
+          if (done % 8 === 0) await new Promise((r) => setTimeout(r, 0))
+        },
+      })
       const finalFileName = `${cleanBaseName}.pdf`
       const resultBlob = new Blob([mergedBytes.slice()], { type: 'application/pdf' })
 
@@ -629,7 +634,7 @@ export default function MergePdfTool() {
       setIsProcessing(false)
       setProgressPercent(0)
     }
-  }, [tray, sources, isProcessing, outputName, computeTargetDimensions])
+  }, [tray, sources, isProcessing, outputName, pageSizeChoice, computeTargetDimensions])
 
   const handleLoadSamples = useCallback(async () => {
     try {
@@ -684,7 +689,8 @@ export default function MergePdfTool() {
         </div>
         <p className={styles.lede}>
           Choose exact pages from every document, arrange the sheets in any order, and preview the
-          bound file as you build it. Each file keeps its own selection while you work.
+          bound file as you build it. Files added together line up by name; the download always
+          follows the merged stack exactly, sheet for sheet.
         </p>
       </div>
 

@@ -122,6 +122,7 @@ export function PagePickerCard({
 export function TrayCard({
   item,
   index,
+  total,
   source,
   aspectRatio,
   isCurrent,
@@ -132,6 +133,7 @@ export function TrayCard({
 }: {
   item: TrayItem
   index: number
+  total: number
   source?: SourcePdfFile
   aspectRatio: string
   isCurrent: boolean
@@ -142,6 +144,7 @@ export function TrayCard({
 }) {
   const thumbUrl = useThumbnail(renderThumbnail, item.sourceId, item.pageNumber, 180)
   const color = source?.color || 'var(--am-brass)'
+  const label = `${source?.letterBadge ?? '?'} page ${item.pageNumber}`
 
   return (
     <div
@@ -195,8 +198,34 @@ export function TrayCard({
         ✕
       </button>
 
-      <div className={styles.trayFilename} title={source?.name || ''}>
-        {source?.name ? source.name.replace(/\.pdf$/i, '') : `Source ${item.sourceId}`}
+      <div className={styles.trayFootRow}>
+        <div className={styles.trayFilename} title={source?.name || ''}>
+          {source?.name ? source.name.replace(/\.pdf$/i, '') : `Source ${item.sourceId}`}
+        </div>
+        {/* Drag is mouse-only on most touch screens; these keep the stack
+            reorderable by touch and keyboard, one position at a time. */}
+        <div className={styles.trayMoves} onClick={(event) => event.stopPropagation()}>
+          <button
+            type="button"
+            className={styles.trayMoveBtn}
+            disabled={index === 0}
+            onClick={() => onDragReorder(index, index - 1)}
+            aria-label={`Move ${label} earlier (now ${index + 1} of ${total})`}
+            title="Move earlier"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            className={styles.trayMoveBtn}
+            disabled={index === total - 1}
+            onClick={() => onDragReorder(index, index + 1)}
+            aria-label={`Move ${label} later (now ${index + 1} of ${total})`}
+            title="Move later"
+          >
+            ›
+          </button>
+        </div>
       </div>
     </div>
   )

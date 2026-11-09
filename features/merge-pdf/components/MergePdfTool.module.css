@@ -1419,10 +1419,35 @@
   .actionBar {
     flex-direction: column;
     align-items: stretch;
-    gap: var(--am-sp-3);
+    gap: var(--am-sp-2);
+    padding: var(--am-sp-2) var(--am-sp-3);
   }
   .actionControls {
     width: 100%;
+  }
+  /* The count and the button are what matter on a phone; the privacy line
+     repeats the page footer. The status kicker is a live region, so it is
+     only visually hidden — screen readers still hear readiness changes. */
+  .actionInfo small {
+    display: none;
+  }
+  .actionStatus {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* On short viewports (a phone in landscape, a split-screen window) a sticky
+   bar would cover most of the workbench, so it settles at the end instead. */
+@media (max-height: 560px) {
+  .actionBar {
+    position: relative;
+    bottom: auto;
   }
 }
 
@@ -1714,14 +1739,100 @@
   outline-offset: var(--am-focus-offset);
 }
 
-.trayFilename {
+.trayFootRow {
+  display: flex;
+  align-items: center;
+  gap: var(--am-sp-1);
   margin-top: var(--am-sp-2);
+}
+
+.trayFilename {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--am-mono);
   font-size: var(--am-fs-xs);
   color: var(--am-ink-faint);
+}
+
+.trayMoves {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+}
+
+.trayMoveBtn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: var(--am-bg);
+  border: 1px solid var(--am-line);
+  color: var(--am-ink-dim);
+  font-size: var(--am-fs-sm);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color var(--am-dur-fast) var(--am-ease-out),
+    color var(--am-dur-fast) var(--am-ease-out);
+}
+
+.trayMoveBtn:hover:not(:disabled) {
+  border-color: var(--am-brass);
+  color: var(--am-ink);
+}
+
+.trayMoveBtn:focus-visible {
+  outline: var(--am-focus-ring);
+  outline-offset: var(--am-focus-offset);
+}
+
+.trayMoveBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Touch screens have no hover: the remove control must be visible to exist. */
+@media (hover: none) {
+  .trayRemove {
+    opacity: 1;
+  }
+}
+
+/* Coarse pointers get finger-sized sheet controls. */
+@media (pointer: coarse) {
+  .trayItem {
+    flex-basis: 120px;
+  }
+  .trayMoveBtn,
+  .trayRemove {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Narrow screens: panel heads wrap their tools under the title instead of
+   pushing them off the edge, and the stack strip snaps sheet by sheet. */
+@media (max-width: 720px) {
+  .panelHead {
+    flex-wrap: wrap;
+    padding: var(--am-sp-3);
+  }
+  .tools {
+    flex-wrap: wrap;
+    gap: var(--am-sp-2) var(--am-sp-4);
+  }
+  .trayStrip {
+    scroll-snap-type: x proximity;
+    padding-inline: var(--am-sp-3);
+  }
+  .trayItem {
+    scroll-snap-align: start;
+  }
 }
 
 .trayEmptyHint {
