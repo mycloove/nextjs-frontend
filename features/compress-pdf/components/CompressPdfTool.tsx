@@ -2,175 +2,149 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useDropzone } from 'react-dropzone'
 import AnimatedBrandLogo from '@/components/animated-brand-logo/AnimatedBrandLogo'
 import AuthNavButton from '@/components/AuthNavButton'
 import CreditCost from '@/components/tools/CreditCost'
+import ToolSwitcher from '@/components/tools/ToolSwitcher'
+import {
+  ActionButton,
+  DownloadIcon,
+  DropAnywhere,
+  FileChip,
+  HonestProgress,
+  Notice,
+  NoticeList,
+  OptionGroup,
+  Receipt,
+  describeLimits,
+  formatBytes,
+  useFilePicker,
+  validateIntake,
+  type IntakeSpec,
+  type Option,
+  type ReceiptFact,
+} from '@/components/tools/kit'
 import { useAccountViewer } from '@/lib/account/useAccountViewer'
 import { useCreditBalance } from '@/lib/usage/useCreditBalance'
 import { useToolAvailability } from '@/lib/usage/useToolAvailability'
-import ToolSwitcher from '@/components/tools/ToolSwitcher'
+import { getTool } from '@/lib/tools/registry'
 import { uploadWithProgress, getApiErrorMessage } from '@/lib/upload/uploadWithProgress'
-import { usePasteFiles } from '@/lib/upload/usePasteFiles'
 import { downloadBlob } from '@/lib/download/downloadOutputs'
 import { addRecentConversion } from '@/lib/history/recentConversions'
 import './CompressPdfTool.css'
 
 /**
- * Compress PDF — "the compression engine console".
+ * Compress PDF — "the compression engine console" (roadmap §8.11).
  *
- * The whole page is the tool (the §2 full-screen exception shape used by
- * /mr-markdown and /split-pdf): a target-mass visualizer on the left, three
- * engine modes and a live terminal on the right. The instrument concept is a
- * containment gauge — you watch the document's mass shrink as you pick a mode.
+ * Instrument concept: a console that weighs the document before and after,
+ * and shows only what it actually measured. Its look — the grid, the glowing
+ * teal mass, the dashed rings, the teal drop target, the inverted run button —
+ * is this tool's identity and stays (owner direction, 2026-11-06). What was
+ * removed on 2026-11-06 was dishonest, not decorative: a scrolling scripted
+ * "engine" log, a size guessed before anything ran, and an auto-download. The
+ * rings now turn only while the server is really working.
  *
- * Honesty (mycloove doctrine 5): the engine (pdf-microservice
- * features/compress_pdf.py) trades image fidelity only — text, links, forms,
- * bookmarks and attachments survive every level, and a file that cannot get
- * smaller comes back unchanged with outcome `already_optimal`. So the mode
- * cards state what each level does to images instead of predicting a size
- * (savings depend entirely on how image-heavy the document is), and after a
- * run the mass is scaled to the real before/after ratio.
+ * Honesty (doctrine 5): the engine is pdf-microservice/features/compress_pdf.py
+ * (PyMuPDF), reached through /api/compress-pdf. It downsamples and re-encodes
+ * images above a level's DPI threshold, subsets fonts and drops unreferenced
+ * objects — and keeps text, links, form fields, bookmarks, attachments and
+ * metadata at every level, verifying the page count and every page's text on
+ * the output before returning it. A result that would not be smaller comes
+ * back unchanged with X-Compression-Outcome: already_optimal. The scale reads
+ * the real source bytes; after a run it reads the real compressed bytes from
+ * the route's X-Original-Bytes / X-Compressed-Bytes headers. Nothing on this
+ * page moves before that.
+ *
+ * Signature moment (one per surface): when the real size arrives, the weight
+ * settles to its new size and the figure counts down from the original to the
+ * result. Reduced motion shows the final value at once.
+ *
+ * Phase 2 pilot: intake, options, progress and the receipt come from the
+ * shared kit (components/tools/kit); limits come from the registry entry.
+ * Results are never auto-downloaded (owner decision D4) — the receipt's
+ * Download button is the only way out.
  */
 
 type Phase = 'idle' | 'running' | 'done'
 type ModeId = 'structural' | 'optimal' | 'aggressive'
 
-interface LogLine {
-  id: number
-  text: string
-  kind: 'dim' | 'warn' | 'loud'
-}
-
-interface ModeConfig {
-  id: ModeId
+interface ModeConfig extends Option<ModeId> {
   /** The wire value the engine and /api/compress-pdf understand. */
   level: 'light' | 'strong' | 'aggressive'
-  title: string
-  desc: string
-  /** What happens to images — shown where a fake size estimate used to be. */
-  tag: string
-  /** Visual mass scale in the gauge before a run. */
-  scale: number
-  logs: string[]
+  /** What the receipt reports this mode did to the file. */
+  receipt: ReceiptFact
 }
 
-const MODES: ModeConfig[] = [
+/* Each mode states what it does to *images* — the only thing the engine
+   trades (compress_pdf.py PROFILES). Nothing else is removed at any level. */
+const MODES: readonly ModeConfig[] = [
   {
-    id: 'structural',
+    value: 'structural',
     level: 'light',
     title: 'Lossless',
-    desc: 'Cleans and repacks the file structure. Every pixel stays exactly as it is — best for text documents and forms.',
     tag: 'Pixel-perfect',
-    scale: 0.9,
-    logs: [
-      '> Target: lossless repack',
-      '> Unused objects removed, duplicates merged',
-      '> Streams re-deflated',
-      '> Images left untouched',
-    ],
+    description: 'Cleans and repacks the file structure. Every pixel stays exactly as it is — best for text documents and forms.',
+    receipt: { tone: 'info', text: 'Lossless repack — every image was left exactly as it was.' },
   },
   {
-    id: 'optimal',
+    value: 'optimal',
     level: 'strong',
     title: 'Recommended',
-    desc: 'Images above 200 dpi resampled to 150 dpi; fonts trimmed to the characters used. Sharp on screen and in print.',
     tag: '150 dpi',
-    scale: 0.6,
-    logs: [
-      '> Target: best balance',
-      '> Images > 200 dpi → 150 dpi, JPEG q75',
-      '> Fonts subset to used glyphs',
-      '> Text, links, forms, bookmarks kept',
-    ],
+    description: 'Images above 200 dpi resampled to 150 dpi; fonts trimmed to the characters used. Sharp on screen and in print.',
+    receipt: { tone: 'info', text: 'Images above 200 dpi were resampled to 150 dpi; fonts were trimmed to the characters used.' },
   },
   {
-    id: 'aggressive',
+    value: 'aggressive',
     level: 'aggressive',
     title: 'Smallest',
-    desc: 'Images resampled to 110 dpi at lower JPEG quality — for email and upload limits. Text stays crisp and selectable.',
     tag: '110 dpi',
-    scale: 0.35,
-    logs: [
-      '> Target: smallest file',
-      '> Images > 130 dpi → 110 dpi, JPEG q60',
-      '> Fonts subset to used glyphs',
-      '> Text, links, forms, bookmarks kept',
-    ],
+    description: 'Images resampled to 110 dpi at lower JPEG quality — for email and upload limits. Text stays crisp and selectable.',
+    receipt: { tone: 'info', text: 'Images above 130 dpi were resampled to 110 dpi at lower JPEG quality.' },
   },
 ]
 
-/* Mirrors the route's env-backed per-file limit (PDF_TOOLS_MAX_FILE_BYTES). */
-const MAX_FILE_MB = 50
-
-const fmtSize = (b: number) =>
-  b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB`
-  : b >= 1024 ? `${Math.max(1, Math.round(b / 1024))} KB`
-  : `${b} B`
-
-const Icon = {
-  doc: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-    </svg>
-  ),
-  upload: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  ),
-  bolt: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
-  ),
-  download: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  ),
-  trash: (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6M9 6V4h6v2" />
-    </svg>
-  ),
-  alert: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-      <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  ),
-  check: (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  ),
-  spinner: (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="acx-spin" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" /><path d="M12 2a10 10 0 0 1 10 10" />
-    </svg>
-  ),
+/* What every level keeps — enforced by the engine, which checks the page
+   count and every page's text on the output before it is returned. */
+const ENGINE_KEEPS: ReceiptFact = {
+  tone: 'info',
+  text: 'Text, links, form fields, bookmarks and metadata were kept, and every page’s text was verified.',
 }
+
+const tool = getTool('compress-pdf')
+/* The registry entry is the one source of the accepted type and limits. */
+const SPEC: IntakeSpec = { accepts: tool.accepts ?? [], limits: tool.limits! }
 
 interface CompressedResult {
   name: string
   blob: Blob
   before: number
   after: number
+  /** Whole-percent change; positive = smaller. */
   pct: number
-  /** Engine verdict; `already_optimal` means the original bytes came back. */
-  outcome: 'compressed' | 'already_optimal'
-  /** Mode the result was produced with — a mode change invalidates it. */
-  mode: ModeId
+  smaller: boolean
+  /** The engine re-encoded at least one image (X-Images-Rewritten). */
+  imagesRewritten: boolean
+  mode: ModeConfig
 }
 
-/** Gauge scale from a real byte ratio; area tracks bytes, hence the sqrt. */
-function massScale(before: number, after: number): number {
-  if (before <= 0) return 0.9
-  return Math.min(0.9, Math.max(0.22, 0.9 * Math.sqrt(after / before)))
+/* The weight's resting scale, and the floor a real result may shrink it to.
+   The floor keeps the paper wider than the longest reading ("12.3 MB") at
+   both dial sizes — below it, ink text would spill onto the dark card. */
+const MASS_FULL = 0.9
+const MASS_FLOOR = 0.45
+const COUNT_MS = 600
+
+const UPLOAD_ICON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="17 8 12 3 7 8" />
+    <line x1="12" y1="3" x2="12" y2="15" />
+  </svg>
+)
+
+function savingLabel(r: CompressedResult): string {
+  return r.pct >= 1 ? `${r.pct}% smaller` : 'less than 1% smaller'
 }
 
 export default function CompressPdfTool() {
@@ -181,98 +155,61 @@ export default function CompressPdfTool() {
   const [mode, setMode] = useState<ModeId>('optimal')
   const [phase, setPhase] = useState<Phase>('idle')
   const [progress, setProgress] = useState<number | null>(null)
-  const [logs, setLogs] = useState<LogLine[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [startedAt, setStartedAt] = useState(0)
+  const [error, setError] = useState<{ messages: string[]; id: number } | null>(null)
   const [result, setResult] = useState<CompressedResult | null>(null)
   const abortRef = useRef<AbortController | null>(null)
-  const logIdRef = useRef(0)
-  const terminalRef = useRef<HTMLDivElement>(null)
-  const replayTimersRef = useRef<number[]>([])
+  const errorIdRef = useRef(0)
 
-  const addLog = useCallback((text: string, kind: LogLine['kind'] = 'dim') => {
-    setLogs((prev) => [...prev, { id: ++logIdRef.current, text, kind }])
+  const showError = useCallback((messages: string[]) => {
+    errorIdRef.current += 1
+    setError({ messages, id: errorIdRef.current })
   }, [])
 
-  // One bench, one document: the newest drop replaces whatever sat here.
+  // One scale, one document: the newest acceptable file replaces the last.
   const addFiles = useCallback((list: File[]) => {
-    const pdf = list.find((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
-    if (!pdf) {
-      setError('Only PDF files can sit on this bench.')
+    const { accepted, rejections } = validateIntake(list, SPEC)
+    if (accepted.length === 0) {
+      showError(rejections.map((r) => r.message))
       return
     }
-    setError(null)
+    // A wrong file dropped alongside a good one is still reported.
+    if (rejections.length) showError(rejections.map((r) => r.message))
+    else setError(null)
     setResult(null)
     setPhase('idle')
-    setFile(pdf)
+    setFile(accepted[0])
+  }, [showError])
+
+  const picker = useFilePicker(SPEC, addFiles)
+
+  // A result belongs to the mode that produced it; picking another mode
+  // clears it so the receipt can never describe the wrong run.
+  const selectMode = useCallback((next: ModeId) => {
+    setMode(next)
+    setResult(null)
+    setPhase((current) => (current === 'done' ? 'idle' : current))
   }, [])
-
-  // Ctrl+V pasted files land on the bench, same as the sibling tools.
-  usePasteFiles(addFiles, phase === 'idle')
-
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    onDrop: addFiles,
-    noClick: true,
-    accept: { 'application/pdf': ['.pdf'] },
-  })
-
-  // Replay the active mode's readout when the mode or the bench document
-  // changes. Deliberately not keyed on `phase`: a finished or failed run must
-  // leave its own terminal output in place, not be overwritten by the replay.
-  useEffect(() => {
-    logIdRef.current += 1
-    setLogs([{ id: logIdRef.current, text: '> Mode plan — applied only when you press Initialize.', kind: 'dim' }])
-    const config = MODES.find((m) => m.id === mode) ?? MODES[1]
-    const timers = config.logs.map((line, index) =>
-      window.setTimeout(() => addLog(line, 'dim'), (index + 1) * 280),
-    )
-    replayTimersRef.current = timers
-    return () => timers.forEach((timer) => window.clearTimeout(timer))
-  }, [mode, file, addLog])
-
-  // Keep the terminal pinned to its newest line.
-  useEffect(() => {
-    const terminal = terminalRef.current
-    if (terminal) terminal.scrollTop = terminal.scrollHeight
-  }, [logs])
 
   const run = useCallback(async () => {
     if (!file || phase === 'running') return
-    if (file.size > MAX_FILE_MB * 1024 * 1024) {
-      setError(`${file.name} is ${fmtSize(file.size)} — the limit is ${MAX_FILE_MB} MB per file.`)
-      return
-    }
-    const config = MODES.find((m) => m.id === mode) ?? MODES[1]
-    // A run owns the terminal: a mode-plan replay still ticking from a fresh
-    // drop must not interleave its lines with the run's real output.
-    replayTimersRef.current.forEach((timer) => window.clearTimeout(timer))
-    replayTimersRef.current = []
+    const config = MODES.find((m) => m.value === mode) ?? MODES[1]
 
     setPhase('running')
     setError(null)
     setResult(null)
     setProgress(0)
-    setLogs([])
-    logIdRef.current += 1
-    setLogs([{ id: logIdRef.current, text: '> EXECUTING COMPRESSION ALGORITHM...', kind: 'loud' }])
+    setStartedAt(Date.now())
 
     const abort = new AbortController()
     abortRef.current = abort
-    // Upload progress ends at 100% long before a heavy file is done — the
-    // engine still has every image to resample. Say so once, in the log.
-    let uploadAnnounced = false
     try {
       const formData = new FormData()
       formData.append('files', file)
       formData.append('level', config.level)
 
-      const res = await uploadWithProgress('/api/compress-pdf', formData, {
-        onProgress: (percent) => {
-          setProgress(percent)
-          if (percent >= 100 && !uploadAnnounced) {
-            uploadAnnounced = true
-            addLog(`> Upload complete (${fmtSize(file.size)}). Engine working…`, 'dim')
-          }
-        },
+      const res = await uploadWithProgress(tool.apiEndpoint, formData, {
+        onProgress: setProgress,
         signal: abort.signal,
       })
       if (!res.ok) throw new Error(await getApiErrorMessage(res, 'The compression failed'))
@@ -284,61 +221,28 @@ export default function CompressPdfTool() {
 
       const before = Number(res.headers.get('X-Original-Bytes') ?? String(file.size))
       const after = Number(res.headers.get('X-Compressed-Bytes') ?? String(blob.size))
-      const outcome = res.headers.get('X-Compression-Outcome') === 'already_optimal' || after >= before
-        ? 'already_optimal' as const
-        : 'compressed' as const
-      const pct = outcome === 'compressed' && before > 0 ? Math.max(1, Math.round((1 - after / before) * 100)) : 0
-      // An unchanged copy is not worth an unasked-for download; the user can
-      // still take it from the button, or try a stronger level.
-      if (outcome === 'compressed') {
-        downloadBlob(blob, outName)
-        addRecentConversion({ toolId: 'compress-pdf', label: 'Compress PDF', filename: outName, sizeBytes: blob.size })
-      }
-      setResult({ name: outName, blob, before, after, pct, outcome, mode: config.id })
-      /* Facts the engine verified on the output bytes — reported as such, not
-         replayed from the mode plan. */
-      const pages = Number(res.headers.get('X-Page-Count') ?? '')
-      if (Number.isFinite(pages) && pages > 0) {
-        addLog(`> Verified: ${pages} page${pages === 1 ? '' : 's'}, text identical to the original.`, 'dim')
-      }
-      if (outcome === 'compressed' && config.level !== 'light') {
-        addLog(
-          res.headers.get('X-Images-Rewritten') === '1'
-            ? '> Images resampled and re-encoded.'
-            : '> No image needed resampling — savings are structural.',
-          'dim',
-        )
-      }
-      addLog(
-        outcome === 'compressed'
-          ? `> DONE. ${fmtSize(before)} → ${fmtSize(after)} (${pct}% smaller).`
-          : `> DONE. Already optimized at this level — original kept (${fmtSize(before)}).`,
-        'dim',
-      )
+      // `already_optimal` is the engine saying "nothing gained; original returned".
+      const smaller = res.headers.get('X-Compression-Outcome') !== 'already_optimal' && after < before
+      const pct = before > 0 ? Math.round((1 - after / before) * 100) : 0
+      const imagesRewritten = res.headers.get('X-Images-Rewritten') === '1'
+      setResult({ name: outName, blob, before, after, pct, smaller, imagesRewritten, mode: config })
+      addRecentConversion({ toolId: 'compress-pdf', label: tool.label, filename: outName, sizeBytes: blob.size })
       setPhase('done')
     } catch (e) {
-      if (e instanceof Error && e.name === 'ApiClientError' && /cancelled/i.test(e.message)) {
-        setError(null) // a deliberate cancel is not an error
-        addLog('> Run cancelled.', 'warn')
-      } else {
-        const message = e instanceof Error ? e.message : 'The compression failed — please try again.'
-        setError(message)
-        addLog(`> ERROR: ${message}`, 'warn')
+      // A deliberate cancel is not an error.
+      if (!(e instanceof Error && e.name === 'ApiClientError' && /cancelled/i.test(e.message))) {
+        showError([e instanceof Error ? e.message : 'The compression failed — please try again.'])
       }
       setPhase('idle')
     } finally {
       abortRef.current = null
       setProgress(null)
     }
-  }, [file, phase, mode, addLog])
+  }, [file, phase, mode, showError])
 
   const cancelRun = useCallback(() => {
     abortRef.current?.abort()
   }, [])
-
-  const downloadResult = useCallback(() => {
-    if (result) downloadBlob(result.blob, result.name)
-  }, [result])
 
   const clearAll = useCallback(() => {
     abortRef.current?.abort()
@@ -346,40 +250,34 @@ export default function CompressPdfTool() {
     setResult(null)
     setPhase('idle')
     setError(null)
-    setLogs([])
   }, [])
 
-  // A result belongs to the level that produced it. Picking another level
-  // returns the bench to "ready" so the button can never hand back a file
-  // compressed at a level the user has since moved away from.
-  const selectMode = useCallback((next: ModeId) => {
-    setMode(next)
-    setResult((current) => (current && current.mode !== next ? null : current))
-    setPhase((current) => (current === 'done' ? 'idle' : current))
-  }, [])
+  const finished = result !== null && phase === 'done'
+  const running = phase === 'running'
 
-  const config = MODES.find((m) => m.id === mode) ?? MODES[1]
-  const tone = 'var(--acx-accent)'
-  const done = result !== null && phase === 'done'
-  const mass = done ? massScale(result.before, result.after) : config.scale
+  // Real bytes only: the weight sits at full size until a run reports its
+  // after/before ratio, and never grows past full for a file that got larger.
+  const massScale = finished
+    ? Math.max(MASS_FLOOR, MASS_FULL * Math.min(1, result.after / Math.max(1, result.before)))
+    : MASS_FULL
 
-  const sizeText =
-    done ? fmtSize(result.after)
-    : file ? fmtSize(file.size)
-    : '—'
-
-  // Upload finished, response not yet back: the server is doing the work.
-  const engineWorking = phase === 'running' && progress === 100
-
+  const shownBytes = useCountDown(finished ? result.before : null, finished ? result.after : null)
+  const sizeText = finished ? formatBytes(shownBytes ?? result.after) : file ? formatBytes(file.size) : '—'
   const sizeSub =
-    done ? (result.outcome === 'compressed' ? `Saved ${result.pct}%` : 'Already optimized')
-    : engineWorking ? 'Compressing…'
-    : phase === 'running' ? 'Uploading…'
-    : file ? 'Original Size'
-    : 'Awaiting document'
+    finished ? (result.smaller ? savingLabel(result) : 'Already optimized')
+    : running ? 'Compressing…'
+    : file ? 'Original size'
+    : 'No document yet'
+
+  const download = () => {
+    if (result) downloadBlob(result.blob, result.name)
+  }
 
   return (
-    <div className={`acx-page${isDragActive ? ' acx-drag' : ''}`}>
+    <div className="acx-page">
+      <DropAnywhere spec={SPEC} onFiles={addFiles} enabled={!running} />
+      {picker.input}
+
       <header className="acx-sitebar" data-tool-navbar="compress-pdf">
         <div className="acx-sitebar-inner">
           <div className="acx-breadcrumb">
@@ -389,163 +287,150 @@ export default function CompressPdfTool() {
             <span className="acx-site-separator" aria-hidden="true">/</span>
             <span className="acx-site-brand">mycloove</span>
             <span className="acx-site-separator" aria-hidden="true">/</span>
-            <b>Compress PDF</b>
+            <b>{tool.label}</b>
           </div>
           <div className="acx-site-actions">
-            <ToolSwitcher toolId="compress-pdf" availability={availability} />
+            <ToolSwitcher toolId="compress-pdf" availability={availability} shortcut />
             <AuthNavButton chrome="tool" accountState={accountState} creditState={creditState} creditDisplayToolId="compress-pdf" />
           </div>
         </div>
       </header>
 
-      <div {...getRootProps({ className: 'acx-main' })}>
-        <input {...getInputProps()} />
-
-        <section className="acx-visualizer" aria-label="Target mass preview">
-          <div className="acx-core-label">TARGET_MASS_PREVIEW</div>
-          <div className="acx-core">
+      <div className="acx-main">
+        <section className="acx-scale" aria-label="Document size">
+          <p className="acx-scale-label" aria-hidden="true">TARGET_MASS</p>
+          <div className={`acx-dial${running ? ' working' : ''}`}>
+            {/* The outer ring is the original's weight, so the gap to the new
+                weight is the saving. The rings turn only while the server is
+                actually working — motion means work, never decoration. */}
             <div className="acx-ring acx-ring-1" aria-hidden="true" />
             <div className="acx-ring acx-ring-2" aria-hidden="true" />
-            {/* After a run, the original's mass stays as an outline so the
-                shrink reads as before → after, not as a lone dot. */}
-            {done && <div className="acx-mass-ghost" aria-hidden="true" />}
             <div
-              className="acx-mass"
-              style={{ transform: `scale(${mass})`, borderColor: tone }}
+              className={`acx-mass${file ? '' : ' empty'}${finished && result.smaller ? ' settled' : ''}`}
+              style={{ transform: `scale(${massScale})` }}
               aria-hidden="true"
             />
-            {/* The readout sits above the disc, never inside its transform —
-                a 99% reduction used to shrink the result itself to a speck. */}
-            <div className="acx-readout">
-              <div className="acx-size" key={sizeText}>{sizeText}</div>
-              <div className="acx-size-sub" style={{ color: tone }}>{sizeSub}</div>
-            </div>
+            {/* A sibling, not a child: scaling the weight must not shrink its reading. */}
+            <div className={`acx-size${file ? '' : ' empty'}`}>{sizeText}</div>
           </div>
+          <p className="acx-size-sub" aria-live="polite">
+            {finished ? `${formatBytes(result.before)} → ${formatBytes(result.after)} · ${sizeSub}` : sizeSub}
+          </p>
         </section>
 
-        <section className="acx-controls">
+        <section className="acx-controls" aria-label="Compression settings">
+          <h1 className="acx-title">{tool.label}</h1>
+          <p className="acx-lede">
+            Shrinks heavy images and trims fonts; text, links, forms and bookmarks stay. The result below is
+            measured, not estimated — and a file that cannot get smaller comes back unchanged.
+          </p>
+
           {!file ? (
-            <button
-              type="button"
-              className={`acx-drop${isDragActive ? ' over' : ''}`}
-              onClick={open}
-              aria-label="Drop a PDF here or browse files"
-            >
-              <span className="acx-drop-icon" aria-hidden="true">{Icon.upload}</span>
+            // The original Compress drop target, kept as this tool's identity
+            // (owner direction, 2026-11-06); the whole page still takes a drop.
+            <button type="button" className="acx-drop" onClick={picker.open} disabled={running}>
+              <span className="acx-drop-icon" aria-hidden="true">{UPLOAD_ICON}</span>
               <span className="acx-drop-title">Drop your PDF here</span>
-              <span className="acx-drop-sub">
-                or <span className="acx-drop-link">browse files</span> — Ctrl+V works too
-              </span>
-              <span className="acx-drop-meta">One document · up to {MAX_FILE_MB} MB</span>
+              <span className="acx-drop-sub">or <span className="acx-drop-link">browse files</span></span>
+              <span className="acx-drop-meta">{describeLimits(SPEC)}</span>
             </button>
           ) : (
-            <div className="acx-file-pill">
-              {Icon.doc}
-              <button type="button" className="acx-file-open" onClick={open} title={file.name}>
-                <span className="acx-file-name">{file.name}</span>
-                <span className="acx-file-size">{fmtSize(file.size)}</span>
-              </button>
-              <button
-                type="button"
-                className="acx-file-x"
-                aria-label="Remove document"
-                onClick={() => { setFile(null); setResult(null); setPhase('idle') }}
-              >
-                {Icon.trash}
-              </button>
-            </div>
+            <FileChip
+              name={file.name}
+              sizeBytes={file.size}
+              onReplace={picker.open}
+              onRemove={clearAll}
+              disabled={running}
+            />
           )}
 
-          <div className="acx-modes" role="radiogroup" aria-label="Compression mode">
-            {MODES.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                role="radio"
-                aria-checked={mode === m.id}
-                className={`acx-mode${mode === m.id ? ' active' : ''}`}
-                onClick={() => selectMode(m.id)}
-                disabled={phase === 'running'}
-              >
-                <div className="acx-mode-head">
-                  <div className="acx-mode-title">{m.title}</div>
-                  <div className="acx-mode-reduction">{m.tag}</div>
-                </div>
-                <div className="acx-mode-desc">{m.desc}</div>
-              </button>
-            ))}
-          </div>
-
-          <div className="acx-terminal" ref={terminalRef} role="log" aria-live="polite">
-            {logs.length === 0 ? (
-              <div className="acx-log dim">&gt; mycloove Core initialized.</div>
-            ) : (
-              logs.map((line) => (
-                <div key={line.id} className={`acx-log${line.kind === 'dim' ? ' dim' : line.kind === 'warn' ? ' warn' : ''}`}>
-                  {line.text}
-                </div>
-              ))
-            )}
-          </div>
-
-          {phase === 'running' && progress !== null && (
-            <div className="acx-runbar">
-              {engineWorking ? (
-                /* Indeterminate on purpose: the engine reports no progress, so
-                   the bar must not pretend to a percentage it does not have. */
-                <div className="acx-progress working" role="progressbar" aria-label="Compressing on the server" aria-valuetext="Compressing">
-                  <div className="acx-progress-fill" />
-                </div>
-              ) : (
-                <div className="acx-progress" role="progressbar" aria-label="Uploading" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-                  <div className="acx-progress-fill" style={{ width: `${progress}%` }} />
-                </div>
-              )}
-              <span className="acx-pct">{engineWorking ? 'Compressing' : `Uploading ${progress}%`}</span>
-              <button type="button" className="acx-cancel" onClick={cancelRun}>Cancel</button>
-            </div>
-          )}
-
-          {done && (
-            <div className="acx-note" role="status">
-              {Icon.check}
-              <span>
-                {result.outcome === 'compressed'
-                  ? `${fmtSize(result.before)} → ${fmtSize(result.after)} (${result.pct}% smaller). Saved to your downloads.`
-                  : result.mode === 'aggressive'
-                    ? 'This PDF is already as small as it can get without damaging it — nothing was changed.'
-                    : 'Already optimized at this level — nothing was changed. Try Smallest for image-heavy files.'}
-              </span>
-            </div>
-          )}
           {error && (
-            <div className="acx-err" role="alert">
-              {Icon.alert}
-              <span>{error}</span>
-            </div>
+            <Notice key={error.id} tone="error" shake>
+              <NoticeList items={error.messages} />
+            </Notice>
           )}
 
-          {phase === 'idle' && creditState.snapshot?.prices['compress-pdf']?.enabled !== false && <div className="acx-credit-cost"><CreditCost toolId="compress-pdf" creditState={creditState} /></div>}
-          <button
-            type="button"
-            className={`acx-btn${done && result.outcome === 'compressed' ? ' success' : ''}`}
-            onClick={done ? downloadResult : run}
-            disabled={!file || phase === 'running'}
-          >
-            {phase === 'running' ? (
-              <>{Icon.spinner}Processing…</>
-            ) : done ? (
-              <>{Icon.download}{result.outcome === 'compressed' ? 'Download Result' : 'Download Copy'}</>
-            ) : (
-              <>{Icon.bolt}Initialize Compression</>
-            )}
-          </button>
+          <OptionGroup
+            label="Mode"
+            options={MODES}
+            value={mode}
+            onChange={selectMode}
+            disabled={running}
+          />
 
-          {(file || result) && phase !== 'running' && (
-            <button type="button" className="acx-clear" onClick={clearAll}>Clear bench</button>
+          {finished ? (
+            <Receipt
+              tone={result.smaller ? 'success' : 'warning'}
+              title={result.smaller ? `Compressed — ${savingLabel(result)}` : 'Already optimized — nothing to gain'}
+              fileName={result.name}
+              facts={[
+                result.smaller
+                  ? { tone: 'success', text: `${formatBytes(result.before)} → ${formatBytes(result.after)}` }
+                  : {
+                      tone: 'warning',
+                      text: result.mode.level === 'aggressive'
+                        ? `${formatBytes(result.before)} — already as small as it can get without damaging it. Your original was returned unchanged.`
+                        : `${formatBytes(result.before)} — already optimized at this level. Your original was returned unchanged; try Smallest for image-heavy files.`,
+                    },
+                ...(result.smaller ? [result.mode.receipt] : []),
+                ...(result.smaller && result.mode.level !== 'light' && !result.imagesRewritten
+                  ? [{ tone: 'info' as const, text: 'No image needed resampling — the saving is structural.' }]
+                  : []),
+                ENGINE_KEEPS,
+              ]}
+              actions={
+                <>
+                  <ActionButton variant={result.smaller ? 'primary' : 'quiet'} icon={<DownloadIcon />} onClick={download}>
+                    {result.smaller ? 'Download' : 'Download anyway'}
+                  </ActionButton>
+                  <ActionButton variant="quiet" onClick={clearAll}>Compress another PDF</ActionButton>
+                </>
+              }
+            />
+          ) : running ? (
+            <HonestProgress
+              uploadPercent={progress}
+              startedAt={startedAt}
+              processingLabel="Compressing on the server"
+              onCancel={cancelRun}
+            />
+          ) : (
+            <div className="acx-run">
+              {creditState.snapshot?.prices['compress-pdf']?.enabled !== false && (
+                <div className="acx-credit-cost"><CreditCost toolId="compress-pdf" creditState={creditState} /></div>
+              )}
+              {/* Only once a document is on the scale: before that, "Choose a
+                  PDF" is the screen's one primary action (roadmap §3.3, Calm). */}
+              {file && <ActionButton className="acx-btn" block arrow onClick={run}>Compress PDF</ActionButton>}
+            </div>
           )}
         </section>
       </div>
     </div>
   )
+}
+
+/**
+ * The signature count: once the real after-size exists, the figure runs from
+ * the original down to it (600ms, ease-out). Before that it returns null —
+ * there is nothing true to animate toward. Reduced motion jumps to the end.
+ */
+function useCountDown(from: number | null, to: number | null): number | null {
+  const [value, setValue] = useState<number | null>(null)
+  useEffect(() => {
+    if (from === null || to === null) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const frame = requestAnimationFrame(() => setValue(to))
+      return () => cancelAnimationFrame(frame)
+    }
+    const start = performance.now()
+    let frame = requestAnimationFrame(function tick(now) {
+      const t = Math.min(1, (now - start) / COUNT_MS)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setValue(Math.round(from + (to - from) * eased))
+      if (t < 1) frame = requestAnimationFrame(tick)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [from, to])
+  return from === null || to === null ? null : value ?? from
 }

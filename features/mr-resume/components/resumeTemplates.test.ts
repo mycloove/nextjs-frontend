@@ -2,9 +2,11 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { bengaliTypefaces } from './resumeFonts.ts'
 import { resumeTemplates, templateSectionTitle, type ResumeTemplate } from './resumeTemplates.ts'
+import { resumeLayoutIds } from './resumeLayouts.ts'
 
 const catalog = new Set(['profile', 'summary', 'experience', 'education', 'skills', 'projects', 'languages', 'awards', 'publications', 'volunteer', 'personal', 'motivation', 'references'])
-const fonts = new Set<string>(['Noto Sans Bengali', 'Latin Modern', ...bengaliTypefaces.map((font) => font.name)])
+// Inter is the app's loaded UI face (next/font); the rest are this module's own files.
+const fonts = new Set<string>(['Inter', 'Noto Sans Bengali', 'Latin Modern', ...bengaliTypefaces.map((font) => font.name)])
 const expected: Record<string, { purpose: ResumeTemplate['purpose']; sections: string[] }> = {
   'job-resume': { purpose: 'Resume', sections: ['summary', 'experience', 'skills'] },
   'government-biodata': { purpose: 'Biodata', sections: ['education', 'personal'] },
@@ -15,14 +17,38 @@ const expected: Record<string, { purpose: ResumeTemplate['purpose']; sections: s
   'personal-biodata': { purpose: 'Biodata', sections: ['personal', 'languages'] },
   'admission-sop': { purpose: 'Statement of purpose', sections: ['education', 'motivation'] },
   'latex-classic': { purpose: 'Resume', sections: ['experience', 'skills', 'projects', 'publications', 'references'] },
+  'corporate-en': { purpose: 'Resume', sections: ['summary', 'experience', 'skills'] },
+  'corporate-sidebar': { purpose: 'Resume', sections: ['experience', 'skills', 'languages'] },
+  'bank-officer': { purpose: 'Resume', sections: ['education', 'experience', 'personal'] },
+  'bcs-biodata-en': { purpose: 'Biodata', sections: ['personal', 'education'] },
+  'fresher-en': { purpose: 'Resume', sections: ['education', 'projects', 'volunteer'] },
+  'software-engineer': { purpose: 'Resume', sections: ['skills', 'experience', 'projects'] },
+  'school-teacher-en': { purpose: 'Academic CV', sections: ['experience', 'education', 'references'] },
+  'creative-portfolio': { purpose: 'Resume', sections: ['projects', 'experience'] },
+  'marketing-sales': { purpose: 'Resume', sections: ['experience', 'skills'] },
+  'executive-leader': { purpose: 'Resume', sections: ['summary', 'experience'] },
+  'ngo-development': { purpose: 'Resume', sections: ['experience', 'projects', 'languages'] },
+  'healthcare-cv': { purpose: 'Resume', sections: ['experience', 'education', 'awards'] },
+  'cover-letter-en': { purpose: 'Cover letter', sections: ['motivation'] },
 }
 
-test('registry contains the nine distinct usable templates and no extra purposes', () => {
-  assert.equal(resumeTemplates.length, 9)
-  assert.equal(new Set(resumeTemplates.map((template) => template.id)).size, 9)
-  assert.equal(new Set(resumeTemplates.map((template) => template.name)).size, 9)
+test('registry contains the twenty-two distinct usable templates, each with a real layout', () => {
+  assert.equal(resumeTemplates.length, 22)
+  assert.equal(new Set(resumeTemplates.map((template) => template.id)).size, 22)
+  assert.equal(new Set(resumeTemplates.map((template) => template.name)).size, 22)
   assert.deepEqual(resumeTemplates.map((template) => template.id).sort(), Object.keys(expected).sort())
-  assert.ok(new Set(resumeTemplates.map((template) => JSON.stringify(template.content))).size === 9)
+  assert.ok(new Set(resumeTemplates.map((template) => JSON.stringify(template.content))).size === 22)
+  for (const template of resumeTemplates) assert.ok(resumeLayoutIds.includes(template.layout), `${template.id}: unknown layout`)
+  // The original nine keep their ids: stored drafts reference them.
+  for (const id of ['job-resume', 'government-biodata', 'teacher-cv', 'engineering-cv', 'fresh-graduate', 'academic-research-cv', 'personal-biodata', 'admission-sop', 'latex-classic']) assert.ok(resumeTemplates.some((template) => template.id === id), id)
+})
+
+test('template typographic settings stay inside the editor bounds', () => {
+  const bounds = { fontSize: [10, 13], leading: [1.25, 1.9], sectionGap: [12, 32], margin: [12, 26] } as const
+  for (const template of resumeTemplates) {
+    const settings = (template as { settings?: Partial<Record<keyof typeof bounds, number>> }).settings ?? {}
+    for (const [key, value] of Object.entries(settings) as [keyof typeof bounds, number][]) assert.ok(value >= bounds[key][0] && value <= bounds[key][1], `${template.id}.${key}`)
+  }
 })
 
 for (const template of resumeTemplates) {

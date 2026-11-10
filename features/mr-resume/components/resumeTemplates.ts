@@ -1,8 +1,10 @@
+import type { ResumeLayoutId } from './resumeLayouts.ts'
+
 export type ResumeTemplate = {
   id: string
   name: string
   detail: string
-  purpose: 'Resume' | 'Academic CV' | 'Biodata' | 'Statement of purpose'
+  purpose: 'Resume' | 'Academic CV' | 'Biodata' | 'Statement of purpose' | 'Cover letter'
   font: string
   enabled: readonly string[]
   fullName: string
@@ -16,6 +18,11 @@ export type ResumeTemplate = {
   accentColor?: string
   /** Thin rule beneath every section heading, as the LaTeX-look template sets. */
   rulesUnderHeadings?: boolean
+  /** The page arrangement this template is designed for (resumeLayouts.ts). */
+  layout: ResumeLayoutId
+  profileAlign?: 'left' | 'center' | 'right'
+  /** Typographic settings the layout needs; undefined keeps the shared defaults. */
+  settings?: { fontSize?: number; leading?: number; sectionGap?: number; margin?: number }
 }
 
 const fullName = '[\u0986\u09aa\u09a8\u09be\u09b0 \u09aa\u09c2\u09b0\u09cd\u09a3 \u09a8\u09be\u09ae]'
@@ -43,7 +50,7 @@ const awards = '[\u09aa\u09c1\u09b0\u09b8\u09cd\u0995\u09be\u09b0 \u09ac\u09be \
 const baseTemplates = [
   {
     id: 'job-resume', name: 'Job Resume', detail: 'Relevant work, skills and evidence for a specific job.',
-    purpose: 'Resume', font: 'Hind Siliguri', fullName,
+    purpose: 'Resume', font: 'Hind Siliguri', fullName, layout: 'classic',
     enabled: ['profile', 'summary', 'experience', 'education', 'skills', 'projects', 'languages', 'references'],
     content: {
       profile, education, experience, skills, languages, references,
@@ -53,7 +60,7 @@ const baseTemplates = [
   },
   {
     id: 'government-biodata', name: 'Government Biodata', detail: 'General outline; follow the vacancy notice, not an official form.',
-    purpose: 'Biodata', font: 'Noto Sans Bengali', fullName,
+    purpose: 'Biodata', font: 'Noto Sans Bengali', fullName, layout: 'biodata',
     enabled: ['profile', 'education', 'experience', 'skills', 'personal'],
     content: {
       profile: `${profile}\n\u0986\u09ac\u09c7\u09a6\u09a8\u09c7\u09b0 \u09aa\u09a6: [\u09aa\u09a6\u09c7\u09b0 \u09a8\u09be\u09ae]`,
@@ -63,7 +70,7 @@ const baseTemplates = [
   },
   {
     id: 'teacher-cv', name: 'Teacher CV', detail: 'Teaching practice, academic preparation and references.',
-    purpose: 'Academic CV', font: 'Noto Serif Bengali', fullName,
+    purpose: 'Academic CV', font: 'Noto Serif Bengali', fullName, layout: 'executive',
     enabled: ['profile', 'summary', 'education', 'experience', 'skills', 'awards', 'references'],
     content: {
       profile, education, awards, references,
@@ -74,7 +81,7 @@ const baseTemplates = [
   },
   {
     id: 'engineering-cv', name: 'Engineering CV', detail: 'Technical methods, project responsibilities and verifiable work.',
-    purpose: 'Resume', font: 'Anek Bangla', fullName,
+    purpose: 'Resume', font: 'Anek Bangla', fullName, layout: 'ledger',
     enabled: ['profile', 'summary', 'skills', 'projects', 'experience', 'education', 'references'],
     content: {
       profile, education, experience, references,
@@ -85,7 +92,7 @@ const baseTemplates = [
   },
   {
     id: 'fresh-graduate', name: 'Fresh Graduate', detail: 'Learning, coursework and practical work without invented experience.',
-    purpose: 'Resume', font: 'Hind Siliguri', fullName,
+    purpose: 'Resume', font: 'Hind Siliguri', fullName, layout: 'classic',
     enabled: ['profile', 'summary', 'education', 'projects', 'skills', 'volunteer', 'languages'],
     content: {
       profile, education, languages,
@@ -97,7 +104,7 @@ const baseTemplates = [
   },
   {
     id: 'academic-research-cv', name: 'Academic Research CV', detail: 'Research questions, methods and accurately labelled publication status.',
-    purpose: 'Academic CV', font: 'Noto Serif Bengali', fullName,
+    purpose: 'Academic CV', font: 'Noto Serif Bengali', fullName, layout: 'ledger',
     enabled: ['profile', 'summary', 'education', 'projects', 'publications', 'experience', 'awards', 'references'],
     content: {
       profile, education, awards, references,
@@ -109,7 +116,7 @@ const baseTemplates = [
   },
   {
     id: 'personal-biodata', name: 'Personal Biodata', detail: 'A personal introduction with only relevant, voluntarily shared details.',
-    purpose: 'Biodata', font: 'Tiro Bangla', fullName,
+    purpose: 'Biodata', font: 'Tiro Bangla', fullName, layout: 'biodata',
     enabled: ['profile', 'personal', 'education', 'skills', 'languages'],
     content: {
       profile, education, skills, languages,
@@ -118,7 +125,7 @@ const baseTemplates = [
   },
   {
     id: 'admission-sop', name: 'Admission SOP', detail: 'A writing scaffold connecting preparation, programme choice and goals.',
-    purpose: 'Statement of purpose', font: 'Noto Serif Bengali', fullName,
+    purpose: 'Statement of purpose', font: 'Noto Serif Bengali', fullName, layout: 'classic',
     enabled: ['profile', 'education', 'motivation', 'projects'],
     content: {
       profile, education,
@@ -202,12 +209,205 @@ const latexTitles = {
   references: 'References',
 } as const
 
+// English scaffolds for the professional gallery. Same honesty rule as above:
+// every bracket names what to write; nothing reads as a fact about anyone.
+const enProfile = [
+  '[Your professional title] | [City, country]',
+  '[Email address](mailto:you@yourmail.test)',
+  '[Phone number](tel:+8801XXXXXXXXX)',
+  '[LinkedIn profile](https://www.linkedin.test/in/your-handle)',
+].join('\n')
+const enPortfolioProfile = [
+  '[Your professional title] | [City, country]',
+  '[Email address](mailto:you@yourmail.test)',
+  '[Portfolio link](https://portfolio.test/your-handle)',
+  '[Phone number](tel:+8801XXXXXXXXX)',
+].join('\n')
+const enTechProfile = [
+  '[Your professional title] | [City, country]',
+  '[Email address](mailto:you@yourmail.test)',
+  '[GitHub profile](https://github.test/your-handle)',
+  '[LinkedIn profile](https://www.linkedin.test/in/your-handle)',
+].join('\n')
+const enExperience = [
+  '**[Job title]** [Employer name] | [Start month year – Present]',
+  '- [Main responsibility, in one line]',
+  '- [Verifiable result with a number, if you have one]',
+  '',
+  '**[Previous job title]** [Employer name] | [Start – End]',
+  '- [Responsibility or achievement]',
+].join('\n')
+const enEducation = [
+  '**[Degree name]** [Institution name] | [Graduation year]',
+  'Result: [CGPA or division, if you choose to share it]',
+].join('\n')
+const enSkills = [
+  '- [Skill area]: [tools or methods you actually use]',
+  '- [Second skill area]: [tools or methods]',
+].join('\n')
+const enLanguages = '[Language]: [Proficiency level]\n[Second language]: [Proficiency level]'
+const enReferences = '**[Reference name]** [Position, organisation] | [Contact, with permission]\n[How they know your work]'
+const enCertifications = '**[Certificate or training name]** [Issuing body] | [Year]\n- [What it qualifies you to do, if relevant]'
+const enSummary = '[Two sentences: who you are professionally and the value you bring]\nFocus: [The role or field you are applying for]'
+
+const englishTemplates = [
+  {
+    id: 'corporate-en', name: 'Corporate Resume', detail: 'Ruled single column for private-sector and corporate applications.',
+    purpose: 'Resume', font: 'Latin Modern', language: 'English', fullName: '[Your full name]', layout: 'ledger', accentColor: '#2f4a6d',
+    enabled: ['profile', 'summary', 'experience', 'education', 'skills', 'awards', 'references'],
+    content: { profile: enProfile, summary: enSummary, experience: enExperience, education: enEducation, skills: enSkills, awards: enCertifications, references: enReferences },
+    titles: { awards: 'Certifications' },
+  },
+  {
+    id: 'corporate-sidebar', name: 'Corporate Sidebar', detail: 'Main work history beside a tinted rail for skills and languages.',
+    purpose: 'Resume', font: 'Inter', language: 'English', fullName: '[Your full name]', layout: 'sidebar', accentColor: '#456f77',
+    enabled: ['profile', 'summary', 'experience', 'education', 'skills', 'languages', 'references'],
+    content: { profile: enProfile, summary: enSummary, experience: enExperience, education: enEducation, skills: enSkills, languages: enLanguages, references: enReferences },
+  },
+  {
+    id: 'bank-officer', name: 'Bank Officer CV', detail: 'Formal two-page CV for bank and financial-institution vacancies.',
+    purpose: 'Resume', font: 'Latin Modern', language: 'English', fullName: '[Your full name]', layout: 'classic', accentColor: '#405444',
+    enabled: ['profile', 'summary', 'education', 'experience', 'skills', 'awards', 'languages', 'personal', 'references'],
+    content: {
+      profile: enProfile, summary: enSummary, experience: enExperience, skills: enSkills, languages: enLanguages, references: enReferences,
+      education: '**[SSC / O level]** [Board or school] | [Year]\nResult: [GPA]\n\n**[HSC / A level]** [Board or college] | [Year]\nResult: [GPA]\n\n**[Bachelor degree]** [University] | [Year]\nResult: [CGPA]',
+      awards: '**[Banking diploma or certificate]** [Institute] | [Year]\n- [Relevant training, if any]',
+      personal: 'Include only what the vacancy notice asks for.\n[Requested personal detail]: [Value]',
+    },
+    titles: { awards: 'Professional qualifications', personal: 'Personal information' },
+  },
+  {
+    id: 'bcs-biodata-en', name: 'BCS and Government Biodata', detail: 'English biodata outline; the vacancy notice and official forms take priority.',
+    purpose: 'Biodata', font: 'Latin Modern', language: 'English', fullName: '[Your full name]', layout: 'biodata', accentColor: '#405444',
+    enabled: ['profile', 'personal', 'education', 'experience', 'skills', 'languages', 'references'],
+    content: {
+      profile: 'Applied post: [Post name and circular reference]\n[Email address](mailto:you@yourmail.test)\n[Phone number](tel:+8801XXXXXXXXX)',
+      personal: 'Add only the fields the circular requires.\n[Field named in the circular]: [Value as on your certificates]\n[Present or permanent address, if requested]: [Address]',
+      education: '**[Examination]** [Board or university] | [Passing year]\nResult: [Division, GPA or CGPA]\n\n**[Next examination]** [Board or university] | [Passing year]\nResult: [Result]',
+      experience: '**[Post held, if any]** [Office or organisation] | [Period]\n- [Duty related to the applied post]',
+      skills: '- Computer: [Applications you can use]\n- [Other relevant skill]: [Level]',
+      languages: enLanguages, references: enReferences,
+    },
+    titles: { personal: 'Personal information', education: 'Educational qualifications', experience: 'Experience' },
+  },
+  {
+    id: 'fresher-en', name: 'Fresh Graduate Resume', detail: 'Coursework, projects and activities first, without invented experience.',
+    purpose: 'Resume', font: 'Inter', language: 'English', fullName: '[Your full name]', layout: 'compact', accentColor: '#567a61',
+    settings: { fontSize: 10.5, leading: 1.4, sectionGap: 16, margin: 16 },
+    enabled: ['profile', 'summary', 'education', 'projects', 'skills', 'volunteer', 'languages'],
+    content: {
+      profile: enProfile, skills: enSkills, languages: enLanguages,
+      summary: '[One sentence: your degree and the role you are seeking]\nStrengths: [Two strengths you can show evidence for]',
+      education: '**[Degree name]** [Institution name] | [Graduation year]\nRelevant courses: [Course], [Course], [Course]\nResult: [CGPA, if you choose to share it]',
+      projects: '**[Project or thesis title]** [Course or supervisor] | [Year]\n- [What you built or studied, and your part]\n- [Result or what you learned]',
+      volunteer: '**[Club, society or internship role]** [Organisation] | [Period]\n- [What you did]',
+    },
+    titles: { volunteer: 'Activities and internships' },
+  },
+  {
+    id: 'software-engineer', name: 'Software Engineer', detail: 'Dense one-page engineering resume with projects and linked work.',
+    purpose: 'Resume', font: 'Inter', language: 'English', fullName: '[Your full name]', layout: 'compact', accentColor: '#456f77',
+    settings: { fontSize: 10.5, leading: 1.4, sectionGap: 16, margin: 15 },
+    enabled: ['profile', 'skills', 'experience', 'projects', 'education'],
+    content: {
+      profile: enTechProfile, experience: enExperience, education: enEducation,
+      skills: '- Languages: [Programming languages you use]\n- Frameworks and tools: [Frameworks, databases, cloud]\n- Practices: [Testing, CI, code review, and so on]',
+      projects: '**[Project name]** [Repository or live link](https://gitprobe.test/your-handle/your-project) | [Year]\n- [Problem, your role and the stack]\n- [Measured result, if any]',
+    },
+    titles: { skills: 'Technical skills' },
+  },
+  {
+    id: 'school-teacher-en', name: 'School Teacher CV', detail: 'Teaching subjects, classroom practice, training and referees.',
+    purpose: 'Academic CV', font: 'Latin Modern', language: 'English', fullName: '[Your full name]', layout: 'executive', accentColor: '#765a48',
+    enabled: ['profile', 'summary', 'experience', 'education', 'awards', 'skills', 'references'],
+    content: {
+      profile: enProfile, education: enEducation, references: enReferences,
+      summary: '[Subjects and levels you teach]\nApproach: [How you teach and assess]',
+      experience: '**[Teaching post]** [School or college] | [Period]\n- [Classes and subjects taught]\n- [A responsibility beyond teaching, if any]',
+      awards: '**[Teacher training, e.g. B.Ed]** [Institute] | [Year]\n- [Other workshop or certificate]',
+      skills: '- Classroom: [Methods, lesson planning, assessment]\n- Digital: [Tools you use for teaching]',
+    },
+    titles: { awards: 'Training and certification' },
+  },
+  {
+    id: 'creative-portfolio', name: 'Creative Portfolio', detail: 'A colour band header for designers, writers and media roles.',
+    purpose: 'Resume', font: 'Inter', language: 'English', fullName: '[Your full name]', layout: 'banner', accentColor: '#6753b5',
+    enabled: ['profile', 'summary', 'projects', 'experience', 'skills', 'education'],
+    content: {
+      profile: enPortfolioProfile, summary: enSummary, experience: enExperience, skills: enSkills, education: enEducation,
+      projects: '**[Selected work title]** [Link to the piece](https://portfolio.test/your-handle/work) | [Year]\n- [Brief, your role and the outcome]\n\n**[Second piece]** [Client or publication] | [Year]\n- [What made it work]',
+    },
+    titles: { projects: 'Selected work' },
+  },
+  {
+    id: 'marketing-sales', name: 'Marketing and Sales', detail: 'Two columns: results on the left, skills and education on the right.',
+    purpose: 'Resume', font: 'Inter', language: 'English', fullName: '[Your full name]', layout: 'twocol', accentColor: '#765a48',
+    enabled: ['profile', 'summary', 'experience', 'projects', 'education', 'skills', 'languages'],
+    content: {
+      profile: enProfile, summary: enSummary, education: enEducation, skills: enSkills, languages: enLanguages,
+      experience: '**[Marketing or sales role]** [Company] | [Period]\n- [Target or campaign you owned]\n- [Result: revenue, leads or growth, if you can verify it]',
+      projects: '**[Campaign name]** [Channel or market] | [Year]\n- [Goal, your part and what changed]',
+    },
+    titles: { projects: 'Campaigns' },
+  },
+  {
+    id: 'executive-leader', name: 'Executive Leader', detail: 'Two-page leadership CV with a framed executive summary.',
+    purpose: 'Resume', font: 'Latin Modern', language: 'English', fullName: '[Your full name]', layout: 'executive', accentColor: '#2f3b52',
+    settings: { margin: 22 },
+    enabled: ['profile', 'summary', 'experience', 'awards', 'education', 'skills'],
+    content: {
+      profile: enProfile, education: enEducation, skills: enSkills,
+      summary: '[Three sentences on the scale you lead: teams, budgets, markets]\nKey outcomes: [Two verifiable outcomes]',
+      experience: '**[Executive title]** [Organisation] | [Period]\n- [Scope: people, budget or regions]\n- [Strategic outcome you can evidence]\n\n**[Earlier leadership title]** [Organisation] | [Period]\n- [Turnaround, launch or growth you led]',
+      awards: '**[Board seat, award or recognition]** [Body] | [Year]\n- [Why it matters to this role]',
+    },
+    titles: { summary: 'Executive summary', awards: 'Board roles and recognition', skills: 'Leadership strengths' },
+  },
+  {
+    id: 'ngo-development', name: 'NGO and Development', detail: 'Programme, field and donor-reporting experience for development roles.',
+    purpose: 'Resume', font: 'Inter', language: 'English', fullName: '[Your full name]', layout: 'ledger', accentColor: '#567a61',
+    enabled: ['profile', 'summary', 'experience', 'projects', 'education', 'skills', 'languages', 'references'],
+    content: {
+      profile: enProfile, summary: enSummary, education: enEducation, languages: enLanguages, references: enReferences,
+      experience: '**[Programme role]** [Organisation] | [Period]\n- [Programme, area and people reached]\n- [Reporting or donor responsibility]',
+      projects: '**[Project name]** [Donor or partner] | [Period]\n- [Your role in design, monitoring or evaluation]',
+      skills: '- Programme: [MEAL, field coordination, reporting]\n- Tools: [Survey or data tools you use]',
+    },
+    titles: { projects: 'Programmes and projects' },
+  },
+  {
+    id: 'healthcare-cv', name: 'Healthcare CV', detail: 'Registration, clinical placements and training for doctors and nurses.',
+    purpose: 'Resume', font: 'Latin Modern', language: 'English', fullName: '[Your full name]', layout: 'classic', accentColor: '#456f77',
+    enabled: ['profile', 'summary', 'experience', 'education', 'awards', 'skills', 'references'],
+    content: {
+      profile: '[Your clinical title] | [City, country]\nRegistration: [Council and registration number]\n[Email address](mailto:you@yourmail.test)\n[Phone number](tel:+8801XXXXXXXXX)',
+      summary: enSummary, education: enEducation, references: enReferences,
+      experience: '**[Clinical post]** [Hospital or clinic] | [Period]\n- [Department and responsibilities]\n- [Procedures or duties you are competent in]',
+      awards: '**[Licence, training or course]** [Issuing body] | [Year]\n- [Validity or scope, if relevant]',
+      skills: '- Clinical: [Areas of competence]\n- Systems: [Records or equipment you use]',
+    },
+    titles: { experience: 'Clinical experience', awards: 'Licences and training' },
+  },
+  {
+    id: 'cover-letter-en', name: 'Cover Letter', detail: 'A one-page letter that pairs with any English resume template.',
+    purpose: 'Cover letter', font: 'Latin Modern', language: 'English', fullName: '[Your full name]', layout: 'classic', accentColor: '#2f4a6d',
+    enabled: ['profile', 'summary', 'motivation'],
+    content: {
+      profile: '[Email address](mailto:you@yourmail.test)\n[Phone number](tel:+8801XXXXXXXXX)\n[City, country]',
+      summary: '[Date]\n[Hiring manager name]\n[Organisation name]\n[Organisation address]',
+      motivation: 'Dear [Hiring manager name],\n\n[Opening: the role you are applying for and why this organisation]\n\n[Middle: one or two examples of work that match the role]\n\n[Close: what you would bring and a request for an interview]\n\nSincerely,\n[Your full name]',
+    },
+    titles: { summary: 'Recipient', motivation: 'Letter' },
+  },
+] as const satisfies readonly ResumeTemplate[]
+
 export const resumeTemplates = [
   ...baseTemplates,
+  ...englishTemplates,
   {
     id: 'latex-classic', name: 'LaTeX Classic', detail: 'A TeX-set resume: Latin Modern type, thin heading rules and edge-aligned entry dates.',
     purpose: 'Resume', font: 'Latin Modern', language: 'English', fullName: '[Your full name]',
-    accentColor: '#3159a8', rulesUnderHeadings: true, titles: latexTitles,
+    accentColor: '#3159a8', rulesUnderHeadings: true, titles: latexTitles, layout: 'ledger',
     enabled: ['profile', 'summary', 'experience', 'skills', 'projects', 'education', 'volunteer', 'awards', 'publications', 'references'],
     content: {
       profile: latexProfile,

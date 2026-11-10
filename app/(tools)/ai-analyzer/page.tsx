@@ -10,4 +10,4 @@ export const metadata = toolMetadata('ai-analyzer')
    component carries its own bespoke "The Reader" masthead instead, so the page
    body is the instrument alone. Same additive discipline as rotate-pdf: only
    this page passes hideHeading, so every other tool's DOM is unchanged. */
-export default function Page() { return <ToolWorkspace toolId="ai-analyzer" hideHeading /> }
+export default function Page() { return <ToolWorkspace toolId="ai-analyzer" hideHeading headingOwnedByTool /> }

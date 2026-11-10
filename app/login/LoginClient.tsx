@@ -493,7 +493,8 @@ export default function LoginClient({
       <Topbar2 openFileHref="/" />
 
       {/* Target of the bar's skip link; topbar.css keyed off .home-page. */}
-      <main className="auth-main" id="main-content" tabIndex={-1}>
+      {/* The root layout owns the main landmark; this is the skip-link target. */}
+      <div className="auth-main" id="main-content" tabIndex={-1}>
         <div className="auth-bg" aria-hidden="true">
           <span className="home-hero-orb orb-1" />
           <span className="home-hero-orb orb-2" />
@@ -733,7 +734,7 @@ export default function LoginClient({
             </p>
           </div>
         </section>
-      </main>
+      </div>
 
       <HomeFooter />
     </div>

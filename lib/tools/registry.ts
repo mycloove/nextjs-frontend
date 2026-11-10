@@ -18,6 +18,27 @@ export type ToolId =
   | 'rotate-pdf'
   | 'compress-pdf'
 
+/* Upload ceilings a tool's UI states up front and checks at drop time
+   (roadmap §6.1). They mirror the route's env-backed *defaults*; the route
+   stays the authority and still refuses anything over its live limit. */
+export type ToolLimits = {
+  maxFileBytes: number
+  /** Files per job. 1 = single-document tool. */
+  maxFiles: number
+  minFiles?: number
+  maxTotalBytes?: number
+}
+
+/* A file type a tool takes or returns: MIME plus the extensions people
+   actually see. Used for intake validation now and for tool-chain handoff
+   (roadmap §6.5) later. */
+export type ToolFileType = {
+  mime: string
+  extensions: readonly string[]
+  /** Short human name, e.g. "PDF" — used in intake copy. */
+  label: string
+}
+
 export type ToolDefinition = {
   id: ToolId
   href: `/${string}`
@@ -27,7 +48,21 @@ export type ToolDefinition = {
   apiEndpoint: string
   icon: string
   badge?: string
+  /* Optional until each tool migrates onto the shared intake (Phase 2/3).
+     Only fill these from a verified route limit, never from a guess. */
+  accepts?: readonly ToolFileType[]
+  produces?: readonly ToolFileType[]
+  limits?: ToolLimits
 }
+
+const PDF: ToolFileType = { mime: 'application/pdf', extensions: ['.pdf'], label: 'PDF' }
+const ZIP: ToolFileType = { mime: 'application/zip', extensions: ['.zip'], label: 'ZIP' }
+
+/* app/api/_shared/pdfOpsRoute.ts defaults (PDF_TOOLS_MAX_FILE_BYTES,
+   PDF_TOOLS_MAX_TOTAL_BYTES, PDF_TOOLS_MAX_FILES). */
+const PDF_OPS_FILE_BYTES = 50 * 1024 * 1024
+const PDF_OPS_TOTAL_BYTES = 150 * 1024 * 1024
+const PDF_OPS_SINGLE: ToolLimits = { maxFileBytes: PDF_OPS_FILE_BYTES, maxFiles: 1, maxTotalBytes: PDF_OPS_TOTAL_BYTES }
 
 export const tools: readonly ToolDefinition[] = [
   { id: 'image-to-pdf', href: '/image-to-pdf', label: 'Images to PDF', description: 'Combine images into one PDF document.', group: 'Convert', apiEndpoint: '/api/images-to-pdf', icon: '🖼️' },
@@ -41,10 +76,10 @@ export const tools: readonly ToolDefinition[] = [
   { id: 'batch-process', href: '/batch-process', label: 'Batch Process', description: 'Process multiple files in one workflow.', group: 'Advanced', apiEndpoint: '/api/batch-process', icon: '⚡', badge: 'Bulk mode' },
   { id: 'fasta-tools', href: '/fasta-tools', label: 'FASTA Tools', description: 'Analyze, transform, and export FASTA sequences.', group: 'Advanced', apiEndpoint: '/api/seq-tools', icon: '🧬' },
   { id: 'bijoy-converter', href: '/bijoy-converter', label: 'Bijoy to Unicode', description: 'Convert legacy Bijoy-encoded Bangla text to clean Unicode.', group: 'Extract', apiEndpoint: '/api/bijoy-convert', icon: '🔤', badge: 'Bangla' },
-  { id: 'merge-pdf', href: '/merge-pdf', label: 'Merge PDF', description: 'Combine multiple PDFs into one document, in your order.', group: 'Convert', apiEndpoint: '/api/merge-pdf', icon: '🔗' },
-  { id: 'split-pdf', href: '/split-pdf', label: 'Split PDF', description: 'Cut one PDF into parts by page ranges.', group: 'Convert', apiEndpoint: '/api/split-pdf', icon: '✂️' },
-  { id: 'rotate-pdf', href: '/rotate-pdf', label: 'Rotate PDF', description: 'Turn pages by a quarter-turn, all or a range.', group: 'Convert', apiEndpoint: '/api/rotate-pdf', icon: '🔄' },
-  { id: 'compress-pdf', href: '/compress-pdf', label: 'Compress PDF', description: 'Shrink a PDF by resampling heavy images — text, links and forms kept.', group: 'Convert', apiEndpoint: '/api/compress-pdf', icon: '🗜️' },
+  { id: 'merge-pdf', href: '/merge-pdf', label: 'Merge PDF', description: 'Combine multiple PDFs into one document, in your order.', group: 'Convert', apiEndpoint: '/api/merge-pdf', icon: '🔗', accepts: [PDF], produces: [PDF], limits: { maxFileBytes: PDF_OPS_FILE_BYTES, minFiles: 2, maxFiles: 20, maxTotalBytes: PDF_OPS_TOTAL_BYTES } },
+  { id: 'split-pdf', href: '/split-pdf', label: 'Split PDF', description: 'Cut one PDF into parts by page ranges.', group: 'Convert', apiEndpoint: '/api/split-pdf', icon: '✂️', accepts: [PDF], produces: [PDF, ZIP], limits: PDF_OPS_SINGLE },
+  { id: 'rotate-pdf', href: '/rotate-pdf', label: 'Rotate PDF', description: 'Turn pages by a quarter-turn, all or a range.', group: 'Convert', apiEndpoint: '/api/rotate-pdf', icon: '🔄', accepts: [PDF], produces: [PDF], limits: PDF_OPS_SINGLE },
+  { id: 'compress-pdf', href: '/compress-pdf', label: 'Compress PDF', description: 'Shrink a PDF by resampling heavy images — text, links and forms kept.', group: 'Convert', apiEndpoint: '/api/compress-pdf', icon: '🗜️', accepts: [PDF], produces: [PDF], limits: PDF_OPS_SINGLE },
 ] as const
 
 export const toolGroups = ['Convert', 'Extract', 'AI', 'Advanced'] as const

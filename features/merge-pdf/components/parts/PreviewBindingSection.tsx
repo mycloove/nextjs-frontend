@@ -130,8 +130,8 @@ export function PreviewBindingSection({
               value={pageSizeChoice}
               onChange={(event) => onPageSizeChange(event.target.value as PageSizeOption)}
             >
+              <option value="orig">Keep each page&apos;s original size (copied as-is)</option>
               <option value="first">Same as first page</option>
-              <option value="orig">Keep each page&apos;s original size</option>
               <option value="A4">A4 — 210 × 297 mm</option>
               <option value="A3">A3 — 297 × 420 mm</option>
               <option value="A5">A5 — 148 × 210 mm</option>

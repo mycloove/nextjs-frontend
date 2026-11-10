@@ -4,9 +4,17 @@
  * Merge PDF — an interactive merge studio.
  *
  * One job of the former 4-in-1 "PDF Tools" workbench, promoted to its own
- * focused tool with its own URL (/merge-pdf). Everything runs in the browser:
- * pages are copied with pdf-lib, never rasterised, so text stays selectable
- * and the file never leaves the device.
+ * focused tool with its own URL (/merge-pdf). Everything runs in the browser
+ * with pdf-lib, never rasterised, so text stays selectable and the file never
+ * leaves the device.
+ *
+ * The binding is done by `parts/mergeEngine.ts` (tested with real bytes): every
+ * sheet stays a real copied page, so annotations, web links and rotation come
+ * along, and links that jump to another kept page are re-pointed at it
+ * (lib/pdf/pageCopy.ts). "Keep each page's original size" is the default;
+ * choosing a target size only fits the page content with one transform, so
+ * it keeps links too. (The default used to be "Same as first page", which
+ * letterboxed mixed-size documents.)
  *
  * The page is a priority stack, top to bottom:
  *   - Input bench    — the sources rail beside the per-document page picker;
@@ -70,7 +78,7 @@ export default function MergePdfTool() {
   const [activeSourceId, setActiveSourceId] = useState<number | null>(null)
   const [tray, setTray] = useState<TrayItem[]>([])
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState<number>(0)
-  const [pageSizeChoice, setPageSizeChoice] = useState<PageSizeOption>('first')
+  const [pageSizeChoice, setPageSizeChoice] = useState<PageSizeOption>('orig')
   const [orientation, setOrientation] = useState<OrientationOption>('auto')
   const [outputName, setOutputName] = useState<string>('mycloove_merged-document')
   const [isProcessing, setIsProcessing] = useState<boolean>(false)
@@ -79,7 +87,7 @@ export default function MergePdfTool() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null)
   const [previewModal, setPreviewModal] = useState<{ sourceId: number; pageNumber: number } | null>(null)
-  const [lastMergedResult, setLastMergedResult] = useState<{ name: string; size: number; blob: Blob } | null>(null)
+  const [lastMergedResult, setLastMergedResult] = useState<{ name: string; size: number; blob: Blob; signature: string } | null>(null)
 
   const dragSourceItemRef = useRef<{ type: 'source' | 'tray'; index: number } | null>(null)
   const nextSourceIdRef = useRef<number>(1)
@@ -576,6 +584,15 @@ export default function MergePdfTool() {
   }, [tray, sources])
 
 
+  /* What a merge would produce right now. A finished result is only offered
+     while it still matches: editing the tray or the output settings after a
+     merge used to leave "Bound successfully" describing a different file. */
+  const mergeSignature = useMemo(
+    () => `${tray.map((t) => `${t.sourceId}:${t.pageNumber}`).join(',')}|${pageSizeChoice}|${orientation}|${outputName.trim()}`,
+    [tray, pageSizeChoice, orientation, outputName],
+  )
+  const currentMergedResult = lastMergedResult?.signature === mergeSignature ? lastMergedResult : null
+
   const executeMerge = useCallback(async () => {
     if (!tray.length || isProcessing) return
 
@@ -616,6 +633,7 @@ export default function MergePdfTool() {
         name: finalFileName,
         size: mergedBytes.length,
         blob: resultBlob,
+        signature: mergeSignature,
       })
 
       await downloadOutputs([{ name: finalFileName, blob: resultBlob }], cleanBaseName)
@@ -634,7 +652,7 @@ export default function MergePdfTool() {
       setIsProcessing(false)
       setProgressPercent(0)
     }
-  }, [tray, sources, isProcessing, outputName, pageSizeChoice, computeTargetDimensions])
+  }, [tray, sources, isProcessing, outputName, pageSizeChoice, computeTargetDimensions, mergeSignature])
 
   const handleLoadSamples = useCallback(async () => {
     try {
@@ -773,13 +791,13 @@ export default function MergePdfTool() {
         pageCount={tray.length}
         isProcessing={isProcessing}
         progressPercent={progressPercent}
-        lastMergedResult={lastMergedResult}
+        lastMergedResult={currentMergedResult}
         onExecuteMerge={executeMerge}
         onDownload={() => {
-          if (lastMergedResult) {
+          if (currentMergedResult) {
             downloadOutputs(
-              [{ name: lastMergedResult.name, blob: lastMergedResult.blob }],
-              lastMergedResult.name.replace(/\.pdf$/, '')
+              [{ name: currentMergedResult.name, blob: currentMergedResult.blob }],
+              currentMergedResult.name.replace(/\.pdf$/, '')
             )
           }
         }}

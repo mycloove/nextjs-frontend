@@ -17,34 +17,41 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
+  /* Ink & Paper (2026-11-06, roadmap §4.1): the neutrals moved from a violet
+     black (#0d0c11 / #17161e) to a blue-black "ink" so the chrome reads as the
+     same material as the marketing pages, and the accent moved from the coral
+     gradient to the octopus mark's own orange as one flat colour. */
+
   /* — Backgrounds — */
-  --bg-page:          #0d0c11;
-  --bg-sidebar:       #131219;
-  --bg-topbar:        rgba(13, 12, 17, 0.90);
-  --bg-card:          #17161e;
-  --bg-card-hover:    #1c1b25;
+  --bg-page:          #0e1117;
+  --bg-sidebar:       #12161d;
+  --bg-topbar:        rgba(14, 17, 23, 0.90);
+  --bg-card:          #161b23;
+  --bg-card-hover:    #1c222c;
   --bg-item:          rgba(255, 255, 255, 0.042);
   --bg-item-hover:    rgba(255, 255, 255, 0.07);
-  --bg-item-active:   rgba(255, 107, 107, 0.11);
+  --bg-item-active:   rgba(253, 121, 23, 0.12);
   --bg-badge:         rgba(255, 255, 255, 0.042);
   --bg-icon:          rgba(255, 255, 255, 0.063);
-  --bg-icon-active:   linear-gradient(135deg, #ff6b6b, #ff8e53);
+  --bg-icon-active:   #fd7917;
   --bg-hamburger:     rgba(255, 255, 255, 0.055);
   --bg-overlay:       rgba(0, 0, 0, 0.60);
 
   /* — Borders — */
-  --border-base:      rgba(255, 255, 255, 0.055);
-  --border-card:      rgba(255, 255, 255, 0.07);
+  --border-base:      rgba(200, 212, 235, 0.07);
+  --border-card:      rgba(200, 212, 235, 0.09);
   --border-item:      transparent;
-  --border-item-active: rgba(255, 107, 107, 0.22);
-  --border-badge:     rgba(255, 255, 255, 0.07);
+  --border-item-active: rgba(253, 121, 23, 0.32);
+  --border-badge:     rgba(200, 212, 235, 0.09);
   --border-hamburger: rgba(255, 255, 255, 0.08);
-  --border-tag:       rgba(255, 107, 107, 0.22);
+  --border-tag:       rgba(253, 121, 23, 0.32);
 
   /* — Text — */
-  --text-primary:     #e4e2ee;
+  --text-primary:     #eceef3;
   --text-secondary:   rgba(255, 255, 255, 0.78);
-  --text-muted:       rgba(255, 255, 255, 0.42);
+  /* 0.50, not the old 0.42: at 0.42 muted text measured ~4.0:1 on --bg-page
+     and --bg-card (WCAG AA body text needs 4.5:1); 0.50 is ~5.3:1. */
+  --text-muted:       rgba(255, 255, 255, 0.50);
   --text-faint:       rgba(255, 255, 255, 0.22);
   --text-ghost:       rgba(255, 255, 255, 0.17);
   --text-label:       rgba(255, 255, 255, 0.27);
@@ -61,19 +68,20 @@
   --brand-mark-glow:  rgba(253, 121, 23, 0.22); /* octopus mark glow — orange brand mark */
   --brand-wordmark-shadow: 0 1px 14px rgba(255, 255, 255, 0.10);
 
-  /* — Accent — */
-  --accent-start:     #ff6b6b;
-  --accent-end:       #ff8e53;
-  --accent-tag-bg:    rgba(255, 107, 107, 0.11);
-  --accent-tag-text:  #ff9080;
+  /* — Accent — one flat Ember; start/end stay as names because nine
+     components still build `linear-gradient(start, end)` from them. */
+  --accent-start:     #fd7917;
+  --accent-end:       #fd7917;
+  --accent-tag-bg:    rgba(253, 121, 23, 0.12);
+  --accent-tag-text:  #ff9c55;
 
   /* — Accent bar gradient — */
-  --card-accent-bar:  linear-gradient(90deg, #ff6b6b 0%, #ff8e53 40%, transparent 100%);
-  --nav-indicator:    linear-gradient(180deg, #ff6b6b, #ff8e53);
+  --card-accent-bar:  linear-gradient(90deg, #fd7917 0%, rgba(253, 121, 23, 0.4) 40%, transparent 100%);
+  --nav-indicator:    #fd7917;
 
-  /* — Shadows — */
-  --shadow-card:      0 8px 48px rgba(0, 0, 0, 0.38);
-  --shadow-sidebar:   24px 0 80px rgba(0, 0, 0, 0.65);
+  /* — Shadows — ink-tinted, not pure black */
+  --shadow-card:      0 8px 48px hsl(220 40% 2% / 0.45);
+  --shadow-sidebar:   24px 0 80px hsl(220 40% 2% / 0.65);
 
   /* — Icon filter — */
   --icon-filter-default: brightness(0) invert(0.62);
@@ -100,34 +108,37 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  /* — Backgrounds — */
-  --bg-page:          #f5f4f8;
+  /* — Backgrounds — a cool "paper" field, not lavender (#f5f4f8) and not
+     the cream every other document tool uses. */
+  --bg-page:          #f4f5f7;
   --bg-sidebar:       #ffffff;
-  --bg-topbar:        rgba(245, 244, 248, 0.92);
+  --bg-topbar:        rgba(244, 245, 247, 0.92);
   --bg-card:          #ffffff;
-  --bg-card-hover:    #fafaf9;
-  --bg-item:          rgba(0, 0, 0, 0.028);
-  --bg-item-hover:    rgba(0, 0, 0, 0.05);
-  --bg-item-active:   rgba(255, 107, 107, 0.08);
-  --bg-badge:         rgba(0, 0, 0, 0.038);
-  --bg-icon:          rgba(0, 0, 0, 0.055);
-  --bg-icon-active:   linear-gradient(135deg, #ff6b6b, #ff8e53);
-  --bg-hamburger:     rgba(0, 0, 0, 0.06);
-  --bg-overlay:       rgba(0, 0, 0, 0.45);
+  --bg-card-hover:    #f9fafb;
+  --bg-item:          rgba(18, 21, 28, 0.028);
+  --bg-item-hover:    rgba(18, 21, 28, 0.05);
+  --bg-item-active:   #fff1e6;
+  --bg-badge:         rgba(18, 21, 28, 0.038);
+  --bg-icon:          rgba(18, 21, 28, 0.055);
+  --bg-icon-active:   #c2500a;
+  --bg-hamburger:     rgba(18, 21, 28, 0.06);
+  --bg-overlay:       rgba(18, 21, 28, 0.45);
 
   /* — Borders — */
-  --border-base:      rgba(0, 0, 0, 0.08);
-  --border-card:      rgba(0, 0, 0, 0.08);
+  --border-base:      rgba(18, 21, 28, 0.08);
+  --border-card:      rgba(18, 21, 28, 0.09);
   --border-item:      transparent;
-  --border-item-active: rgba(255, 107, 107, 0.30);
-  --border-badge:     rgba(0, 0, 0, 0.08);
-  --border-hamburger: rgba(0, 0, 0, 0.10);
-  --border-tag:       rgba(255, 107, 107, 0.30);
+  --border-item-active: rgba(194, 80, 10, 0.32);
+  --border-badge:     rgba(18, 21, 28, 0.08);
+  --border-hamburger: rgba(18, 21, 28, 0.10);
+  --border-tag:       rgba(194, 80, 10, 0.30);
 
   /* — Text — */
-  --text-primary:     #1a1825;
-  --text-secondary:   #2e2c3a;
-  --text-muted:       rgba(0, 0, 0, 0.52);
+  --text-primary:     #12151c;
+  --text-secondary:   #2f3542;
+  /* 0.60, not the old 0.52: at 0.52 muted text measured ~4.15:1 on --bg-page
+     (WCAG AA body text needs 4.5:1); 0.60 is ~5.6:1 on the page, ~5.7:1 on cards. */
+  --text-muted:       rgba(0, 0, 0, 0.60);
   --text-faint:       rgba(0, 0, 0, 0.30);
   --text-ghost:       rgba(0, 0, 0, 0.22);
   --text-label:       rgba(0, 0, 0, 0.38);
@@ -139,24 +150,26 @@
 
   /* — Brand (same) — */
   --brand-yellow:     #e6b800;
-  --brand-red:        #e85555;
+  /* #c4302b, not #e85555: brand-red carries danger (credit shortfall,
+     errors) as 12px text, and #e85555 measured ~3.6:1 on white. */
+  --brand-red:        #c4302b;
   --brand-wordmark:   #172033;
   --brand-mark-glow:  rgba(234, 88, 12, 0.18); /* octopus mark glow — orange brand mark */
   --brand-wordmark-shadow: none;
 
-  /* — Accent — */
-  --accent-start:     #ff6b6b;
-  --accent-end:       #ff8e53;
-  --accent-tag-bg:    rgba(255, 107, 107, 0.10);
-  --accent-tag-text:  #d94f30;
+  /* — Accent — Ember, darkened for paper so white text on it reads ~4.9:1 */
+  --accent-start:     #c2500a;
+  --accent-end:       #c2500a;
+  --accent-tag-bg:    #fff1e6;
+  --accent-tag-text:  #a8460a;
 
-  /* — Accent bar / indicator (same) — */
-  --card-accent-bar:  linear-gradient(90deg, #ff6b6b 0%, #ff8e53 40%, transparent 100%);
-  --nav-indicator:    linear-gradient(180deg, #ff6b6b, #ff8e53);
+  /* — Accent bar / indicator — */
+  --card-accent-bar:  linear-gradient(90deg, #c2500a 0%, rgba(194, 80, 10, 0.4) 40%, transparent 100%);
+  --nav-indicator:    #c2500a;
 
-  /* — Shadows — */
-  --shadow-card:      0 4px 32px rgba(0, 0, 0, 0.10);
-  --shadow-sidebar:   24px 0 60px rgba(0, 0, 0, 0.12);
+  /* — Shadows — ink-tinted */
+  --shadow-card:      0 4px 32px hsl(220 30% 20% / 0.10);
+  --shadow-sidebar:   24px 0 60px hsl(220 30% 20% / 0.12);
 
   /* — Icon filter — */
   --icon-filter-default: brightness(0) invert(0.38);
@@ -178,6 +191,90 @@
 
 
 /* ══════════════════════════════════════════════
+   FOUNDATION — the "Ink & Paper" system (Phase 1, 2026-11-06)
+   docs/ui-ux-premium-roadmap-bn.md §4. Every token is `--mc-` prefixed:
+   `--accent`, `--paper`, `--r-*`, `--ease-*` and `--dur-*` already exist
+   inside other modules, so an unprefixed :root token could leak into a
+   module that reads one of those names without defining it. The prefix
+   keeps this layer strictly additive until a surface opts in.
+══════════════════════════════════════════════ */
+:root {
+  /* — Spacing: 4px grid — */
+  --mc-space-1: 4px;   --mc-space-2: 8px;   --mc-space-3: 12px;  --mc-space-4: 16px;
+  --mc-space-5: 20px;  --mc-space-6: 24px;  --mc-space-8: 32px;  --mc-space-10: 40px;
+  --mc-space-12: 48px; --mc-space-16: 64px; --mc-space-20: 80px; --mc-space-24: 96px;
+
+  /* — Radius ladder; paper (document pages) is nearly square on purpose — */
+  --mc-r-paper: 2px;
+  --mc-r-xs: 6px;  --mc-r-sm: 10px; --mc-r-md: 14px;
+  --mc-r-lg: 20px; --mc-r-xl: 28px; --mc-r-full: 999px;
+
+  /* — Type scale (fixed roles; 12px is the floor) — */
+  --mc-fs-display: clamp(40px, 5vw, 64px);
+  --mc-fs-h1: 32px;  --mc-fs-h2: 24px;    --mc-fs-h3: 18px;
+  --mc-fs-body: 15px; --mc-fs-ui: 14px;   --mc-fs-small: 13px; --mc-fs-label: 12px;
+  --mc-lh-tight: 1.05; --mc-lh-heading: 1.25; --mc-lh-body: 1.6;
+  /* Bangla needs room for matras and conjuncts above and below the line. */
+  --mc-lh-bn: 1.75;
+
+  /* — Motion: the house curves and durations — */
+  --mc-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --mc-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --mc-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --mc-dur-instant: 80ms; --mc-dur-fast: 120ms; --mc-dur-base: 200ms; --mc-dur-slow: 360ms;
+}
+
+/* Colour roles — Ink (dark). Contrast ratios are hand-calculated with the
+   WCAG formula against --bg-page / --bg-card; see the roadmap §4.1 table. */
+:root,
+[data-theme="dark"] {
+  --mc-accent:         #fd7917;               /* the octopus mark's own orange */
+  --mc-accent-hover:   #ff8d38;
+  --mc-on-accent:      #1a0f06;               /* ink on ember ≈ 7:1; white would be ≈ 3:1 */
+  --mc-accent-text:    #ff9c55;               /* ≈ 8:1 on cards */
+  --mc-accent-subtle:  rgba(253, 121, 23, 0.12);
+  --mc-focus-ring:     #ffb37a;
+  --mc-selection-bg:   rgba(253, 121, 23, 0.28);
+
+  --mc-success: #4fd18b; --mc-success-subtle: rgba(79, 209, 139, 0.12);
+  --mc-warning: #f2c14e; --mc-warning-subtle: rgba(242, 193, 78, 0.12);
+  --mc-error:   #ff7a7a; --mc-error-subtle:   rgba(255, 122, 122, 0.12);
+  --mc-info:    #7ab4ff; --mc-info-subtle:    rgba(122, 180, 255, 0.12);
+
+  /* Document pages: not pure white on ink, which glares. */
+  --mc-paper:      #e9eaee;
+  --mc-paper-line: rgba(0, 0, 0, 0.4);
+
+  --mc-shadow-color: 220 40% 2%;
+  --mc-elev-1: 0 1px 2px hsl(var(--mc-shadow-color) / 0.5), 0 2px 8px hsl(var(--mc-shadow-color) / 0.35);
+  --mc-elev-2: 0 12px 32px hsl(var(--mc-shadow-color) / 0.6), 0 2px 6px hsl(var(--mc-shadow-color) / 0.4);
+}
+
+/* Colour roles — Paper (light). */
+[data-theme="light"] {
+  --mc-accent:         #c2500a;               /* white on it ≈ 4.9:1 */
+  --mc-accent-hover:   #a8460a;
+  --mc-on-accent:      #ffffff;
+  --mc-accent-text:    #a8460a;               /* ≈ 5.9:1 on white */
+  --mc-accent-subtle:  #fff1e6;
+  --mc-focus-ring:     #c2500a;
+  --mc-selection-bg:   rgba(194, 80, 10, 0.18);
+
+  --mc-success: #17794a; --mc-success-subtle: #e8f5ee;
+  --mc-warning: #8a5a00; --mc-warning-subtle: #fbf3e0;
+  --mc-error:   #c4302b; --mc-error-subtle:   #fdecea;
+  --mc-info:    #2457b8; --mc-info-subtle:    #e9f0fc;
+
+  --mc-paper:      #ffffff;
+  --mc-paper-line: rgba(18, 21, 28, 0.12);
+
+  --mc-shadow-color: 220 30% 20%;
+  --mc-elev-1: 0 1px 2px hsl(var(--mc-shadow-color) / 0.06), 0 2px 8px hsl(var(--mc-shadow-color) / 0.06);
+  --mc-elev-2: 0 8px 24px hsl(var(--mc-shadow-color) / 0.12), 0 2px 6px hsl(var(--mc-shadow-color) / 0.08);
+}
+
+
+/* ══════════════════════════════════════════════
    BASE RESETS & LAYOUT (theme-aware)
 ══════════════════════════════════════════════ */
 *, *::before, *::after {
@@ -191,7 +288,12 @@ html {
 }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  /* Inter (and its metric-matched Arial fallback) first, so every Latin glyph
+     renders exactly as when Inter was applied by class; Arial has no Bengali,
+     so Bangla falls through to Noto Sans Bengali. Both variables are set on
+     <body> by next/font in app/layout.tsx. The old 'DM Sans' value here never
+     applied — the Inter class always overrode it. */
+  font-family: var(--mc-font-ui), var(--mc-font-bn), system-ui, sans-serif;
   background: var(--bg-page);
   color: var(--text-primary);
   min-height: 100vh;
@@ -200,6 +302,12 @@ body {
     color      0.35s cubic-bezier(0.4, 0, 0.2, 1);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* The page turns as one object — unless the user asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  body { transition: none; }
 }
 
 /* ── Scrollbar ── */
@@ -214,411 +322,10 @@ body {
   border-radius: 10px;
 }
 
-
-/* ══════════════════════════════════════════════
-   SIDEBAR
-══════════════════════════════════════════════ */
-.sp-sidebar {
-  position: fixed;
-  top: 0; left: 0;
-  height: 100vh;
-  width: 256px;
-  background: var(--bg-sidebar);
-  border-right: 1px solid var(--border-base);
-  display: flex;
-  flex-direction: column;
-  z-index: 60;
-  transition:
-    transform      0.32s cubic-bezier(0.4, 0, 0.2, 1),
-    background     0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color   0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-@media (max-width: 768px) {
-  .sp-sidebar { transform: translateX(-100%); }
-  .sp-sidebar.open {
-    transform: translateX(0);
-    box-shadow: var(--shadow-sidebar);
-  }
-}
-
-/* Brand */
-.sp-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 20px 18px 16px;
-  border-bottom: 1px solid var(--border-base);
-  flex-shrink: 0;
-  transition: border-color 0.35s;
-}
-.sp-brand-logo-wrap {
-  width: 36px; height: 36px;
-  border-radius: 9px;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: var(--bg-item);
-  transition: background 0.35s;
-}
-.sp-brand-name {
-  font-family: 'Manrope', sans-serif;
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  line-height: 1.1;
-}
-.sp-brand-name .y { color: var(--brand-yellow); transition: color 0.35s; }
-.sp-brand-name .r { color: var(--brand-red);    transition: color 0.35s; }
-.sp-brand-sub {
-  font-size: 7.5px;
-  color: var(--text-label);
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  margin-top: 2px;
-  transition: color 0.35s;
-}
-
-/* Nav scroll area */
-.sp-nav {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px 10px 6px;
-  scrollbar-width: none;
-}
-.sp-nav::-webkit-scrollbar { display: none; }
-
-.sp-group-label {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 1.4px;
-  text-transform: uppercase;
-  color: var(--text-faint);
-  padding: 13px 10px 5px;
-  transition: color 0.35s;
-}
-
-.sp-nav-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border-item);
-  background: transparent;
-  cursor: pointer;
-  transition:
-    background    0.15s ease,
-    border-color  0.15s ease,
-    color         0.15s ease;
-  margin-bottom: 2px;
-  position: relative;
-  text-align: left;
-  color: var(--text-primary);
-}
-.sp-nav-btn:hover {
-  background: var(--bg-item-hover);
-}
-.sp-nav-btn.active {
-  background: var(--bg-item-active);
-  border-color: var(--border-item-active);
-}
-
-.sp-nav-indicator {
-  position: absolute;
-  left: -10px; top: 50%;
-  transform: translateY(-50%);
-  width: 3px; height: 20px;
-  background: var(--nav-indicator);
-  border-radius: 0 3px 3px 0;
-}
-
-.sp-nav-icon {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  background: var(--bg-icon);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  font-size: 15px;
-  transition: background 0.15s;
-}
-.sp-nav-btn.active .sp-nav-icon {
-  background: var(--bg-icon-active);
-}
-
-.sp-nav-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  line-height: 1.15;
-  transition: color 0.15s;
-}
-.sp-nav-btn.active .sp-nav-label { color: var(--text-active); }
-
-.sp-nav-desc {
-  font-size: 10.5px;
-  color: var(--text-label);
-  line-height: 1;
-  margin-top: 2px;
-  transition: color 0.35s;
-}
-
-.sp-sparkle {
-  position: absolute;
-  top: 5px; right: 8px;
-  font-size: 10px;
-  animation: sp-pulse 2.2s ease-in-out infinite;
-}
-@keyframes sp-pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
-}
-
-/* Page links */
-.sp-page-links {
-  padding: 8px 10px 4px;
-  border-top: 1px solid var(--border-base);
-  transition: border-color 0.35s;
-}
-.sp-page-link {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  font-size: 12.5px;
-  color: var(--text-muted);
-  text-decoration: none;
-  transition: color 0.14s, background 0.14s;
-}
-.sp-page-link:hover {
-  color: var(--text-nav-hover);
-  background: var(--bg-item-hover);
-}
-.sp-page-link svg {
-  opacity: 0.55;
-  flex-shrink: 0;
-}
-
-/* Sidebar footer */
-.sp-sidebar-footer {
-  padding: 10px 10px 14px;
-  border-top: 1px solid var(--border-base);
-  flex-shrink: 0;
-  transition: border-color 0.35s;
-}
-.sp-badges {
-  display: flex;
-  gap: 5px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-bottom: 7px;
-}
-.sp-badge {
-  font-size: 10px;
-  padding: 3px 8px;
-  border-radius: 20px;
-  background: var(--bg-badge);
-  border: 1px solid var(--border-badge);
-  color: var(--text-muted);
-  transition: background 0.35s, color 0.35s, border-color 0.35s;
-}
-.sp-copy {
-  font-size: 10px;
-  color: var(--text-ghost);
-  text-align: center;
-  transition: color 0.35s;
-}
-
-
-/* ══════════════════════════════════════════════
-   OVERLAY
-══════════════════════════════════════════════ */
-.sp-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: var(--bg-overlay);
-  z-index: 55;
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  transition: background 0.35s;
-}
-@media (max-width: 768px) {
-  .sp-overlay.visible { display: block; }
-}
-
-
-/* ══════════════════════════════════════════════
-   MAIN WRAPPER
-══════════════════════════════════════════════ */
-.sp-main {
-  margin-left: 256px;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-page);
-  transition: background 0.35s;
-}
-@media (max-width: 768px) { .sp-main { margin-left: 0; } }
-
-
-/* ══════════════════════════════════════════════
-   TOPBAR
-══════════════════════════════════════════════ */
-.sp-topbar {
-  position: sticky;
-  top: 0;
-  height: 58px;
-  background: var(--bg-topbar);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border-base);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  z-index: 40;
-  gap: 12px;
-  transition:
-    background   0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-@media (max-width: 640px) { .sp-topbar { padding: 0 14px; } }
-
-.sp-topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  flex: 1;
-}
-
-/* Hamburger */
-.sp-hamburger {
-  display: none;
-  width: 34px; height: 34px;
-  border-radius: 8px;
-  background: var(--bg-hamburger);
-  border: 1px solid var(--border-hamburger);
-  align-items: center; justify-content: center;
-  flex-direction: column;
-  gap: 4px;
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
-  transition: background 0.2s;
-}
-@media (max-width: 768px) { .sp-hamburger { display: flex; } }
-.sp-hamburger span {
-  display: block;
-  width: 15px; height: 1.5px;
-  background: var(--toggle-icon);
-  border-radius: 2px;
-  transition: background 0.35s;
-}
-
-/* Mobile logo */
-.sp-mob-logo {
-  display: none;
-  align-items: center;
-  gap: 7px;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-@media (max-width: 768px) { .sp-mob-logo { display: flex; } }
-.sp-mob-logo-name {
-  font-family: 'Manrope', sans-serif;
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
-}
-.sp-mob-logo-name .y { color: var(--brand-yellow); transition: color 0.35s; }
-.sp-mob-logo-name .r { color: var(--brand-red);    transition: color 0.35s; }
-
-/* Breadcrumb */
-.sp-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex: 1;
-}
-@media (max-width: 768px) { .sp-breadcrumb { display: none; } }
-.sp-bc-root {
-  font-size: 12px;
-  color: var(--text-breadcrumb);
-  transition: color 0.35s;
-}
-.sp-bc-sep {
-  font-size: 13px;
-  color: var(--text-bc-sep);
-  transition: color 0.35s;
-}
-.sp-bc-cur {
-  font-family: 'Manrope', sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 0.35s;
-}
-
-/* Topbar right */
-.sp-topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-}
-
-/* Nav links */
-.sp-top-links {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-}
-@media (max-width: 900px) { .sp-top-links { display: none; } }
-.sp-top-link {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-nav);
-  text-decoration: none;
-  padding: 5px 10px;
-  border-radius: 7px;
-  border: 1px solid transparent;
-  transition: color 0.14s, background 0.14s, border-color 0.14s;
-  white-space: nowrap;
-}
-.sp-top-link:hover {
-  color: var(--text-nav-hover);
-  background: var(--bg-item-hover);
-  border-color: var(--border-base);
-}
-
-.sp-vdivider {
-  width: 1px; height: 18px;
-  background: var(--divider);
-  margin: 0 4px;
-  flex-shrink: 0;
-  transition: background 0.35s;
-}
-@media (max-width: 900px) { .sp-vdivider { display: none; } }
-
-.sp-ctx-tag {
-  font-size: 10.5px;
-  font-weight: 500;
-  padding: 3px 9px;
-  border-radius: 20px;
-  background: var(--accent-tag-bg);
-  border: 1px solid var(--border-tag);
-  color: var(--accent-tag-text);
-  white-space: nowrap;
-  transition: background 0.35s, color 0.35s, border-color 0.35s;
-}
-@media (max-width: 640px) { .sp-ctx-tag { display: none; } }
-
+/* The sidebar/topbar shell that used to follow here (.sp-sidebar, .sp-main,
+   .sp-topbar, overlays — three stacked generations) was deleted on 2026-11-06:
+   no component renders those classes. Only the theme toggle below is live;
+   ThemeToggle2 (Image Editor) still relies on these rules. */
 
 /* ══════════════════════════════════════════════
    THEME TOGGLE BUTTON
@@ -690,381 +397,3 @@ body {
 /* Default (no attribute yet) — treat as dark */
 .sp-theme-toggle .icon-sun  { opacity: 0; transform: rotate(90deg) scale(0.5); }
 .sp-theme-toggle .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
-
-
-/* ══════════════════════════════════════════════
-   CONTENT AREA
-══════════════════════════════════════════════ */
-.sp-content {
-  flex: 1;
-  padding: 28px 28px 0;
-  max-width: 920px;
-  width: 100%;
-  margin: 0 auto;
-}
-@media (max-width: 640px) { .sp-content { padding: 18px 14px 0; } }
-
-.sp-content-hdr { margin-bottom: 18px; }
-.sp-content-hdr h1 {
-  font-family: 'Manrope', sans-serif;
-  font-size: clamp(20px, 2.5vw, 28px);
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: -0.4px;
-  margin-bottom: 4px;
-  transition: color 0.35s;
-}
-.sp-content-hdr p {
-  font-size: 13.5px;
-  color: var(--text-muted);
-  transition: color 0.35s;
-}
-
-/* Card */
-.sp-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-card);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: var(--shadow-card);
-  transition:
-    background    0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color  0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow    0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.sp-card::before {
-  content: '';
-  display: block;
-  height: 2px;
-  background: var(--card-accent-bar);
-}
-.sp-card-body { padding: 28px 32px; }
-@media (max-width: 640px) { .sp-card-body { padding: 18px; } }
-
-
-/* ══════════════════════════════════════════════
-   FOOTER
-══════════════════════════════════════════════ */
-.sp-footer {
-  padding: 20px 28px 24px;
-  text-align: center;
-  border-top: 1px solid var(--border-base);
-  margin-top: 28px;
-  transition: border-color 0.35s;
-}
-.sp-footer p {
-  font-size: 11px;
-  color: var(--text-ghost);
-  line-height: 1.75;
-  transition: color 0.35s;
-}
-
-
-/* new edited here //////////////////////////////////////////////////////////////////////*/
-/* ── Floating collapse button (on sidebar's right edge, vertically centered) ── */
-/* ─────────────────────────────────────────────
-   BASE LAYOUT (keep your existing variabless)
-   ───────────────────────────────────────────── */
-
-/* Sidebar base */
-/* ─────────────────────────────────────────────
-   SIDEBAR – DESKTOP FIRST
-   ───────────────────────────────────────────── */
-.sp-sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 256px;
-  height: 100vh;
-  background: var(--bg-sidebar);
-  border-right: 1px solid var(--border-base);
-  display: flex;
-  flex-direction: column;
-  z-index: 60;
-  transition: width 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-  overflow: visible;
-}
-
-/* Collapsed state (desktop only) */
-.sp-sidebar.collapsed {
-  width: 72px;
-}
-
-.sp-sidebar.collapsed .sp-brand-text,
-.sp-sidebar.collapsed .sp-nav-text,
-.sp-sidebar.collapsed .sp-page-links,
-.sp-sidebar.collapsed .sp-badges,
-.sp-sidebar.collapsed .sp-copy,
-.sp-sidebar.collapsed .sp-collapse-edge-btn span {
-  display: none;
-}
-.sp-sidebar.collapsed .sp-brand {
-  justify-content: center;
-  padding: 20px 0 16px;
-}
-.sp-sidebar.collapsed .sp-nav-btn {
-  justify-content: center;
-  padding: 8px 0;
-  gap: 0;
-}
-.sp-sidebar.collapsed .sp-nav-icon {
-  width: 36px;
-  height: 36px;
-  margin: 0;
-}
-.sp-sidebar.collapsed .sp-group-label {
-  text-align: center;
-  font-size: 8px;
-  padding: 10px 0 4px;
-}
-.sp-sidebar.collapsed .sp-nav-indicator {
-  left: 0;
-  width: 2px;
-  height: 24px;
-}
-
-/* Main content – desktop */
-.sp-main {
-  margin-left: 256px;
-  min-height: 100vh;
-  background: var(--bg-page);
-  transition: margin-left 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-}
-
-/* Overlay – hidden on desktop */
-.sp-overlay {
-  display: none;
-}
-
-/* ── Floating collapse button (desktop only) ── */
-@media (min-width: 768px) {
-  .sp-collapse-wrapper {
-    position: absolute;
-    top: 50%;
-    right: -12px;
-    transform: translateY(-50%);
-    z-index: 100;
-    pointer-events: none;
-  }
-  .sp-collapse-edge-btn {
-    pointer-events: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 26px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-card);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: var(--text-muted);
-  }
-  .sp-collapse-edge-btn:hover {
-    transform: scale(1.08);
-    background: var(--accent-tag-bg);
-    border-color: var(--accent-start);
-    color: var(--accent-start);
-  }
-  .sp-collapse-arrow {
-    width: 14px;
-    height: 14px;
-    transition: transform 0.28s ease;
-  }
-  .sp-collapse-arrow.rotated {
-    transform: rotate(180deg);
-  }
-  .sp-sidebar.collapsed .sp-collapse-wrapper {
-    right: -12px;
-  }
-}
-
-/* ══════════════════════════════════════════════
-   MOBILE (≤ 768px) – NO EMPTY SPACE!
-   ══════════════════════════════════════════════ */
-@media (max-width: 768px) {
-  /* Sidebar: hidden by default, slides in from left */
-  .sp-sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    width: 85%;
-    max-width: 280px;
-    z-index: 70;
-    border-right: none;
-    box-shadow: none;
-  }
-  .sp-sidebar.open {
-    transform: translateX(0);
-    box-shadow: var(--shadow-sidebar);
-  }
-  /* Main content: full width, no left margin */
-  .sp-main {
-    margin-left: 0 !important;
-    width: 100%;
-  }
-  /* Overlay: covers whole screen */
-  .sp-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: var(--bg-overlay);
-    z-index: 65;
-    backdrop-filter: blur(3px);
-  }
-  .sp-overlay.visible {
-    display: block;
-  }
-  /* Hide collapse button on mobile */
-  .sp-collapse-wrapper {
-    display: none;
-  }
-  /* Ensure body doesn't scroll when sidebar is open */
-  body.no-scroll {
-    overflow: hidden;
-  }
-}
-
-
-/*added page navigasion in the sidebar with collapse icon /////////////*/
-/* Section header for pages */
-/* ── Page links section with vertical collapse toggle ── */
-.sp-page-links {
-  margin-top: 8px;
-  border-top: 1px solid var(--border-base);
-  padding-top: 8px;
-}
-
-.sp-page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 10px;
-  margin-bottom: 4px;
-}
-
-.sp-page-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--text-label);
-}
-
-.sp-page-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: background 0.2s, transform 0.15s;
-}
-
-.sp-page-toggle:hover {
-  background: var(--bg-item-hover);
-  color: var(--text-secondary);
-}
-
-.sp-page-chevron {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sp-page-chevron.expanded {
-  transform: rotate(0deg);
-}
-
-.sp-page-chevron.collapsed {
-  transform: rotate(-90deg);
-}
-
-.sp-page-list {
-  overflow: hidden;
-  transition: max-height 0.3s ease, opacity 0.2s ease;
-  max-height: 0;
-  opacity: 0;
-}
-
-.sp-page-list.expanded {
-  max-height: 300px;   /* enough for all links */
-  opacity: 1;
-}
-
-.sp-page-list.collapsed {
-  max-height: 0;
-  opacity: 0;
-}
-
-/* সাইডবার কোলাপসড অবস্থায় পেজ সেকশন লুকানো (আগেই ছিল) */
-.sp-sidebar.collapsed .sp-page-links {
-  display: none;
-}
-
-/* Force layout fix – ensure sidebar fixed and main content has margin */
-.sp-sidebar {
-  position: fixed !important;
-  top: 0;
-  left: 0;
-  height: 100vh;
-  width: 256px;
-  z-index: 60;
-}
-.sp-main {
-  margin-left: 256px !important;
-  width: auto;
-}
-/* When sidebar collapsed */
-.sp-sidebar.collapsed {
-  width: 72px !important;
-}
-.sp-sidebar.collapsed + .sp-main,
-.sp-sidebar.collapsed ~ .sp-main {
-  margin-left: 72px !important;
-}
-/* Mobile override */
-@media (max-width: 768px) {
-  .sp-main {
-    margin-left: 0 !important;
-  }
-  .sp-sidebar {
-    transform: translateX(-100%);
-  }
-  .sp-sidebar.open {
-    transform: translateX(0);
-  }
-}
-/* মোবাইল ওভারলে ফিক্স – সাইডবার ক্লিকযোগ্য করতে */
-@media (max-width: 768px) {
-  .sp-overlay {
-    pointer-events: none !important;   /* ওভারলে ক্লিক ব্লক করে না */
-    background: rgba(0, 0, 0, 0.25);
-    backdrop-filter: blur(2px);
-  }
-  .sp-sidebar {
-    pointer-events: auto !important;
-    z-index: 80 !important;
-  }
-  /* ওভারলে ক্লোজিং (যদি চান) – তাহলে ওভারলের জায়গায় একটি আলাদা এলিমেন্ট ব্যবহার করুন */
-}
-/* sp-overlay rlated all updated code here 10-05/2026 old code pore delete korbo */
-/* ── ওভারলে (শুধু মোবাইলে ভিজুয়াল, কখনো ক্লিক ব্লক করে না) ── */
-/* ── ওভারলে (মোবাইল ও ডেস্কটপ) ── */
-/* মোবাইলে ওভারলে ক্লিকযোগ্য ও সাইডবার বন্ধের জন্য */
-@media (max-width: 768px) {
-  .sp-overlay {
-    cursor: pointer;
-  }
-  /* সাইডবার খোলা থাকলে ওভারলে ক্লিক নিশ্চিত করুন */
-  .sp-overlay.visible {
-    display: block;
-    pointer-events: auto !important;
-    z-index: 55;
-  }
-  .sp-sidebar.open {
-    z-index: 60;
-  }
-}

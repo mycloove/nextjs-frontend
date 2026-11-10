@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type Dispatch, MouseEvent as ReactMouseEvent, type ReactNode, RefObject, SetStateAction } from 'react'
+import type { ResumeLayout, ResumeLayoutId } from './resumeLayouts'
 import styles from './MrResumeStudio.module.css'
 import { Glyph, StudioDropdown, type GlyphName } from './MrResumeStudioControls'
 import type { PhotoBackground, PhotoBackgroundId } from './photoBackground'
@@ -23,6 +24,9 @@ export type SectionDividerConfig = { enabled: boolean; style: 'solid' | 'dashed'
 export type ResumeHeadingIconSize = 'small' | 'medium' | 'large' | 'custom'
 
 export type ResumeInspectorPanelProps = {
+  layout: ResumeLayoutId
+  onLayoutChange: (layout: ResumeLayoutId) => void
+  layouts: readonly ResumeLayout[]
   inspector: InspectorMode
   setInspector: Dispatch<SetStateAction<InspectorMode>>
   setMobilePanel: Dispatch<SetStateAction<MobilePanel>>
@@ -150,7 +154,7 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
     photoShape, setPhotoShape, photoBackground, choosePhotoBackground, photoBackgrounds,
     photoCustomColor, setPhotoCustomColor, photoBlur, setPhotoBlur, accent, setAccent, accents,
     customAccentColor, setCustomAccentColor, customAccentIndex, removeSection, documentTitle,
-    setDocumentTitle, pageSize, setPageSize, paperSizes, font, setFont, typefaces, fontFamily, fontSample,
+    setDocumentTitle, pageSize, setPageSize, paperSizes, layout, onLayoutChange, layouts, font, setFont, typefaces, fontFamily, fontSample,
     fontSize, setFontSize, leading, setLeading, leadingDraft, setLeadingDraft, sectionGap,
     setSectionGap, sectionGapDraft, setSectionGapDraft, margin, setMargin, marginDraft,
     setMarginDraft, spacingPresets, resetPageSettings, banglishMode, setBanglishMode,
@@ -406,6 +410,11 @@ export default function ResumeInspectorPanel(props: ResumeInspectorPanelProps) {
               <fieldset className={`${styles.settingsGroup} ${styles.pageFormatGroup}`}>
                 <legend><Glyph name="page" />{t('Page format')}</legend>
                 <div className={styles.paperChoices} role="group" aria-label={t('Page size')}>{(Object.keys(paperSizes) as (keyof typeof paperSizes)[]).map((item) => <button type="button" key={item} className={pageSize === item ? styles.paperChoiceActive : ''} onClick={() => setPageSize(item)} aria-pressed={pageSize === item}><span className={styles.miniPaper} style={{ aspectRatio: paperSizes[item].width / paperSizes[item].height }} /><b>{t(item === 'Letter' ? 'US Letter' : item)}</b><small>{paperSizes[item].dimensions}</small></button>)}</div>
+              </fieldset>
+              <fieldset className={styles.settingsGroup}>
+                <legend><Glyph name="page" />{t('Page layout')}</legend>
+                <p className={styles.helperText}>{t('Changes where sections sit on the page. Your writing and section order stay the same.')}</p>
+                <div className={styles.layoutChoices}>{layouts.map((item) => <button type="button" key={item.id} className={layout === item.id ? styles.layoutChoiceActive : ''} aria-pressed={layout === item.id} onClick={() => onLayoutChange(item.id)}><span className={styles.layoutGlyph} data-layout={item.id} aria-hidden="true"><i /><i /><i /></span><span><b>{t(item.name)}</b><small>{t(item.detail)}</small></span></button>)}</div>
               </fieldset>
               {/* ── P2: Voice ── */}
               <div className={styles.settingsDivider}><span className={styles.dividerStep}>{t('PRIORITY 2')}</span><span>{t('Voice')}</span></div>

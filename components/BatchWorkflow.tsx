@@ -39,10 +39,14 @@
     Press Room's press treatment); busy keeps full colour under the running
     sphere instead of dimming to a grey husk.
   - No simulated progress, ever. The backend runs one opaque POST and
-    returns one zip; per-file status does not exist in the contract. While
-    dispatching, the whole truth is: the sphere (indeterminate by design),
-    the "5 parallel lanes" copy, the elapsed clock, and the honest note
-    that per-file results arrive inside the archive.
+    returns one zip; per-file status is not a separate field in the
+    contract. While dispatching, the whole truth is: the sphere
+    (indeterminate by design), the "5 parallel lanes" copy, the elapsed
+    clock, and the honest note that per-file results arrive inside the
+    archive. After delivery the receipt opens that archive in the browser
+    and counts the engine's `<name>_error.txt` entries, so "Batch delivered"
+    is only said when nothing failed — the old receipt said it even when
+    every file had failed.
   - Truth-telling fixes carried over the old implementation: fabricated
     8%-92% progress bar removed; alert() replaced by the header notice
     slot; unroutable files are refused at the door instead of silently
@@ -206,6 +210,30 @@ interface Delivery {
   sizeBytes: number
   seconds: number
   name: string
+  /* Files the engine reported as failed (one `<name>_error.txt` each in the
+     archive), or null when the archive could not be read in the browser and
+     the outcome per file is therefore unknown. */
+  failed: Array<{ name: string; reason: string }> | null
+}
+
+const ERROR_ENTRY_SUFFIX = '_error.txt'
+
+/* Reads the engine's failure notes out of the returned archive. The note text
+   is `Error processing <name>: <reason>` (utils/task_executor.py). */
+async function readFailures(blob: Blob): Promise<Delivery['failed']> {
+  try {
+    const { default: JSZip } = await import('jszip')
+    const zip = await JSZip.loadAsync(blob)
+    const notes = Object.values(zip.files).filter(f => !f.dir && f.name.endsWith(ERROR_ENTRY_SUFFIX))
+    return Promise.all(notes.map(async (note) => {
+      const name = note.name.slice(0, -ERROR_ENTRY_SUFFIX.length)
+      const text = await note.async('string')
+      const reason = text.replace(/^Error processing .*?:\s*/, '').trim() || 'Unknown error'
+      return { name, reason: reason.length > 160 ? `${reason.slice(0, 157)}…` : reason }
+    }))
+  } catch {
+    return null
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -339,15 +367,22 @@ export default function BatchWorkflow() {
       const name = `mycloove_Batch_${Date.now()}.zip`
       const url  = URL.createObjectURL(blob)
       zipUrlRef.current = url
+      const failed = await readFailures(blob)
 
-      const a = Object.assign(document.createElement('a'), { href: url, download: name })
-      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+      // An archive holding only failure notes is not a result: it stays
+      // available through the receipt but is not pushed into downloads.
+      const nothingConverted = failed !== null && failed.length >= tasks.length
+      if (!nothingConverted) {
+        const a = Object.assign(document.createElement('a'), { href: url, download: name })
+        document.body.appendChild(a); a.click(); document.body.removeChild(a)
+      }
 
       setDelivery({
         count: tasks.length,
         sizeBytes: blob.size,
         seconds: Math.max(1, Math.round((Date.now() - startedRef.current) / 1000)),
         name,
+        failed,
       })
     } catch (err: unknown) {
       if (isCancellation(err)) {
@@ -387,9 +422,14 @@ export default function BatchWorkflow() {
   /* ledger numerals — a row's position in dispatch order, across all groups */
   const orderById = new Map(tasks.map((t, i) => [t.id, i + 1]))
 
+  const deliveredFailures = delivery?.failed?.length ?? 0
   const stateSuffix =
     phase === 'dispatched' ? ' \u00B7 dispatching' :
-    phase === 'delivered'  ? ' \u00B7 delivered' :
+    phase === 'delivered'  ? (
+      deliveredFailures === 0 ? ' \u00B7 delivered'
+      : delivery && deliveredFailures >= delivery.count ? ' \u00B7 failed'
+      : ` \u00B7 ${deliveredFailures} failed`
+    ) :
     hasStack               ? ` \u00B7 ${tasks.length} file${tasks.length > 1 ? 's' : ''}` : ''
 
   const metaParts = groups.map(g => `${g.tasks.length} ${g.type === 'pdf' ? 'pdf' : g.type === 'image' ? 'img' : 'doc'}`)
@@ -715,6 +755,13 @@ export default function BatchWorkflow() {
           margin: 0;
         }
         .bw-slip-sub { font-size: 11.5px; line-height: 1.55; color: var(--text-secondary); margin: 0; }
+        /* a failed file is danger, so it takes the one danger colour */
+        .bw-slip-icon.is-warn { border-color: var(--brand-red); color: var(--brand-red); }
+        .bw-slip-fails {
+          margin: 0; padding: 0; list-style: none;
+          display: flex; flex-direction: column; gap: 4px;
+          font-size: 11.5px; line-height: 1.5; color: var(--text-secondary);
+        }
         .bw-slip-dl { justify-content: center; padding: 8px 12px; font-size: 11.5px; }
         .bw-mono { font-family: ui-monospace, monospace; font-size: 10.5px; }
 
@@ -1068,28 +1115,65 @@ export default function BatchWorkflow() {
               )}
 
               {/* the delivery receipt — the job's third act, same pane */}
-              {!loading && delivery && (
+              {!loading && delivery && (() => {
+                const failedCount = delivery.failed?.length ?? 0
+                const allFailed = delivery.failed !== null && failedCount >= delivery.count
+                const someFailed = failedCount > 0 && !allFailed
+                const title = delivery.failed === null
+                  ? 'Batch returned'
+                  : allFailed ? 'Nothing was converted'
+                  : someFailed ? `Partly delivered — ${failedCount} of ${delivery.count} failed`
+                  : 'Batch delivered'
+                return (
                 <div className="bw-slip-wrap">
                   <div className="bw-slip-card" role="status">
                     <div className="bw-slip-title-row">
-                      <span className="bw-slip-icon" aria-hidden="true">
-                        <svg className="bw-slip-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
+                      <span className={`bw-slip-icon${failedCount > 0 ? ' is-warn' : ''}`} aria-hidden="true">
+                        {failedCount > 0 ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="7" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                          </svg>
+                        ) : (
+                          <svg className="bw-slip-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
                       </span>
-                      <p className="bw-slip-title">Batch delivered</p>
+                      <p className="bw-slip-title">{title}</p>
                     </div>
                     <p className="bw-slip-sub">
-                      {delivery.count} file{delivery.count > 1 ? 's' : ''} processed in {delivery.seconds}s —
+                      {delivery.count} file{delivery.count > 1 ? 's' : ''} sent, finished in {delivery.seconds}s —
                       archive {formatSize(delivery.sizeBytes)} (<span className="bw-mono">{delivery.name}</span>).
-                      Any file that failed is inside as <span className="bw-mono">*_error.txt</span>.
+                      {delivery.failed === null
+                        ? <> The archive could not be read here, so check it for <span className="bw-mono">*_error.txt</span> notes.</>
+                        : allFailed ? ' It holds only the error notes below, so it was not downloaded automatically.'
+                        : someFailed ? ' The failed files are listed below; their notes are inside the archive.'
+                        : ''}
                     </p>
-                    <button type="button" className="bw-btn bw-btn-quiet bw-slip-dl" onClick={downloadAgain}>
-                      {Ic.download} Download again
+                    {failedCount > 0 && (
+                      <ul className="bw-slip-fails">
+                        {delivery.failed!.slice(0, 5).map((f) => (
+                          <li key={f.name}><span className="bw-mono">{f.name}</span> — {f.reason}</li>
+                        ))}
+                        {failedCount > 5 && <li>+{failedCount - 5} more inside the archive</li>}
+                      </ul>
+                    )}
+                    <button
+                      type="button"
+                      className="bw-btn bw-btn-quiet bw-slip-dl"
+                      onClick={(e) => {
+                        // This button sits inside the dropzone root; without this the
+                        // click bubbles up and also opens the file picker.
+                        e.stopPropagation()
+                        downloadAgain()
+                      }}
+                    >
+                      {Ic.download} {allFailed ? 'Download error notes' : 'Download again'}
                     </button>
                   </div>
                 </div>
-              )}
+                )
+              })()}
             </div>
 
             {/* ledger pane — what the user decides */}

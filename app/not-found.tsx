@@ -10,7 +10,8 @@ import styles from "./system-state.module.css";
 export default function NotFound() {
   return (
     <div className="home-page">
-      <main className={styles.wrap}>
+      {/* The root layout owns the main landmark. */}
+      <div className={styles.wrap}>
         <div className={styles.stack}>
           <span className={styles.ghostBack} aria-hidden="true" />
           <span className={styles.ghost} aria-hidden="true" />
@@ -31,7 +32,7 @@ export default function NotFound() {
             </div>
           </section>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

@@ -124,7 +124,8 @@ export default function FaqPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <Topbar2 openFileHref="/" />
-      <main className={styles.main}>
+      {/* The root layout owns the main landmark; this is the skip-link target. */}
+      <div className={styles.main} id="main-content" tabIndex={-1}>
         <div className={styles.shell}>
           <p className={styles.eyebrow}>Questions</p>
           <h1 className={styles.title}>Frequently asked questions</h1>
@@ -147,7 +148,7 @@ export default function FaqPage() {
             </div>
           </section>
         </div>
-      </main>
+      </div>
       <HomeFooter />
     </div>
   );

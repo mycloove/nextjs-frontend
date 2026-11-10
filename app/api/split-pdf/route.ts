@@ -27,10 +27,12 @@ export async function POST(request: NextRequest) {
     const { maxFileBytes, maxTotalBytes } = pdfOpsLimits()
     const files = await collectPdfFiles(formData, { min: 1, max: 1, maxFileBytes, maxTotalBytes })
     const ranges = formText(formData, 'ranges')
+    // Optional: "1" puts every requested page into one PDF (Extract mode).
+    const combine = formText(formData, 'combine') === '1'
     quota = await beginToolQuota(request, 'split-pdf', formData)
     if (!quota.ok) return quota.response
 
-    const { parts, pageCount } = await splitPdf(files[0], ranges)
+    const { parts, pageCount } = await splitPdf(files[0], ranges, { combine })
     if (parts.length === 1) {
       return quota.apply(pdfResponse(parts[0].bytes, `mycloove_${parts[0].name}`, requestId, {
         'X-Page-Count': String(pageCount),

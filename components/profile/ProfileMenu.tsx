@@ -24,6 +24,7 @@ export default function ProfileMenu({
   avatarUrl = null,
   creditState,
   creditDisplayToolId,
+  dockedCredit = 'always',
   variant = 'desktop',
   onNavigate,
   onRefreshAccount,
@@ -39,6 +40,8 @@ export default function ProfileMenu({
   avatarUrl?: string | null
   creditState?: CreditBalanceState
   creditDisplayToolId?: string
+  /** `narrow`: the docked badge shows below 641px only (see AuthNavButton). */
+  dockedCredit?: 'always' | 'narrow'
   variant?: 'desktop' | 'mobile'
   onNavigate?: () => void
   onRefreshAccount?: () => void
@@ -211,7 +214,11 @@ export default function ProfileMenu({
       >
         <span className={styles.avatarDock} aria-hidden="true">
           {avatar}
-          {showCredits ? <CreditBadge snapshot={snapshot} status={status} refreshing={refreshing} /> : null}
+          {showCredits ? (
+            dockedCredit === 'narrow'
+              ? <span className={styles.dockedNarrow}><CreditBadge snapshot={snapshot} status={status} refreshing={refreshing} /></span>
+              : <CreditBadge snapshot={snapshot} status={status} refreshing={refreshing} />
+          ) : null}
         </span>
         {variant === 'mobile' ? (
           <span className={styles.chipIdentity}><strong>{displayName}</strong><span>{email || (signedIn ? 'Signed in' : 'Not signed in')}</span></span>

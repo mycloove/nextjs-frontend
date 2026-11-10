@@ -69,7 +69,7 @@
 
 .eyebrow {
   margin: 0 0 10px;
-  color: var(--brand);
+  color: var(--brand-text);
   font-size: 12px;
   font-weight: 750;
   letter-spacing: 0.14em;
@@ -119,7 +119,7 @@
 }
 
 .num {
-  color: var(--brand);
+  color: var(--brand-text);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -149,7 +149,7 @@
 }
 
 .prose a {
-  color: var(--brand);
+  color: var(--brand-text);
   text-decoration: none;
 }
 

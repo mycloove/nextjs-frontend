@@ -10,7 +10,9 @@ import styles from './MrResumeStudio.module.css'
 // so "Recommended typeface" is literally what the dialog shows.
 const previewFontFamilies = new Map<string, string>([...bengaliTypefaces, ...latinTypefaces].map((font) => [font.name as string, font.family]))
 
-export default function ResumeTemplateLibrary({ selected, hasBackup, onApply, onRestore, onExportBackup, sectionTitle, catalogTitle, t }: {
+export default function ResumeTemplateLibrary({ request = null, selected, hasBackup, onApply, onRestore, onExportBackup, sectionTitle, catalogTitle, t }: {
+  /** A gallery request to preview: opens the same confirm dialog a click would. */
+  request?: { template: ResumeTemplate; sequence: number } | null
   selected: string | null
   hasBackup: boolean
   onApply: (template: ResumeTemplate) => void
@@ -23,9 +25,26 @@ export default function ResumeTemplateLibrary({ selected, hasBackup, onApply, on
   const [preview, setPreview] = useState<ResumeTemplate | null>(null)
   const [replaceBackup, setReplaceBackup] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const detailsRef = useRef<HTMLDetailsElement>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const id = `resume-template-${useId()}`
 
+  // A gallery request opens the same preview a click would (state adjusted
+  // during render, once per request sequence).
+  const [shownRequest, setShownRequest] = useState(0)
+  if (request && request.sequence !== shownRequest) {
+    setShownRequest(request.sequence)
+    setReplaceBackup(false)
+    setPreview(request.template)
+  }
+  // The dialog lives inside the collapsed list; open it so the modal can render.
+  useEffect(() => {
+    if (!request) return
+    if (detailsRef.current) detailsRef.current.open = true
+    triggerRef.current = null
+  }, [request])
+
+  // Declared after the details effect so a requested preview opens inside an expanded list.
   useEffect(() => {
     if (preview && dialogRef.current && !dialogRef.current.open) dialogRef.current.showModal()
   }, [preview])
@@ -38,7 +57,7 @@ export default function ResumeTemplateLibrary({ selected, hasBackup, onApply, on
   }
 
   return <div className={styles.templateLibrary}>
-    <details>
+    <details ref={detailsRef}>
       <summary><Glyph name="page" /><span>{t('Templates')}</span><small>{resumeTemplates.length}</small></summary>
       <p className={styles.helperText}>{t('Start with a purposeful outline. Preview first; your current draft gets a restore copy.')}</p>
       <div className={styles.templateList} role="group" aria-label={t('Templates')}>

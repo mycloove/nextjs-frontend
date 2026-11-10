@@ -113,17 +113,38 @@ test('availability check remains beside Compile and uses the isolated typed feed
   assert.doesNotMatch(latexCss, /availabilityToast|statusStack/u)
 })
 
-test('the route selects the chooser or editor without restoring a conflicting mode preference', () => {
+test('the route selects the gallery home or an editor without restoring a conflicting mode preference', () => {
   assert.match(host, /const segment = useSelectedLayoutSegment\(\)/u)
   assert.match(host, /segment === 'regular-editor' \? 'regular' : segment === 'latex' \? 'latex' : null/u)
   assert.match(host, /useState\(mode !== null\)/u)
   assert.match(host, /useState\(mode === 'latex'\)/u)
-  assert.match(host, /!mode && <main[\s\S]*?Choose how you want to build/u)
-  assert.match(host, /onClick=\{\(\) => chooseMode\('regular'\)\}/u)
-  assert.match(host, /onClick=\{\(\) => chooseMode\('latex'\)\}/u)
-  assert.match(host, /Your projects stay separate/u)
+  assert.match(host, /!mode && <ResumeHome onOpenEditor=\{chooseMode\} onOpenTemplate=\{openTemplate\} \/>/u)
+  const home = read('../home/ResumeHome.tsx')
+  assert.match(home, /onClick=\{\(\) => onOpenEditor\(editor\)\}/u)
+  assert.match(read('../home/homeText.ts'), /Your next chapter, on the right page\./u)
   assert.match(host, /data-editor-mode=\{mode \?\? undefined\}/u)
   assert.doesNotMatch(host, /getItem\(LATEX_MODE_KEY\)|setMode\(/u)
+})
+
+test('gallery deep links are validated per editor, handed over once and removed from the URL', () => {
+  assert.match(host, /new URLSearchParams\(window\.location\.search\)\.get\('template'\)/u)
+  assert.match(host, /resolveTemplateRequest\(mode, value, mode === 'regular' \? regularTemplateCards : latexTemplateCards\)/u)
+  assert.match(host, /router\.replace\(editorPaths\[mode\], \{ scroll: false \}\)/u)
+  assert.match(host, /templateRequest=\{templateRequest\?\.editor === 'regular' \? templateRequest : null\}/u)
+  assert.match(host, /templateRequest=\{templateRequest\?\.editor === 'latex' \? templateRequest : null\}/u)
+  // Regular never replaces an existing draft without the library's confirm dialog.
+  assert.match(regular, /if \(!hadStoredDraftRef\.current && saveState === 'fresh'\) \{ applyTemplate\(template\); return \}/u)
+  assert.match(regular, /setRequestedTemplate\(\{ template, sequence: templateRequest\.sequence \}\)/u)
+  // LaTeX always adds a new project and refuses at the eight-project limit first.
+  assert.match(latex, /current\.projects\.length >= LOCAL_LATEX_LIMITS\.projects\) \{ current\.notify\('error'/u)
+  assert.doesNotMatch(latex, /applyProject\(createTemplateProject/u)
+})
+
+test('the home bundle never loads TeX sources or the compiler', () => {
+  for (const file of ['../home/ResumeHome.tsx', '../home/ResumeTemplateGallery.tsx', '../home/ResumeTemplatePreview.tsx', '../home/galleryCards.ts', '../latex/latexTemplateCards.ts']) {
+    const source = read(file)
+    assert.doesNotMatch(source, /from '\.\.\/latex\/templates|from '\.\/templates|galleryTemplates|LatexResumeStudio|CodeMirror|pdfjs/u, file)
+  }
 })
 
 test('chooser, copy, and fallback navigation use the dedicated editor routes', () => {
@@ -134,26 +155,46 @@ test('chooser, copy, and fallback navigation use the dedicated editor routes', (
   assert.match(host, /if \(mode !== 'latex'\) router\.push\(editorPaths\.latex, \{ scroll: false \}\)/u)
 })
 
-test('all Mr. Resume entry routes share one persistent feature host and unchanged metadata', () => {
+test('all Mr. Resume entry routes share one persistent feature host; only the gallery home is indexable', () => {
   const layout = read('../../../app/mr-resume/layout.tsx')
   assert.match(layout, /import MrResumeWorkspace from '@\/features\/mr-resume'/u)
   assert.match(layout, /<MrResumeWorkspace \/>\{children\}/u)
-  assert.match(layout, /robots: \{ index: false, follow: false \}/u)
+  assert.match(layout, /robots: \{ index: true, follow: true \}/u)
   for (const route of ['page.tsx', 'regular-editor/page.tsx', 'latex/page.tsx']) {
     const page = read(`../../../app/mr-resume/${route}`)
     assert.match(page, /export default function/u)
     assert.match(page, /return null/u)
     assert.doesNotMatch(page, /import|redirect\(/u)
+    // Editor routes hold a private draft and stay out of search indexes.
+    if (route !== 'page.tsx') assert.match(page, /export const metadata = \{ robots: \{ index: false, follow: false \} \}/u)
+    else assert.doesNotMatch(page, /metadata/u)
   }
 })
 
-test('new host markup references only existing module-scoped style classes', () => {
-  const source = ts.createSourceFile('workspace.tsx', host, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
-  const missing = new Set<string>()
-  const visit = (node: ts.Node) => {
-    if (ts.isPropertyAccessExpression(node) && node.expression.getText(source) === 'styles' && !new RegExp(`\\.${node.name.text}(?![\\w-])`, 'u').test(css)) missing.add(node.name.text)
-    ts.forEachChild(node, visit)
+test('new host and home markup reference only existing module-scoped style classes', () => {
+  const missingIn = (source: string, stylesheet: string, name = 'styles') => {
+    const tree = ts.createSourceFile('file.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+    const missing = new Set<string>()
+    const visit = (node: ts.Node) => {
+      if (ts.isPropertyAccessExpression(node) && node.expression.getText(tree) === name && !new RegExp(`\\.${node.name.text}(?![\\w-])`, 'u').test(stylesheet)) missing.add(node.name.text)
+      ts.forEachChild(node, visit)
+    }
+    visit(tree)
+    return [...missing]
   }
-  visit(source)
-  assert.deepEqual([...missing], [])
+  assert.deepEqual(missingIn(host, css), [])
+  const homeCss = read('../home/ResumeHome.module.css')
+  for (const file of ['../home/ResumeHome.tsx', '../home/ResumeHomeNavbar.tsx', '../home/ResumeTemplateGallery.tsx', '../home/ResumeTemplatePreview.tsx']) assert.deepEqual(missingIn(read(file), homeCss), [], file)
+  assert.deepEqual(missingIn(read('./ResumeInspectorPanel.tsx'), regularCss), [])
+  // The replaced chooser left no styles behind.
+  assert.doesNotMatch(css, /\.(?:entry|choice|paperSample|sourceSample|chooseRegular)\b(?!Root)/u)
+})
+
+test('the home keeps the 12px floor, both themes and a reduced-motion path', () => {
+  const homeCss = read('../home/ResumeHome.module.css')
+  for (const size of homeCss.matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/gu)) assert.ok(Number(size[1]) >= 12, `font-size ${size[1]}px`)
+  assert.match(homeCss, /@media \(prefers-reduced-motion: reduce\)/u)
+  assert.doesNotMatch(homeCss, /#[\da-f]{3,8}\b/iu, 'Colours come from --rs-* tokens, not hex')
+  const theme = read('./MrResumeTheme.module.css')
+  assert.equal((theme.match(/--rs-gold-text:/gu) ?? []).length, 2, 'A gold text role in light and dark')
 })

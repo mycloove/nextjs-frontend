@@ -50,7 +50,7 @@
 
 .code {
   margin: 0 0 10px;
-  color: var(--brand);
+  color: var(--brand-text);
   font-size: 12px;
   font-weight: 750;
   letter-spacing: 0.14em;
@@ -104,8 +104,8 @@
 
 .primary {
   border: 0;
-  background: var(--brand-gradient);
-  color: #fff;
+  background: var(--brand-fill);
+  color: var(--on-brand);
   box-shadow: var(--shadow-sm);
 }
 

@@ -20,6 +20,9 @@ export interface UploadWithProgressOptions {
   signal?: AbortSignal
 }
 
+// Statuses the Fetch spec forbids a body on; `new Response(body, { status })` throws for them.
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304])
+
 export function uploadWithProgress(
   url: string,
   body: FormData,
@@ -55,16 +58,33 @@ export function uploadWithProgress(
 
     xhr.onload = () => {
       cleanup()
-      const headers = new Headers()
-      for (const line of xhr.getAllResponseHeaders().trim().split(/[\r\n]+/)) {
-        const separator = line.indexOf(':')
-        if (separator > 0) headers.append(line.slice(0, separator).trim(), line.slice(separator + 1).trim())
+      // Every caller uploads a document and expects a file back, so a "success"
+      // with no body is never a real result. It happens when a download-manager
+      // extension (seen: IDM) grabs the attachment and hands the page a 204 —
+      // which also made `new Response(blob, { status: 204 })` throw here and
+      // left the tool spinning forever. Reject honestly instead.
+      const body = xhr.response as Blob | null
+      if (xhr.status >= 200 && xhr.status < 300 && (NULL_BODY_STATUSES.has(xhr.status) || !body || body.size === 0)) {
+        reject(new ApiClientError(
+          'The result never reached this page — a download-manager browser extension may have intercepted it. Pause it for this site and try again.',
+        ))
+        return
       }
-      resolve(new Response(xhr.response as Blob, {
-        status: xhr.status,
-        statusText: xhr.statusText,
-        headers,
-      }))
+      try {
+        const headers = new Headers()
+        for (const line of xhr.getAllResponseHeaders().trim().split(/[\r\n]+/)) {
+          const separator = line.indexOf(':')
+          if (separator > 0) headers.append(line.slice(0, separator).trim(), line.slice(separator + 1).trim())
+        }
+        resolve(new Response(NULL_BODY_STATUSES.has(xhr.status) ? null : body, {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          headers,
+        }))
+      } catch {
+        // Any throw inside an XHR handler would otherwise never settle the promise.
+        reject(new ApiClientError('The server reply could not be read. Please try again.'))
+      }
     }
 
     xhr.onerror = () => {

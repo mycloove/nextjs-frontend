@@ -6,7 +6,8 @@ import { createTemplateProject, latexSourceTemplates, latexTemplateQualification
 import { BROWSER_LATEX_MANIFEST_PIN } from './browserManifestPin.ts'
 
 test('starter qualifications name actual fixtures and invalidate on source, main, engine or version changes', () => {
-  const smoke = readFileSync(new URL('./browser/smoke.mjs', import.meta.url), 'utf8')
+  // Original fixtures live in the release's smoke.mjs; gallery fixtures in gallery-smoke.mjs (smoke.mjs is a frozen provisioning input).
+  const smoke = readFileSync(new URL('./browser/smoke.mjs', import.meta.url), 'utf8') + readFileSync(new URL('./browser/gallery-smoke.mjs', import.meta.url), 'utf8')
   for (const qualification of latexTemplateQualifications) {
     const template = latexSourceTemplates.find((item) => item.id === qualification.id)!
     const project = createTemplateProject(template.id)
@@ -30,14 +31,31 @@ test('recorded starter checks bind their exact browser build, not an untested fu
     manifestSha256: '4a0cca5dcea6b297df5cc6caf0bbfa932267502e68f3c19d0dc9b44a55634196',
     workerSha256: 'a8ac2cece2aa5c4ab93a69fcb4cdfa9fcb77e12344b0b55abaf1e93813e2c8b5',
   }
+  // The three original starters keep their historical result; gallery starters
+  // were compiled on today's pin and must name exactly that pin.
+  const currentBuild = { profileVersion: manifest.profileVersion, manifestSha256: BROWSER_LATEX_MANIFEST_PIN.sha256, workerSha256: worker.sha256 }
+  const historical = new Set(['career-source', 'academic-source', 'bangla-source'])
   for (const qualification of latexTemplateQualifications) {
     assert.equal(qualification.runtime, 'browser')
-    assert.equal(qualification.profileVersion, recordedBuild.profileVersion)
-    assert.equal(qualification.manifestSha256, recordedBuild.manifestSha256, 'Preserve the historically tested release; do not relabel it as a new qualification')
-    assert.equal(qualification.workerSha256, recordedBuild.workerSha256)
-    assert.notEqual(qualification.profileVersion, manifest.profileVersion, 'The new SyncTeX release must not inherit a starter qualification')
-    assert.notEqual(qualification.manifestSha256, BROWSER_LATEX_MANIFEST_PIN.sha256)
-    assert.notEqual(qualification.workerSha256, worker.sha256)
+    const build = historical.has(qualification.id) ? recordedBuild : currentBuild
+    assert.equal(qualification.profileVersion, build.profileVersion, qualification.id)
+    assert.equal(qualification.manifestSha256, build.manifestSha256, `${qualification.id}: preserve the tested release; do not relabel it as a new qualification`)
+    assert.equal(qualification.workerSha256, build.workerSha256, qualification.id)
+    if (historical.has(qualification.id)) {
+      assert.notEqual(qualification.profileVersion, manifest.profileVersion, 'The new SyncTeX release must not inherit a starter qualification')
+      assert.notEqual(qualification.manifestSha256, BROWSER_LATEX_MANIFEST_PIN.sha256)
+      assert.notEqual(qualification.workerSha256, worker.sha256)
+    }
   }
   assert.match(latexTemplateQualifications.find((item) => item.id === 'bangla-source')!.limitation, /not fully faithful.*not certified/u)
+})
+
+test('gallery starters are browser-ready without package consent and third-party sources ship their license', () => {
+  const consentPackages = /\\(?:usepackage|RequirePackage)(?:\[[^\]]*\])?\{[^}]*\b(?:xcolor|tikz|tcolorbox|paracol|fontawesome5|lato|roboto|biblatex|amsmath)\b/u
+  for (const template of latexSourceTemplates) {
+    for (const file of template.files) assert.doesNotMatch(file.content, consentPackages, `${template.id}/${file.path} would need a package download`)
+  }
+  const jakes = latexSourceTemplates.find((template) => template.id === 'jakes-resume')!
+  assert.ok(jakes.files.some((file) => file.path === 'LICENSE-jakes-resume.txt' && /MIT License[\s\S]*Copyright \(c\) 2020 Jake Gutierrez/u.test(file.content)))
+  assert.match(jakes.files.find((file) => file.path === 'main.tex')!.content, /3e64a933141a7cda3a328f0743f73a201628a4ba/u)
 })

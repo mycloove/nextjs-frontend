@@ -1,10 +1,15 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Noto_Sans_Bengali } from 'next/font/google'
 import Script from 'next/script'
 import { SITE_URL } from '../lib/metadata'
 import './theme.css'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--mc-font-ui' })
+/* Bangla used to render in whatever the OS had (Nirmala UI, Vrinda, an
+   Android default…), so the same text looked different on every machine.
+   Not preloaded: pages without Bangla never fetch it; the browser requests
+   it only when a Bengali glyph needs drawing. */
+const bangla = Noto_Sans_Bengali({ subsets: ['bengali'], variable: '--mc-font-bn', preload: false })
 
 const extensionErrorGuard = `
 (() => {
@@ -84,7 +89,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${bangla.variable}`}>
         <Script
           id="extension-error-guard"
           strategy="afterInteractive"

@@ -2,7 +2,7 @@ import JSZip from 'jszip'
 import { LATEX_LIMITS, LATEX_PROJECT_VERSION, type LatexAsset, type LatexEngine, type LatexProject } from './types.ts'
 import { assertLatexPath, isLatexTextPath, isRecord, LatexProjectError, newLatexId, requiredNativeFonts, sha256, utf8Bytes, validateLatexProject } from './project.ts'
 import { findLatexDocumentRoots } from './projectAssessment.ts'
-import { latexSourceTemplates, templateNotice } from './templates.ts'
+import { latexSourceTemplates, templateNotice, thirdPartyTemplateIds } from './templates.ts'
 
 const manifestName = 'smilepdf-project.json'
 const requirementsNotice = 'Native fonts and TeX packages are not bundled. Build in a compatible offline TeX environment. Raw TeX must run in an isolated sandbox.'
@@ -315,7 +315,7 @@ export async function createProjectZip(project: LatexProject) {
     files: project.files.map((file) => ({ id: file.id, path: file.path })), assets: assetManifest,
     nativeFonts: requiredNativeFonts(project.files.map((file) => file.content).join('\n')),
     requirements: requirementsNotice,
-    ...(latexSourceTemplates.some((template) => template.id === project.templateId && template.version === project.templateVersion) ? { templateNotice } : {}) }, null, 2)
+    ...(latexSourceTemplates.some((template) => template.id === project.templateId && template.version === project.templateVersion) && !thirdPartyTemplateIds.has(project.templateId ?? '') ? { templateNotice } : {}) }, null, 2)
   if (utf8Bytes(manifest) > 32 * 1024) fail('The portable build manifest exceeds 32 KiB. Source was kept; download the main .tex file or simplify the file/font declarations before ZIP export.', 'archive_too_large')
   zip.file(manifestName, manifest)
   const bytes = await streamBytes(zip.generateInternalStream({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 6 }, streamFiles: true }), LATEX_LIMITS.uploadBytes)

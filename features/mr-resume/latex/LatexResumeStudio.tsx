@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import Link from 'next/link'
 import theme from '../components/MrResumeTheme.module.css'
 import styles from './LatexResumeStudio.module.css'
 import CodeMirrorSource, { type SourceJump } from './CodeMirrorSource'
@@ -16,6 +17,8 @@ import { selectAttention, selectReceipt, type FeedbackFact } from './feedback'
 import { addProjectAsset, addTextFile, applyNativeFontChoices, cloneAsNewProject, deleteProjectFile, downloadName, projectSize, referencesToFile, renameProjectFile,
   newLatexId, requiredNativeFonts, restoreCheckpointProject, reviseProject, sameProjectSource, sourceOutline, utf8Bytes } from './project.ts'
 import { createTemplateProject, latexSourceTemplates, latexTemplateQualifications } from './templates.ts'
+import { createArchiveTemplateProject, latexArchiveTemplates } from './archiveTemplates.ts'
+import type { TemplateRequest } from '../components/templateCatalog'
 import { createRegularLatexProject, downloadBlob, exportProjectFile, importProjectFileWithReport, importSupportedFile } from './projectImport'
 import type { LatexImportReport } from './projectArchive'
 import { assessLatexProject, type LatexInventoryStatus } from './projectAssessment'
@@ -31,7 +34,7 @@ import { compilerEditorDiagnostics, type EditorDiagnostic, type LocalDiagnosticR
 import { reviewDiagnosticFix, reviewPackageDeclaration, type ReviewedSourceFix } from './editorFixes'
 import { packageAssistance, type PackageAssistance } from './packageAssistance'
 
-export type LatexResumeStudioProps = { active: boolean; importRequest?: LatexImportRequest | null; onImportHandled?: (id: string) => void; onCopyRegular?: () => void }
+export type LatexResumeStudioProps = { active: boolean; importRequest?: LatexImportRequest | null; onImportHandled?: (id: string) => void; onCopyRegular?: () => void; templateRequest?: TemplateRequest | null; onTemplateHandled?: (sequence: number) => void }
 type Panel = 'files' | 'source' | 'proof' | 'problems'
 type Drawer = WorkspaceDrawer
 type Modal = { kind: 'new' | 'rename'; fileId?: string; path?: string } | { kind: 'delete'; fileId: string; path: string }
@@ -148,7 +151,7 @@ function ProjectImagePreview({ asset, onSource }: { asset: LatexAsset; onSource:
   </div>
 }
 
-export default function LatexResumeStudio({ active, importRequest = null, onImportHandled, onCopyRegular }: LatexResumeStudioProps) {
+export default function LatexResumeStudio({ active, importRequest = null, onImportHandled, onCopyRegular, templateRequest = null, onTemplateHandled }: LatexResumeStudioProps) {
   const workspace = useLatexWorkspace(active)
   const small = useSyncExternalStore(subscribeSmall, smallSnapshot, () => false)
   const [mobilePanel, setMobilePanel] = useState<Panel>('source'), [wrap, setWrap] = useState(true), [split, setSplit] = useState(50)
@@ -186,8 +189,8 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
   const localIntent = useRef(false), localStart = useRef<number | null>(null), localAnimations = useRef<Animation[]>([])
   const importInput = useRef<HTMLInputElement>(null), assetInput = useRef<HTMLInputElement>(null), sourceTabs = useRef<(HTMLButtonElement | null)[]>([])
   const handledImports = useRef(new Set<string>()), jumpSequence = useRef(0), syncRequest = useRef<AbortController | null>(null)
-  const latest = useRef(workspace), callbacks = useRef({ onImportHandled })
-  useLayoutEffect(() => { latest.current = workspace; callbacks.current = { onImportHandled } }, [workspace, onImportHandled])
+  const latest = useRef(workspace), callbacks = useRef({ onImportHandled, onTemplateHandled }), handledTemplates = useRef(0)
+  useLayoutEffect(() => { latest.current = workspace; callbacks.current = { onImportHandled, onTemplateHandled } }, [workspace, onImportHandled, onTemplateHandled])
   const alive = useRef(true)
   const modalRef = useRef<ModalSession | null>(null), pendingActions = useRef(new Set<string>()), pendingModals = useRef(new Set<string>())
   const project = workspace.project
@@ -367,6 +370,28 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
       callbacks.current.onImportHandled?.(request.id)
     }).catch((error: unknown) => { if (!alive.current) return; latest.current.notify('error', 'import', 'regular-source-copy', error instanceof Error ? error.message : 'Source copy failed. The Regular draft and current project are unchanged.', initiatingProject, request.id); callbacks.current.onImportHandled?.(request.id) })
   }, [workspace.ready, importRequest])
+
+  // Gallery deep link (?template=): always a NEW independent project, like an
+  // import. The eight-project limit refuses before anything changes.
+  useEffect(() => {
+    if (!workspace.ready || !templateRequest || templateRequest.editor !== 'latex' || handledTemplates.current >= templateRequest.sequence) return
+    const request = templateRequest, current = latest.current
+    handledTemplates.current = request.sequence
+    callbacks.current.onTemplateHandled?.(request.sequence)
+    if (current.projects.length >= LOCAL_LATEX_LIMITS.projects) { current.notify('error', 'project', 'gallery-template', 'This workspace already has eight projects. Export and remove one, then choose the template again. Nothing was changed.'); return }
+    const opened = (project: LatexProject, extra = '') => latest.current.notify('success', 'project', 'gallery-template', `${project.title} opened as a new project. Your other projects are unchanged.${extra}`, project)
+    if (latexArchiveTemplates.some((item) => item.id === request.id)) {
+      void createArchiveTemplateProject(request.id).then((project) => {
+        if (!alive.current) return
+        latest.current.addProject(project)
+        opened(project, ' Its first compile asks before downloading the package groups it needs.')
+      }).catch((error: unknown) => { if (alive.current) latest.current.notify('error', 'project', 'gallery-template', error instanceof Error ? error.message : 'The template could not be opened. Nothing was changed.') })
+      return
+    }
+    if (!latexSourceTemplates.some((item) => item.id === request.id)) { current.notify('error', 'project', 'gallery-template', 'That template is no longer available. Nothing was changed.'); return }
+    try { const project = createTemplateProject(request.id); current.addProject(project); opened(project) }
+    catch (error) { current.notify('error', 'project', 'gallery-template', error instanceof Error ? error.message : 'The template could not be opened. Nothing was changed.') }
+  }, [workspace.ready, templateRequest])
 
   useEffect(() => { syncRequest.current?.abort(); navigation.current?.dispose(); navigation.current = null; setNavigationChoices(null) }, [active, project, identity, workspace.runtime, file?.id])
   useEffect(() => {
@@ -719,7 +744,7 @@ export default function LatexResumeStudio({ active, importRequest = null, onImpo
     <header className={styles.identity}>
       <h1 className={styles.srOnly}>Resume typesetting editor</h1>
       <button type="button" className={`${styles.iconButton} ${styles.filesToggle}`} aria-label={filesToggleLabel} aria-expanded={small ? mobilePanel === 'files' : filesOpen} aria-controls="resume-latex-file-rail" title={filesToggleLabel} onClick={() => small ? setMobilePanel(mobilePanel === 'files' ? 'source' : 'files') : setFilesOpen((open) => !open)}><LatexIcon name="files" /></button>
-      <div className={styles.brand} role="img" aria-label="Mr Resume logo"><span className={styles.brandMark} aria-hidden="true" /></div>
+      <Link className={styles.brand} href="/mr-resume" aria-label="Mr. Resume home" title="Mr. Resume home"><span className={styles.brandMark} aria-hidden="true" /></Link>
       <span className={styles.breadcrumbSeparator} aria-hidden="true">/</span>
       <div className={styles.projectIdentity}>
         <div className={styles.projectTitle}>

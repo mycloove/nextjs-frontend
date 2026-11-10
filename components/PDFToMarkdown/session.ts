@@ -194,13 +194,17 @@ export function loadSession(): MrSession | null {
   }
 }
 
-export function saveSession(session: MrSession): void {
-  if (typeof window === 'undefined') return
+export function saveSession(session: MrSession): boolean {
+  if (typeof window === 'undefined') return false
   try {
     window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    return true
   } catch {
     /* Quota or private-mode failure: the session is a convenience, never a
-       hard requirement — the app stays fully usable without it. */
+       hard requirement — the app stays fully usable without it. The caller
+       is told, though, so the editor never shows "Saved" for a write that
+       did not happen. */
+    return false
   }
 }
 

@@ -1,8 +1,12 @@
 import { LATEX_PROJECT_VERSION, type LatexEngine, type LatexProject } from './types.ts'
 import { newLatexId, validateLatexProject } from './project.ts'
+import { galleryLatexTemplates } from './galleryTemplates.ts'
 
 export type LatexSourceTemplate = { id: string; version: number; name: string; detail: string; engine: LatexEngine; requirements: string; files: { path: string; content: string }[] }
 export const templateNotice = 'Original SmilePDF versioned source templates. You may edit and redistribute these sources with your resume. Compiler fonts and TeX packages are separate dependencies.'
+// Third-party starters carry their own license file; the SmilePDF notice above
+// must never be stamped onto them (projectArchive.ts reads this set).
+export const thirdPartyTemplateIds: ReadonlySet<string> = new Set(['jakes-resume'])
 const style = String.raw`% Original SmilePDF source template, version 1.
 % You may edit and redistribute this source with your resume.
 \NeedsTeXFormat{LaTeX2e}
@@ -161,6 +165,7 @@ Community accessibility workshops; qualitative analysis; prototyping; statistics
 \end{document}
 ` },
     ] },
+  ...galleryLatexTemplates,
 ]
 
 export function createTemplateProject(id = 'career-source', now = new Date().toISOString()): LatexProject {
@@ -178,6 +183,13 @@ const qualifiedBrowserBuild = {
   manifestSha256: '4a0cca5dcea6b297df5cc6caf0bbfa932267502e68f3c19d0dc9b44a55634196',
   workerSha256: 'a8ac2cece2aa5c4ab93a69fcb4cdfa9fcb77e12344b0b55abaf1e93813e2c8b5',
 } as const
+// Later starters are checked on the build that is pinned today (see browserManifestPin.ts).
+const qualifiedCurrentBuild = {
+  checkedAt: '2026-11-06', runtime: 'browser',
+  profileVersion: 'browser-busytex-v2-tl2023-4499aa69-altacv-synctex-r2',
+  manifestSha256: 'd1baeb97576d06164cfea2032de3b70e43184950fb0a890cbfb14f8c79e575a5',
+  workerSha256: '0f2308e61c76784a045958292b44f202ddb7079e7640fc71d4bd711bb54fc974',
+} as const
 export const latexTemplateQualifications = [
   { ...qualifiedBrowserBuild, id: 'career-source', templateVersion: 2, engine: 'xelatex', fixture: 'career-template-as-is',
     sourceSha256: 'dacbe296f9656ce8b2d7a07200b59173ea8452e429346e4d9b0e86f3a85fbac4',
@@ -191,4 +203,33 @@ export const latexTemplateQualifications = [
     sourceSha256: '4fe5a840bc41eb18de50a055c01e60afd45b7c81304ba663269bfe99a1ef77d3',
     checks: 'Unchanged Bangla/English starter: real LuaHBTeX, one-page PDF and Noto Sans Bengali glyph/font coverage.',
     limitation: 'Complex Bangla cluster extraction in PDF.js is not fully faithful. Copy, search, reading-order and ATS compatibility are not certified.' },
+  // Gallery starters, checked on the current pinned build (supplied assets, core + profile groups only).
+  { ...qualifiedCurrentBuild, id: 'compact-source', templateVersion: 1, engine: 'pdflatex', fixture: 'compact-template-as-is',
+    sourceSha256: 'e3ce5414e4b6b46e325b251322eb321381e3fce03eac0b689f896959e2e2ec0a',
+    checks: 'Unchanged compact starter: real pdfLaTeX, one-page PDF, extracted section headings and embedded Latin Modern.',
+    limitation: 'Checks the bundled starter only. Plain reading order is not an ATS score or certification.' },
+  { ...qualifiedCurrentBuild, id: 'modern-source', templateVersion: 1, engine: 'xelatex', fixture: 'modern-template-as-is',
+    sourceSha256: '2b84364756554a9226ff27ab57ab71facfa77d535a71557f64a053f5ccb4f685',
+    checks: 'Unchanged modern starter: real XeLaTeX, one-page PDF, extracted headings and embedded Latin Modern Sans.',
+    limitation: 'Checks the bundled starter only, not arbitrary edits or visual equality with other TeX installations.' },
+  { ...qualifiedCurrentBuild, id: 'sidebar-source', templateVersion: 1, engine: 'xelatex', fixture: 'sidebar-template-as-is',
+    sourceSha256: 'a7cbd2a975eb0f3e6e1791b84b7379ab9ef6ad279420f64e3bdaf4a5610e1426',
+    checks: 'Unchanged sidebar starter: real XeLaTeX, one-page PDF with both columns extracted.',
+    limitation: 'Two columns are extracted in source order; strict ATS portals may read columns differently.' },
+  { ...qualifiedCurrentBuild, id: 'international-source', templateVersion: 1, engine: 'pdflatex', fixture: 'international-template-as-is',
+    sourceSha256: '90725e0a96b2a102d76da8c73e8e093c0941f2536e4a40c63b242f7a89cd68e4',
+    checks: 'Unchanged international starter: real pdfLaTeX, one-page PDF, extracted headings and embedded Latin Modern.',
+    limitation: 'Checks the bundled starter only. The left date column is a table layout, not an ATS certification.' },
+  { ...qualifiedCurrentBuild, id: 'bd-biodata-source', templateVersion: 1, engine: 'lualatex', fixture: 'bd-biodata-template-as-is',
+    sourceSha256: 'c8a9fef2f778356540581e0e105479f499ea92823c9233cad02fc3fc22fd4dc9',
+    checks: 'Unchanged Bangla biodata: real LuaHBTeX, one-page PDF and Noto Sans Bengali glyph/font coverage.',
+    limitation: 'Bangla hyphenation patterns are not bundled (reported as a warning). Complex-cluster extraction, copy, search and ATS use are not certified.' },
+  { ...qualifiedCurrentBuild, id: 'letter-source', templateVersion: 1, engine: 'xelatex', fixture: 'letter-template-as-is',
+    sourceSha256: '13ab1cfcaeb75a9e7335aa9ace35c4addb8db8d06dc880d6f36316b8fc0fc399',
+    checks: 'Unchanged cover letter: real XeLaTeX, one-page PDF, extracted salutation and embedded Latin Modern.',
+    limitation: 'Checks the bundled starter only, not arbitrary edits.' },
+  { ...qualifiedCurrentBuild, id: 'jakes-resume', templateVersion: 1, engine: 'pdflatex', fixture: 'jakes-resume-as-is',
+    sourceSha256: '8f3010985dd18e7a8586f006de648c490aa58a66b31a1baa9c75ca0d617547e7',
+    checks: 'Adapted MIT starter as bundled: real pdfLaTeX, one-page PDF and extracted section headings.',
+    limitation: 'Package substitutions are listed in the source header. Visual equality with the upstream Overleaf build is not claimed.' },
 ] as const

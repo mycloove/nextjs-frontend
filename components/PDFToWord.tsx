@@ -2345,10 +2345,14 @@ export default function PDFToWord() {
 
             <div className="p2w-stage-body">
               <div>
-                <h1 className="p2w-title">
+                {/* h2: the page h1 is ToolWorkspace's visually hidden tool name,
+                    which stays present after a file loads; this headline only
+                    exists in the empty state. .p2w-title sets every visual
+                    property, so the level change does not move a pixel. */}
+                <h2 className="p2w-title">
                   <span className="w-frozen">Frozen</span> in PDF.<br />
                   <span className="w-live">Alive</span> in Word.
-                </h1>
+                </h2>
                 <p className="p2w-lede">
                   {isDragActive
                     ? 'Release to load it into the docket.'

@@ -11,7 +11,7 @@ import ResumeSectionPanel from './ResumeSectionPanel'
 import ResumeInspectorPanel, { type ResumeInspectorPanelProps, type ResumeHeadingIconSize, type SectionDividerConfig } from './ResumeInspectorPanel'
 import { ResumeHeadingIcon, resumeHeadingIconOptions, type ResumeHeadingIconId } from './ResumeHeadingIcon'
 import { ResumeContactIcon } from './ResumeContactIcon'
-import { editorText, type EditorLanguage } from './editorLanguage'
+import { EDITOR_LANGUAGE_KEY, editorText, type EditorLanguage } from './editorLanguage'
 import { applyPhotoBackground, blurPhotoBackground, isHexColor, photoBackgroundPlate, photoBackgrounds, type PhotoBackground, type PhotoBackgroundId } from './photoBackground'
 import { suggestReadings } from './banglish'
 import { rebaseBanglishSources, rememberBanglishSource, replaceBanglishSource, validBanglishSources, type BanglishSource } from './banglishEditing'
@@ -20,12 +20,14 @@ import BanglishCorrection, { BanglishWords } from './BanglishCorrection'
 import { bengaliTypefaces, getBengaliTexFamily, latinTypefaces } from './resumeFonts'
 import { entryHasLink, parseContactLine, parseEntryLine, type EntryLine } from './resumeEntries'
 import { escapeLatex, latexLanguageSetup, paperFontStack } from './resumeTypography'
-import { decodeResumeDraft, encodeResumeDraft, TEMPLATE_BACKUP_KEY, type ResumeDraft } from './resumeDraft'
+import { decodeResumeDraft, encodeResumeDraft, REGULAR_DRAFT_KEY, TEMPLATE_BACKUP_KEY, type ResumeDraft } from './resumeDraft'
 import { resumeTemplates, type ResumeTemplate } from './resumeTemplates'
 import ResumeLanguageSuggestions, { type LanguageProposal } from './ResumeLanguageSuggestions'
 import ResumeTemplateLibrary from './ResumeTemplateLibrary'
+import { DEFAULT_RESUME_LAYOUT, getResumeLayout, partitionSections, resumeLayoutIds, resumeLayouts, type ResumeLayoutId } from './resumeLayouts'
+import type { TemplateRequest } from './templateCatalog'
 
-type Purpose = 'Resume' | 'Career profile' | 'Academic CV' | 'Biodata' | 'Statement of purpose'
+type Purpose = 'Resume' | 'Career profile' | 'Academic CV' | 'Biodata' | 'Statement of purpose' | 'Cover letter'
 type ProfileAlign = 'left' | 'center' | 'right'
 type PhotoShape = 'circle' | 'square'
 type Section = { id: string; title: string; detail: string; group: 'Core' | 'Additional' }
@@ -60,7 +62,7 @@ const initialContent: Record<string, string> = {
   languages: '', awards: '', publications: '', volunteer: '', references: '',
 }
 
-const purposes: Purpose[] = ['Resume', 'Career profile', 'Academic CV', 'Biodata', 'Statement of purpose']
+const purposes: Purpose[] = ['Resume', 'Career profile', 'Academic CV', 'Biodata', 'Statement of purpose', 'Cover letter']
 const profileAligns: ProfileAlign[] = ['left', 'center', 'right']
 // The glyph IS the setting: each button previews its own arrangement, so no
 // wording has to teach what "left" applies to.
@@ -113,11 +115,11 @@ const bengaliSectionTitles: Record<string, string> = {
 const profilePhotoBounds = { min: 18, max: 48, initial: 30 }
 const initialSectionDivider: SectionDividerConfig = { enabled: false, style: 'solid', color: 'accent', thickness: 0.75 }
 
-// Guest autosave. Module-owned key, never read or written by another module.
+// Guest autosave (resumeDraft.ts owns the key; the home page only summarizes it).
 // Schema version bumps invalidate older blobs instead of guessing their shape.
-const draftKey = 'mr-resume:draft:v1'
-const editorLanguageKey = 'mr-resume:editor-language:v1'
-const draftOptions = { sectionIDs: sections.map((section) => section.id), fonts: typefaces.map((item) => item.name), photoBackgrounds: photoBackgrounds.map((item) => item.id), headingIcons: resumeHeadingIconOptions.map((item) => item.id), templates: resumeTemplates.map((item) => item.id), accentCount: accents.length }
+const draftKey = REGULAR_DRAFT_KEY
+const editorLanguageKey = EDITOR_LANGUAGE_KEY
+const draftOptions = { sectionIDs: sections.map((section) => section.id), fonts: typefaces.map((item) => item.name), photoBackgrounds: photoBackgrounds.map((item) => item.id), headingIcons: resumeHeadingIconOptions.map((item) => item.id), templates: resumeTemplates.map((item) => item.id), accentCount: accents.length, layouts: resumeLayoutIds }
 
 // Exported files must describe themselves: a title like "Untitled resume" becomes
 // `Untitled-resume` — and never an empty or mangled filename.
@@ -264,11 +266,14 @@ export type RegularStudioBridge = {
   prepareToHide: () => ReturnType<typeof prepareRegularSuspension>
 }
 
-export default function MrResumeStudio({ embedded = false, workspaceActive = true, bridgeRef, onCopyToLatex }: {
+export default function MrResumeStudio({ embedded = false, workspaceActive = true, bridgeRef, onCopyToLatex, templateRequest = null, onTemplateHandled }: {
   embedded?: boolean
   workspaceActive?: boolean
   bridgeRef?: Ref<RegularStudioBridge>
   onCopyToLatex?: () => void
+  /** A gallery deep link (?template=). Handled once per sequence; never replaces writing without consent. */
+  templateRequest?: TemplateRequest | null
+  onTemplateHandled?: (sequence: number) => void
 } = {}) {
   const [documentTitle, setDocumentTitle] = useState('Untitled resume')
   const [fullName, setFullName] = useState('Ayesha Rahman')
@@ -347,6 +352,12 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
   const [restored, setRestored] = useState(false)
   const [confirmFresh, setConfirmFresh] = useState(false)
   const [templateId, setTemplateId] = useState<string | null>(null)
+  const [layout, setLayout] = useState<ResumeLayoutId>(DEFAULT_RESUME_LAYOUT)
+  const [requestedTemplate, setRequestedTemplate] = useState<{ template: ResumeTemplate; sequence: number } | null>(null)
+  const handledTemplateRef = useRef(0)
+  const hadStoredDraftRef = useRef(false)
+  const templateHandledRef = useRef(onTemplateHandled)
+  templateHandledRef.current = onTemplateHandled
   const [templateBackup, setTemplateBackup] = useState<ResumeDraft | null>(null)
   const restoreBlockedRef = useRef(false)
   const templateSourcesBackupRef = useRef<Record<string, BanglishSource[]> | null>(null)
@@ -401,7 +412,7 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
   latestPrintState.current = { content, titles, enabled, fullName, documentTitle, language, font, fontSize, leading, pageSize, margin, sectionGap, format, profileAlign, photoSize, photoShape, profileImageDisplay, profileImage, accent, customAccentColor, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor, workspaceActive }
 
   function captureDraft(): ResumeDraft {
-    return { documentTitle, fullName, purpose, enabled, customSections, content, titles, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor, language, banglishMode, format, pageSize, font, fontSize, leading, sectionGap, margin, accent, customAccentColor, profileAlign, profileImage, photoShape, photoSize, photoBackground, photoBlur, photoCustomColor, profileImageDisplay, templateId }
+    return { documentTitle, fullName, purpose, enabled, customSections, content, titles, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor, language, banglishMode, format, pageSize, font, fontSize, leading, sectionGap, margin, accent, customAccentColor, profileAlign, profileImage, photoShape, photoSize, photoBackground, photoBlur, photoCustomColor, profileImageDisplay, templateId, layout }
   }
   latestDraftRef.current = captureDraft()
   workspaceStateRef.current = { restored, writable: restored && saveState !== 'unavailable' && !restoreBlockedRef.current, modal: wordCorrection !== null }
@@ -443,6 +454,7 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
     setAccent(draft.accent); setCustomAccentColor(draft.customAccentColor); setProfileAlign(draft.profileAlign)
     setProfileImage(draft.profileImage); setProfileImageDisplay(draft.profileImageDisplay); setPhotoShape(draft.photoShape); setPhotoSize(draft.photoSize)
     setPhotoBackground(draft.photoBackground); setPhotoBlur(draft.photoBlur); setPhotoCustomColor(draft.photoCustomColor); setTemplateId(draft.templateId)
+    setLayout(draft.layout ?? DEFAULT_RESUME_LAYOUT)
     textHistoryRef.current.clear(); sourceHistoryRef.current.clear(); banglishSourcesRef.current = {}; setBanglishSources({}); setWordCorrection(null)
     setActive('profile'); setInspector('section')
   }
@@ -460,7 +472,7 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
     const english = template.language === 'English'
     const accentColor = template.accentColor
     const accentIndex = accents.findIndex((item) => item.color === accentColor)
-    applyDraft({ ...backup, documentTitle: template.name, fullName: template.fullName, purpose: template.purpose, enabled: [...template.enabled], customSections: [], content: { ...Object.fromEntries(sections.map((section) => [section.id, ''])), ...template.content }, titles: template.titles ? { ...template.titles } : {}, sectionDividers: template.rulesUnderHeadings ? Object.fromEntries(template.enabled.filter((id) => id !== 'profile').map((id) => [id, { enabled: true, style: 'solid' as const, color: '#1f1f1f', thickness: 0.6, underHeading: true }])) : {}, headingIcons: {}, language: english ? 'English' : 'Bangla', banglishMode: !english, format: 'Visual', pageSize: 'A4', font: template.font, fontSize: 11, leading: 1.65, sectionGap: 24, margin: 18, accent: accentColor ? (accentIndex >= 0 ? accentIndex : CUSTOM_ACCENT) : 0, customAccentColor: accentColor ?? backup.customAccentColor, profileAlign: 'left', profileImage: null, profileImageDisplay: null, photoShape: 'square', photoSize: profilePhotoBounds.initial, photoBackground: 'none', templateId: template.id })
+    applyDraft({ ...backup, documentTitle: template.name, fullName: template.fullName, purpose: template.purpose, enabled: [...template.enabled], customSections: [], content: { ...Object.fromEntries(sections.map((section) => [section.id, ''])), ...template.content }, titles: template.titles ? { ...template.titles } : {}, sectionDividers: template.rulesUnderHeadings ? Object.fromEntries(template.enabled.filter((id) => id !== 'profile').map((id) => [id, { enabled: true, style: 'solid' as const, color: '#1f1f1f', thickness: 0.6, underHeading: true }])) : {}, headingIcons: {}, language: english ? 'English' : 'Bangla', banglishMode: !english, format: 'Visual', pageSize: 'A4', font: template.font, fontSize: template.settings?.fontSize ?? 11, leading: template.settings?.leading ?? 1.65, sectionGap: template.settings?.sectionGap ?? 24, margin: template.settings?.margin ?? 18, accent: accentColor ? (accentIndex >= 0 ? accentIndex : CUSTOM_ACCENT) : 0, customAccentColor: accentColor ?? backup.customAccentColor, profileAlign: template.profileAlign ?? 'left', layout: template.layout, profileImage: null, profileImageDisplay: null, photoShape: 'square', photoSize: profilePhotoBounds.initial, photoBackground: 'none', templateId: template.id })
     setSaveState('fresh'); setSavedAt(null); selectSection('profile', true)
     setNotice(stored ? 'Template applied. Your previous draft has a restore copy on this device.' : 'Template applied. The restore copy is available in this session only because device storage is unavailable.')
   }
@@ -614,6 +626,7 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
     try {
       const raw = window.localStorage.getItem(draftKey)
       const saved = decodeResumeDraft(raw, latestDraftRef.current!, draftOptions)
+      hadStoredDraftRef.current = raw !== null
       if (saved) {
         applyDraft(saved.document)
         setSaveState('saved')
@@ -648,7 +661,25 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
       }
     }, 700)
     return () => window.clearTimeout(handle)
-  }, [restored, saveState, documentTitle, fullName, purpose, enabled, customSections, content, titles, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor, language, banglishMode, format, pageSize, font, fontSize, leading, sectionGap, margin, accent, customAccentColor, profileAlign, profileImage, photoShape, photoSize, photoBackground, photoBlur, photoCustomColor, profileImageDisplay, templateId])
+  }, [restored, saveState, documentTitle, fullName, purpose, enabled, customSections, content, titles, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor, language, banglishMode, format, pageSize, font, fontSize, leading, sectionGap, margin, accent, customAccentColor, profileAlign, profileImage, photoShape, photoSize, photoBackground, photoBlur, photoCustomColor, profileImageDisplay, templateId, layout])
+
+  // Gallery deep link: the host hands over a validated request once. A first
+  // visit (nothing stored, nothing autosaved yet) applies at once; any existing
+  // draft gets the same preview-and-confirm dialog the template library uses,
+  // so arriving from the gallery can never silently replace someone's writing.
+  useEffect(() => {
+    if (!restored || !templateRequest || templateRequest.editor !== 'regular' || handledTemplateRef.current >= templateRequest.sequence) return
+    handledTemplateRef.current = templateRequest.sequence
+    templateHandledRef.current?.(templateRequest.sequence)
+    const template = resumeTemplates.find((item) => item.id === templateRequest.id)
+    if (!template) { setNotice('That template is no longer available. Your draft is unchanged.'); return }
+    if (restoreBlockedRef.current) { setNotice('The stored draft could not be restored. Start fresh explicitly before replacing it.'); return }
+    if (!hadStoredDraftRef.current && saveState === 'fresh') { applyTemplate(template); return }
+    setMobilePanel('sections')
+    setRequestedTemplate({ template, sequence: templateRequest.sequence })
+    setNotice('Review the template, then choose whether to replace the current draft.')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs per request sequence, not per keystroke
+  }, [restored, templateRequest])
 
   // "Start fresh" asks once, then stands down if left unanswered.
   useEffect(() => {
@@ -822,13 +853,15 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
     // otherwise the source has no reference to it at all.
     const photoNote = profileImage ? `% The nameplate clips profile-photo.jpg into a ${photoShape} ${photoMM}mm frame, the\n% same cover-crop the preview shows. Supply the photograph you used here; a\n% background preset chosen in the studio is already baked into that preview\n% photo, so this sidecar reference wants the original file. Without the file,\n% the nameplate compiles with the placeholder seen in the preview text.\n` : ''
     const profileDivider = dividerLatex('profile')
-    return `% Generated draft source. Compile with LuaLaTeX or XeLaTeX.\n% The selected fonts must be installed; no PDF has been generated here.\n${photoNote}\\documentclass[11pt]{article}\n\\usepackage[${paperSizes[pageSize].tex},margin=${margin}mm]{geometry}\n\\usepackage{graphicx}\n${profileImage ? '\\usepackage{tikz}\n' : ''}\\usepackage{fontspec}\n${font === 'Latin Modern'
+    // The visual layouts are a preview arrangement; the source stays one column and says so.
+    const layoutNote = layout === DEFAULT_RESUME_LAYOUT ? '' : `% The "${getResumeLayout(layout).name}" visual layout is not reproduced here; this source keeps the single-column structure.\n`
+    return `% Generated draft source. Compile with LuaLaTeX or XeLaTeX.\n${layoutNote}% The selected fonts must be installed; no PDF has been generated here.\n${photoNote}\\documentclass[11pt]{article}\n\\usepackage[${paperSizes[pageSize].tex},margin=${margin}mm]{geometry}\n\\usepackage{graphicx}\n${profileImage ? '\\usepackage{tikz}\n' : ''}\\usepackage{fontspec}\n${font === 'Latin Modern'
   // Latin Modern is the family TeX itself sets; skipping \setmainfont here
   // makes the compiled source reproduce the template on any TeX install
   // exactly, without depending on how a local engine names the font.
   ? '% Latin Modern is the TeX-native default font; no \\setmainfont override is needed.\n'
   : `\\setmainfont{${font}}\n`}${languageSetup}\n\\usepackage{xcolor,enumitem,titlesec,hyperref,dashrule}\n${hasHeadingIcons || hasContactIcons ? '\\usepackage{fontawesome5}\n' : ''}\\definecolor{accent}{HTML}{${(accent < accents.length ? accents[accent].color : customAccentColor).slice(1)}}\n\\titleformat{\\section}{\\normalsize\\bfseries\\color{accent}}{}{0em}{}\n\\titlespacing*{\\section}{0pt}{${sectionGap * .75}pt}{6pt}\n\\setlength{\\parindent}{0pt}\n\\setlength{\\parskip}{6pt}\n\\begin{document}\n\\fontsize{${fontSize}}{${(fontSize * leading).toFixed(2)}}\\selectfont\n${nameplate}${profileDivider ? `\n\n${profileDivider}` : ''}\n\n${lines.join('\n\n')}\n\\end{document}\n`
-  }, [content, enabled, customSections, titles, language, documentHasBangla, fullName, pageSize, margin, font, fontSize, leading, sectionGap, accent, customAccentColor, profileAlign, profileImage, photoShape, photoSize, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor])
+  }, [content, enabled, customSections, titles, language, documentHasBangla, fullName, pageSize, margin, font, fontSize, leading, sectionGap, accent, customAccentColor, profileAlign, profileImage, photoShape, photoSize, sectionDividers, headingIcons, headingIconSize, headingIconCustomSize, headingIconColor, layout])
   latestLatexRef.current = latex
 
   function selectSection(id: string, focus = false) {
@@ -1406,6 +1439,7 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
     } catch { /* unreadable storage; the debounced writer will rebuild it */ }
     restoreBlockedRef.current = false
     setTemplateId(null)
+    setLayout(DEFAULT_RESUME_LAYOUT)
     setDocumentTitle('Untitled resume')
     setFullName('Ayesha Rahman')
     setPurpose('Resume')
@@ -1480,6 +1514,12 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
     }
   }
 
+  function changeLayout(next: ResumeLayoutId) {
+    if (next === layout) return
+    setLayout(next)
+    setNotice('Layout changed. Your writing and section order are unchanged.')
+  }
+
   function resetPageSettings() {
     setPageSize('A4')
     setFont(language === 'Bangla' ? 'Noto Sans Bengali' : 'Inter')
@@ -1496,6 +1536,7 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
   }
 
   const inspectorPanelProps: ResumeInspectorPanelProps = {
+    layout, onLayoutChange: changeLayout, layouts: resumeLayouts,
     inspector, setInspector, setMobilePanel, sectionTabRef, pageTabRef, openPageSettings,
     active, activeIndex, enabled, title: editorTitle, resumeTitle: title, t: tx, sectionDetail: currentSection.detail, moveSection,
     activeHeadingIcon: headingIcons[active] ?? 'none',
@@ -1559,7 +1600,26 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
     '--resume-accent': accent < accents.length ? accents[accent].color : customAccentColor,
     '--resume-font': effectiveFontFamily,
     '--resume-font-size': `${fontSize}pt`, '--resume-leading': leading, '--resume-section-gap': `${sectionGap}px`,
+    '--resume-margin': `${margin}mm`,
   } as CSSProperties
+
+  // Profile contact lines keep [label](href) as a real link with its label, the
+  // same shape the LaTeX export compiles (\href), instead of raw markup.
+  const contactParts = (parts: InlinePart[], key: string, sources: readonly BanglishSource[]): ReactNode[] => parts.map((part, index) => {
+    const partKey = `${key}-${index}`
+    if (part.kind === 'bold') return <strong key={partKey}>{contactParts(part.children, partKey, sources)}</strong>
+    if (part.kind === 'italic') return <em key={partKey}>{contactParts(part.children, partKey, sources)}</em>
+    if (part.kind === 'link') return <a key={partKey} href={part.href} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()}>{contactParts(part.children, partKey, [])}</a>
+    return <BanglishWords key={partKey} value={part.text} offset={part.start} sources={sources} onCorrect={(source, trigger) => openWordCorrection('content:profile', source, trigger)} t={tx} />
+  })
+
+  // One section block, shared by every layout; a layout only decides which column holds it.
+  const paperColumns = partitionSections(layout, enabled)
+  const paperSection = (id: string) => <section key={id} className={`${styles.paperSection} ${active === id ? styles.paperSelected : ''} ${dragging?.id === id ? styles.dragOrigin : ''}`} data-sort-id={id} data-paper-section={id} data-flip-key={`canvas:${id}`} onClick={() => selectSection(id, true)}>
+      {dropMarker(id)}{active === id && <span key={selectionPulse} className={styles.registrationSettle} aria-hidden="true" />}<div className={styles.blockControls} onClick={(event) => event.stopPropagation()}>{dragHandle(id, true)}<button type="button" className={styles.blockEdit} onClick={() => selectSection(id, true)} aria-label={`${tx('Edit')} ${editorTitle(id) || tx('Untitled section')}`}><Glyph name="edit" />{tx('Edit')}</button></div>
+      <h3 style={{ '--heading-icon-size': headingIconSize === 'small' ? '.82em' : headingIconSize === 'large' ? '1.18em' : headingIconSize === 'custom' ? `${headingIconCustomSize}em` : '1em', '--heading-icon-color': headingIconColor === 'accent' ? (accent < accents.length ? accents[accent].color : customAccentColor) : headingIconColor } as CSSProperties}>{headingIcons[id] && headingIcons[id] !== 'none' && <span className={styles.paperHeadingIcon}><ResumeHeadingIcon name={headingIcons[id]} /></span>}<span data-banglish-field={`title:${id}`}><BanglishWords value={title(id)} sources={validBanglishSources(title(id), banglishSources[`title:${id}`] ?? [])} onCorrect={(source, trigger) => openWordCorrection(`title:${id}`, source, trigger)} t={tx} /></span></h3>{sectionDividers[id]?.enabled && sectionDividers[id].underHeading && <hr className={styles.paperDivider + ' ' + styles.paperDivider_underHeading} style={{ '--divider-color': sectionDividers[id].color === 'accent' ? (accent < accents.length ? accents[accent].color : customAccentColor) : sectionDividers[id].color, '--divider-thickness': `${sectionDividers[id].thickness}px` } as CSSProperties} />}<div className={styles.sectionText} data-banglish-field={`content:${id}`}>{(content[id] ?? '').trim() ? <SectionText value={content[id]} sources={validBanglishSources(content[id], banglishSources[`content:${id}`] ?? [])} onCorrect={(source, trigger) => openWordCorrection(`content:${id}`, source, trigger)} t={tx} /> : <p className={styles.emptySection}>{cx('Select this section to start writing.')}</p>}</div>
+      {sectionDividers[id]?.enabled && !sectionDividers[id].underHeading && enabled.indexOf(id) < enabled.length - 1 && <hr className={`${styles.paperDivider} ${styles[`paperDivider_${sectionDividers[id].style}`]}`} style={{ '--divider-color': sectionDividers[id].color === 'accent' ? (accent < accents.length ? accents[accent].color : customAccentColor) : sectionDividers[id].color, '--divider-thickness': `${sectionDividers[id].thickness}px` } as CSSProperties} />}
+                  </section>
 
   return (
     <div ref={studioRef} className={`${theme.theme} ${styles.studio} ${embedded ? styles.embedded : ''}`} lang={editorLanguage === 'Bangla' ? 'bn' : 'en'} data-editor-language={editorLanguage} data-mobile-panel={mobilePanel} data-dragging={!!dragging} onKeyDown={(event) => {
@@ -1570,7 +1630,7 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
       }
     }}>
       <header className={styles.topbar}>
-        <Link className={styles.backLink} href="/" aria-label={tx('Back to workspace')}><Glyph name="back" /></Link>
+        <Link className={styles.backLink} href="/mr-resume" aria-label={tx('Back to Mr. Resume home')} title={tx('Back to Mr. Resume home')}><Glyph name="back" /></Link>
         <div className={styles.brand}><span className={styles.brandMark}><Glyph name="page" /></span><span>Mr.<b>Resume</b><small>Studio</small></span></div>
         <div className={styles.docIdentity}><input aria-label={tx('Document title')} value={documentTitle} onChange={(event) => setDocumentTitle(event.target.value)} /><span className={`${styles.saveStatus} ${saveState === 'unavailable' ? styles.saveUnavailable : ''}`} title={tx(saveState === 'unavailable' ? 'This browser is blocking local autosave. Download your work regularly.' : 'Your draft is autosaved on this device. Nothing is uploaded.')}><span key={savedAt ?? saveState} className={styles.savePulse}>{saveState === 'saved' && savedAt ? `${tx('Autosaved')} ${new Date(savedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}` : tx(saveState === 'unavailable' ? 'Autosave unavailable' : 'Autosave on')}</span></span></div>
         <div className={styles.topActions}><div className={styles.sourceActions}><button type="button" className={styles.texButton} aria-label={tx('Export .tex')} title={tx('Editable LaTeX source')} onClick={downloadLatex}><Glyph name="download" /><span>.tex</span></button>{onCopyToLatex && <button type="button" className={styles.copyToLatexButton} aria-label={tx('Copy to LaTeX')} title={tx('Create a separate LaTeX project from the current Regular writing')} onClick={onCopyToLatex}><span>{tx('Copy to LaTeX')}</span><span className={styles.copyToLatexArrow} aria-hidden="true">→</span></button>}</div><div className={styles.editorLanguageControl}><StudioDropdown value={tx(editorLanguage)} options={(['English', 'Bangla'] as EditorLanguage[]).map(tx)} onChange={(value) => setEditorLanguage(value === tx('Bangla') ? 'Bangla' : 'English')} label={tx('Editor language')} icon="globe" /></div><button type="button" className={styles.exportButton} aria-label={tx('Download draft PDF')} title={tx('A draft PDF, printed from this preview')} disabled={preparingPrint} aria-busy={preparingPrint} onClick={printDraft}><Glyph name="download" /><span>{tx(preparingPrint ? 'Preparing PDF' : 'Draft PDF')}</span></button></div>
@@ -1594,14 +1654,14 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
       </section>
 
       <section className={styles.workspace} aria-label={tx('Resume editor')}>
-        <ResumeSectionPanel active={active} enabled={enabled} dragging={dragging} content={content} title={editorTitle} t={tx} selectSection={selectSection} dropMarker={dropMarker} dragHandle={dragHandle} addRef={addRef} libraryOpen={libraryOpen} setLibraryOpen={setLibraryOpen} catalog={catalog} addSection={addSection} addCustomSection={addCustomSection} startFresh={startFresh} confirmFresh={confirmFresh} templateLibrary={<ResumeTemplateLibrary selected={templateId} hasBackup={Boolean(templateBackup)} onApply={applyTemplate} onRestore={restoreTemplateBackup} onExportBackup={downloadTemplateBackup} sectionTitle={(id) => bengaliSectionTitles[id] ?? title(id)} catalogTitle={(id) => catalog.find((section) => section.id === id)?.title ?? 'Untitled section'} t={tx} />} />
+        <ResumeSectionPanel active={active} enabled={enabled} dragging={dragging} content={content} title={editorTitle} t={tx} selectSection={selectSection} dropMarker={dropMarker} dragHandle={dragHandle} addRef={addRef} libraryOpen={libraryOpen} setLibraryOpen={setLibraryOpen} catalog={catalog} addSection={addSection} addCustomSection={addCustomSection} startFresh={startFresh} confirmFresh={confirmFresh} templateLibrary={<ResumeTemplateLibrary request={requestedTemplate} selected={templateId} hasBackup={Boolean(templateBackup)} onApply={applyTemplate} onRestore={restoreTemplateBackup} onExportBackup={downloadTemplateBackup} sectionTitle={(id) => bengaliSectionTitles[id] ?? title(id)} catalogTitle={(id) => catalog.find((section) => section.id === id)?.title ?? 'Untitled section'} t={tx} />} />
 
         <section className={styles.canvasPanel} aria-label={tx('Live document preview')}>
           <div ref={stageRef} className={styles.paperStage} data-sort-scroll="canvas">
           {format === 'LaTeX' ? <div className={styles.sourceView}><p>{tx('Generated from your writing and page settings. Edit a section to update this read-only source.')}</p><pre className={styles.texCanvas} aria-label={tx('Generated LaTeX source')}><code>{latex}</code></pre><p>{tx('Requires LuaLaTeX or XeLaTeX and the selected fonts.')}{documentHasBangla ? ` ${tx('Bengali typeface')}: ${getBengaliTexFamily(font)}.` : ''}</p></div> : <div className={styles.pageStack}>
               <div className={styles.pageCaption}><span>{tx('YOUR DOCUMENT')}</span><span>{size.dimensions}</span></div>
               <div className={styles.paperFrame} style={{ width: size.width * scale, height: Math.max(size.height, paperHeight) * scale }}>
-                <article ref={paperRef} className={styles.paper} lang={language === 'Bangla' ? 'bn' : 'en'} data-font={font} style={paperStyle} aria-label={tx('Resume draft')}>
+                <article ref={paperRef} className={styles.paper} lang={language === 'Bangla' ? 'bn' : 'en'} data-font={font} data-layout={layout} style={paperStyle} aria-label={tx('Resume draft')}>
                   <header className={`${styles.paperHeader} ${profileImage ? styles.headerHasPhoto : ''} ${active === 'profile' ? styles.paperSelected : ''}`} data-align={profileAlign} data-paper-section="profile" onClick={() => selectSection('profile', true)}>
                     <div className={styles.blockControls}><button type="button" className={styles.blockEdit} onClick={(event) => { event.stopPropagation(); selectSection('profile', true) }} aria-label={`${tx('Edit')} ${editorTitle('profile')}`}><Glyph name="edit" />{tx('Edit')}</button></div>
                     {active === 'profile' && <span key={selectionPulse} className={styles.registrationSettle} aria-hidden="true" />}
@@ -1615,7 +1675,7 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
                         const start = content.profile.indexOf(line, cursor)
                         cursor = start + line.length + 1
                         const contact = parseContactLine(line)
-                        return <span key={`contact-${lineIndex}`} className={styles.paperContactLine}>{contact.icon && <ResumeContactIcon name={contact.icon} className={styles.paperContactIcon} />}<BanglishWords value={line} offset={Math.max(0, start)} sources={validBanglishSources(line, banglishSources['content:profile'] ?? [])} onCorrect={(source, trigger) => openWordCorrection('content:profile', source, trigger)} t={tx} /></span>
+                        return <span key={`contact-${lineIndex}`} className={styles.paperContactLine}>{contact.icon && <ResumeContactIcon name={contact.icon} className={styles.paperContactIcon} />}{contactParts(parseInline(line, Math.max(0, start)), `contact-${lineIndex}`, validBanglishSources(line, banglishSources['content:profile'] ?? []))}</span>
                       })
                     })()}</p></div>
                     {photoSrc && (
@@ -1637,11 +1697,7 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
                     )}
                   </header>
                   {sectionDividers.profile?.enabled && enabled.length > 1 && (sectionDividers.profile.underHeading ? <div className={styles.paperDivider + ' ' + styles.paperDivider_underHeading} /> : <hr className={`${styles.paperDivider} ${styles[`paperDivider_${sectionDividers.profile.style}`]}`} style={{ '--divider-color': sectionDividers.profile.color === 'accent' ? (accent < accents.length ? accents[accent].color : customAccentColor) : sectionDividers.profile.color, '--divider-thickness': `${sectionDividers.profile.thickness}px` } as CSSProperties} />)}
-                  <div className={styles.paperBody}>{enabled.filter((id) => id !== 'profile').map((id) => <section key={id} className={`${styles.paperSection} ${active === id ? styles.paperSelected : ''} ${dragging?.id === id ? styles.dragOrigin : ''}`} data-sort-id={id} data-paper-section={id} data-flip-key={`canvas:${id}`} onClick={() => selectSection(id, true)}>
-                    {dropMarker(id)}{active === id && <span key={selectionPulse} className={styles.registrationSettle} aria-hidden="true" />}<div className={styles.blockControls} onClick={(event) => event.stopPropagation()}>{dragHandle(id, true)}<button type="button" className={styles.blockEdit} onClick={() => selectSection(id, true)} aria-label={`${tx('Edit')} ${editorTitle(id) || tx('Untitled section')}`}><Glyph name="edit" />{tx('Edit')}</button></div>
-                    <h3 style={{ '--heading-icon-size': headingIconSize === 'small' ? '.82em' : headingIconSize === 'large' ? '1.18em' : headingIconSize === 'custom' ? `${headingIconCustomSize}em` : '1em', '--heading-icon-color': headingIconColor === 'accent' ? (accent < accents.length ? accents[accent].color : customAccentColor) : headingIconColor } as CSSProperties}>{headingIcons[id] && headingIcons[id] !== 'none' && <span className={styles.paperHeadingIcon}><ResumeHeadingIcon name={headingIcons[id]} /></span>}<span data-banglish-field={`title:${id}`}><BanglishWords value={title(id)} sources={validBanglishSources(title(id), banglishSources[`title:${id}`] ?? [])} onCorrect={(source, trigger) => openWordCorrection(`title:${id}`, source, trigger)} t={tx} /></span></h3>{sectionDividers[id]?.enabled && sectionDividers[id].underHeading && <hr className={styles.paperDivider + ' ' + styles.paperDivider_underHeading} style={{ '--divider-color': sectionDividers[id].color === 'accent' ? (accent < accents.length ? accents[accent].color : customAccentColor) : sectionDividers[id].color, '--divider-thickness': `${sectionDividers[id].thickness}px` } as CSSProperties} />}<div className={styles.sectionText} data-banglish-field={`content:${id}`}>{(content[id] ?? '').trim() ? <SectionText value={content[id]} sources={validBanglishSources(content[id], banglishSources[`content:${id}`] ?? [])} onCorrect={(source, trigger) => openWordCorrection(`content:${id}`, source, trigger)} t={tx} /> : <p className={styles.emptySection}>{cx('Select this section to start writing.')}</p>}</div>
-                    {sectionDividers[id]?.enabled && !sectionDividers[id].underHeading && enabled.indexOf(id) < enabled.length - 1 && <hr className={`${styles.paperDivider} ${styles[`paperDivider_${sectionDividers[id].style}`]}`} style={{ '--divider-color': sectionDividers[id].color === 'accent' ? (accent < accents.length ? accents[accent].color : customAccentColor) : sectionDividers[id].color, '--divider-thickness': `${sectionDividers[id].thickness}px` } as CSSProperties} />}
-                  </section>)}</div>
+                  <div className={styles.paperBody} data-has-rail={paperColumns.rail.length > 0 || undefined}>{paperColumns.rail.length ? <><div className={styles.paperMain}>{paperColumns.main.map(paperSection)}</div><div className={styles.paperRail}>{paperColumns.rail.map(paperSection)}</div></> : paperColumns.main.map(paperSection)}</div>
                 </article>
               </div>
               <p className={styles.draftCaption}>{tx('Click a section to edit. Drag its handle to move it.')}</p>

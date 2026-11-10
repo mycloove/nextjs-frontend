@@ -61,6 +61,7 @@ export default function ToolWorkspace({
   toolId,
   topbarVariant,
   hideHeading,
+  headingOwnedByTool,
 }: {
   toolId: ToolId
   topbarVariant?: 'aligned'
@@ -72,6 +73,12 @@ export default function ToolWorkspace({
      as its accessible region name. Default false keeps every other tool's
      heading and DOM unchanged. */
   hideHeading?: boolean
+  /* Only meaningful with hideHeading. When the visible heading row is hidden,
+     the workspace still renders the tool name as a visually hidden <h1> so
+     every tool page has exactly one page heading (several had none). A tool
+     whose own component always renders its <h1> passes this to suppress the
+     workspace one and avoid two. Default false. */
+  headingOwnedByTool?: boolean
 }) {
   const account = useAccountViewer()
   const credits = useCreditBalance(account.status === 'loading' ? null : account.viewer?.id ?? 'guest')
@@ -89,13 +96,16 @@ export default function ToolWorkspace({
     <div className={`${styles.shell} ${toolId === 'merge-pdf' ? styles.shellMerge : ''}`}>
       <section className={styles.main}>
         <ToolNavbar toolId={toolId} aligned={aligned} accountState={account} creditState={credits} availability={availability} />
-        <main className={`${styles.content} ${toolId === 'merge-pdf' ? styles.contentMerge : ''}`}>
+        {/* The root layout owns the main landmark; this is the workspace body. */}
+        <div className={`${styles.content} ${toolId === 'merge-pdf' ? styles.contentMerge : ''}`}>
           {/* hideHeading: the whole identity row — the layered mark, the
               "Convert" eyebrow, the tool title and the description — is
               skipped, leaving the tool surface as the page's only content.
               Opt-in pages use this when their surface provides the visual
               identity; every other tool keeps its heading and description. */}
-          {hideHeading || toolId === 'merge-pdf' || toolId === 'pdf-to-images' ? null : (
+          {hideHeading || toolId === 'merge-pdf' || toolId === 'pdf-to-images' ? (
+            headingOwnedByTool ? null : <h1 className={styles.srOnly}>{tool.label}</h1>
+          ) : (
             <div className={styles.heading}>
               {/* Same layered identity as the home tool card. The wrapper is
                   aria-hidden because the h1 right after it already carries the
@@ -112,7 +122,7 @@ export default function ToolWorkspace({
             {!withdrawn && <CreditCost toolId={toolId} creditState={credits} />}
             {withdrawn ? <WithdrawnTool compact label={tool.label} /> : <Tool />}
           </section>
-        </main>
+        </div>
       </section>
     </div>
   )

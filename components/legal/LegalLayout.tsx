@@ -33,7 +33,8 @@ export default function LegalLayout({
   return (
     <div className="home-page">
       <Topbar2 openFileHref="/" />
-      <main className={styles.main}>
+      {/* The root layout owns the main landmark; this is the skip-link target. */}
+      <div className={styles.main} id="main-content" tabIndex={-1}>
         <div className={styles.shell}>
           <aside className={styles.toc} aria-label="On this page">
             <p className={styles.tocTitle}>On this page</p>
@@ -70,7 +71,7 @@ export default function LegalLayout({
             ))}
           </article>
         </div>
-      </main>
+      </div>
       <HomeFooter />
     </div>
   );

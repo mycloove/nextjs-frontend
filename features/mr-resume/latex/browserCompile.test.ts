@@ -10,7 +10,8 @@ test('XeLaTeX templates remain compatible with the legacy Xe-only adapter withou
   for (const item of latexSourceTemplates.filter((item) => item.engine === 'xelatex')) {
     const project = createTemplateProject(item.id)
     assert.equal(project.engine, 'xelatex')
-    assert.equal(item.version, 2)
+    // The original starters are on v2; gallery starters began at v1.
+    assert.equal(item.version, ['career-source', 'academic-source'].includes(item.id) ? 2 : 1)
     assert.equal(browserSourceRefusal(project), null)
   }
   const lua = reviseProject(createTemplateProject(), { engine: 'lualatex' })

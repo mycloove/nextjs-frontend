@@ -393,6 +393,10 @@ export function browserLatexDiagnostics(log: string, project: LatexProject, refu
     // notice in the log, but still reject missing final output or authored files.
     if (index < finalPass && /^No file output\.bbl\.\s*$/iu.test(message)) return null
     if (/^(?:!\s*)?Font\s+[\s\S]*?\bnot loadable\b/iu.test(message)) return { severity: 'error', code: 'missing_font' }
+    // polyglossia reports absent hyphenation patterns as a module warning. The
+    // PDF is complete (words are simply not hyphenated), so this stays a
+    // visible warning rather than a missing-file refusal of a good proof.
+    if (/^Module polyglossia Warning: Hyphenation file \S+ not found/iu.test(message)) return index < finalPass ? null : { severity: 'warning', code: 'tex_warning' }
     if (!(warningHeader.test(message) && index < finalPass) && (/(?:\bfile\b|\bpackage\s+[`'"])[\s\S]*?(?:not found|cannot be found)|(?:cannot|could not|can't|couldn't) (?:open|find) (?:database |style )?file|unable to load (?:picture|image)/iu.test(message)
       || /^No file .+\.(?:tex|sty|cls|bib|bbl|bst|bbx|cbx|png|jpe?g|pdf|eps|svg|otf|ttf|ttc|tfm|woff2?)\./iu.test(message))) {
       const target = /\b(?:file|package)\s+[`'"]([^`'"]+)[`'"]|\bfile\s+([^\s`'"]+)/iu.exec(message)

@@ -6,8 +6,11 @@ import { addTextFile, applyNativeFontChoices, assertLatexPath, cloneAsNewProject
 import { createTemplateProject, latexSourceTemplates } from './templates.ts'
 import { LATEX_LIMITS, type LatexProof } from './types.ts'
 
-test('three genuine versioned source templates are independent, with local style/bibliography and actual Bangla text', () => {
-  assert.equal(latexSourceTemplates.length, 3)
+test('the genuine versioned source templates are independent, with local style/bibliography and actual Bangla text', () => {
+  // Three originals plus seven gallery starters (galleryTemplates.ts).
+  assert.equal(latexSourceTemplates.length, 10)
+  assert.equal(new Set(latexSourceTemplates.map((item) => item.id)).size, 10)
+  for (const item of latexSourceTemplates) { const project = createTemplateProject(item.id); assert.equal(project.mainFile, 'main.tex'); assert.equal(validateLatexProject(project), project) }
   const career = createTemplateProject(), academic = createTemplateProject('academic-source'), bangla = createTemplateProject('bangla-source')
   assert.notEqual(career.id, createTemplateProject().id)
   assert.ok(career.files.some((file) => file.path === 'resume.sty' && file.content.includes('ProvidesPackage')))

@@ -71,7 +71,8 @@ export default function PdfEditorPage() {
   // with the actual drawing state, even when other tools interrupt a draw.
   const isSignatureMode = state.activeTool === 'signature';
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; visible: boolean }>({ msg: '', visible: false });
+  const [toast, setToast] = useState<{ msg: string; visible: boolean; tone: 'status' | 'error' }>({ msg: '', visible: false, tone: 'status' });
+  const toastTimerRef = useRef<number | null>(null);
   const [pendingDocumentDialog, setPendingDocumentDialog] = useState<{
     kind: 'recovery' | 'ocr' | 'close'; session: number; revision: string; ocrRequest?: PdfEditorOcrCopyRequest;
   } | null>(null);
@@ -342,24 +343,46 @@ export default function PdfEditorPage() {
     zoomRef.current = state.zoom;
   }, [state.zoom]);
 
+  /* One toast slot, one timer. Each message cancels the previous message's
+     timer — otherwise an older timeout hides a newer message early. `ms: null`
+     keeps the message until it is replaced or dismissed: a hard failure must
+     not disappear on its own (no-lie: a failure is never quietly withdrawn). */
+  const presentToast = useCallback((msg: string, options: { ms: number | null; tone?: 'status' | 'error' }) => {
+    if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = null;
+    setToast({ msg, visible: true, tone: options.tone ?? 'status' });
+    if (options.ms !== null) {
+      toastTimerRef.current = window.setTimeout(() => {
+        toastTimerRef.current = null;
+        setToast(current => ({ ...current, msg: '', visible: false }));
+      }, options.ms);
+    }
+  }, []);
+
+  const dismissToast = useCallback(() => {
+    if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = null;
+    setToast(current => ({ ...current, msg: '', visible: false }));
+  }, []);
+
+  useEffect(() => () => {
+    if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
+  }, []);
+
   const showToast = (msg: string, ms = 2500) => {
-    setToast({ msg, visible: true });
-    setTimeout(() => setToast({ msg: '', visible: false }), ms);
+    presentToast(msg, { ms });
   };
 
   const runObjectCommand = useCallback((command: () => unknown) => {
     void Promise.resolve().then(command).catch(error => {
-      setToast({ msg: error instanceof Error ? error.message : 'The object command failed. Please retry.', visible: true });
-      window.setTimeout(() => setToast({ msg: '', visible: false }), 6000);
+      presentToast(error instanceof Error ? error.message : 'The object command failed. Please retry.', { ms: 6000, tone: 'error' });
     });
-  }, []);
+  }, [presentToast]);
 
   useEffect(() => {
     if (state.saveStatus !== 'error' || !state.saveMessage) return;
-    setToast({ msg: state.saveMessage, visible: true });
-    const timer = window.setTimeout(() => setToast({ msg: '', visible: false }), 7000);
-    return () => window.clearTimeout(timer);
-  }, [state.saveStatus, state.saveMessage]);
+    presentToast(state.saveMessage, { ms: 7000, tone: 'error' });
+  }, [state.saveStatus, state.saveMessage, presentToast]);
 
   const handleRunOcr = useCallback(async () => {
     const request = await prepareOcrCopy();
@@ -422,7 +445,7 @@ export default function PdfEditorPage() {
       }).catch(() => {
         if (!cancelled) {
           setSearchResults([]);
-          setToast({ msg: 'Document search could not finish. Change the query to retry.', visible: true });
+          presentToast('Document search could not finish. Change the query to retry.', { ms: null });
         }
       }).finally(() => {
         if (cancelled) return;
@@ -430,7 +453,7 @@ export default function PdfEditorPage() {
       });
     }, 220);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [searchDocument, searchQuery, set, state.documentSession, state.editVersion, state.pdfFile]);
+  }, [presentToast, searchDocument, searchQuery, set, state.documentSession, state.editVersion, state.pdfFile]);
 
   const applyFitMode = useCallback(async (mode: Exclude<PdfEditorFitMode, 'custom'>) => {
     const area = canvasAreaRef.current;
@@ -679,7 +702,7 @@ export default function PdfEditorPage() {
       return;
     }
     if (!result.ok) {
-      showToast(`Export failed: ${result.message}`, 5000);
+      presentToast(`Export failed: ${result.message}`, { ms: null, tone: 'error' });
       return;
     }
     try {
@@ -1636,7 +1659,8 @@ export default function PdfEditorPage() {
             )}
           </header>
 
-          <main className="pe-drop-shell">
+          {/* The root layout owns the main landmark. */}
+          <div className="pe-drop-shell">
             <section className="pe-drop-intro" aria-labelledby="pe-drop-title">
               <p className="pe-drop-eyebrow">Document workspace</p>
               <h1 className="pe-drop-title" id="pe-drop-title">
@@ -1781,7 +1805,7 @@ export default function PdfEditorPage() {
                 </div>
               </div>
             </div>
-          </main>
+          </div>
         </div>
       </>
     );
@@ -2258,6 +2282,20 @@ export default function PdfEditorPage() {
           box-shadow: var(--pe-shadow-dialog);
           font-size: 12px; line-height: 1.5;
         }
+        .pe-toast.is-error {
+          display: flex; align-items: flex-start; gap: 12px;
+          border-color: var(--pe-danger);
+          border-left-width: 3px;
+        }
+        .pe-toast-msg { flex: 1; min-width: 0; }
+        .pe-toast-dismiss {
+          flex-shrink: 0;
+          min-height: 24px; padding: 0 8px;
+          border: 1px solid var(--pe-line); border-radius: var(--pe-r-sm);
+          background: transparent; color: var(--pe-text-2);
+          font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer;
+        }
+        .pe-toast-dismiss:hover { background: var(--pe-panel-3); color: var(--pe-text); }
 
         /* OCR preflight — a disclosure, not a success banner. */
         .pe-preflight {
@@ -2353,8 +2391,16 @@ export default function PdfEditorPage() {
 
         {/* Toast */}
         {toast.visible && (
-          <div data-testid="pdf-editor-toast" className="pe-toast" role="status" aria-live="polite">
-            {toast.msg}
+          <div
+            data-testid="pdf-editor-toast"
+            className={`pe-toast${toast.tone === 'error' ? ' is-error' : ''}`}
+            role={toast.tone === 'error' ? 'alert' : 'status'}
+            aria-live={toast.tone === 'error' ? 'assertive' : 'polite'}
+          >
+            <span className="pe-toast-msg">{toast.msg}</span>
+            {toast.tone === 'error' && (
+              <button type="button" className="pe-toast-dismiss" onClick={dismissToast}>Dismiss</button>
+            )}
           </div>
         )}
 

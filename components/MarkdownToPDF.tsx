@@ -131,9 +131,13 @@ const LANGUAGES = [
 ] as const
 
 /* ── Feature pills ── */
+/* Only what the export actually does. "Syntax Highlighting" used to be listed
+   here and offered as a switch, but this tool sends its own rendered HTML,
+   which the server prints as-is — the server's highlighter never runs on it,
+   so the switch changed nothing. Code blocks do render, in monospace. */
 const FEATURES = [
   { icon: Ic.heading, label: 'Headings' },
-  { icon: Ic.code,    label: 'Syntax Highlighting' },
+  { icon: Ic.code,    label: 'Code blocks' },
   { icon: Ic.table,   label: 'Tables' },
   { icon: Ic.image,   label: 'Images' },
 ]
@@ -146,8 +150,6 @@ export default function MarkdownToPDF() {
   const [loading, setLoading]         = useState(false)
   const [pageSize, setPageSize]       = useState('A4')
   const [fontSize, setFontSize]       = useState(12)
-  const [includeToc, setIncludeToc]   = useState(false)
-  const [syntaxHighlight, setSyntaxHighlight] = useState(true)
   const [lang, setLang]               = useState('auto')
   const [done, setDone]               = useState(false)
   const [error, setError]             = useState<string | null>(null)
@@ -186,8 +188,13 @@ export default function MarkdownToPDF() {
       formData.append('md_file', new File([markdown], file.name, { type: 'text/markdown' }))
       formData.append('page_size', pageSize)
       formData.append('font_size', String(fontSize))
-      formData.append('include_toc', includeToc ? 'true' : 'false')
-      formData.append('syntax_highlight', syntaxHighlight ? 'true' : 'false')
+      // The table-of-contents and syntax-highlight switches were removed: the
+      // server builds its TOC only from a literal [TOC] marker and highlights
+      // only its own renderer's output, neither of which applies to the
+      // rendered_html sent below. These are the values the switches defaulted
+      // to, so the request the server sees is unchanged.
+      formData.append('include_toc', 'false')
+      formData.append('syntax_highlight', 'true')
       formData.append('lang', lang)
       formData.append('rendered_html', exported.html)
       formData.append('rendered_css', diagramExportStyles())
@@ -660,7 +667,7 @@ export default function MarkdownToPDF() {
             </div>
             <button
               className="m2p-remove-btn"
-              onClick={() => { setFile(null); setDone(false) }}
+              onClick={() => { setFile(null); setDone(false); setError(null); setOutput(null) }}
             >
               {Ic.close} Remove
             </button>
@@ -723,40 +730,6 @@ export default function MarkdownToPDF() {
                   onChange={e => setFontSize(Number(e.target.value))}
                 />
                 <span className="m2p-slider-value">{fontSize}pt</span>
-              </div>
-
-              {/* Include TOC toggle */}
-              <div className="m2p-control-row">
-                <span className="m2p-control-label">
-                  {Ic.heading} Table of Contents
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={includeToc}
-                  aria-label="Include table of contents"
-                  className={`m2p-switch ${includeToc ? 'on' : ''}`}
-                  onClick={() => setIncludeToc(v => !v)}
-                >
-                  <div className="m2p-switch-thumb" />
-                </button>
-              </div>
-
-              {/* Syntax highlighting toggle */}
-              <div className="m2p-control-row">
-                <span className="m2p-control-label">
-                  {Ic.code} Syntax Highlighting
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={syntaxHighlight}
-                  aria-label="Syntax highlighting"
-                  className={`m2p-switch ${syntaxHighlight ? 'on' : ''}`}
-                  onClick={() => setSyntaxHighlight(v => !v)}
-                >
-                  <div className="m2p-switch-thumb" />
-                </button>
               </div>
 
               {/* Language selector */}

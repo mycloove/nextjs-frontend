@@ -6,4 +6,4 @@ export const metadata = toolMetadata('image-to-pdf')
    and the tool surface owns its own instrument header (the Light Table).
    The registry `description` stays untouched because it is the SEO metadata
    payload (`toolMetadata`), not page copy. */
-export default function Page() { return <ToolWorkspace toolId="image-to-pdf" hideHeading /> }
+export default function Page() { return <ToolWorkspace toolId="image-to-pdf" hideHeading headingOwnedByTool /> }

@@ -33,6 +33,9 @@
 .filesToggle[aria-expanded='true'] { border-color: color-mix(in srgb, var(--rs-accent) 24%, var(--rs-line)); color: var(--rs-accent); background: color-mix(in srgb, var(--rs-accent) 8%, var(--rs-panel)); }
 .filesToggle[aria-expanded='true']:hover { background: color-mix(in srgb, var(--rs-accent) 14%, var(--rs-panel)); }
 .brand { display: flex; flex: 0 0 auto; align-items: center; gap: 7px; font-size: 14px; letter-spacing: -.02em; }
+/* The mark doubles as the way back to the Mr. Resume home (gallery). */
+a.brand { border-radius: 8px; color: inherit; text-decoration: none; }
+a.brand:focus-visible { outline: 2px solid var(--rs-focus); outline-offset: 2px; }
 .brandMark { display: block; width: 28px; height: 28px; flex: 0 0 auto; border: 1px solid rgba(197, 160, 89, .32); border-radius: 7px; background: #f3efe6 url('/mr-resume-logo.webp') center / cover no-repeat; box-shadow: 0 1px 3px color-mix(in srgb, #c5a059 14%, transparent); }
 .breadcrumbSeparator { flex: 0 0 auto; color: var(--rs-line); font-size: 14px; font-weight: 400; }
 .projectIdentity { display: grid; min-width: 0; flex: 1; grid-template-columns: minmax(80px, 220px) auto minmax(80px, 260px); align-items: center; gap: 12px; }

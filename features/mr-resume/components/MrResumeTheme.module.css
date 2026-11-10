@@ -5,7 +5,8 @@
   --rs-raised: #fffefa;
   --rs-paper: #ffffff;
   --rs-ink: #272923;
-  --rs-muted: #6e7268;
+  /* #63675d keeps the sage-grey temperature and lifts text to 5.2:1 on --rs-bg (was 4.43:1). */
+  --rs-muted: #63675d;
   --rs-line: #dadbd1;
   --rs-control-line: #6e7466;
   --rs-soft: #edede7;
@@ -14,6 +15,8 @@
   --rs-on-primary: #fffefa;
   --rs-accent-soft: #edf3ed;
   --rs-gold: #916b2b;
+  /* Gold for text (5.2:1 on --rs-bg); --rs-gold stays for fills and rules. */
+  --rs-gold-text: #835f26;
   --rs-success: #40664e;
   --rs-danger: #9a514a;
   --rs-focus: #8c6bad;
@@ -43,6 +46,7 @@
   --rs-on-primary: #24301e;
   --rs-accent-soft: #293c2f;
   --rs-gold: #e0c17c;
+  --rs-gold-text: #e0c17c;
   --rs-success: #b3d5ba;
   --rs-danger: #e1a29b;
   --rs-focus: #cce0b8;

@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { decodeResumeDraft, encodeResumeDraft, type ResumeDraft } from './resumeDraft.ts'
+import { decodeResumeDraft, encodeResumeDraft, summarizeStoredDraft, type ResumeDraft } from './resumeDraft.ts'
 
 const defaults: ResumeDraft = { documentTitle: 'Untitled resume', fullName: 'Name', purpose: 'Resume', enabled: ['profile', 'summary'], customSections: [], content: { profile: '', summary: '', skills: '' }, titles: {}, sectionDividers: {}, headingIcons: {}, headingIconSize: 'medium', headingIconCustomSize: 1, headingIconColor: 'accent', language: 'English', banglishMode: false, format: 'Visual', pageSize: 'A4', font: 'Inter', fontSize: 11, leading: 1.5, sectionGap: 24, margin: 18, accent: 0, customAccentColor: '#405444', profileAlign: 'left', profileImage: null, photoShape: 'circle', photoSize: 30, photoBackground: 'none', photoBlur: 50, photoCustomColor: '#405444', profileImageDisplay: null, templateId: null }
-const options = { sectionIDs: ['profile', 'summary', 'skills'], fonts: ['Inter', 'Hind Siliguri'], photoBackgrounds: ['none', 'accent'], headingIcons: ['briefcase'], templates: ['bangla-job'], accentCount: 5 }
+const options = { sectionIDs: ['profile', 'summary', 'skills'], fonts: ['Inter', 'Hind Siliguri'], photoBackgrounds: ['none', 'accent'], headingIcons: ['briefcase'], templates: ['bangla-job'], accentCount: 5, layouts: ['classic', 'sidebar'] }
 
 test('current snapshots preserve writing, page settings, null photos and selected templates exactly', () => {
-  const document: ResumeDraft = { ...defaults, language: 'Bangla', font: 'Hind Siliguri', leading: 1.65, banglishMode: true, templateId: 'bangla-job', fullName: 'রহমান', content: { ...defaults.content, summary: 'আমার লেখা' } }
+  const document: ResumeDraft = { ...defaults, language: 'Bangla', font: 'Hind Siliguri', leading: 1.65, banglishMode: true, templateId: 'bangla-job', layout: 'sidebar', fullName: 'রহমান', content: { ...defaults.content, summary: 'আমার লেখা' } }
   const restored = decodeResumeDraft(encodeResumeDraft(document, '2026-10-26T08:00:00Z'), defaults, options)!
   assert.deepEqual(restored.document, document)
   assert.equal(restored.timestamp, '2026-10-26T08:00:00Z')
@@ -66,4 +66,21 @@ test('corrupt identity fields never become default names while restoring valid w
   const blank = decodeResumeDraft(encodeResumeDraft({ ...defaults, documentTitle: '', fullName: '' }), defaults, options)!
   assert.equal(blank.document.documentTitle, '')
   assert.equal(blank.document.fullName, '')
+})
+
+test('layouts are additive: missing or unknown layouts read as the original classic page, never the caller state', () => {
+  const current = { ...defaults, layout: 'sidebar' as const }
+  for (const layout of [undefined, 'not-a-layout', 7]) {
+    const restored = decodeResumeDraft(JSON.stringify({ schema: 8, document: { fullName: 'Kept', layout } }), current, options)!
+    assert.equal(restored.document.layout, 'classic')
+    assert.equal(restored.document.fullName, 'Kept')
+  }
+  assert.equal(decodeResumeDraft(JSON.stringify({ schema: 8, document: { layout: 'sidebar' } }), defaults, options)!.document.layout, 'sidebar')
+})
+
+test('the home summary reads a stored draft without decoding it and reports unreadable copies honestly', () => {
+  assert.deepEqual(summarizeStoredDraft(null), { status: 'none' })
+  for (const raw of ['{', 'null', JSON.stringify({ schema: 99, document: {} }), JSON.stringify({ schema: 8 })]) assert.deepEqual(summarizeStoredDraft(raw), { status: 'unreadable' })
+  assert.deepEqual(summarizeStoredDraft(encodeResumeDraft({ ...defaults, documentTitle: '  Bank CV  ', templateId: 'bank-officer' }, '2026-11-06T10:00:00Z')), { status: 'ready', title: 'Bank CV', savedAt: '2026-11-06T10:00:00Z', templateId: 'bank-officer' })
+  assert.equal((summarizeStoredDraft(JSON.stringify({ schema: 8, document: { documentTitle: '' } })) as { title: string }).title, 'Untitled resume')
 })

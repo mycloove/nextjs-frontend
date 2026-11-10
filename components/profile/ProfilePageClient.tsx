@@ -26,15 +26,16 @@ export default function ProfilePageClient() {
     return () => { alive = false }
   }, [])
 
+  /* The root layout owns the main landmark; each state renders a plain wrapper. */
   if (loading) {
-    return <main className={styles.page}><p className={styles.muted} role="status">Loading your profile…</p></main>
+    return <div className={styles.page}><p className={styles.muted} role="status">Loading your profile…</p></div>
   }
   if (error || !profile) {
-    return <main className={styles.page}><p className={styles.error} role="alert">{error || 'Your profile could not be found.'}</p></main>
+    return <div className={styles.page}><p className={styles.error} role="alert">{error || 'Your profile could not be found.'}</p></div>
   }
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
       <header className={styles.pageHead}>
         <p className={styles.pageEyebrow}>Account</p>
         <h1 className={styles.pageTitle}>{profile.name?.trim() || profile.email?.split('@')[0] || 'Your profile'}</h1>
@@ -46,6 +47,6 @@ export default function ProfilePageClient() {
         <ChangePasswordSection email={profile.email} />
         <ActivitySection />
       </div>
-    </main>
+    </div>
   )
 }

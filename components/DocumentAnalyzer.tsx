@@ -136,6 +136,9 @@ export default function DocumentAnalyzer() {
     totalPages: number; analyzedPages: number;
     origWords: number;  sumWords: number;
     processingTime: number; note?: string;
+    /* The depth this report was produced with — the toggle stays live after a
+       result, so labelling the report from the toggle would relabel it. */
+    mode: 'minimal' | 'elaborate';
   } | null>(null);
   const [error, setError]       = useState<string | null>(null);
   const [pagePreviews, setPagePreviews] = useState<{page:number;preview:string}[]|null>(null);
@@ -208,6 +211,7 @@ export default function DocumentAnalyzer() {
         sumWords:       data.summary_length,
         processingTime: data.processing_time_seconds,
         note:           data.note,
+        mode:           analysisMode,
       });
       if (data.page_previews) setPagePreviews(data.page_previews);
     } catch (e) {
@@ -258,7 +262,7 @@ export default function DocumentAnalyzer() {
   const rawPct   = stats && stats.origWords > 0 ? (stats.sumWords / stats.origWords) * 100 : 0;
   const pctLabel = rawPct > 0 && rawPct < 1 ? '<1' : String(Math.round(rawPct));
   const pctWidth = Math.min(100, Math.max(1, Math.round(rawPct)));
-  const modeLabel = analysisMode === 'minimal' ? 'Minimal' : 'Elaborate';
+  const modeLabel = stats?.mode === 'elaborate' ? 'Elaborate' : 'Minimal';
 
   return (
     <>
@@ -772,7 +776,7 @@ export default function DocumentAnalyzer() {
           animation: da-fade-in .45s ease both;
         }
 
-        /* ══ Source excerpts — margin notes ══ */
+        /* ══ Page openings — margin notes ══ */
         .da-excerpts {
           background: var(--bg-card);
           border: 1px solid var(--border-card);
@@ -829,7 +833,7 @@ export default function DocumentAnalyzer() {
           <span className="da-mast-mark" aria-hidden="true">{Ic.read}</span>
           <div style={{ minWidth: 0 }}>
             <p className="da-mast-title">The Reader</p>
-            <p className="da-mast-sub">Give it a document; get back the essentials — marked, counted, and sourced.</p>
+            <p className="da-mast-sub">Give it a document; get back the essentials — distilled, counted, and shown beside the opening lines of its first pages.</p>
           </div>
           <span className="da-mast-tag">mycloove · Reader</span>
         </div>
@@ -932,7 +936,7 @@ export default function DocumentAnalyzer() {
             {stats.origWords > 0 && (
               <div className="da-distill">
                 <p className="da-distill-head">
-                  Distilled to <b>{pctLabel}%</b> of the original
+                  Distilled to <b>{pctLabel}%</b> of the pages read
                 </p>
                 <div className="da-distill-track">
                   <div
@@ -941,7 +945,7 @@ export default function DocumentAnalyzer() {
                   />
                 </div>
                 <div className="da-distill-labels">
-                  <span>Source · {stats.origWords.toLocaleString()} words</span>
+                  <span>Pages read · {stats.origWords.toLocaleString()} words</span>
                   <span>Digest · {stats.sumWords.toLocaleString()} words</span>
                 </div>
               </div>
@@ -976,11 +980,13 @@ export default function DocumentAnalyzer() {
           </div>
         )}
 
-        {/* ── Source excerpts — margin notes ── */}
+        {/* ── Page openings — margin notes. These are the first ~250
+            characters of each of the first pages, as the server sends them;
+            they are context, not citations for the summary's sentences. ── */}
         {pagePreviews && pagePreviews.length > 0 && !loading && (
           <div className="da-excerpts">
             <div className="da-excerpts-head">
-              {Ic.eye} Source excerpts
+              {Ic.eye} Page openings
             </div>
             <div className="da-excerpt-list">
               {pagePreviews.map(p => (

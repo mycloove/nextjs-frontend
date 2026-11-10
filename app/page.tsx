@@ -538,7 +538,8 @@ export default function Home() {
         onOpenFile={() => fileInputRef.current?.click()}
       />
 
-      <main id="main-content" tabIndex={-1}>
+      {/* The root layout owns the main landmark; this is the skip-link target. */}
+      <div id="main-content" tabIndex={-1}>
         <section className="home-hero" aria-labelledby="hero-title">
           <div className="home-hero-bg" aria-hidden="true">
             <span className="home-hero-orb orb-1" />
@@ -721,7 +722,7 @@ export default function Home() {
         </section>
 
         <section className="home-trust" id="security" aria-labelledby="trust-title"><div className="home-container home-trust-panel"><div><p>Designed for confidence</p><h2 id="trust-title">Your document.<br/>Your decision.</h2></div><article><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span><b>Know the file handling</b><p>Processing and retention differ by tool. Read the <Link href="/privacy">privacy policy</Link> before uploading sensitive files.</p></article><article><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></span><b>Focused workflows</b><p>Independent tools keep each task direct and understandable.</p></article><article><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 22a8 8 0 0 1 16 0"/><path d="M19 5v6M16 8h6"/></svg></span><b>Guest access</b><p>Many tools support guest use. Some actions require an account; current limits are shown in the workspace.</p></article></div></section>
-      </main>
+      </div>
 
       <HomeFooter />
 

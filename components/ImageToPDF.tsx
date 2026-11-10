@@ -304,6 +304,7 @@ export default function ImageToPDF() {
   const [boundBlob, setBoundBlob] = useState<Blob | null>(null)
   const [boundFileName, setBoundFileName] = useState('')
   const [boundPages, setBoundPages] = useState(0)
+  const [boundSkipped, setBoundSkipped] = useState(0)
   const [boundBytes, setBoundBytes] = useState(0)
   const dragRef = useRef<{ id: string; x0: number; y0: number; active: boolean } | null>(null)
   const ghostRef = useRef<HTMLDivElement | null>(null)
@@ -576,12 +577,18 @@ export default function ImageToPDF() {
       }
       const blob = await res.blob()
       const name = boundName()
+      // The engine skips images it cannot decode and says so in headers; the
+      // page count shown must be the document's, not the number of tiles sent.
+      const skipped = Number.parseInt(res.headers.get('X-Skipped-Count') ?? '0', 10) || 0
+      const reportedPages = Number.parseInt(res.headers.get('X-Page-Count') ?? '', 10)
+      const pages = Number.isFinite(reportedPages) ? reportedPages : Math.max(0, entries.length - skipped)
       // Hold the document instead of auto-saving it: the download fires only
       // when the user asks, so the result stays available and a re-bind is
       // never needed just to get the file again.
       setBoundBlob(blob)
       setBoundFileName(name)
-      setBoundPages(entries.length)
+      setBoundPages(pages)
+      setBoundSkipped(skipped)
       setBoundBytes(blob.size)
       addRecentConversion({
         toolId: 'image-to-pdf',
@@ -625,6 +632,7 @@ export default function ImageToPDF() {
     setBoundBlob(null)
     setBoundFileName('')
     setBoundPages(0)
+    setBoundSkipped(0)
     setBoundBytes(0)
   }
 
@@ -1445,6 +1453,17 @@ export default function ImageToPDF() {
               {boundPages} page{boundPages === 1 ? '' : 's'}
               {boundBytes ? ` · ${fmtSize(boundBytes)}` : ''} · ready when you are
             </p>
+            {boundSkipped > 0 && (
+              <div className="i2p-err" role="status">
+                {Icon.alert}
+                <span>
+                  {boundSkipped === 1
+                    ? '1 image could not be read and was left out of the PDF.'
+                    : `${boundSkipped} images could not be read and were left out of the PDF.`}
+                  {' '}Go back to the table to check the set.
+                </span>
+              </div>
+            )}
             <div className="i2p-bound-actions">
               <button type="button" className="i2p-browse-btn i2p-download-btn" onClick={downloadBound}>
                 {Icon.download}&nbsp;Download PDF

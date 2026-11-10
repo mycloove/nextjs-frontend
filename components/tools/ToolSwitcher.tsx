@@ -1,14 +1,27 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import type { ToolId } from '@/lib/tools/registry'
 import MyclooveWordmark from '@/components/brand/mycloove/MyclooveWordmark'
+import { getRecentConversions } from '@/lib/history/recentConversions'
 import { LayeredIconGlyph } from './layered-icons/LayeredIcon'
-import { filterNavigation, isNavigationUnavailable, navigationGroups, type NavigationAvailability, type NavigationEntry } from './toolNavigation'
+import { filterNavigation, isNavigationUnavailable, isPaletteShortcut, navigationGroups, recentNavigation, type NavigationAvailability, type NavigationEntry } from './toolNavigation'
 import styles from './ToolNavigation.module.css'
 
-type Props = { toolId: ToolId; availability: NavigationAvailability; className?: string }
+type Props = {
+  toolId: ToolId
+  availability: NavigationAvailability
+  className?: string
+  /* Opt-in Ctrl/⌘K (roadmap §7.2). Off by default because three surfaces
+     already own that chord: the home page (focus search), Mr. Markdown (its
+     own palette, and "insert link" in the editor) and Document AI. A host
+     turns it on only where nothing else listens. */
+  shortcut?: boolean
+}
+
+/* Results the arrow keys walk through, in reading order (Recent row first). */
+const RESULT_LINKS = 'a[data-recent-tool-link], a[data-tool-link]'
 
 function positionDialog(dialog: HTMLDialogElement, trigger: HTMLButtonElement) {
   const viewport = window.visualViewport
@@ -33,7 +46,52 @@ function EntryGlyph({ entry }: { entry: NavigationEntry }) {
   return <LayeredIconGlyph variant={variant} />
 }
 
-export default function ToolSwitcher({ toolId, availability, className }: Props) {
+const subscribeNever = () => () => {}
+
+/* "⌘K" on Apple devices, "Ctrl K" elsewhere, nothing without a fine pointer
+   (touch devices have no such chord). Null on the server so hydration matches. */
+function readShortcutLabel(): string | null {
+  if (!window.matchMedia('(pointer: fine)').matches) return null
+  const platform = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform
+  return /mac|iphone|ipad/i.test(platform) ? '⌘K' : 'Ctrl K'
+}
+
+function pickKeys(event: KeyboardEvent) {
+  return {
+    key: event.key,
+    ctrlKey: event.ctrlKey,
+    metaKey: event.metaKey,
+    altKey: event.altKey,
+    shiftKey: event.shiftKey,
+    defaultPrevented: event.defaultPrevented,
+  }
+}
+
+/* ↓ from the search box enters the results; ↑/↓ walk them; ↑ from the first
+   returns to the search box; Home/End jump (but not while typing, where they
+   move the caret). Enter is the link's own native activation. */
+function moveThroughResults(event: KeyboardEvent, dialog: HTMLDialogElement, input: HTMLInputElement | null) {
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+  const links = [...dialog.querySelectorAll<HTMLElement>(RESULT_LINKS)]
+  if (links.length === 0) return
+  const active = document.activeElement
+  const index = links.indexOf(active as HTMLElement)
+  let next: HTMLElement | null = null
+  if (active === input) {
+    if (event.key === 'ArrowDown') next = links[0]
+  } else if (index !== -1) {
+    if (event.key === 'ArrowDown') next = links[Math.min(links.length - 1, index + 1)]
+    if (event.key === 'ArrowUp') next = index === 0 ? input : links[index - 1]
+    if (event.key === 'Home') next = links[0]
+    if (event.key === 'End') next = links[links.length - 1]
+  }
+  if (!next) return
+  event.preventDefault()
+  next.focus({ preventScroll: true })
+  next.scrollIntoView({ block: 'nearest' })
+}
+
+export default function ToolSwitcher({ toolId, availability, className, shortcut = false }: Props) {
   const id = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -43,21 +101,60 @@ export default function ToolSwitcher({ toolId, availability, className }: Props)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [activeGroup, setActiveGroup] = useState('All tools')
+  const [recent, setRecent] = useState<NavigationEntry[]>([])
   const matchingGroups = filterNavigation(query)
   const groups = activeGroup === 'All tools' ? matchingGroups : matchingGroups.filter(({ group }) => group === activeGroup)
   const matchingCount = matchingGroups.reduce((total, group) => total + group.entries.length, 0)
   const count = groups.reduce((total, group) => total + group.entries.length, 0)
+  const showRecent = recent.length > 0 && query === '' && activeGroup === 'All tools'
+  const shortcutLabel = useSyncExternalStore(subscribeNever, readShortcutLabel, () => null)
+
+  const openSwitcher = () => {
+    const dialog = dialogRef.current
+    const trigger = triggerRef.current
+    if (!dialog || !trigger || dialog.open) return
+    navigating.current = false
+    setQuery('')
+    setActiveGroup('All tools')
+    // Read on open, not on render: the log lives in localStorage, which the server render cannot see.
+    setRecent(recentNavigation(getRecentConversions(), toolId))
+    dialog.showModal()
+    positionDialog(dialog, trigger)
+    setOpen(true)
+    inputRef.current?.focus({ preventScroll: true })
+  }
+  const openRef = useRef(openSwitcher)
+  useEffect(() => {
+    openRef.current = openSwitcher
+  })
+
+  useEffect(() => {
+    if (!shortcut) return
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null
+      const targetIsEditable = !!target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+      const modalOpen = !!document.querySelector('dialog[open]')
+      if (!isPaletteShortcut({ ...pickKeys(event), targetIsEditable, modalOpen })) return
+      event.preventDefault()
+      openRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [shortcut])
 
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
     // Native containment runs before document/window editor shortcuts and paste listeners.
+    // Because it stops propagation, React never sees keydown inside the dialog,
+    // so arrow-key movement through the results lives here too.
     const contain = (event: Event) => {
       event.stopPropagation()
       if (event instanceof KeyboardEvent && event.key === 'Escape') {
         event.preventDefault()
         dialog.close()
       }
+      if (event instanceof KeyboardEvent && event.type === 'keydown') moveThroughResults(event, dialog, inputRef.current)
       if (event.type === 'drop' || event.type === 'dragover') event.preventDefault()
     }
     const events = ['keydown', 'keyup', 'paste', 'dragover', 'drop'] as const
@@ -95,20 +192,12 @@ export default function ToolSwitcher({ toolId, availability, className }: Props)
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={id}
-        onClick={() => {
-          const dialog = dialogRef.current
-          const trigger = triggerRef.current
-          if (!dialog || !trigger || dialog.open) return
-          navigating.current = false
-          setQuery('')
-          setActiveGroup('All tools')
-          dialog.showModal()
-          positionDialog(dialog, trigger)
-          setOpen(true)
-          inputRef.current?.focus({ preventScroll: true })
-        }}
+        aria-keyshortcuts={shortcut ? 'Control+K Meta+K' : undefined}
+        onClick={openSwitcher}
       >
         <span>Tools</span>
+        {/* aria-hidden: the accessible name stays exactly "Tools"; the chord is announced via aria-keyshortcuts. */}
+        {shortcut && shortcutLabel && <kbd className={styles.shortcutHint} aria-hidden="true">{shortcutLabel}</kbd>}
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 6 4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </button>
       <dialog
@@ -165,6 +254,25 @@ export default function ToolSwitcher({ toolId, availability, className }: Props)
             <div className={styles.empty}><strong>No matching tools</strong><p>Try another category or search for a tool, format, or workflow.</p><button type="button" onClick={() => { setQuery(''); setActiveGroup('All tools'); inputRef.current?.focus() }}>Show all tools</button></div>
           ) : (
             <div className={styles.groups}>
+              {showRecent && (
+                <section className={styles.group} aria-labelledby={`${id}-recent`}>
+                  <h3 id={`${id}-recent`}>Recent</h3>
+                  <ul>
+                    {recent.map((entry) => {
+                      const unavailable = isNavigationUnavailable(entry, availability)
+                      const content = <><span className={styles.glyph} aria-hidden="true"><EntryGlyph entry={entry} /></span><span className={styles.entryCopy}><span className={styles.entryTitle}>{entry.label}</span><span className={styles.description}>{unavailable ? 'Unavailable' : entry.description}</span></span></>
+                      return (
+                        <li key={`recent-${entry.id}`}>
+                          {/* data-recent-tool-link, not data-tool-link: the index keeps exactly one link per destination. */}
+                          {unavailable ? <span className={styles.entry} aria-disabled="true">{content}</span> : (
+                            <Link className={styles.entry} href={entry.href} prefetch={false} data-recent-tool-link={entry.id} onNavigate={() => { navigating.current = true }}>{content}</Link>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              )}
               {groups.map(({ group, entries }) => (
                 <section key={group} className={group === 'Workspaces' ? styles.workspaces : styles.group} aria-labelledby={`${id}-${group.replaceAll(' ', '-')}`}>
                   <h3 id={`${id}-${group.replaceAll(' ', '-')}`}>{group.replace(' And ', ' & ')}</h3>
@@ -196,7 +304,7 @@ export default function ToolSwitcher({ toolId, availability, className }: Props)
           )}
         </nav>
         <div className={styles.dialogFoot}>
-          <p id={`${id}-note`}>Switching tools does not transfer files. Open in a new tab to keep this workspace open.</p>
+          <p id={`${id}-note`}>Switching tools does not transfer files. Open in a new tab to keep this workspace open. Use ↑ ↓ to move through results.</p>
           <span role="status" className={styles.results}>{count} {count === 1 ? 'destination' : 'destinations'}{availability.status !== 'ready' && <span className={styles.availabilityNote}> · Availability not confirmed</span>}</span>
         </div>
       </dialog>

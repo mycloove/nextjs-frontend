@@ -105,3 +105,6 @@ html[data-theme='light'] .shellMerge { background: #f4f3ef; color: #272923; }
 @media (max-width: 820px) { .content { padding: 28px 16px 42px; }.heading { align-items: flex-start; }.heading em { display: none; }.toolSurface { border-radius: 12px; padding: 16px; } }
 .toolSurfaceMerge { background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow: visible; padding: 0; }
 @media (max-width: 820px) { .content { padding: 28px 16px 42px; }.heading { align-items: flex-start; }.heading em { display: none; }.toolSurface { border-radius: 12px; padding: 16px; }.toolSurfaceMerge { border-radius: 0; padding: 0; } }
+/* The page heading for tools that hide the visible heading row: present for
+   assistive technology and document outline, out of the layout entirely. */
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

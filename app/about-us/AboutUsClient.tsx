@@ -206,7 +206,8 @@ export default function AboutUsClient({ fontClass = '' }: { fontClass?: string }
     <div className="home-page">
       <Topbar2 openFileHref="/#heroFile" />
 
-      <main id="main-content" className={`${styles.page} ${fontClass}`} onClick={handleSectionLink}>
+      {/* The root layout owns the main landmark; this is the skip-link target. */}
+      <div id="main-content" className={`${styles.page} ${fontClass}`} onClick={handleSectionLink} tabIndex={-1}>
         <div className={styles.shell}>
           <div className={styles.pageMasthead}>
             <p>The mycloove story <span lang="bn">/ আমাদের কথা</span></p>
@@ -335,7 +336,7 @@ export default function AboutUsClient({ fontClass = '' }: { fontClass?: string }
             <div className={styles.closingBody}><p>A missing tool. A difficult document. A small detail that could be better. Tell us what would make your work easier.</p><Link href="/contact-us" className={styles.buttonPrimary}>Talk to mycloove<Arrow diagonal /></Link></div>
           </section>
         </div>
-      </main>
+      </div>
 
       <HomeFooter />
     </div>

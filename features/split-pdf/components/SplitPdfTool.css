@@ -21,6 +21,19 @@
   --spl-sh-1: 0 1px 2px rgba(0, 0, 0, .28);
   --spl-sh-2: 0 10px 28px rgba(0, 0, 0, .30);
   --spl-sh-3: 0 24px 70px rgba(0, 0, 0, .48);
+  /* Seat the shared kit (progress, confirm dialog) on the mat's own material
+     and brass — the kit never imposes the global accent on this design. */
+  --kit-accent: var(--spl-brass);
+  --kit-accent-hover: var(--spl-brass);
+  --kit-on-accent: var(--spl-brass-ink);
+  --kit-accent-subtle: color-mix(in srgb, var(--spl-brass) 12%, transparent);
+  --kit-focus-ring: var(--spl-brass);
+  --kit-surface: var(--spl-panel);
+  --kit-line: var(--spl-line);
+  --kit-line-strong: var(--spl-ink-faint);
+  --kit-text: var(--spl-ink);
+  --kit-muted: var(--spl-ink-muted);
+  --kit-hover: var(--spl-panel-raised);
   color: var(--spl-ink);
   background: var(--spl-bg);
   min-height: 100vh;
@@ -74,8 +87,8 @@ html[data-theme="light"] .spl-page {
 .spl-breadcrumb b { overflow: hidden; color: var(--spl-ink); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .spl-header { display: flex; justify-content: flex-end; margin-bottom: 28px; }
 .spl-header-actions { display: flex; align-items: center; gap: 10px; max-width: 100%; }
-.spl h1, .spl-trayhead h2 { font-family: Fraunces, Georgia, serif; color: var(--spl-ink); }
-.spl-filechip, .spl-hint, .spl-count, .spl-ticket-name, .spl-ticket-size, .spl-footer, .spl-progress-pct { font-family: "JetBrains Mono", ui-monospace, monospace; }
+.spl h1, .spl-trayhead h2 { font-family: var(--font-fraunces), Fraunces, Georgia, serif; color: var(--spl-ink); }
+.spl-filechip, .spl-hint, .spl-count, .spl-ticket-name, .spl-ticket-size, .spl-footer, .spl-progress-pct { font-family: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace; }
 .spl-filechip { display: flex; align-items: center; gap: 9px; max-width: 100%; padding: 9px 14px; color: var(--spl-ink-muted); background: var(--spl-panel); border: 1px solid var(--spl-line); font-size: 12.5px; }
 .spl-filechip b { max-width: 32ch; overflow: hidden; color: var(--spl-ink); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .spl-filechip span { flex: 0 0 auto; }
@@ -109,11 +122,11 @@ html[data-theme="light"] .spl-page {
 .spl-hint, .spl-count { color: var(--spl-ink-faint); font-size: 12px; }
 .spl-ruler, .spl-matbody { display: flex; gap: 0; overflow-x: auto; scrollbar-color: var(--spl-line) transparent; }
 .spl-ruler { padding: 16px 30px 0; }
-.spl-rulermark { flex: 0 0 76px; padding-bottom: 6px; color: var(--spl-ink-faint); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10.5px; text-align: center; border-left: 1px solid var(--spl-line); }
+.spl-rulermark { flex: 0 0 76px; padding-bottom: 6px; color: var(--spl-ink-faint); font-family: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace; font-size: 10.5px; text-align: center; border-left: 1px solid var(--spl-line); }
 .spl-rulergap, .spl-blade { flex: 0 0 34px; }
 .spl-matbody { align-items: flex-end; padding: 6px 30px 26px; }
 .spl-sheet-cell { position: relative; flex: 0 0 76px; width: 76px; height: 98px; }
-.spl-sheet { position: relative; display: flex; flex: 0 0 100%; align-items: flex-end; justify-content: center; width: 100%; height: 100%; padding: 0 0 8px; color: var(--spl-sheet-ink); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px; cursor: default; background: linear-gradient(165deg, var(--spl-paper), var(--spl-paper-shade)); border: 0; clip-path: polygon(0 2%,3% 0,97% 1%,100% 3%,99% 97%,96% 100%,2% 99%,1% 96%); }
+.spl-sheet { position: relative; display: flex; flex: 0 0 100%; align-items: flex-end; justify-content: center; width: 100%; height: 100%; padding: 0 0 8px; color: var(--spl-sheet-ink); font-family: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace; font-size: 11px; cursor: default; background: linear-gradient(165deg, var(--spl-paper), var(--spl-paper-shade)); border: 0; clip-path: polygon(0 2%,3% 0,97% 1%,100% 3%,99% 97%,96% 100%,2% 99%,1% 96%); }
 .spl-sheet.selectable { cursor: pointer; }
 .spl-sheet.selectable:hover { box-shadow: inset 0 0 0 1px var(--spl-brass); }
 .spl-sheet:not(.selectable) { cursor: zoom-in; }
@@ -125,7 +138,7 @@ html[data-theme="light"] .spl-page {
 .spl-sheet-number { position: relative; z-index: 1; padding: 1px 4px; color: var(--spl-sheet-ink); background: color-mix(in srgb, var(--spl-paper) 88%, transparent); }
 .spl-sheet.picked .spl-sheet-number { color: var(--spl-brass-ink); background: var(--spl-brass); }
 .spl-sheet.flag { box-shadow: inset 0 0 0 1px var(--spl-danger); }
-.spl-sheet.flag::after { position: absolute; top: 6px; left: 8px; color: var(--spl-danger); font-family: "JetBrains Mono", monospace; font-size: 10px; content: "×"; }
+.spl-sheet.flag::after { position: absolute; top: 6px; left: 8px; color: var(--spl-danger); font-family: var(--font-jetbrains-mono), "JetBrains Mono", monospace; font-size: 10px; content: "×"; }
 .spl-sheet.picked.flag::after { color: var(--spl-brass); content: "✓"; }
 .spl-blade { position: relative; display: flex; align-items: center; justify-content: center; height: 110px; padding: 0; cursor: pointer; background: none; border: 0; }
 .spl-blade-line { width: 2px; height: 0; background: var(--spl-brass); transition: height .18s ease; }
@@ -144,7 +157,7 @@ html[data-theme="light"] .spl-page {
 .spl-modebtn:focus-visible { outline: 2px solid color-mix(in srgb, var(--spl-brass) 60%, transparent); outline-offset: 2px; }
 .spl-sizebar { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; color: var(--spl-ink-muted); font-size: 13px; }
 .spl-sizebar label { font-weight: 700; }
-.spl-sizebar input { width: 110px; padding: 9px 11px; color: var(--spl-ink); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; background: var(--spl-panel); border: 1px solid var(--spl-line); }
+.spl-sizebar input { width: 110px; padding: 9px 11px; color: var(--spl-ink); font-family: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace; font-size: 13px; background: var(--spl-panel); border: 1px solid var(--spl-line); }
 .spl-sizebar input:focus { border-color: var(--spl-brass); }
 .spl-cardnote { margin: 0 0 22px; color: var(--spl-ink-faint); font-size: 12.5px; }
 
@@ -203,14 +216,14 @@ html[data-theme="light"] .spl-page {
 .spl-preview-dialog::backdrop { background: rgba(20, 18, 15, .62); backdrop-filter: blur(6px); }
 @keyframes spl-preview-in { from { opacity: 0; transform: translateY(10px) scale(.986); } to { opacity: 1; transform: none; } }
 .spl-preview-head { display: grid; grid-template-columns: minmax(120px, 1fr) auto; align-items: center; gap: 14px; padding: 15px 20px; border-bottom: 1px solid var(--spl-line); }
-.spl-preview-head h2 { margin: 0 0 3px; color: var(--spl-ink); font-family: Fraunces, Georgia, serif; font-size: 15px; font-weight: 500; letter-spacing: -.3px; overflow-wrap: anywhere; }
-.spl-preview-head span { color: var(--spl-ink-faint); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px; }
+.spl-preview-head h2 { margin: 0 0 3px; color: var(--spl-ink); font-family: var(--font-fraunces), Fraunces, Georgia, serif; font-size: 15px; font-weight: 500; letter-spacing: -.3px; overflow-wrap: anywhere; }
+.spl-preview-head span { color: var(--spl-ink-faint); font-family: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace; font-size: 11px; }
 .spl-preview-close { flex: 0 0 auto; display: grid; width: 34px; height: 34px; padding: 0; color: var(--spl-ink-muted); font: inherit; font-size: 20px; line-height: 1; cursor: pointer; background: transparent; border: 1px solid var(--spl-line); border-radius: var(--spl-r-sm); place-items: center; transition: color .16s, border-color .16s, background .16s; }
 .spl-preview-close:hover { color: var(--spl-ink); border-color: var(--spl-brass); background: var(--spl-panel-raised); }
 .spl-preview-controls { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 12px 20px; border-top: 1px solid var(--spl-line); font-size: 12px; }
 .spl-preview-pager, .spl-preview-zoom { display: flex; align-items: center; gap: 8px; }
 .spl-preview-pager input { width: 60px; padding: 8px 9px; color: var(--spl-ink); font: inherit; text-align: center; background: var(--spl-bg); border: 1px solid var(--spl-line); border-radius: var(--spl-r-sm); }
-.spl-preview-total, .spl-preview-zoom span { color: var(--spl-ink-muted); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px; }
+.spl-preview-total, .spl-preview-zoom span { color: var(--spl-ink-muted); font-family: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace; font-size: 11px; }
 .spl-preview-dialog .spl-ghost.small { min-height: 34px; padding: 7px 11px; border-radius: var(--spl-r-sm); background: var(--spl-panel); }
 .spl-preview-dialog .spl-ghost.small:hover:not(:disabled) { background: var(--spl-panel-raised); }
 .spl-preview-content { display: grid; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 18px; background: var(--spl-stage); scrollbar-color: var(--spl-line) transparent; }
@@ -218,7 +231,7 @@ html[data-theme="light"] .spl-page {
 .spl-preview-page { position: relative; flex: 0 0 auto; max-width: none; margin: 0 auto; overflow: hidden; scroll-margin-top: 20px; background: #fafbf5; border: 1px solid #d4d5ca; border-radius: 3px; box-shadow: 0 5px 20px rgba(0, 0, 0, .16); }
 .spl-preview-page-frame { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; overflow: hidden; background: #fff; }
 .spl-preview-page-frame canvas { display: block; max-width: 100%; max-height: 100%; }
-.spl-preview-page-number { position: absolute; right: 10px; bottom: 10px; z-index: 1; padding: 3px 8px; color: #454034; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; background: rgba(250, 251, 245, .9); border: 1px solid #d4d5ca; border-radius: 6px; }
+.spl-preview-page-number { position: absolute; right: 10px; bottom: 10px; z-index: 1; padding: 3px 8px; color: #454034; font-family: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace; font-size: 10px; background: rgba(250, 251, 245, .9); border: 1px solid #d4d5ca; border-radius: 6px; }
 .spl-preview-dialog.single-page { width: min(640px, calc(100vw - 32px)); height: auto; max-height: min(92vh, calc(100dvh - 32px)); }
 .spl-preview-dialog.single-page .spl-preview-controls { justify-content: center; }
 .spl-preview-dialog.single-page .spl-preview-content { display: block; padding: 22px; }
@@ -262,4 +275,56 @@ html[data-theme="light"] .spl-page {
 
 @media (prefers-reduced-motion: reduce) {
   .spl, .spl *, .spl *::before, .spl *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ── Wave A additions (2026-11-06) — inside the atelier design ───────────
+   New controls reuse the mat's own tokens and shapes; nothing above was
+   re-skinned (owner direction: each tool keeps its identity). */
+
+/* Intake: limits stated before a drop; the paste hint only where a keyboard exists. */
+.spl-limits { margin: 0; color: var(--spl-ink-faint); font-family: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: .02em; }
+.spl-intake .spl-err { max-width: 56ch; }
+@media (pointer: coarse) { .spl-paste-hint { display: none; } }
+
+/* Mode panel: the controls for the active tab. */
+.spl-modepanel { min-height: 1px; }
+.spl-sizebar button.spl-ghost.small { margin-left: 4px; }
+.spl-rangesbar { flex-wrap: wrap; align-items: center; }
+.spl-rangesbar .spl-rangesinput { width: min(340px, 100%); }
+.spl-rangesbar .spl-rangesinput[aria-invalid="true"] { border-color: var(--spl-danger); }
+.spl-rangesbar p { flex: 1 0 100%; margin: 0; }
+.spl-fielderr { margin: 0; color: var(--spl-danger); font-size: 12.5px; }
+.spl-checkline { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; color: var(--spl-ink); font-weight: 700; cursor: pointer; }
+.spl-checkline input { width: 16px; height: 16px; accent-color: var(--spl-brass); }
+.spl-inline-note { margin: 0; }
+.spl-sizebar { flex-wrap: wrap; }
+
+/* The corner mark in Extract mode is a cue now, not a second control. */
+span.spl-sheet-select { pointer-events: none; }
+
+/* Pages no part includes (Extract / Custom ranges) recede on the mat. */
+.spl-sheet-cell { transition: transform .36s cubic-bezier(.34, 1.56, .64, 1), opacity .12s ease; }
+.spl-sheet-cell.outside { opacity: .45; }
+
+/* Cuts decided by Size / Bookmarks are drawn, not pressed. */
+.spl-blade.static { cursor: default; }
+.spl-blade.static:not(.active) .spl-blade-line { height: 0; }
+
+/* Signature (§8.9): a lowered blade parts its two neighbouring sheets on the
+   house spring — transform only, so the ruler above never shifts. */
+.spl-blade.active + .spl-sheet-cell { transform: translateX(5px); }
+.spl-sheet-cell:has(+ .spl-blade.active) { transform: translateX(-5px); }
+
+/* Confirm dialog body (the dialog chrome is the shared kit's). */
+.spl-confirm { display: grid; gap: 18px; padding: 20px; }
+.spl-confirm p { margin: 0; color: var(--spl-ink-muted); font-size: 14px; line-height: 1.6; }
+.spl-confirm-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .spl-sheet-cell { transition: none; }
+}
+
+/* The ≤640px rule top-aligns the size bar; text labels still sit on the control's centre line. */
+@media (max-width: 640px) {
+  .spl-sizebar > label, .spl-sizebar > span { align-self: center; }
 }

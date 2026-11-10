@@ -560,6 +560,7 @@ export function Workspace({
   onMarkGithubCommitted,
   onResetSourcedDocument,
   aiBusy,
+  sessionSave,
 }: {
   accountState: AccountViewerState
   creditState: CreditBalanceState
@@ -600,12 +601,17 @@ export function Workspace({
   /** Adopt the remote copy wholesale (explicit "Re-read from GitHub"). */
   onResetSourcedDocument: (sourceId: string, markdown: string, sha: string | null) => void
   aiBusy: string | null
+  /** Outcome of the orchestrator's latest autosave write (null before the first). */
+  sessionSave: { at: number; ok: boolean } | null
 }) {
   const active = jobs.find((j) => j.id === activeId) || null
   const [preview, setPreview] = useState<'preview' | 'raw' | 'outline'>('preview')
   const [editorMode, setEditorMode] = useState<'raw' | 'rich'>('raw')
   const [focusView, setFocusView] = useState<FocusView>('write')
   const editorRef = useRef<HTMLTextAreaElement>(null)
+  /* Tab indents inside the editor, so Escape arms a one-shot exit: the next
+     Tab moves focus out as normal (WCAG 2.1.2, no keyboard trap). */
+  const tabExitArmedRef = useRef(false)
   const gutterRef = useRef<HTMLDivElement>(null)
   const richEditorRef = useRef<HTMLDivElement>(null)
   const previewRef = useRef<HTMLDivElement>(null)
@@ -621,11 +627,17 @@ export function Workspace({
   const [previewOnly, setPreviewOnly] = useState(false)
   const [focusCheatOpen, setFocusCheatOpen] = useState(false)
   const focusCheatWrapRef = useRef<HTMLDivElement>(null)
-  const [saveState, setSaveState] = useState<'saved' | 'editing'>('saved')
+  /* When the user last edited here. "Saved" is derived from this against the
+     orchestrator's real autosave outcome — it used to be a 900 ms timer that
+     said "Saved" whether or not storage accepted the write. */
+  const [editedAt, setEditedAt] = useState(0)
+  const saveState: 'saved' | 'editing' | 'failed' =
+    sessionSave && !sessionSave.ok && sessionSave.at >= editedAt ? 'failed'
+    : editedAt > (sessionSave?.at ?? 0) ? 'editing'
+    : 'saved'
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const titleInputRef = useRef<HTMLInputElement>(null)
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null)
   /* ── Identity + the calibration console ───────────────────────────────
      The MR parent supplies one identity/balance across upload and workspace;
@@ -1047,10 +1059,10 @@ export function Workspace({
     const richEditor = richEditorRef.current
     if (!active || !richEditor) return
     const markdown = htmlToMarkdown(richEditor.innerHTML)
-    if (markdown !== active.markdown) onEdit(active.id, markdown)
-    setSaveState('editing')
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => setSaveState('saved'), 900)
+    if (markdown !== active.markdown) {
+      onEdit(active.id, markdown)
+      setEditedAt(Date.now())
+    }
   }
 
   const outline = useMemo(() => {
@@ -1182,12 +1194,44 @@ export function Workspace({
 
   if (!active) return null
 
+  /* Writes `next` into the textarea through the browser's own editing
+     command, so the change lands on the native undo stack (Ctrl+Z / Ctrl+Y)
+     and reaches state through handleEditorChange exactly like typing. Only the
+     slice that differs is replaced. Setting the controlled value directly —
+     the old path for toolbar, Tab, list, paste, slash and emoji edits — wiped
+     that undo stack every time. If the browser refuses the command, or the
+     result differs from what was asked, fall back to setting the value. */
+  const commitEditorText = (ta: HTMLTextAreaElement, next: string) => {
+    const prev = ta.value
+    if (prev === next) return
+    let start = 0
+    const shortest = Math.min(prev.length, next.length)
+    while (start < shortest && prev.charCodeAt(start) === next.charCodeAt(start)) start++
+    let endPrev = prev.length
+    let endNext = next.length
+    while (endPrev > start && endNext > start && prev.charCodeAt(endPrev - 1) === next.charCodeAt(endNext - 1)) {
+      endPrev--
+      endNext--
+    }
+    const replacement = next.slice(start, endNext)
+    let applied = false
+    try {
+      if (document.activeElement !== ta) ta.focus({ preventScroll: true })
+      ta.setSelectionRange(start, endPrev)
+      applied = replacement
+        ? document.execCommand('insertText', false, replacement)
+        : document.execCommand('delete', false)
+    } catch {
+      applied = false
+    }
+    if (!applied || ta.value !== next) onEdit(active.id, next)
+  }
+
   const applyToolbar = (fn: (s: string, start: number, end: number) => { text: string; caret: number }) => {
     const ta = editorRef.current
     if (!ta) return
     const { selectionStart, selectionEnd, value, scrollTop, scrollLeft } = ta
     const { text, caret } = fn(value, selectionStart, selectionEnd)
-    onEdit(active.id, text)
     // Snapshot the workspace/parent scroll positions so setSelectionRange
     // (which auto-scrolls the caret into view) does not yank the page down.
     const parents: { el: Element; top: number; left: number }[] = []
@@ -1196,6 +1240,7 @@ export function Workspace({
       parents.push({ el: node, top: node.scrollTop, left: node.scrollLeft })
       node = node.parentElement
     }
+    commitEditorText(ta, text)
     requestAnimationFrame(() => {
       ta.focus({ preventScroll: true })
       ta.setSelectionRange(caret, caret)
@@ -1324,9 +1369,7 @@ export function Workspace({
   const handleEditorChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value
     onEdit(active.id, val)
-    setSaveState('editing')
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => setSaveState('saved'), 900)
+    if (val !== active.markdown) setEditedAt(Date.now())
     const caret = e.target.selectionStart
     // Defer detection so state settles first
     requestAnimationFrame(() => detectTriggers(val, caret))
@@ -1334,6 +1377,13 @@ export function Workspace({
 
   const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const mod = e.metaKey || e.ctrlKey
+
+    // Escape-then-Tab leaves the editor. Any other key disarms the exit.
+    if (e.key === 'Tab' && tabExitArmedRef.current && !slashOpen && !acOpen) {
+      tabExitArmedRef.current = false
+      return
+    }
+    tabExitArmedRef.current = e.key === 'Escape' && !slashOpen && !acOpen
 
     // Slash-menu navigation takes precedence
     if (slashOpen) {
@@ -1355,7 +1405,7 @@ export function Workspace({
             slashIndex: slashActiveIdxRef.current,
             caretIndex: ta.selectionStart,
           })
-          onEdit(active.id, applied.text)
+          commitEditorText(ta, applied.text)
           requestAnimationFrame(() => {
             ta.focus({ preventScroll: true })
             ta.setSelectionRange(applied.caret, applied.caret)
@@ -1390,7 +1440,7 @@ export function Workspace({
               const before = val.slice(0, start)
               const after = val.slice(end)
               const text = before + picked.e + after
-              onEdit(active.id, text)
+              commitEditorText(ta, text)
               requestAnimationFrame(() => {
                 ta.focus({ preventScroll: true })
                 ta.setSelectionRange(before.length + picked.e.length, before.length + picked.e.length)
@@ -1433,7 +1483,7 @@ export function Workspace({
           const before = val.slice(0, lineStart)
           const after = val.slice(caret)
           const text = before + after
-          onEdit(active.id, text)
+          commitEditorText(ta, text)
           requestAnimationFrame(() => {
             ta.focus({ preventScroll: true })
             ta.setSelectionRange(before.length, before.length)
@@ -1446,7 +1496,7 @@ export function Workspace({
         const task = /\[[ xX]\]/.test(line) ? '[ ] ' : ''
         const insert = '\n' + m[1] + marker + ' ' + task
         const text = val.slice(0, caret) + insert + val.slice(caret)
-        onEdit(active.id, text)
+        commitEditorText(ta, text)
         requestAnimationFrame(() => {
           ta.focus({ preventScroll: true })
           const p = caret + insert.length
@@ -1467,7 +1517,7 @@ export function Workspace({
         const trim = head.startsWith('  ') ? 2 : head.startsWith(' ') ? 1 : 0
         if (trim > 0) {
           const text = val.slice(0, lineStart) + val.slice(lineStart + trim)
-          onEdit(active.id, text)
+          commitEditorText(ta, text)
           requestAnimationFrame(() => {
             ta.focus({ preventScroll: true })
             ta.setSelectionRange(Math.max(lineStart, s - trim), Math.max(lineStart, en - trim))
@@ -1475,7 +1525,7 @@ export function Workspace({
         }
       } else {
         const text = val.slice(0, s) + '  ' + val.slice(en)
-        onEdit(active.id, text)
+        commitEditorText(ta, text)
         requestAnimationFrame(() => {
           ta.focus({ preventScroll: true })
           ta.setSelectionRange(s + 2, s + 2)
@@ -1512,7 +1562,7 @@ export function Workspace({
       }
 
       const next = ta.value.slice(0, s) + inserted + ta.value.slice(en)
-      onEdit(active.id, next)
+      commitEditorText(ta, next)
       requestAnimationFrame(() => {
         ta.focus({ preventScroll: true })
         ta.setSelectionRange(s + inserted.length, s + inserted.length)
@@ -1527,7 +1577,7 @@ export function Workspace({
       const sel = ta.value.slice(s, en)
       const inserted = `[${sel}](${text.trim()})`
       const next = ta.value.slice(0, s) + inserted + ta.value.slice(en)
-      onEdit(active.id, next)
+      commitEditorText(ta, next)
       requestAnimationFrame(() => {
         ta.focus({ preventScroll: true })
         ta.setSelectionRange(s + inserted.length, s + inserted.length)
@@ -1542,7 +1592,7 @@ export function Workspace({
         e.preventDefault()
         const s = ta.selectionStart, en = ta.selectionEnd
         const next = ta.value.slice(0, s) + md + ta.value.slice(en)
-        onEdit(active.id, next)
+        commitEditorText(ta, next)
         requestAnimationFrame(() => {
           ta.focus({ preventScroll: true })
           ta.setSelectionRange(s + md.length, s + md.length)
@@ -1662,8 +1712,8 @@ export function Workspace({
               <span className="mr-document-meta">
                 <small>Personal workspace</small>
                 <span className="mr-meta-separator" aria-hidden="true">·</span>
-                <span className={cx('mr-save-state', saveState === 'editing' && 'mr-unsaved')} aria-live="polite">
-                  {saveState === 'editing' ? 'Unsaved changes' : 'Saved'}
+                <span className={cx('mr-save-state', saveState !== 'saved' && 'mr-unsaved')} aria-live="polite">
+                  {saveState === 'failed' ? 'Not saved in this browser' : saveState === 'editing' ? 'Unsaved changes' : 'Saved'}
                 </span>
                 {/* A GitHub-bound document states its sync where the owner reads
                     the filename. A clean document is quiet; an edited one carries
@@ -1760,8 +1810,8 @@ export function Workspace({
           <div className="mr-focus-identity">
             <span className="mr-focus-mark" aria-hidden="true">{Ic.edit(14)}</span>
             <span className="mr-focus-title" title={`${active.title}.md`}>{active.title}.md</span>
-            <span className={cx('mr-focus-status', saveState === 'editing' && 'is-editing')} aria-live="polite">
-              <i aria-hidden="true" />{saveState === 'editing' ? 'Saving…' : 'Saved'}
+            <span className={cx('mr-focus-status', saveState !== 'saved' && 'is-editing')} aria-live="polite">
+              <i aria-hidden="true" />{saveState === 'failed' ? 'Not saved in this browser' : saveState === 'editing' ? 'Saving…' : 'Saved'}
             </span>
           </div>
 
@@ -2187,7 +2237,7 @@ export function Workspace({
               slashIndex: slashActiveIdxRef.current,
               caretIndex: ta.selectionStart,
             })
-            onEdit(active.id, applied.text)
+            commitEditorText(ta, applied.text)
             closeSlashMenu()
             requestAnimationFrame(() => {
               ta.focus({ preventScroll: true })
@@ -2210,7 +2260,7 @@ export function Workspace({
             const end = ta.selectionStart
             const val = ta.value
             const text = val.slice(0, start) + em.e + val.slice(end)
-            onEdit(active.id, text)
+            commitEditorText(ta, text)
             closeEmojiAC()
             requestAnimationFrame(() => {
               ta.focus({ preventScroll: true })
@@ -2245,6 +2295,10 @@ export function Workspace({
             />
           )}
           {editorMode === 'raw' ? (
+            <>
+            <span id="pm-editor-tab-hint" className="mr-ws-sr-only">
+              Tab indents. Press Escape, then Tab, to move focus out of the editor.
+            </span>
             <textarea
               ref={editorRef}
               className="pm-editor-textarea"
@@ -2259,7 +2313,10 @@ export function Workspace({
               spellCheck={false}
               placeholder="Your markdown appears here..."
               aria-label="Markdown source editor"
+              aria-describedby="pm-editor-tab-hint"
+              onBlur={() => { tabExitArmedRef.current = false }}
             />
+            </>
           ) : (
             <div
               ref={richEditorRef}

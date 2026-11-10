@@ -193,7 +193,9 @@ function isLayoutRegion(value: unknown): value is LayoutRegion {
 
 /* Script calibration — the values are the backend's accepted language
    choices (features/image_to_text.py _LANGUAGE_CHOICES). 'auto' is the
-   honest default: the instrument reads English unless told otherwise. */
+   default and does what it says: the engine reads one pass per installed
+   supported script (English, then Bangla) and keeps the stronger reading
+   (_resolve_language). An explicit script forces that pack alone. */
 const LANG_OPTIONS = [
   { value: 'auto', label: 'Auto' },
   { value: 'eng', label: 'English' },
@@ -1686,7 +1688,10 @@ export default function ImageToText() {
                 </figure>
 
                 <aside className="i2t-side i2t-enter" key={phase}>
-                  {(phase === 'placed' || phase === 'reading') && (
+                  {/* The script control also stays on the "no text found"
+                      screen: its advice says to change the script and read
+                      again, so both have to be reachable from there. */}
+                  {(phase === 'placed' || phase === 'reading' || phase === 'emptyResult') && (
                     <div className="i2t-seg" role="radiogroup" aria-label="Script to read">
                       <span className="i2t-seg-label">Script</span>
                       <div className="i2t-seg-track">
@@ -2111,6 +2116,11 @@ export default function ImageToText() {
                 <button type="button" className="i2t-btn i2t-btn-quiet" onClick={clearAll}>
                   {Ic.retry} New image
                 </button>
+                {phase === 'emptyResult' && (
+                  <button type="button" className="i2t-btn i2t-btn-primary" onClick={extractText}>
+                    {Ic.scan} Read again
+                  </button>
+                )}
               </>
             )}
           </footer>

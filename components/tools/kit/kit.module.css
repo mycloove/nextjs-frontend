@@ -1,0 +1,989 @@
+/*
+ * Shared tool kit (roadmap §6, Phase 2) — the quiet chassis every tool's
+ * intake, options, progress and receipt sit on. Tier-2 shared code: a change
+ * here reaches every tool that imports the kit (see kit/index.ts).
+ *
+ * Colour comes from the Phase 1 `--mc-*` roles (app/theme.css). Surfaces read
+ * `--kit-*` first so a full-screen tool with its own material can seat the
+ * kit on it without the kit reaching into that tool's tokens; the fallbacks
+ * are the global tool-chrome tokens, which already switch per theme.
+ *
+ * Accent hooks (owner direction, 2026-11-06: every tool keeps its own visual
+ * identity): `--kit-accent`, `--kit-accent-hover`, `--kit-on-accent`,
+ * `--kit-accent-subtle` and `--kit-focus-ring` let a host give the kit its own
+ * accent (Split's brass, Rotate's and Compress's teal). Unset, they fall back
+ * to the global Ember roles, so a host that sets nothing is unchanged.
+ *
+ * Doctrine: hairlines structure, one Ember accent means "act", status colours
+ * always travel with words or an icon, only transform/opacity animate.
+ */
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--mc-space-2);
+  min-height: 44px;
+  padding: 0 var(--mc-space-5);
+  border: 1px solid transparent;
+  border-radius: var(--mc-r-sm);
+  font: inherit;
+  font-size: var(--mc-fs-ui);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color var(--mc-dur-fast) var(--mc-ease-out),
+    border-color var(--mc-dur-fast) var(--mc-ease-out),
+    transform var(--mc-dur-fast) var(--mc-ease-spring);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: var(--mc-dur-instant);
+}
+
+.button:focus-visible,
+.chipAction:focus-visible,
+.option:focus-visible,
+.cancel:focus-visible {
+  outline: 2px solid var(--kit-focus-ring, var(--mc-focus-ring));
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.button svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.primary {
+  color: var(--kit-on-accent, var(--mc-on-accent));
+  background: var(--kit-accent, var(--mc-accent));
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--kit-accent-hover, var(--mc-accent-hover));
+}
+
+/* The arrow nudges toward the action on hover (§5.2). */
+.primary:hover:not(:disabled) .arrow {
+  transform: translateX(2px);
+}
+
+.arrow {
+  transition: transform var(--mc-dur-fast) var(--mc-ease-out);
+}
+
+.quiet {
+  color: var(--kit-text, var(--text-primary));
+  background: transparent;
+  border-color: var(--kit-line-strong, var(--border-card));
+}
+
+.quiet:hover:not(:disabled) {
+  background: var(--kit-hover, var(--bg-item-hover));
+}
+
+.block {
+  width: 100%;
+}
+
+/* ── Intake ──────────────────────────────────────────────── */
+.intake {
+  display: grid;
+  justify-items: start;
+  gap: var(--mc-space-3);
+  padding: var(--mc-space-6);
+  border: 1px solid var(--kit-line, var(--border-card));
+  border-radius: var(--mc-r-md);
+  background: var(--kit-surface, var(--bg-card));
+}
+
+.intakeTitle {
+  color: var(--kit-text, var(--text-primary));
+  font-size: var(--mc-fs-h3);
+  font-weight: 600;
+  line-height: var(--mc-lh-heading);
+}
+
+.intakeHint {
+  color: var(--kit-muted, var(--text-muted));
+  font-size: var(--mc-fs-small);
+  line-height: var(--mc-lh-body);
+}
+
+.limits {
+  color: var(--kit-muted, var(--text-muted));
+  font-size: var(--mc-fs-label);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Drop-anywhere frame (§5.2) ──────────────────────────── */
+.dropFrame {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px var(--kit-accent, var(--mc-accent));
+  background: color-mix(in srgb, var(--bg-page) 40%, transparent);
+  animation: kitFade var(--mc-dur-fast) var(--mc-ease-out);
+}
+
+.dropFrame[data-acceptable="false"] {
+  box-shadow: inset 0 0 0 2px var(--mc-error);
+}
+
+.dropLabel {
+  padding: var(--mc-space-3) var(--mc-space-5);
+  border-radius: var(--mc-r-full);
+  color: var(--kit-on-accent, var(--mc-on-accent));
+  font-size: var(--mc-fs-ui);
+  font-weight: 600;
+  background: var(--kit-accent, var(--mc-accent));
+  box-shadow: var(--mc-elev-2);
+}
+
+/* Error text on the card surface, not a red fill: --mc-error on --bg-card is
+   ≈6.8:1 dark / ≈5.5:1 light, while white on the dark coral would fail. */
+.dropFrame[data-acceptable="false"] .dropLabel {
+  color: var(--mc-error);
+  background: var(--bg-card);
+  box-shadow: inset 0 0 0 1px var(--mc-error), var(--mc-elev-2);
+}
+
+/* ── File chip ───────────────────────────────────────────── */
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-3);
+  min-width: 0;
+  padding: var(--mc-space-3) var(--mc-space-3) var(--mc-space-3) var(--mc-space-4);
+  border: 1px solid var(--kit-line, var(--border-card));
+  border-radius: var(--mc-r-sm);
+  background: var(--kit-surface, var(--bg-card));
+  animation: kitRise var(--mc-dur-base) var(--mc-ease-out);
+}
+
+/* A paper glyph: the document is the only raised object (§3.2). */
+.chipPaper {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 28px;
+  border-radius: var(--mc-r-paper);
+  background: var(--mc-paper);
+  box-shadow: 0 0 0 1px var(--mc-paper-line), var(--mc-elev-1);
+}
+
+.chipText {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.chipName {
+  overflow: hidden;
+  color: var(--kit-text, var(--text-primary));
+  font-size: var(--mc-fs-ui);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipMeta {
+  color: var(--kit-muted, var(--text-muted));
+  font-size: var(--mc-fs-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.chipAction {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 var(--mc-space-2);
+  border: 0;
+  border-radius: var(--mc-r-xs);
+  color: var(--kit-muted, var(--text-muted));
+  font: inherit;
+  font-size: var(--mc-fs-small);
+  background: transparent;
+  cursor: pointer;
+}
+
+.chipAction:hover:not(:disabled) {
+  color: var(--kit-text, var(--text-primary));
+  background: var(--kit-hover, var(--bg-item-hover));
+}
+
+.chipAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ── Option group (radio cards) ──────────────────────────── */
+.options {
+  display: grid;
+  gap: var(--mc-space-2);
+  border: 0;
+}
+
+.optionsLegend {
+  margin-bottom: var(--mc-space-2);
+  color: var(--kit-muted, var(--text-muted));
+  font-size: var(--mc-fs-label);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.option {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  column-gap: var(--mc-space-3);
+  row-gap: var(--mc-space-1);
+  width: 100%;
+  padding: var(--mc-space-4);
+  border: 1px solid var(--kit-line, var(--border-card));
+  border-radius: var(--mc-r-sm);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  background: var(--kit-surface, var(--bg-card));
+  cursor: pointer;
+  transition: border-color var(--mc-dur-fast) var(--mc-ease-out), background-color var(--mc-dur-fast) var(--mc-ease-out);
+}
+
+.option:hover:not(:disabled):not([aria-checked="true"]) {
+  border-color: var(--kit-line-strong, var(--text-faint));
+}
+
+.option[aria-checked="true"] {
+  border-color: var(--kit-accent, var(--mc-accent));
+  background: var(--kit-accent-subtle, var(--mc-accent-subtle));
+}
+
+.option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* The radio dot is the non-colour cue for selection. */
+.optionDot {
+  grid-row: 1;
+  align-self: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--kit-line-strong, var(--text-muted));
+  border-radius: 50%;
+}
+
+.option[aria-checked="true"] .optionDot {
+  border-color: var(--kit-accent, var(--mc-accent));
+  box-shadow: inset 0 0 0 3px var(--kit-surface, var(--bg-card)), inset 0 0 0 8px var(--kit-accent, var(--mc-accent));
+}
+
+.optionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--mc-space-3);
+}
+
+.optionTitle {
+  color: var(--kit-text, var(--text-primary));
+  font-size: var(--mc-fs-ui);
+  font-weight: 600;
+}
+
+.optionTag {
+  color: var(--kit-muted, var(--text-muted));
+  font-size: var(--mc-fs-label);
+  white-space: nowrap;
+}
+
+.option[data-tone="danger"] .optionTag {
+  color: var(--mc-error);
+}
+
+.optionDesc {
+  grid-column: 2;
+  color: var(--kit-muted, var(--text-muted));
+  font-size: var(--mc-fs-small);
+  line-height: 1.5;
+}
+
+/* ── Honest progress ─────────────────────────────────────── */
+.progress {
+  display: grid;
+  gap: var(--mc-space-2);
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mc-space-3);
+  color: var(--kit-text, var(--text-primary));
+  font-size: var(--mc-fs-small);
+}
+
+.progressFigure {
+  color: var(--kit-muted, var(--text-muted));
+  font-variant-numeric: tabular-nums;
+}
+
+.track {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--mc-r-full);
+  background: var(--kit-line, var(--border-card));
+}
+
+/* Determinate: scaleX, never width (§5.1). */
+.fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: var(--kit-accent, var(--mc-accent));
+  transition: transform var(--mc-dur-base) var(--mc-ease-out);
+}
+
+/* Indeterminate: a segment that travels — it says "working", not "x% done". */
+.sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  background: var(--kit-accent, var(--mc-accent));
+  animation: kitSweep 1.4s var(--mc-ease-in-out) infinite;
+}
+
+.cancel {
+  min-height: 32px;
+  padding: 0 var(--mc-space-3);
+  border: 1px solid var(--kit-line-strong, var(--border-card));
+  border-radius: var(--mc-r-xs);
+  color: var(--kit-text, var(--text-primary));
+  font: inherit;
+  font-size: var(--mc-fs-small);
+  background: transparent;
+  cursor: pointer;
+}
+
+.cancel:hover {
+  background: var(--kit-hover, var(--bg-item-hover));
+}
+
+/* ── Notice (inline status) ──────────────────────────────── */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mc-space-2);
+  padding: var(--mc-space-3) var(--mc-space-4);
+  border-radius: var(--mc-r-sm);
+  color: var(--kit-text, var(--text-primary));
+  font-size: var(--mc-fs-small);
+  line-height: 1.5;
+}
+
+.notice svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+.notice[data-tone="error"] { background: var(--mc-error-subtle); }
+.notice[data-tone="error"] svg { color: var(--mc-error); }
+.notice[data-tone="warning"] { background: var(--mc-warning-subtle); }
+.notice[data-tone="warning"] svg { color: var(--mc-warning); }
+.notice[data-tone="success"] { background: var(--mc-success-subtle); }
+.notice[data-tone="success"] svg { color: var(--mc-success); }
+.notice[data-tone="info"] { background: var(--mc-info-subtle); }
+.notice[data-tone="info"] svg { color: var(--mc-info); }
+
+/* A refused drop shakes once, 2px, and never clears what the user had (§5.2). */
+.notice[data-shake="true"] {
+  animation: kitShake 150ms var(--mc-ease-in-out);
+}
+
+.noticeList {
+  display: grid;
+  gap: var(--mc-space-1);
+  list-style: none;
+}
+
+/* ── Receipt ─────────────────────────────────────────────── */
+.receipt {
+  display: grid;
+  gap: var(--mc-space-4);
+  padding: var(--mc-space-5);
+  border: 1px solid var(--kit-line, var(--border-card));
+  border-radius: var(--mc-r-md);
+  background: var(--kit-surface, var(--bg-card));
+  scroll-margin-bottom: var(--mc-space-6);
+}
+
+/* Focus lands here programmatically; the ring would read as a selection. */
+.receipt:focus {
+  outline: none;
+}
+
+/* Ink Settle (§3.4): the product's one brand moment, real success only. */
+.receipt[data-settle="true"] {
+  animation: kitInkSettle var(--mc-dur-slow) var(--mc-ease-out);
+}
+
+.receiptHead {
+  display: flex;
+  align-items: center;
+  gap: var(--mc-space-2);
+}
+
+.receiptHead svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
+.receipt[data-tone="success"] .receiptHead svg { color: var(--mc-success); }
+.receipt[data-tone="warning"] .receiptHead svg { color: var(--mc-warning); }
+
+/* The check draws itself once the ink has settled. */
+.receipt[data-settle="true"] .checkPath {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: kitDraw 300ms var(--mc-ease-out) var(--mc-dur-base) forwards;
+}
+
+.receiptTitle {
+  color: var(--kit-text, var(--text-primary));
+  font-size: var(--mc-fs-h3);
+  font-weight: 600;
+  line-height: var(--mc-lh-heading);
+}
+
+.receiptFile {
+  overflow: hidden;
+  color: var(--kit-muted, var(--text-muted));
+  font-size: var(--mc-fs-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.facts {
+  display: grid;
+  gap: var(--mc-space-2);
+  padding-top: var(--mc-space-4);
+  border-top: 1px solid var(--kit-line, var(--border-card));
+  list-style: none;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: var(--mc-space-2);
+  color: var(--kit-text, var(--text-primary));
+  font-size: var(--mc-fs-small);
+  line-height: 1.5;
+}
+
+.fact svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+.fact[data-tone="success"] svg { color: var(--mc-success); }
+.fact[data-tone="warning"] svg { color: var(--mc-warning); }
+.fact[data-tone="info"] svg { color: var(--kit-muted, var(--text-muted)); }
+
+.receiptActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--mc-space-2);
+}
+
+.receiptActions > :first-child {
+  flex: 1 1 200px;
+}
+
+/* ── Page grid (§6.2) ────────────────────────────────────── */
+.pageGridWrap {
+  display: grid;
+  gap: var(--mc-space-3);
+}
+
+.pageGridBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mc-space-2);
+}
+
+.pageGridSummary {
+  color: var(--kit-text, var(--text-primary));
+  font-size: var(--mc-fs-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.pageGridLinks {
+  display: flex;
+  gap: var(--mc-space-1);
+}
+
+.pageGridHint {
+  color: var(--kit-muted, var(--text-muted));
+  font-size: var(--mc-fs-label);
+}
+
+.pageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  align-items: start;
+  gap: var(--mc-space-4);
+}
+
+.pageCell {
+  position: relative;
+  display: grid;
+  gap: var(--mc-space-2);
+  justify-items: center;
+  padding: var(--mc-space-2);
+  border-radius: var(--mc-r-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--mc-dur-fast) var(--mc-ease-out);
+}
+
+.pageCell:hover {
+  background: var(--kit-hover, var(--bg-item-hover));
+}
+
+.pageCell:focus-visible {
+  outline: 2px solid var(--kit-focus-ring, var(--mc-focus-ring));
+  outline-offset: 2px;
+}
+
+.pageCell[aria-selected="true"] {
+  background: var(--kit-accent-subtle, var(--mc-accent-subtle));
+}
+
+/* Paper: the only raised object. Dark theme uses off-white paper (§4.1). */
+.thumb {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--mc-r-paper);
+  background: var(--mc-paper);
+  box-shadow: 0 0 0 1px var(--mc-paper-line), var(--mc-elev-1);
+}
+
+.pageCell[aria-selected="true"] .thumb {
+  box-shadow: 0 0 0 2px var(--kit-accent, var(--mc-accent)), var(--mc-elev-1);
+}
+
+.thumbCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity var(--mc-dur-fast) var(--mc-ease-out);
+}
+
+.thumb[data-state="ready"] .thumbCanvas {
+  opacity: 1;
+}
+
+/* §4.1 dark paper: pdfjs paints true white, which glares on ink. A slight dim
+   brings it to ≈ --mc-paper (#e9eaee). Preview only — never the export. */
+:global([data-theme="dark"]) .thumbCanvas {
+  filter: brightness(0.92);
+}
+
+.thumbFailed {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--mc-space-2);
+  color: #586070;
+  font-size: var(--mc-fs-label);
+  text-align: center;
+}
+
+.pageNumber {
+  color: var(--kit-muted, var(--text-muted));
+  font-size: var(--mc-fs-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.pageCell[aria-selected="true"] .pageNumber {
+  color: var(--kit-text, var(--text-primary));
+  font-weight: 600;
+}
+
+.pageTick {
+  position: absolute;
+  top: var(--mc-space-3);
+  right: var(--mc-space-3);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--kit-on-accent, var(--mc-on-accent));
+  background: var(--kit-accent, var(--mc-accent));
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity var(--mc-dur-fast) var(--mc-ease-out), transform var(--mc-dur-fast) var(--mc-ease-spring);
+}
+
+.pageTick svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pageCell[aria-selected="true"] .pageTick {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Range field ─────────────────────────────────────────── */
+.rangeField {
+  display: grid;
+  gap: var(--mc-space-1);
+}
+
+.rangeInput {
+  min-height: 40px;
+  padding: 0 var(--mc-space-3);
+  border: 1px solid var(--kit-line-strong, var(--border-card));
+  border-radius: var(--mc-r-xs);
+  color: var(--kit-text, var(--text-primary));
+  font: inherit;
+  font-size: var(--mc-fs-ui);
+  font-variant-numeric: tabular-nums;
+  background: var(--kit-surface, var(--bg-card));
+}
+
+.rangeInput:focus-visible {
+  outline: 2px solid var(--kit-focus-ring, var(--mc-focus-ring));
+  outline-offset: 1px;
+}
+
+.rangeInput[aria-invalid="true"] {
+  border-color: var(--mc-error);
+}
+
+.rangeError {
+  color: var(--mc-error);
+  font-size: var(--mc-fs-small);
+}
+
+/* ── Dialog / lightbox (§5.2) ────────────────────────────── */
+.dialog {
+  width: min(560px, calc(100vw - 2 * var(--mc-space-4)));
+  max-height: calc(100vh - 2 * var(--mc-space-8));
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--kit-line, var(--border-card));
+  border-radius: var(--mc-r-md);
+  color: var(--kit-text, var(--text-primary));
+  background: var(--kit-surface, var(--bg-card));
+  box-shadow: var(--mc-elev-2);
+}
+
+.dialog[data-size="full"] {
+  width: min(1100px, calc(100vw - 2 * var(--mc-space-4)));
+  height: calc(100vh - 2 * var(--mc-space-8));
+}
+
+.dialog[open] {
+  animation: kitDialogIn var(--mc-dur-base) var(--mc-ease-out);
+}
+
+.dialog::backdrop {
+  background: var(--bg-overlay);
+  animation: kitFade var(--mc-dur-base) var(--mc-ease-out);
+}
+
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dialogHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mc-space-3);
+  padding: var(--mc-space-3) var(--mc-space-3) var(--mc-space-3) var(--mc-space-5);
+  border-bottom: 1px solid var(--kit-line, var(--border-card));
+}
+
+.dialogTitle {
+  overflow: hidden;
+  font-size: var(--mc-fs-ui);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dialogClose,
+.lightboxStep {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--mc-r-xs);
+  color: var(--kit-text, var(--text-primary));
+  background: transparent;
+  cursor: pointer;
+}
+
+.dialogClose:hover,
+.lightboxStep:hover:not(:disabled) {
+  background: var(--kit-hover, var(--bg-item-hover));
+}
+
+.dialogClose:focus-visible,
+.lightboxStep:focus-visible,
+.toastClose:focus-visible {
+  outline: 2px solid var(--kit-focus-ring, var(--mc-focus-ring));
+  outline-offset: 2px;
+}
+
+.dialogClose svg,
+.lightboxStep svg {
+  width: 20px;
+  height: 20px;
+}
+
+.lightboxStep:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.lightbox {
+  display: grid;
+  flex: 1;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--mc-space-2);
+  min-height: 0;
+  padding: var(--mc-space-4) var(--mc-space-2);
+  background: var(--bg-page);
+}
+
+.lightboxStage {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Fit the page to the stage height; the width follows the page's own aspect. */
+.lightboxPage {
+  height: 100%;
+  max-width: 100%;
+  max-height: calc(100vh - 160px);
+}
+
+.lightboxPage .thumb {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
+/* ── Toasts (§5.2) ───────────────────────────────────────── */
+.toastRegion {
+  position: fixed;
+  right: var(--mc-space-6);
+  bottom: var(--mc-space-6);
+  z-index: 1100;
+  display: grid;
+  gap: var(--mc-space-2);
+  width: min(380px, calc(100vw - 2 * var(--mc-space-4)));
+  pointer-events: none;
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: start;
+  gap: var(--mc-space-3);
+  padding: var(--mc-space-3) var(--mc-space-2) var(--mc-space-3) var(--mc-space-4);
+  border: 1px solid var(--border-card);
+  border-radius: var(--mc-r-sm);
+  color: var(--text-primary);
+  background: var(--bg-card);
+  box-shadow: var(--mc-elev-2);
+  pointer-events: auto;
+  animation: kitToastIn var(--mc-dur-base) var(--mc-ease-out);
+}
+
+.toast > svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.toast[data-tone="success"] > svg { color: var(--mc-success); }
+.toast[data-tone="info"] > svg { color: var(--mc-info); }
+.toast[data-tone="warning"] > svg { color: var(--mc-warning); }
+.toast[data-tone="error"] > svg { color: var(--mc-error); }
+
+/* Error toasts stay, so they carry a stronger edge than the passing ones. */
+.toast[data-tone="error"] {
+  border-color: var(--mc-error);
+}
+
+.toastText {
+  font-size: var(--mc-fs-small);
+  line-height: 1.5;
+}
+
+.toastClose {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: -4px;
+  border: 0;
+  border-radius: var(--mc-r-xs);
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.toastClose:hover {
+  color: var(--text-primary);
+  background: var(--bg-item-hover);
+}
+
+.toastClose svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 640px) {
+  .toastRegion {
+    right: 50%;
+    bottom: var(--mc-space-4);
+    transform: translateX(50%);
+  }
+
+  .pageGrid {
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: var(--mc-space-2);
+  }
+}
+
+/* ── Motion ──────────────────────────────────────────────── */
+@keyframes kitDialogIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes kitToastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes kitFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes kitRise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes kitSweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(290%); }
+}
+
+@keyframes kitShake {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes kitInkSettle {
+  from { clip-path: circle(0% at var(--kit-settle-origin, 50% 100%)); }
+  to { clip-path: circle(150% at var(--kit-settle-origin, 50% 100%)); }
+}
+
+@keyframes kitDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .arrow,
+  .option,
+  .fill,
+  .pageCell,
+  .thumbCanvas,
+  .pageTick {
+    transition: none;
+  }
+
+  .button:active:not(:disabled) {
+    transform: none;
+  }
+
+  .chip,
+  .dropFrame,
+  .notice[data-shake="true"],
+  .dialog[open],
+  .dialog::backdrop,
+  .toast {
+    animation: none;
+  }
+
+  /* Still says "working": a parked segment instead of a moving one. */
+  .sweep {
+    left: 0;
+    width: 100%;
+    opacity: 0.45;
+    animation: none;
+  }
+
+  .receipt[data-settle="true"] {
+    animation: kitFade var(--mc-dur-fast) linear;
+  }
+
+  .receipt[data-settle="true"] .checkPath {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+}

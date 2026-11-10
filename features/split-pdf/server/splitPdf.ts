@@ -32,8 +32,16 @@ export interface SplitResult {
   pageCount: number
 }
 
-/** Cut a document into one PDF per requested range. */
-export async function splitPdf(file: File, rangeSpec: string): Promise<SplitResult> {
+/**
+ * Cut a document into one PDF per requested range — or, with `combine`, one
+ * PDF holding every requested page in the order given (Extract mode's
+ * "selected pages in one file"; roadmap §8.9).
+ */
+export async function splitPdf(
+  file: File,
+  rangeSpec: string,
+  options: { combine?: boolean } = {},
+): Promise<SplitResult> {
   const src = await PDFDocument.load(await file.arrayBuffer()).catch(() => {
     throw new SplitPdfValidationError(
       `"${file.name}" could not be read — it may be encrypted or corrupted`,
@@ -53,9 +61,21 @@ export async function splitPdf(file: File, rangeSpec: string): Promise<SplitResu
   }
 
   const base = stripPdfExtension(file.name)
-  // Tags the throwaway source once so every part can re-point its own
-  // internal links and shed pages it does not contain (lib/pdf/pageCopy.ts).
+  // Tags the throwaway source once so every output — each part, or the one
+  // combined file — can re-point its own internal links and shed pages it
+  // does not contain (lib/pdf/pageCopy.ts).
   prepareSourceForCopy(src, 'src')
+  if (options.combine) {
+    const out = await PDFDocument.create()
+    const indices = ranges.flatMap(([from, to]) => Array.from({ length: to - from + 1 }, (_, offset) => from - 1 + offset))
+    const pages = await out.copyPages(src, indices)
+    pages.forEach((page) => out.addPage(page))
+    finalizeCopiedPages(out)
+    return {
+      parts: [{ name: `${base}_selected_pages.pdf`, bytes: await out.save({ useObjectStreams: true }) }],
+      pageCount,
+    }
+  }
   const parts: SplitResult['parts'] = []
   for (let i = 0; i < ranges.length; i += 1) {
     const [from, to] = ranges[i]

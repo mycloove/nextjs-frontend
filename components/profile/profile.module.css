@@ -1406,3 +1406,10 @@
     transition: none;
   }
 }
+
+/* Docked balance only on narrow screens: the tool navbar's CreditPill shows it
+   above 640px (components/tools/ToolNavigation.module.css hides the pill at
+   max-width 640px). Keep the two breakpoints in step. */
+@media (min-width: 641px) {
+  .dockedNarrow { display: none; }
+}

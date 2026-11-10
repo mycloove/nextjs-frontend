@@ -1,11 +1,19 @@
 /*
- * Compress PDF — "the compression engine console".
+ * Compress PDF — "the compression engine console" (roadmap §8.11).
  *
- * A single self-contained surface, scoped behind `.acx-page` so none of its
- * generic-looking selectors (a dark grid, mode cards, a terminal) can leak
- * into any other route. Tokens are declared on the root and mirrored for the
- * light theme; the socket/mono face is the route's JetBrains Mono variable.
- * The dark palette is the mockup's verbatim (#030303 base, #36B39C signal).
+ * Scoped behind `.acx-page` so none of these selectors leak into another
+ * route. The palette, grid, glowing mass, dashed rings, teal drop target and
+ * inverted run button are this tool's own identity and stay (owner direction,
+ * 2026-11-06: tools keep their design; Wave A improves the UX inside it).
+ * What Wave A removed was dishonest, not decorative: the scripted "engine
+ * terminal", a size guessed before anything ran, and an auto-download. The
+ * rings now turn only while the server is really working.
+ *
+ * Intake validation, options, progress and the receipt are the shared kit
+ * (components/tools/kit), dressed in this palette through its --kit-* hooks.
+ *
+ * `.acx-sitebar` and `.acx-main` are read by scripts/verify-tool-navigation.mjs;
+ * keep those two class names.
  */
 
 .acx-page {
@@ -18,19 +26,34 @@
   --acx-text-main: #fafafa;
   --acx-text-muted: #888888;
   --acx-accent: #36b39c;
+  --acx-accent-hover: #2c9e89;
+  --acx-on-accent: #031d18;
   --acx-accent-glow: rgba(54, 179, 156, 0.15);
   --acx-accent-border: rgba(54, 179, 156, 0.4);
   --acx-danger: #ef4444;
   --acx-danger-glow: rgba(239, 68, 68, 0.15);
   --acx-danger-border: rgba(239, 68, 68, 0.45);
-  --acx-ok: #4ade80;
   --acx-grid-line: #111111;
   --acx-btn-bg: #fafafa;
   --acx-btn-fg: #000000;
   --acx-radius-md: 12px;
   --acx-radius-lg: 24px;
   --acx-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --acx-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --acx-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* The kit, dressed in this console's material and teal. */
+  --kit-accent: var(--acx-accent);
+  --kit-accent-hover: var(--acx-accent-hover);
+  --kit-on-accent: var(--acx-on-accent);
+  --kit-accent-subtle: var(--acx-accent-glow);
+  --kit-focus-ring: var(--acx-accent);
+  --kit-surface: var(--acx-bg-card);
+  --kit-line: var(--acx-border-dim);
+  --kit-line-strong: var(--acx-border-strong);
+  --kit-text: var(--acx-text-main);
+  --kit-muted: var(--acx-text-muted);
+  --kit-hover: var(--acx-bg-hover);
 
   display: flex;
   flex-direction: column;
@@ -42,7 +65,9 @@
     linear-gradient(to bottom, var(--acx-grid-line) 1px, transparent 1px);
   background-size: 40px 40px;
   background-position: center center;
-  overflow-x: hidden;
+  /* clip, not hidden: `hidden` makes this a scroll container, which silently
+     breaks the sticky .acx-sitebar once the receipt makes the page scroll. */
+  overflow-x: clip;
 }
 
 .acx-page *,
@@ -51,8 +76,7 @@
   box-sizing: border-box;
 }
 
-/* Light theme: same instrument, daylight dial. The terminal stays dark — it
-   is a console — but the material around it matches the app's light shell. */
+/* Light theme: same instrument, daylight dial. */
 html[data-theme="light"] .acx-page {
   --acx-bg-base: #f4f5f7;
   --acx-bg-panel: #ffffff;
@@ -63,6 +87,8 @@ html[data-theme="light"] .acx-page {
   --acx-text-main: #0b0c0e;
   --acx-text-muted: #5c636b;
   --acx-accent: #1c8b78;
+  --acx-accent-hover: #17786a;
+  --acx-on-accent: #ffffff;
   --acx-accent-glow: rgba(28, 139, 120, 0.1);
   --acx-accent-border: rgba(28, 139, 120, 0.35);
   --acx-danger: #c0392b;
@@ -73,17 +99,15 @@ html[data-theme="light"] .acx-page {
   --acx-btn-fg: #ffffff;
 }
 
-.acx-page :is(button, [role="radio"], a):focus-visible {
+.acx-page :is(a, button):focus-visible {
   outline: 2px solid var(--acx-accent);
   outline-offset: 3px;
 }
 
 /* Site bar --------------------------------------------------------------
    The same app chrome as /split-pdf's sitebar: a sticky 62px band, blurred
-   translucent background, a hairline base, and an inner row aligned to the
-   workspace column — [octopus] / mycloove / Compress PDF on the left, a
-   common tool index on the right. Replaces the mockup's standalone
-   brand + version badge so this full-screen tool reads as part of the app. */
+   translucent background, a hairline base, and [octopus] / mycloove /
+   Compress PDF on the left, the common tool index on the right. */
 .acx-sitebar {
   --tool-nav-surface: var(--acx-bg-panel);
   --tool-nav-text: var(--acx-text-main);
@@ -126,15 +150,6 @@ html[data-theme="light"] .acx-page {
   gap: 12px;
 }
 
-.acx-credit-cost {
-  --text-primary: var(--acx-text-main);
-  --text-secondary: var(--acx-text-muted);
-  --text-muted: var(--acx-text-muted);
-  color: var(--acx-text-muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
 .acx-logo-link {
   display: inline-flex;
   flex: 0 0 auto;
@@ -172,14 +187,15 @@ html[data-theme="light"] .acx-page {
   padding: 40px;
 }
 
-/* Left: target mass visualizer */
-.acx-visualizer {
+/* Left: the mass visualizer -------------------------------------------- */
+.acx-scale {
   position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 24px;
   min-height: 460px;
   overflow: hidden;
   border: 1px solid var(--acx-border-dim);
@@ -187,7 +203,7 @@ html[data-theme="light"] .acx-page {
   background: radial-gradient(circle at center, var(--acx-bg-panel) 0%, var(--acx-bg-base) 100%);
 }
 
-.acx-core-label {
+.acx-scale-label {
   position: absolute;
   top: 32px;
   left: 32px;
@@ -196,104 +212,90 @@ html[data-theme="light"] .acx-page {
   font-size: 12px;
 }
 
-.acx-core {
+.acx-dial {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   width: 320px;
   height: 320px;
 }
 
 .acx-ring {
   position: absolute;
-  border: 1px dashed var(--acx-border-dim);
+  border: 1px dashed var(--acx-accent-border);
   border-radius: 50%;
-  transition: all 0.8s var(--acx-spring);
 }
 
-.acx-ring-1 {
-  width: 100%;
-  height: 100%;
-  border-color: var(--acx-accent-border);
-  opacity: 0.5;
-  animation: acx-spin 20s linear infinite;
-}
+/* The outer ring is also the original's weight: the mass never grows past it. */
+.acx-ring-1 { inset: 0; opacity: 0.5; }
+.acx-ring-2 { inset: 12.5%; }
 
-.acx-ring-2 {
-  width: 75%;
-  height: 75%;
-  border-color: var(--acx-accent-border);
-  animation: acx-spin 15s linear infinite reverse;
-}
+/* Turning only while a run is in flight — the server really is working. */
+.acx-dial.working .acx-ring-1 { animation: acx-spin 20s linear infinite; }
+.acx-dial.working .acx-ring-2 { animation: acx-spin 15s linear infinite reverse; }
 
 @keyframes acx-spin {
-  100% { transform: rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
 
+/* The document's weight: the glowing teal mass. Its scale is the real
+   after/before ratio once a run reports it, full until then. */
 .acx-mass {
   position: absolute;
-  z-index: 10;
-  width: 50%;
-  height: 50%;
+  inset: 20%;
   border: 2px solid var(--acx-accent);
   border-radius: 50%;
   background: var(--acx-accent-glow);
   box-shadow: 0 0 40px var(--acx-accent-glow), inset 0 0 20px var(--acx-accent-glow);
-  transition: transform 0.8s var(--acx-spring), background 0.5s, border-color 0.5s, box-shadow 0.5s;
+  transition: transform 0.8s var(--acx-spring), background-color 0.5s, border-color 0.5s, box-shadow 0.5s;
 }
 
-/* The original's footprint (the pre-run 0.9 scale), kept as a dashed outline
-   once the real result is in. */
-.acx-mass-ghost {
-  position: absolute;
-  z-index: 9;
-  width: 50%;
-  height: 50%;
-  border: 1.5px dashed var(--acx-accent-border);
-  border-radius: 50%;
-  transform: scale(0.9);
-  animation: acx-fade-in 0.5s ease;
+.acx-mass.empty {
+  border-style: dashed;
+  border-color: var(--acx-border-strong);
+  background: transparent;
+  box-shadow: none;
 }
 
-.acx-readout {
-  position: relative;
-  z-index: 11;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-  pointer-events: none;
+/* Aggressive mode removes content: the mass takes the danger tone until run. */
+.acx-mass.danger:not(.empty) {
+  border-color: var(--acx-danger);
+  background: var(--acx-danger-glow);
+  box-shadow: 0 0 40px var(--acx-danger-glow), inset 0 0 20px var(--acx-danger-glow);
+}
+
+/* A measured saving glows a little brighter — real bytes, not a guess. */
+.acx-mass.settled {
+  box-shadow: 0 0 56px var(--acx-accent-border), inset 0 0 24px var(--acx-accent-glow);
 }
 
 .acx-size {
+  position: relative;
   color: var(--acx-text-main);
   font-family: var(--acx-mono);
   font-size: 24px;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-  animation: acx-fade-in 0.3s var(--acx-spring);
 }
 
-.acx-size-sub {
-  color: var(--acx-text-muted);
-  font-size: 13px;
-  white-space: nowrap;
-  transition: color 0.5s;
-}
-
-/* The dark glow that lifts the number off the dark panel smudges it on paper. */
 html[data-theme="light"] .acx-size {
   text-shadow: none;
 }
 
-@keyframes acx-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.acx-size.empty {
+  color: var(--acx-text-muted);
 }
 
-/* Right: controls */
+.acx-size-sub {
+  min-height: 1.5em;
+  color: var(--acx-text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* Right: controls ------------------------------------------------------- */
 .acx-controls {
   display: flex;
   flex: 0 0 420px;
@@ -301,74 +303,22 @@ html[data-theme="light"] .acx-size {
   gap: 20px;
 }
 
-.acx-file-pill {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px 10px 20px;
-  border: 1px solid var(--acx-border-dim);
-  border-radius: 99px;
-  background: var(--acx-bg-panel);
+.acx-title {
+  color: var(--acx-text-main);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
-.acx-file-pill > svg {
-  flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
+.acx-lede {
+  margin-top: -12px;
   color: var(--acx-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
-.acx-file-open {
-  display: flex;
-  flex: 1;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-  padding: 2px 0;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.acx-file-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.acx-file-size {
-  flex: 0 0 auto;
-  color: var(--acx-text-muted);
-  font-family: var(--acx-mono);
-  font-size: 12px;
-}
-
-.acx-file-x {
-  flex: 0 0 auto;
-  display: flex;
-  padding: 5px;
-  color: var(--acx-text-muted);
-  background: none;
-  border: 0;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.acx-file-x:hover {
-  color: var(--acx-danger);
-  background: var(--acx-danger-glow);
-}
-
-/* Empty-state drop zone — the pill opens into a proper target so it is
-   obvious the document goes here. A dashed accent frame with a soft top
-   glow; it lifts with a halo the moment a file is dragged over the page. */
+/* Empty-state drop target: a dashed teal frame with a soft top glow. */
 .acx-drop {
   display: flex;
   flex-direction: column;
@@ -385,23 +335,18 @@ html[data-theme="light"] .acx-size {
     radial-gradient(120% 130% at 50% 0%, var(--acx-accent-glow) 0%, transparent 62%),
     var(--acx-bg-panel);
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s, background 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 
-.acx-drop:hover {
+.acx-drop:hover:not(:disabled) {
   border-style: solid;
   border-color: var(--acx-accent);
   box-shadow: 0 12px 30px -16px var(--acx-accent);
 }
 
-.acx-drop.over {
-  border-style: solid;
-  border-color: var(--acx-accent);
-  background:
-    radial-gradient(120% 130% at 50% 0%, var(--acx-accent-glow) 0%, transparent 72%),
-    var(--acx-bg-hover);
-  box-shadow: 0 0 0 3px var(--acx-accent-glow), 0 16px 36px -16px var(--acx-accent);
-  transform: translateY(-1px);
+.acx-drop:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .acx-drop-icon {
@@ -414,17 +359,11 @@ html[data-theme="light"] .acx-size {
   border-radius: 14px;
   color: var(--acx-accent);
   background: var(--acx-accent-glow);
-  transition: transform 0.25s var(--acx-spring), box-shadow 0.25s;
 }
 
 .acx-drop-icon svg {
   width: 22px;
   height: 22px;
-}
-
-.acx-drop.over .acx-drop-icon {
-  transform: translateY(-2px);
-  animation: acx-drop-pulse 1.6s ease-in-out infinite;
 }
 
 .acx-drop-title {
@@ -450,263 +389,49 @@ html[data-theme="light"] .acx-size {
   margin-top: 6px;
   color: var(--acx-text-muted);
   font-family: var(--acx-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-@keyframes acx-drop-pulse {
-  0%, 100% { box-shadow: 0 0 18px var(--acx-accent-glow); }
-  50% { box-shadow: 0 0 30px var(--acx-accent-glow); }
-}
-
-.acx-modes {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.acx-mode {
-  position: relative;
-  overflow: hidden;
-  width: 100%;
-  padding: 18px 20px;
-  border: 1px solid var(--acx-border-dim);
-  border-radius: var(--acx-radius-md);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  background: var(--acx-bg-card);
-  cursor: pointer;
-  transition: border-color 0.3s, background 0.3s, transform 0.2s;
-}
-
-.acx-mode:hover:not(:disabled) {
-  border-color: var(--acx-border-strong);
-  background: var(--acx-bg-hover);
-}
-
-.acx-mode.active {
-  border-color: var(--acx-accent);
-  background: var(--acx-accent-glow);
-}
-
-.acx-mode.danger.active {
-  border-color: var(--acx-danger);
-  background: var(--acx-danger-glow);
-}
-
-.acx-mode:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.acx-mode-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.acx-mode-title {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.acx-mode-reduction {
-  color: var(--acx-accent);
-  font-family: var(--acx-mono);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.acx-mode.danger .acx-mode-reduction {
-  color: var(--acx-danger);
-}
-
-.acx-mode-desc {
-  color: var(--acx-text-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-/* Terminal -------------------------------------------------------------- */
-.acx-terminal {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  height: 116px;
-  padding: 16px;
-  overflow-y: auto;
-  border: 1px solid var(--acx-border-dim);
-  border-radius: var(--acx-radius-md);
-  background: #000000;
-  color: var(--acx-ok);
-  font-family: var(--acx-mono);
-  font-size: 11px;
-}
-
-.acx-log {
-  opacity: 0;
-  animation: acx-fade-in 0.1s forwards;
-}
-
-.acx-log.dim {
-  color: var(--acx-text-muted);
-}
-
-.acx-log.warn {
-  color: var(--acx-danger);
-}
-
-/* Run bar (progress + cancel) — additive; hidden unless a run is active. */
-.acx-runbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.acx-progress {
-  position: relative;
-  flex: 1;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 99px;
-  background: var(--acx-border-dim);
-}
-
-.acx-progress-fill {
-  height: 100%;
-  border-radius: 99px;
-  background: linear-gradient(90deg, var(--acx-accent-glow), var(--acx-accent));
-  transition: width 0.25s ease;
-}
-
-.acx-pct {
-  color: var(--acx-text-muted);
-  font-family: var(--acx-mono);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* Engine stage: a short segment travels the track — work is happening, but
-   no fake percentage is claimed. */
-.acx-progress.working .acx-progress-fill {
-  width: 38%;
-  background: linear-gradient(90deg, transparent, var(--acx-accent), transparent);
-  transition: none;
-  animation: acx-sweep 1.2s ease-in-out infinite;
-}
-
-@keyframes acx-sweep {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(265%); }
-}
-
-.acx-cancel {
-  padding: 5px 10px;
-  color: var(--acx-danger);
-  font-size: 12px;
-  font-weight: 600;
-  background: var(--acx-danger-glow);
-  border: 1px solid var(--acx-danger-border);
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-/* Notes / errors */
-.acx-note,
-.acx-err {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 13px;
-  border-radius: 10px;
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-
-.acx-note {
-  color: var(--acx-text-main);
-  background: var(--acx-accent-glow);
-  border: 1px solid var(--acx-accent-border);
-}
-
-.acx-err {
-  color: var(--acx-danger);
-  background: var(--acx-danger-glow);
-  border: 1px solid var(--acx-danger-border);
-}
-
-/* Execute --------------------------------------------------------------- */
-.acx-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.acx-run {
+  display: grid;
   gap: 12px;
   margin-top: auto;
-  padding: 16px;
-  border: none;
+}
+
+/* As in the original console, the destructive mode wears the danger tone when
+   chosen — the kit card reads these hooks, so no kit selector is touched. */
+.acx-controls [role="radio"][data-tone="danger"][aria-checked="true"] {
+  --kit-accent: var(--acx-danger);
+  --kit-accent-subtle: var(--acx-danger-glow);
+}
+
+/* The original execute button: inverted ink, not the accent — the teal is
+   kept for the mass and the selected mode. Two classes outrank the kit's. */
+.acx-run .acx-btn {
+  min-height: 52px;
+  border: 0;
   border-radius: var(--acx-radius-md);
   color: var(--acx-btn-fg);
   font-size: 15px;
-  font-weight: 600;
   background: var(--acx-btn-bg);
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s, background 0.3s, opacity 0.3s;
+  transition: transform 0.2s var(--acx-ease), box-shadow 0.2s;
 }
 
-.acx-btn:hover:not(:disabled) {
+.acx-run .acx-btn:hover:not(:disabled) {
+  background: var(--acx-btn-bg);
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(127, 127, 127, 0.22);
 }
 
-.acx-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.acx-btn.success {
-  color: #06281a;
-  background: var(--acx-ok);
-}
-
-.acx-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.acx-clear {
-  align-self: center;
-  padding: 2px;
+.acx-credit-cost {
+  --text-primary: var(--acx-text-main);
+  --text-secondary: var(--acx-text-muted);
+  --text-muted: var(--acx-text-muted);
   color: var(--acx-text-muted);
-  font-size: 12.5px;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  background: none;
-  border: 0;
-  cursor: pointer;
-}
-
-.acx-clear:hover {
-  color: var(--acx-text-main);
-}
-
-/* Drag feedback — the whole workspace is the drop target. */
-.acx-drag .acx-visualizer {
-  border-color: var(--acx-accent-border);
-  box-shadow: inset 0 0 0 1px var(--acx-accent-border);
-}
-
-@keyframes acx-spin-fast {
-  to { transform: rotate(360deg); }
-}
-
-.acx-spin {
-  animation: acx-spin-fast 0.75s linear infinite;
-  transform-origin: center;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Responsive ------------------------------------------------------------ */
@@ -726,8 +451,9 @@ html[data-theme="light"] .acx-size {
     padding: 0 18px;
   }
 
+  /* Controls first on narrow screens: the action matters more than the dial. */
   .acx-main {
-    flex-direction: column;
+    flex-direction: column-reverse;
     padding: 22px 18px 40px;
   }
 
@@ -735,32 +461,17 @@ html[data-theme="light"] .acx-size {
     flex: 1 1 auto;
   }
 
-  .acx-visualizer {
-    min-height: 360px;
+  .acx-scale {
+    min-height: 320px;
   }
 
-  .acx-core {
-    width: 260px;
-    height: 260px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .acx-page *,
-  .acx-page *::before,
-  .acx-page *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  .acx-dial {
+    width: 220px;
+    height: 220px;
   }
 
-  /* Without the sweep, a stopped segment would read as "38% done". Fill the
-     track at low intensity instead: busy, with no position claimed. */
-  .acx-progress.working .acx-progress-fill {
-    width: 100%;
-    opacity: 0.45;
-    background: var(--acx-accent);
-    animation: none !important;
+  .acx-size {
+    font-size: 20px;
   }
 }
 
@@ -768,21 +479,17 @@ html[data-theme="light"] .acx-size {
   .acx-site-separator, .acx-site-brand { display: none; }
   .acx-sitebar-inner { gap: 10px; padding-inline: 16px; }
   .acx-site-actions { gap: 8px; }
-
-  /* Phones: the gauge is a readout, not the task — keep it short so the drop
-     zone and the modes sit above the fold. */
-  .acx-main { gap: 18px; padding: 16px 14px 32px; }
-  .acx-visualizer { min-height: 220px; }
-  .acx-core { width: 176px; height: 176px; }
-  .acx-core-label { top: 14px; left: 16px; font-size: 11px; }
-  .acx-size { font-size: 18px; }
-  .acx-size-sub { font-size: 12px; }
-  .acx-terminal { height: 92px; }
 }
 
-/* Short landscape viewports: same compaction, side-by-side layout kept. */
-@media (max-height: 640px) and (min-width: 861px) {
-  .acx-main { padding-block: 20px; }
-  .acx-visualizer { min-height: 0; }
-  .acx-core { width: 240px; height: 240px; }
+@media (prefers-reduced-motion: reduce) {
+  .acx-dial.working .acx-ring-1,
+  .acx-dial.working .acx-ring-2 {
+    animation: none;
+  }
+
+  .acx-mass,
+  .acx-drop,
+  .acx-run .acx-btn {
+    transition: none;
+  }
 }

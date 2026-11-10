@@ -176,6 +176,9 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
 
   /* ── AI busy state (which action is in-flight) ────────────── */
   const [aiBusy, setAiBusy] = useState<string | null>(null)
+  /* Outcome of the latest autosave write — the editor's "Saved" label reads
+     this instead of a timer, so it only claims what actually reached storage. */
+  const [sessionSave, setSessionSave] = useState<{ at: number; ok: boolean } | null>(null)
 
   /* ═══════════════════════════════════════════════════════════════════════
      WORKSPACE SESSION — restore on boot, autosave on change
@@ -249,7 +252,8 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
         focusMode,
         options: { mode, bijoy, bilingual, pageRange, language, activePreset },
       })
-      saveSession(session)
+      const ok = saveSession(session)
+      setSessionSave({ at: Date.now(), ok })
     }, 400)
     return () => window.clearTimeout(handle)
   }, [jobs, activeJobId, view, newDocumentMode, focusMode, mode, bijoy, bilingual, pageRange, language, activePreset])
@@ -913,12 +917,18 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // A key the editor (or any widget) already handled is not a global
+      // shortcut. React's handlers run before this window listener, so ⌘K
+      // in the editor — which inserts a link — used to also open the command
+      // palette, and ⌘↵ inside a field used to open a new blank document.
+      if (e.defaultPrevented) return
       const mod = e.metaKey || e.ctrlKey
       const target = e.target as HTMLElement | null
       const inField = target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+      const inEditable = inField || !!target?.isContentEditable
 
       if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); setCmdkOpen((s) => !s); return }
-      if (mod && e.key === 'Enter')             { e.preventDefault(); openBlankEditor(); return }
+      if (mod && e.key === 'Enter' && !inEditable) { e.preventDefault(); openBlankEditor(); return }
       if (mod && e.key === '/')                 { e.preventDefault(); setFocusMode((s) => !s); return }
 
       if (view === 'workspace' && activeJobId) {
@@ -1058,6 +1068,7 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
           onMarkGithubCommitted={markGithubCommitted}
           onResetSourcedDocument={resetSourcedDocument}
           aiBusy={aiBusy}
+          sessionSave={sessionSave}
         />
         <CommandPalette open={cmdkOpen} actions={cmdActions} creditState={creditState} onClose={() => setCmdkOpen(false)} />
         <ShortcutsModal open={helpOpen} onClose={() => setHelpOpen(false)} />

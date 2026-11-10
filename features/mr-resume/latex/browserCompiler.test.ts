@@ -247,6 +247,14 @@ test('browser diagnostics keep nested source authority, vendor barriers and expl
   assert.equal(indirect[0].help, undefined)
 })
 
+test('browser diagnostics keep polyglossia missing hyphenation patterns a warning, not a refused missing file', () => {
+  const project = literalProject('Source')
+  const [hyphenation] = browserLatexDiagnostics('Module polyglossia Warning: Hyphenation file hyph-bn.pat.txt not found on input line 21\n', project, true)
+  assert.equal(hyphenation.severity, 'warning'); assert.equal(hyphenation.code, 'tex_warning')
+  const [authored] = browserLatexDiagnostics("! LaTeX Error: File `hyph-bn.tex' not found.\n", project, true)
+  assert.equal(authored.code, 'missing_file', 'An authored or required file is still refused')
+})
+
 test('browser diagnostics classify actual missing extensions and reconstruct wrapped/package-prefixed messages', () => {
   const project = literalProject('Source')
   for (const [name, code] of [['part.tex', 'missing_file'], ['refs.bib', 'missing_file'], ['style.bst', 'missing_file'], ['custom.sty', 'missing_package'], ['resume.cls', 'missing_package'], ['photo.png', 'missing_asset'], ['font.otf', 'missing_font']]) {

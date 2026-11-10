@@ -1,10 +1,13 @@
 'use client'
 
-import { Component, lazy, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import Link from 'next/link'
+import { Component, lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useRouter, useSelectedLayoutSegment } from 'next/navigation'
 import MrResumeStudio, { type RegularStudioBridge } from './MrResumeStudio'
 import { LATEX_MODE_KEY, type LatexImportRequest } from '../latex/types'
+import { latexTemplateCards } from '../latex/latexTemplateCards'
+import ResumeHome from '../home/ResumeHome'
+import { regularTemplateCards } from './regularTemplateCards'
+import { resolveTemplateRequest, templateHref, type TemplateRequest } from './templateCatalog'
 import styles from './MrResumeWorkspace.module.css'
 import theme from './MrResumeTheme.module.css'
 
@@ -36,6 +39,8 @@ export default function MrResumeWorkspace() {
   const regularPanel = useRef<HTMLDivElement>(null)
   const latexPanel = useRef<HTMLDivElement>(null)
   const importSequence = useRef(0)
+  const [templateRequest, setTemplateRequest] = useState<TemplateRequest | null>(null)
+  const templateSequence = useRef(0)
 
   if (mode && !workspaceVisited) setWorkspaceVisited(true)
   if (mode === 'latex' && !latexVisited) setLatexVisited(true)
@@ -52,6 +57,27 @@ export default function MrResumeWorkspace() {
     if (regularPanel.current) regularPanel.current.inert = mode !== 'regular'
     if (latexPanel.current) latexPanel.current.inert = mode !== 'latex'
   }, [mode, latexVisited])
+
+  // Gallery deep link: /mr-resume/<editor>?template=<id>. The id is checked
+  // against that editor's own catalog, handed to the editor once, and removed
+  // from the URL so Reload or Back can never apply the same template twice.
+  useEffect(() => {
+    if (mode === null) return
+    const value = new URLSearchParams(window.location.search).get('template')
+    const resolved = resolveTemplateRequest(mode, value, mode === 'regular' ? regularTemplateCards : latexTemplateCards)
+    if (!resolved) return
+    router.replace(editorPaths[mode], { scroll: false })
+    setTemplateRequest({ editor: mode, id: resolved.kind === 'template' ? resolved.card.id : String(value), sequence: ++templateSequence.current })
+  }, [mode, router])
+
+  function templateHandled(sequence: number) {
+    setTemplateRequest((current) => current?.sequence === sequence ? null : current)
+  }
+
+  function openTemplate(editor: EditorMode, id: string) {
+    router.push(templateHref(editor, id), { scroll: false })
+    try { window.localStorage.setItem(LATEX_MODE_KEY, editor) } catch { /* The gallery remains usable without storage. */ }
+  }
 
   function changeMode(next: EditorMode) {
     if (next === mode) return
@@ -84,39 +110,14 @@ export default function MrResumeWorkspace() {
   }
 
   return <div className={`${theme.theme} ${styles.root}${mode ? '' : ` ${styles.entryRoot}`}`} data-editor-mode={mode ?? undefined}>
-    {!mode && <main className={styles.entry}>
-      <header className={styles.entryHeader}>
-        <Link className={styles.entryBrand} href="/" aria-label="SmilePDF home"><span aria-hidden="true">S</span><span>MR.RESUME <i>by ASTRUM</i></span></Link>
-        <span className={styles.entryLabel}>DOCUMENT STUDIO <span aria-hidden="true">·</span> BANGLA + ENGLISH</span>
-      </header>
-      <section className={styles.entryIntro} aria-labelledby="resume-entry-title">
-        <p className={styles.entryEyebrow}>YOUR NEXT DOCUMENT STARTS HERE</p>
-        <h1 id="resume-entry-title">Choose how you want to build.</h1>
-        <p className={styles.entryLead}>Start with a visual editor, or work directly in LaTeX. Your projects stay separate, and you can choose either one whenever you visit.</p>
-      </section>
-      <section className={styles.choiceGrid} aria-label="Choose a resume editor">
-        <article className={`${styles.choice} ${styles.regularChoice}`}>
-          <div className={styles.choiceTop}><span className={styles.choiceIndex}>01 / VISUAL</span><span className={styles.choiceGlyph} aria-hidden="true">Aa</span></div>
-          <div className={styles.paperSample} aria-hidden="true"><div className={styles.sampleName}></div><div className={styles.sampleRule}></div><div className={styles.sampleColumns}><div><i></i><i></i><i></i></div><div><i></i><i></i><i></i><i></i></div></div></div>
-          <div className={styles.choiceCopy}><h2>Regular editor</h2><p>Build visually with guided sections and see your document take shape as you write.</p><ul><li>Live page preview</li><li>Resume, CV, biodata &amp; more</li><li>Draft PDF via print dialog</li></ul></div>
-          <button className={styles.chooseRegular} type="button" onClick={() => chooseMode('regular')}>Open Regular editor <span aria-hidden="true">→</span></button>
-        </article>
-        <article className={`${styles.choice} ${styles.latexChoice}`}>
-          <div className={styles.choiceTop}><span className={styles.choiceIndex}>02 / SOURCE</span><span className={styles.choiceGlyph} aria-hidden="true">TeX</span></div>
-          <div className={styles.sourceSample} aria-hidden="true"><span><b>\documentclass</b>{'{'}resume{'}'}</span><span><em>\begin</em>{'{'}document{'}'}</span><span className={styles.sourceIndent}>\section*{'{'}Experience{'}'}</span><span className={styles.sourceIndent}><i>Senior designer</i> · 2022—now</span><span><em>\end</em>{'{'}document{'}'}</span></div>
-          <div className={styles.choiceCopy}><h2>LaTeX editor</h2><p>Shape a typeset resume with source files, project assets, and compiled PDF proof.</p><ul><li>Direct source editing</li><li>Project files &amp; checkpoints</li><li>Compile to a typeset PDF</li></ul></div>
-          <button className={styles.chooseLatex} type="button" onClick={() => chooseMode('latex')}>Open LaTeX editor <span aria-hidden="true">→</span></button>
-        </article>
-      </section>
-      <footer className={styles.entryFooter}><span>Separate drafts for each editor.</span><span>Already started? Choose that editor to continue.</span></footer>
-    </main>}
+    {!mode && <ResumeHome onOpenEditor={chooseMode} onOpenTemplate={openTemplate} />}
     {workspaceVisited && <>
       {mode && notice && <div className={styles.status} role="status"><span>{notice}</span><button type="button" aria-label="Dismiss editor notice" onClick={() => setNotice('')}>Close</button></div>}
       <div ref={regularPanel} className={styles.panel} id="mr-resume-panel-regular" role="region" aria-label="Regular resume editor" tabIndex={0} hidden={mode !== 'regular'}>
-        <MrResumeStudio embedded workspaceActive={mode === 'regular'} bridgeRef={regular} onCopyToLatex={copyRegular} />
+        <MrResumeStudio embedded workspaceActive={mode === 'regular'} bridgeRef={regular} onCopyToLatex={copyRegular} templateRequest={templateRequest?.editor === 'regular' ? templateRequest : null} onTemplateHandled={templateHandled} />
       </div>
       <div ref={latexPanel} className={styles.panel} id="mr-resume-panel-latex" role="region" aria-label="LaTeX resume editor" tabIndex={0} hidden={mode !== 'latex'}>
-        {(latexVisited || mode === 'latex') && <LatexBoundary onRegular={() => changeMode('regular')}><Suspense fallback={<div className={styles.loadState} role="status"><b>Opening the typesetting workspace</b><p>Loading the source editor. Your resume is not uploaded.</p></div>}><LatexResumeStudio active={mode === 'latex'} importRequest={importRequest} onImportHandled={(id: string) => setImportRequest((current) => current?.id === id ? null : current)} onCopyRegular={copyRegular} /></Suspense></LatexBoundary>}
+        {(latexVisited || mode === 'latex') && <LatexBoundary onRegular={() => changeMode('regular')}><Suspense fallback={<div className={styles.loadState} role="status"><b>Opening the typesetting workspace</b><p>Loading the source editor. Your resume is not uploaded.</p></div>}><LatexResumeStudio active={mode === 'latex'} importRequest={importRequest} onImportHandled={(id: string) => setImportRequest((current) => current?.id === id ? null : current)} onCopyRegular={copyRegular} templateRequest={templateRequest?.editor === 'latex' ? templateRequest : null} onTemplateHandled={templateHandled} /></Suspense></LatexBoundary>}
       </div>
       <p className={styles.printMessage}>Download the compiled PDF from the LaTeX editor to print the typeset document.</p>
     </>}

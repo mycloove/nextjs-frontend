@@ -1406,7 +1406,8 @@ export default function EditorRightPanel({
           <div className="pe-rp-section">
             <span className="pe-rp-title">Shape</span>
             <p className="pe-inspector-empty">
-              Use the object handles on the canvas to resize or move the shape. Shape styling is not exposed yet.
+              Use the object handles on the canvas to resize or move the shape. Fill, stroke, width and
+              dash are under Position &amp; size above.
             </p>
           </div>
         )}

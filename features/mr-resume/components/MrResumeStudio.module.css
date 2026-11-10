@@ -279,6 +279,8 @@
 
 /* Contact rows: icon and line share one baseline; lines break cleanly. */
 .paperContactLine { display: block; min-height: 1.2em; }
+.paperContactLine a { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--resume-accent) 45%, transparent); text-underline-offset: 2px; }
+.paperContactLine a:focus-visible { border-radius: 2px; outline: 2px solid var(--rs-focus); outline-offset: 2px; }
 
 /* Latin Modern register: the template's serif reads machine-set, so the
    nameplate sheds Inter-style display tracking and letters set as TeX would. */
@@ -292,6 +294,39 @@
 .paper[lang='bn'] .paperSection h3 { letter-spacing: .04em; text-transform: none; }
 .paper[lang='bn'] .paperHeader h2 { letter-spacing: 0; }
 .paper[lang='bn'] .emptySection { font-style: normal; }
+
+/* Page layouts (resumeLayouts.ts). A layout re-arranges the same sections; it
+   never changes writing. Every rule is scoped by data-layout so the classic
+   page above stays byte-for-byte what existing drafts already print. */
+.paperMain, .paperRail { min-width: 0; }
+.paperBody[data-has-rail] > :where(.paperMain, .paperRail) > .paperSection:first-child { margin-top: 0; }
+.paper[data-layout="sidebar"] .paperBody[data-has-rail] { display: grid; grid-template-columns: 32% minmax(0, 1fr); grid-template-areas: "rail main"; column-gap: 7mm; margin-top: var(--resume-section-gap); }
+.paper[data-layout="sidebar"] .paperMain { grid-area: main; }
+.paper[data-layout="sidebar"] .paperRail { grid-area: rail; align-self: start; padding: 5mm 4mm; background: color-mix(in srgb, var(--resume-accent) 8%, #fff); }
+.paper[data-layout="sidebar"] .paperRail .paperSection + .paperSection { margin-top: calc(var(--resume-section-gap) * .7); }
+.paper[data-layout="sidebar"] .paperRail .sectionText { font-size: .92em; }
+.paper[data-layout="twocol"] .paperBody[data-has-rail] { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); grid-template-areas: "main rail"; column-gap: 8mm; margin-top: var(--resume-section-gap); }
+.paper[data-layout="twocol"] .paperMain { grid-area: main; }
+.paper[data-layout="twocol"] .paperRail { grid-area: rail; padding-left: 6mm; border-left: 1px solid color-mix(in srgb, var(--resume-accent) 35%, #fff); }
+.paper[data-layout="ledger"] .paperHeader { padding-bottom: 14px; border-bottom: 1px solid var(--rs-paper-ink); }
+.paper[data-layout="ledger"] .paperSection h3 { color: var(--rs-paper-ink); letter-spacing: .08em; }
+.paper[data-layout="ledger"] .paperSection h3:not(:has(+ hr)) { padding-bottom: 3px; border-bottom: .75pt solid currentColor; }
+.paper[data-layout="compact"] .paperHeader { padding-bottom: 12px; }
+.paper[data-layout="compact"] .paperHeader h2 { margin: 4px 0 6px; font-size: 1.9em; }
+.paper[data-layout="compact"] .paperSection { padding: 2px 0; }
+.paper[data-layout="compact"] .paperSection h3 { margin-bottom: 5px; }
+.paper[data-layout="compact"] .sectionText :where(p, ul, ol) + :where(p, ul, ol) { margin-top: 6px; }
+.paper[data-layout="executive"] .paperHeader { padding-bottom: 18px; border-bottom: 3px double var(--resume-accent); }
+.paper[data-layout="executive"] .paperHeader h2 { font-weight: 500; letter-spacing: 0; }
+.paper[data-layout="executive"] .paperSection[data-paper-section="summary"] { padding: 10px 14px; border-left: 3px solid var(--resume-accent); background: color-mix(in srgb, var(--resume-accent) 6%, #fff); }
+.paper[data-layout="banner"] .paperHeader { margin: calc(-1 * var(--resume-margin)) calc(-1 * var(--resume-margin)) 0; padding: max(var(--resume-margin), 6mm) max(var(--resume-margin), 6mm) 7mm; border-bottom: 0; color: #fff; background: var(--resume-accent); }
+.paper[data-layout="banner"] .paperHeader :where(.paperKicker, h2, .headerText > p, .paperContactIcon) { color: #fff; }
+.paper[data-layout="banner"] .paperHeader .headerText > p a { color: #fff; }
+.paper[data-layout="biodata"] .paperHeader { padding-bottom: 14px; border-bottom: 1.5px solid var(--rs-paper-ink); }
+.paper[data-layout="biodata"] .paperKicker { display: block; color: var(--rs-paper-ink); font-size: .95em; }
+/* Latin caps may track; Bangla is never letter-spaced (it breaks conjuncts and the matra line). */
+.paper[data-layout="biodata"]:not([lang='bn']) .paperKicker { letter-spacing: .22em; }
+.paper[data-layout="biodata"] .paperSection h3 { padding: 4px 8px; color: var(--rs-paper-ink); background: color-mix(in srgb, var(--resume-accent) 13%, #fff); letter-spacing: .06em; }
 
 /* আ — Banglish typing toggle. Lives in the writing-heading row; the glyph is
    always set in the Bangla face so the metaphor never relies on the UI font. */
@@ -655,6 +690,27 @@
 .paperChoices b { min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: -.01em; }
 .paperChoices small { min-width: 0; color: var(--rs-muted); font-size: 9px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .paperChoices .paperChoiceActive { border-color: var(--rs-accent); background: var(--rs-accent-soft); box-shadow: 0 0 0 1px color-mix(in srgb, var(--rs-accent) 40%, transparent), 0 2px 6px rgba(40, 43, 33, .06); }
+.layoutChoices { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin-top: 8px; }
+.layoutChoices button { display: grid; min-width: 0; min-height: 56px; grid-template-columns: 32px minmax(0, 1fr); align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--rs-line); border-radius: 6px; color: var(--rs-ink); background: var(--rs-panel); text-align: left; transition: border-color 120ms var(--rs-ease), background-color 120ms var(--rs-ease); }
+.layoutChoices button:hover { border-color: var(--rs-control-line); }
+.layoutChoices button > span:last-child { display: grid; min-width: 0; gap: 2px; }
+.layoutChoices b { font-size: 12px; font-weight: 600; }
+.layoutChoices small { color: var(--rs-muted); font-size: 12px; line-height: 1.4; }
+.layoutChoices .layoutChoiceActive { border-color: var(--rs-accent); background: var(--rs-accent-soft); }
+.layoutGlyph { position: relative; display: grid; width: 32px; height: 42px; grid-template-columns: 1fr; grid-template-rows: 8px 1fr; gap: 3px; padding: 4px; border: 1px solid var(--rs-control-line); border-radius: 2px; background: var(--rs-paper); }
+.layoutGlyph i { display: block; border-radius: 1px; background: var(--rs-line); }
+.layoutGlyph i:first-child { background: var(--rs-accent); opacity: .7; }
+.layoutGlyph i:last-child { display: none; }
+.layoutGlyph[data-layout="sidebar"], .layoutGlyph[data-layout="twocol"] { grid-template-columns: 1fr 1fr; }
+.layoutGlyph[data-layout="sidebar"] i:first-child, .layoutGlyph[data-layout="twocol"] i:first-child { grid-column: 1 / -1; }
+.layoutGlyph[data-layout="sidebar"] i:last-child, .layoutGlyph[data-layout="twocol"] i:last-child { display: block; }
+.layoutGlyph[data-layout="sidebar"] { grid-template-columns: 9px 1fr; }
+.layoutGlyph[data-layout="sidebar"] i:nth-child(2) { background: color-mix(in srgb, var(--rs-accent) 30%, var(--rs-line)); }
+.layoutGlyph[data-layout="banner"] i:first-child { margin: -4px -4px 0; opacity: 1; }
+.layoutGlyph[data-layout="compact"] { grid-template-rows: 5px 1fr; gap: 2px; }
+.layoutGlyph[data-layout="executive"] i:first-child { height: 3px; align-self: end; opacity: 1; }
+.layoutGlyph[data-layout="ledger"] i:first-child { height: 1px; align-self: end; background: var(--rs-ink); }
+.layoutGlyph[data-layout="biodata"] i:first-child { width: 60%; justify-self: center; }
 .miniPaper { position: relative; width: 22px; grid-row: 1 / span 2; justify-self: center; border: 1px solid var(--rs-muted); border-radius: 2px; }
 .miniPaper::after { position: absolute; inset: 8px 4px; border-top: 1px solid var(--rs-muted); border-bottom: 1px solid var(--rs-muted); content: ''; }
 .fontPreview { display: flex; min-width: 0; min-height: 66px; align-items: center; gap: 14px; padding: 10px 13px; border: 1px solid var(--rs-line); border-radius: 8px; background: var(--rs-panel); }

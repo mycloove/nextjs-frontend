@@ -1,4 +1,6 @@
 export type EditorLanguage = 'English' | 'Bangla'
+// Shared by both editors and the Mr. Resume home, so one choice carries over.
+export const EDITOR_LANGUAGE_KEY = 'mr-resume:editor-language:v1'
 
 const banglaCopy: Record<string, string> = {
   English: 'ইংরেজি', Bangla: 'বাংলা',
@@ -149,6 +151,35 @@ const extraBanglaCopy: Record<string, string> = {
   'Add a photo…': 'ছবি যোগ করুন…', 'Kept on this device. Included in the draft PDF.': 'এই ডিভাইসেই থাকে। খসড়া PDF-এ যুক্ত হয়।',
   'Content is kept in the section library, so you can add it back.': 'লেখা বিভাগ তালিকায় থাকবে, পরে আবার যোগ করতে পারবেন।',
   'Unsupported Bangla glyphs use an available browser font fallback.': 'কিছু বাংলা অক্ষরের জন্য ব্রাউজারের বিকল্প ফন্ট ব্যবহৃত হতে পারে।',
+  // Gallery templates, layouts and deep-link notices.
+  'Cover letter': 'কভার লেটার',
+  'Corporate Resume': 'কর্পোরেট রিজিউম', 'Ruled single column for private-sector and corporate applications.': 'বেসরকারি ও কর্পোরেট চাকরির জন্য রুল-টানা এক কলাম।',
+  'Corporate Sidebar': 'কর্পোরেট সাইডবার', 'Main work history beside a tinted rail for skills and languages.': 'মূল কাজের ইতিহাসের পাশে দক্ষতা ও ভাষার রঙিন কলাম।',
+  'Bank Officer CV': 'ব্যাংক অফিসার সিভি', 'Formal two-page CV for bank and financial-institution vacancies.': 'ব্যাংক ও আর্থিক প্রতিষ্ঠানের জন্য দুই পাতার ফরমাল সিভি।',
+  'BCS and Government Biodata': 'বিসিএস ও সরকারি বায়োডাটা', 'English biodata outline; the vacancy notice and official forms take priority.': 'ইংরেজি বায়োডাটা রূপরেখা। নিয়োগ বিজ্ঞপ্তি ও সরকারি ফরম আগে মানুন।',
+  'Fresh Graduate Resume': 'ফ্রেশ গ্র্যাজুয়েট রিজিউম', 'Coursework, projects and activities first, without invented experience.': 'বানানো অভিজ্ঞতা ছাড়া কোর্স, প্রকল্প ও সহশিক্ষা আগে।',
+  'Software Engineer': 'সফটওয়্যার ইঞ্জিনিয়ার', 'Dense one-page engineering resume with projects and linked work.': 'প্রকল্প ও লিংকসহ ঘন এক পাতার ইঞ্জিনিয়ারিং রিজিউম।',
+  'School Teacher CV': 'স্কুল শিক্ষক সিভি', 'Teaching subjects, classroom practice, training and referees.': 'পাঠদানের বিষয়, শ্রেণিকক্ষের অভিজ্ঞতা, প্রশিক্ষণ ও রেফারেন্স।',
+  'Creative Portfolio': 'ক্রিয়েটিভ পোর্টফোলিও', 'A colour band header for designers, writers and media roles.': 'ডিজাইনার, লেখক ও মিডিয়ার জন্য রঙিন ব্যান্ড-শিরোনাম।',
+  'Marketing and Sales': 'মার্কেটিং ও সেলস', 'Two columns: results on the left, skills and education on the right.': 'দুই কলাম: বামে ফলাফল, ডানে দক্ষতা ও শিক্ষা।',
+  'Executive Leader': 'এক্সিকিউটিভ লিডার', 'Two-page leadership CV with a framed executive summary.': 'ফ্রেম-করা সারাংশসহ দুই পাতার নেতৃত্বের সিভি।',
+  'NGO and Development': 'এনজিও ও উন্নয়ন', 'Programme, field and donor-reporting experience for development roles.': 'উন্নয়ন খাতের জন্য প্রকল্প, মাঠ ও ডোনার-রিপোর্টিংয়ের অভিজ্ঞতা।',
+  'Healthcare CV': 'স্বাস্থ্যসেবা সিভি', 'Registration, clinical placements and training for doctors and nurses.': 'চিকিৎসক ও নার্সদের জন্য রেজিস্ট্রেশন, ক্লিনিক্যাল অভিজ্ঞতা ও প্রশিক্ষণ।',
+  'Cover Letter': 'কভার লেটার', 'A one-page letter that pairs with any English resume template.': 'যেকোনো ইংরেজি রিজিউমের সাথে মানানসই এক পাতার চিঠি।',
+  'Layout': 'বিন্যাস', 'Page layout': 'পৃষ্ঠার বিন্যাস', 'Back to Mr. Resume home': 'Mr. Resume হোমে ফিরুন',
+  'Changes where sections sit on the page. Your writing and section order stay the same.': 'বিভাগগুলো পাতায় কোথায় বসবে তা বদলায়। আপনার লেখা ও বিভাগের ক্রম একই থাকে।',
+  'Classic': 'ক্লাসিক', 'One column with an accent rule beneath the header.': 'শিরোনামের নিচে রঙিন রেখাসহ এক কলাম।',
+  'Ledger': 'লেজার', 'One column, ruled headings and edge-aligned dates.': 'এক কলাম, রুল-টানা শিরোনাম ও ডানে তারিখ।',
+  'Compact': 'কম্প্যাক্ট', 'Dense one column that keeps more on one page.': 'এক পাতায় বেশি আঁটানোর ঘন এক কলাম।',
+  'Executive': 'এক্সিকিউটিভ', 'Generous margins, double rule and a framed summary.': 'চওড়া মার্জিন, দ্বৈত রেখা ও ফ্রেম-করা সারাংশ।',
+  'Banner': 'ব্যানার', 'Name and contacts on a full-width colour band.': 'পূর্ণ-প্রস্থ রঙিন ব্যান্ডে নাম ও যোগাযোগ।',
+  'Sidebar': 'সাইডবার', 'Skills, languages and awards in a tinted side rail.': 'রঙিন পাশের কলামে দক্ষতা, ভাষা ও পুরস্কার।',
+  'Two column': 'দুই কলাম', 'Work on the left, education and skills on the right.': 'বামে কাজ, ডানে শিক্ষা ও দক্ষতা।',
+  'Biodata': 'বায়োডাটা', 'Formal biodata: centred title, banded headings, photo beside the name.': 'ফরমাল বায়োডাটা: মাঝখানে শিরোনাম, ব্যান্ড-শিরোনাম, নামের পাশে ছবি।',
+  'Layout changed. Your writing and section order are unchanged.': 'বিন্যাস বদলেছে। আপনার লেখা ও বিভাগের ক্রম অপরিবর্তিত।',
+  'That template is no longer available. Your draft is unchanged.': 'এই টেমপ্লেট আর নেই। আপনার খসড়া অপরিবর্তিত।',
+  'Review the template, then choose whether to replace the current draft.': 'টেমপ্লেটটি দেখে নিন, তারপর বর্তমান খসড়া বদলাবেন কি না ঠিক করুন।',
+  'Started a fresh page. The previous draft has a restore copy on this device.': 'নতুন পাতা শুরু হয়েছে। আগের খসড়ার পুনরুদ্ধার কপি এই ডিভাইসে আছে।',
 }
 
 export function editorText(value: string, language: EditorLanguage): string {

@@ -23,9 +23,10 @@ import { toolRequest, getApiErrorMessage, ApiClientError } from '@/lib/api/clien
      an indeterminate cycle, because the backend reports no percentage
      and the UI never fabricates one. The draft dims; the final plate
      brightens under the same curve.
-   · The manifest — "what survives the press", laid out near-bento by
+   · The manifest — "what usually carries over", laid out near-bento by
      real importance (typography and images read first), not as four
-     equal slots.
+     equal slots. It states the engine's general behaviour, never a
+     result for the loaded file.
    · The proof table — after success the REAL output is shown: the
      converted blob is mounted in an embedded viewer next to the
      receipt. The file on screen is the file that downloads; nothing
@@ -186,7 +187,7 @@ const Ic = {
   ),
 }
 
-/* ── What survives the press — the merged manifest ──────────
+/* ── What usually carries over — the merged manifest ──────────
    Near-bento: the two things users actually convert Word for read
    as major tiles; the other two stay compact rows. */
 const SURVIVORS = [
@@ -662,7 +663,7 @@ export default function WordToPDF() {
         @keyframes w2p-pressdown { from { transform: translateY(-120%); } to { transform: translateY(400%); } }
         @keyframes w2p-setset { 0%, 100% { transform: scaleY(1); } 45% { transform: scaleY(0.62); } }
 
-        /* ══ What survives the press — near-bento manifest,
+        /* ══ What usually carries over — near-bento manifest,
            ordered by real importance ══ */
         .w2p-panel {
           background: var(--bg-card); border: 1px solid var(--border-card);
@@ -1047,7 +1048,11 @@ export default function WordToPDF() {
 
             <div className={`w2p-panel w2p-reveal${locked ? ' is-locked' : ''}`} style={ri(2)}>
               <div className="w2p-panel-head">
-                {Ic.checkSm} What survives the press
+                {/* A general expectation of the LibreOffice/Word engine, not a
+                    check run on this file — the heading must not read as a
+                    per-file verification, which is what the old "What survives
+                    the press" with ticks implied. */}
+                {Ic.checkSm} What usually carries over
               </div>
               <div className="w2p-panel-body">
                 {SURVIVORS.map(s => (

@@ -21,6 +21,12 @@ export type AuthNavButtonProps = {
   creditState?: CreditBalanceState;
   /** Hides shared balance UI when this tool has credits disabled. */
   creditDisplayToolId?: string;
+  /**
+   * `always` (default): the avatar's docked balance badge shows at every width.
+   * `narrow`: only below 641px — for chrome that shows its own credit pill on
+   * wider screens (components/tools/ToolNavbar), so the number is never shown twice.
+   */
+  dockedCredit?: "always" | "narrow";
 };
 
 type ResolvedProps = AuthNavButtonProps & {
@@ -35,6 +41,7 @@ function AccountControl({
   accountState,
   creditState,
   creditDisplayToolId,
+  dockedCredit,
 }: ResolvedProps) {
   const { status, viewer } = accountState;
 
@@ -57,6 +64,7 @@ function AccountControl({
       onNavigate={onNavigate}
       creditState={creditState}
       creditDisplayToolId={creditDisplayToolId}
+      dockedCredit={dockedCredit}
       onRefreshAccount={accountState.refresh}
       onSignOut={accountState.signOut}
     />

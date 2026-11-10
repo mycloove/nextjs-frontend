@@ -1,12 +1,15 @@
 import type { SectionDividerConfig, ResumeHeadingIconSize } from './ResumeInspectorPanel.tsx'
 import type { ResumeHeadingIconId } from './ResumeHeadingIcon.tsx'
 import type { PhotoBackgroundId } from './photoBackground.ts'
+import type { ResumeLayoutId } from './resumeLayouts.ts'
 
 export const RESUME_DRAFT_SCHEMA = 8
 export const TEMPLATE_BACKUP_KEY = 'mr-resume:template-backup:v1'
+// Guest autosave. Module-owned key, never read or written by another module.
+export const REGULAR_DRAFT_KEY = 'mr-resume:draft:v1'
 export type ResumeDraft = {
   documentTitle: string; fullName: string
-  purpose: 'Resume' | 'Career profile' | 'Academic CV' | 'Biodata' | 'Statement of purpose'
+  purpose: 'Resume' | 'Career profile' | 'Academic CV' | 'Biodata' | 'Statement of purpose' | 'Cover letter'
   enabled: string[]
   customSections: { id: string; title: string; detail: string; group: 'Core' | 'Additional' }[]
   content: Record<string, string>; titles: Record<string, string>
@@ -18,8 +21,10 @@ export type ResumeDraft = {
   profileImage: string | null; photoShape: 'circle' | 'square'; photoSize: number
   photoBackground: PhotoBackgroundId; photoBlur: number; photoCustomColor: string; profileImageDisplay: string | null
   templateId: string | null
+  /** Visual arrangement. Optional and additive: drafts saved before layouts existed read as 'classic'. */
+  layout?: ResumeLayoutId
 }
-type DraftOptions = { sectionIDs: readonly string[]; fonts: readonly string[]; photoBackgrounds: readonly string[]; headingIcons: readonly string[]; templates: readonly string[]; accentCount: number }
+type DraftOptions = { sectionIDs: readonly string[]; fonts: readonly string[]; photoBackgrounds: readonly string[]; headingIcons: readonly string[]; templates: readonly string[]; accentCount: number; layouts?: readonly string[] }
 const object = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === 'object' && !Array.isArray(value))
 const hex = (value: unknown): value is string => typeof value === 'string' && /^#[\da-f]{6}$/iu.test(value)
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
@@ -63,7 +68,7 @@ export function decodeResumeDraft(raw: string | null, defaults: ResumeDraft, opt
       if (typeof data[key] !== 'string') return null
       draft[key] = data[key]
     }
-    if (['Resume', 'Career profile', 'Academic CV', 'Biodata', 'Statement of purpose'].includes(String(data.purpose))) draft.purpose = data.purpose as ResumeDraft['purpose']
+    if (['Resume', 'Career profile', 'Academic CV', 'Biodata', 'Statement of purpose', 'Cover letter'].includes(String(data.purpose))) draft.purpose = data.purpose as ResumeDraft['purpose']
     if (data.language === 'Bangla' || data.language === 'English') draft.language = data.language
     if (typeof data.banglishMode === 'boolean') draft.banglishMode = data.banglishMode
     if (data.format === 'Visual' || data.format === 'LaTeX') draft.format = data.format
@@ -92,8 +97,30 @@ export function decodeResumeDraft(raw: string | null, defaults: ResumeDraft, opt
         draft.sectionDividers[id] = { enabled: item.enabled, style: item.style as SectionDividerConfig['style'], color: item.color as string, thickness: Math.max(0.5, Math.min(2, item.thickness)), ...(item.underHeading ? { underHeading: true } : {}) }
       }
     }
+    // A missing or unknown layout is the original arrangement, never the caller's current one.
+    draft.layout = typeof data.layout === 'string' && (options.layouts ?? []).includes(data.layout) ? data.layout as ResumeLayoutId : 'classic'
     draft.templateId = typeof data.templateId === 'string' && options.templates.includes(data.templateId) ? data.templateId : null
     const timestamp = typeof saved.timestamp === 'string' && Number.isFinite(Date.parse(saved.timestamp)) ? saved.timestamp : null
     return { document: draft, timestamp }
   } catch { return null }
+}
+
+export type StoredDraftSummary = { status: 'none' } | { status: 'unreadable' } | { status: 'ready'; title: string; savedAt: string | null; templateId: string | null }
+
+/**
+ * A read-only glance at the stored Regular draft for the Mr. Resume home page.
+ * It never decodes into editor state and never writes; anything it cannot read
+ * is reported as unreadable, so the home page cannot imply a draft is safe.
+ */
+export function summarizeStoredDraft(raw: string | null): StoredDraftSummary {
+  if (raw === null) return { status: 'none' }
+  if (raw.length > 6500000) return { status: 'unreadable' }
+  try {
+    const saved: unknown = JSON.parse(raw)
+    if (!object(saved) || !Number.isInteger(saved.schema) || (saved.schema as number) < 1 || (saved.schema as number) > RESUME_DRAFT_SCHEMA || !object(saved.document)) return { status: 'unreadable' }
+    const title = typeof saved.document.documentTitle === 'string' && saved.document.documentTitle.trim() ? saved.document.documentTitle.trim().slice(0, 120) : 'Untitled resume'
+    const savedAt = typeof saved.timestamp === 'string' && Number.isFinite(Date.parse(saved.timestamp)) ? saved.timestamp : null
+    const templateId = typeof saved.document.templateId === 'string' ? saved.document.templateId : null
+    return { status: 'ready', title, savedAt, templateId }
+  } catch { return { status: 'unreadable' } }
 }

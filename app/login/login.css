@@ -389,8 +389,8 @@ html[data-theme="dark"] .home-page .auth-alert.error {
   margin-top: 4px;
   border: 0;
   border-radius: var(--r-sm);
-  background: var(--brand-gradient);
-  color: #fff;
+  background: var(--brand-fill);
+  color: var(--on-brand);
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   font-size: 14px;

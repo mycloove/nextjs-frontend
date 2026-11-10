@@ -14,7 +14,7 @@ export default function Page() {
      (hideHeading defaults to false), the same additive switch rotate-pdf owns. */
   return (
     <>
-      <ToolWorkspace toolId="bijoy-converter" hideHeading />
+      <ToolWorkspace toolId="bijoy-converter" hideHeading headingOwnedByTool />
       <section aria-labelledby="bijoy-about" className="mx-auto max-w-7xl px-4 py-12 md:px-8" style={{ color: 'var(--text-primary)' }}>
         <h2 id="bijoy-about" className="mb-6 text-2xl font-semibold">Bijoy to Unicode for Bangla text</h2>
         <div className="grid gap-8 md:grid-cols-2">

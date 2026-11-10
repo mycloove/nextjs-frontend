@@ -9,9 +9,9 @@ const browser = await chromium.launch({ headless: true })
 const reports = []
 
 async function enterRegularEditor(page) {
-  // Every visit, including reload, begins at the standalone chooser.
-  await page.waitForFunction(() => [...document.querySelectorAll('button')].some((button) => button.textContent.includes('Open Regular editor') && Object.keys(button).some((key) => key.startsWith('__reactProps'))), undefined, { timeout: 60000 })
-  await page.getByRole('button', { name: 'Open Regular editor', exact: true }).click()
+  // Every visit, including reload, begins at the gallery home.
+  await page.waitForFunction(() => [...document.querySelectorAll('button')].some((button) => button.getAttribute('aria-label') === 'Open editor: Regular' && Object.keys(button).some((key) => key.startsWith('__reactProps'))), undefined, { timeout: 60000 })
+  await page.getByRole('button', { name: 'Open editor: Regular', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Regular resume editor', exact: true })).toBeVisible()
   await expect(page.locator('.cm-editor')).toHaveCount(0)
 }

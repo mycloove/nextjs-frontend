@@ -141,8 +141,7 @@ export function PdfEditorCommandPalette({ open, onClose, onRun, editingReady, re
           border-top: 1px solid var(--pe-line);
           color: var(--pe-text-3); font-size: 11px;
         }
-        .pe-palette-foot kbd,
-        .pe-shortcuts kbd {
+        .pe-palette-foot kbd {
           padding: 1px 5px;
           border: 1px solid var(--pe-line-strong);
           border-radius: 4px;
@@ -150,53 +149,8 @@ export function PdfEditorCommandPalette({ open, onClose, onRun, editingReady, re
           color: var(--pe-text-2);
           font-family: inherit; font-size: 11px;
         }
-
-        .pe-shortcuts-backdrop {
-          position: fixed; inset: 0; z-index: 600;
-          display: grid; place-items: center;
-          padding: 16px;
-          background: var(--pe-scrim);
-          overflow: auto;
-        }
-        .pe-shortcuts {
-          width: min(500px, 100%);
-          max-height: calc(100dvh - 32px);
-          overflow: auto;
-          padding: 18px 20px;
-          border: 1px solid var(--pe-line);
-          border-radius: var(--pe-r-md);
-          background: var(--pe-panel);
-          box-shadow: var(--pe-shadow-dialog);
-          color: var(--pe-text);
-        }
-        .pe-shortcuts-head {
-          display: flex; align-items: center; justify-content: space-between; gap: 10px;
-          margin-bottom: 12px;
-        }
-        .pe-shortcuts-title {
-          margin: 0;
-          font-family: 'Manrope', sans-serif; font-size: 17px;
-        }
-        .pe-shortcuts-close {
-          min-height: 30px; padding: 0 9px;
-          border: 1px solid var(--pe-line); border-radius: var(--pe-r-sm);
-          background: transparent; color: var(--pe-text-2);
-          font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer;
-        }
-        .pe-shortcuts-close:hover { background: var(--pe-panel-3); color: var(--pe-text); }
-        .pe-shortcuts-list { display: flex; flex-direction: column; gap: 2px; }
-        .pe-shortcuts-row {
-          display: flex; align-items: center; justify-content: space-between; gap: 12px;
-          min-height: 32px; padding: 0 4px;
-          border-bottom: 1px solid var(--pe-line);
-          font-size: 12px;
-        }
-        .pe-shortcuts-row:last-child { border-bottom: 0; }
-        .pe-shortcuts-row span { color: var(--pe-text-2); }
-        .pe-shortcuts-row kbd { white-space: nowrap; }
         @media (max-width: 520px) {
           .pe-palette-backdrop { padding: 10px; align-items: start; }
-          .pe-shortcuts-row { font-size: 11.5px; }
         }
       `}</style>
 
@@ -308,6 +262,66 @@ export function PdfEditorShortcutsDialog({ open, onClose }: { open: boolean; onC
       role="presentation"
       onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}
     >
+      {/* The sheet carries its own styles. They used to live in the palette's
+          <style>, which is not rendered while the palette is closed — and
+          opening this sheet closes the palette — so the dialog appeared
+          unstyled, with no backdrop, inside the page flow. */}
+      <style>{`
+        .pe-shortcuts-backdrop {
+          position: fixed; inset: 0; z-index: 600;
+          display: grid; place-items: center;
+          padding: 16px;
+          background: var(--pe-scrim);
+          overflow: auto;
+        }
+        .pe-shortcuts {
+          width: min(500px, 100%);
+          max-height: calc(100dvh - 32px);
+          overflow: auto;
+          padding: 18px 20px;
+          border: 1px solid var(--pe-line);
+          border-radius: var(--pe-r-md);
+          background: var(--pe-panel);
+          box-shadow: var(--pe-shadow-dialog);
+          color: var(--pe-text);
+        }
+        .pe-shortcuts-head {
+          display: flex; align-items: center; justify-content: space-between; gap: 10px;
+          margin-bottom: 12px;
+        }
+        .pe-shortcuts-title {
+          margin: 0;
+          font-family: 'Manrope', sans-serif; font-size: 17px;
+        }
+        .pe-shortcuts-close {
+          min-height: 30px; padding: 0 9px;
+          border: 1px solid var(--pe-line); border-radius: var(--pe-r-sm);
+          background: transparent; color: var(--pe-text-2);
+          font-family: inherit; font-size: 11px; font-weight: 700; cursor: pointer;
+        }
+        .pe-shortcuts-close:hover { background: var(--pe-panel-3); color: var(--pe-text); }
+        .pe-shortcuts-list { display: flex; flex-direction: column; gap: 2px; }
+        .pe-shortcuts-row {
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          min-height: 32px; padding: 0 4px;
+          border-bottom: 1px solid var(--pe-line);
+          font-size: 12px;
+        }
+        .pe-shortcuts-row:last-child { border-bottom: 0; }
+        .pe-shortcuts-row span { color: var(--pe-text-2); }
+        .pe-shortcuts kbd {
+          padding: 1px 5px;
+          border: 1px solid var(--pe-line-strong);
+          border-radius: 4px;
+          background: var(--pe-panel-2);
+          color: var(--pe-text-2);
+          font-family: inherit; font-size: 11px;
+          white-space: nowrap;
+        }
+        @media (max-width: 520px) {
+          .pe-shortcuts-row { font-size: 11.5px; }
+        }
+      `}</style>
       <div className="pe-shortcuts" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" data-testid="pdf-shortcuts-dialog">
         <div className="pe-shortcuts-head">
           <h2 className="pe-shortcuts-title">Keyboard shortcuts</h2>
