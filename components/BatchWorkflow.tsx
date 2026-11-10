@@ -38,19 +38,22 @@
     when the label changes. Hover lifts with a soft accent shadow (the
     Press Room's press treatment); busy keeps full colour under the running
     sphere instead of dimming to a grey husk.
-  - No simulated progress, ever. The backend runs one opaque POST and
-    returns one zip; per-file status is not a separate field in the
-    contract. While dispatching, the whole truth is: the sphere
-    (indeterminate by design), the "5 parallel lanes" copy, the elapsed
-    clock, and the honest note that per-file results arrive inside the
-    archive. After delivery the receipt opens that archive in the browser
-    and counts the engine's `<name>_error.txt` entries, so "Batch delivered"
-    is only said when nothing failed — the old receipt said it even when
-    every file had failed.
+  - No simulated progress, ever. The one real percentage is the XHR
+    upload (bw-meter); once the server holds the files the engine runs
+    one opaque job and reports nothing per file until it ends, so the
+    readout becomes the sphere (indeterminate by design), the "5
+    parallel lanes" copy and the elapsed clock. After delivery the
+    receipt opens the archive in the browser and lists what is in it
+    and every `<name>_error.txt` note, so "Batch delivered" is only said
+    when nothing failed. When nothing converted at all the engine sends
+    422 `batch_failed` with the reasons instead of an archive of notes:
+    nothing is downloaded and no credit is used, and the receipt says so.
   - Truth-telling fixes carried over the old implementation: fabricated
     8%-92% progress bar removed; alert() replaced by the header notice
     slot; unroutable files are refused at the door instead of silently
-    queued to die inside the zip; the delivery receipt reports the real
+    queued to die inside the zip, a file already on the manifest is not
+    queued twice, and the engine's 30-file limit is stated before
+    dispatch; the delivery receipt reports the real
     blob size and the *_error.txt contract; the blob URL is revoked on the
     next action instead of leaking (it is kept between delivery and
     re-download — "Download again" is honest, and the lifetime is bounded).
@@ -71,12 +74,13 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useDropzone, type FileRejection } from 'react-dropzone'
-import { toolRequest, getApiErrorMessage, ApiClientError } from '@/lib/api/client'
+import { getApiErrorMessage } from '@/lib/api/client'
+import { uploadWithProgress } from '@/lib/upload/uploadWithProgress'
 import KineticSphere from '@/components/KineticSphere'
 
 /* ── Operation vocabulary ─────────────────────────────────────
    These six values are the backend's dispatch vocabulary
-   (utils/task_executor.py process_single_task). Changing a value
+   (utils/task_executor.py OPERATIONS). Changing a value
    here breaks the batch contract — labels may change, values may not. */
 const ALL_OPERATIONS = [
   { value: 'image_to_pdf',  label: 'Image → PDF',        fileType: 'image' },
@@ -90,11 +94,21 @@ const ALL_OPERATIONS = [
 /* The Flask app's MAX_CONTENT_LENGTH. The UI states the ceiling before
    dispatch instead of letting a 100 MB upload fail opaquely. */
 const MAX_TOTAL_BYTES = 100 * 1024 * 1024
+/* BATCH_MAX_FILES in utils/task_executor.py — stated before dispatch too. */
+const MAX_FILES = 30
+
+const IMAGE_EXTS = ['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp']
+/* Word → PDF's engine reads all four (features/word_to_pdf.py). */
+const WORD_EXTS = ['.docx', '.doc', '.odt', '.rtf']
 
 const ACCEPT: Record<string, string[]> = {
   'application/pdf': ['.pdf'],
-  'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp'],
+  'image/*': IMAGE_EXTS,
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/msword': ['.doc'],
+  'application/vnd.oasis.opendocument.text': ['.odt'],
+  'application/rtf': ['.rtf'],
+  'text/rtf': ['.rtf'],
 }
 
 type FileType = 'image' | 'pdf' | 'word' | 'other'
@@ -158,14 +172,24 @@ const Ic = {
 }
 
 /* ── Helpers ───────────────────────────────────────────────────
-   getFileType matches the old implementation exactly — the default
-   operation inference and the group routing both key off it. */
+   getFileType drives the default operation and the group routing. The
+   extension counts as much as the MIME type: browsers send an empty type
+   for some PDFs, and `.DOCX` is still a Word document. */
+const extOf = (file: File) => {
+  const dot = file.name.lastIndexOf('.')
+  return dot >= 0 ? file.name.slice(dot).toLowerCase() : ''
+}
+
 const getFileType = (file: File): FileType => {
-  if (file.type === 'application/pdf') return 'pdf'
-  if (file.type.startsWith('image/')) return 'image'
-  if (file.name.endsWith('.docx')) return 'word'
+  const ext = extOf(file)
+  if (file.type === 'application/pdf' || ext === '.pdf') return 'pdf'
+  if (file.type.startsWith('image/') || IMAGE_EXTS.includes(ext)) return 'image'
+  if (WORD_EXTS.includes(ext)) return 'word'
   return 'other'
 }
+
+/* The same file dropped twice is one file — name, size and timestamp. */
+const fileKey = (file: File) => `${file.name}\u0000${file.size}\u0000${file.lastModified}`
 
 const operationsForType = (type: FileType) =>
   ALL_OPERATIONS.filter(op => op.fileType === type)
@@ -187,7 +211,7 @@ const typeLabel = (file: File) => {
   const t = getFileType(file)
   if (t === 'pdf') return 'PDF'
   if (t === 'image') return file.type.split('/')[1]?.toUpperCase() || 'IMG'
-  if (t === 'word') return 'DOCX'
+  if (t === 'word') return extOf(file).slice(1).toUpperCase() || 'DOC'
   return '?'
 }
 
@@ -207,34 +231,48 @@ interface FileTask {
    the current queue. */
 interface Delivery {
   count: number
-  sizeBytes: number
   seconds: number
-  name: string
-  /* Files the engine reported as failed (one `<name>_error.txt` each in the
-     archive), or null when the archive could not be read in the browser and
-     the outcome per file is therefore unknown. */
+  /* The archive, or null when nothing converted: the engine then answers
+     422 `batch_failed` with the reasons and no archive (and no credit). */
+  archive: { name: string; sizeBytes: number } | null
+  /* Result entries inside the archive; null when it could not be read here. */
+  outputs: string[] | null
+  /* Files that did not convert, with the engine's reason; null when the
+     archive could not be read and the outcome per file is unknown. */
   failed: Array<{ name: string; reason: string }> | null
 }
 
 const ERROR_ENTRY_SUFFIX = '_error.txt'
+const shorten = (text: string) => (text.length > 160 ? `${text.slice(0, 157)}…` : text)
 
-/* Reads the engine's failure notes out of the returned archive. The note text
-   is `Error processing <name>: <reason>` (utils/task_executor.py). */
-async function readFailures(blob: Blob): Promise<Delivery['failed']> {
+/* Reads the archive back: every result entry, and the engine's failure notes
+   (`<name>_error.txt`, text `Error processing <name>: <reason>` —
+   utils/task_executor.py build_archive). */
+async function readArchive(blob: Blob): Promise<Pick<Delivery, 'outputs' | 'failed'>> {
   try {
     const { default: JSZip } = await import('jszip')
     const zip = await JSZip.loadAsync(blob)
-    const notes = Object.values(zip.files).filter(f => !f.dir && f.name.endsWith(ERROR_ENTRY_SUFFIX))
-    return Promise.all(notes.map(async (note) => {
+    const entries = Object.values(zip.files).filter(f => !f.dir)
+    const notes = entries.filter(f => f.name.endsWith(ERROR_ENTRY_SUFFIX))
+    const failed = await Promise.all(notes.map(async (note) => {
       const name = note.name.slice(0, -ERROR_ENTRY_SUFFIX.length)
       const text = await note.async('string')
-      const reason = text.replace(/^Error processing .*?:\s*/, '').trim() || 'Unknown error'
-      return { name, reason: reason.length > 160 ? `${reason.slice(0, 157)}…` : reason }
+      return { name, reason: shorten(text.replace(/^Error processing .*?:\s*/, '').trim() || 'Unknown error') }
     }))
+    return { outputs: entries.filter(f => !f.name.endsWith(ERROR_ENTRY_SUFFIX)).map(f => f.name), failed }
   } catch {
-    return null
+    return { outputs: null, failed: null }
   }
 }
+
+/* `mycloove_batch_2026-11-10_1305.zip` — sortable, and says when it ran. */
+const archiveName = () => {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `mycloove_batch_${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.zip`
+}
+
+const REFUSED_TYPES = 'images, PDFs and Word documents only'
 
 /* ─────────────────────────────────────────────────────────────
    Component
@@ -245,15 +283,14 @@ export default function BatchWorkflow() {
   const [delivery, setDelivery] = useState<Delivery | null>(null)
   const [notice, setNotice]     = useState<{ text: string; tone: 'info' | 'error' } | null>(null)
   const [elapsed, setElapsed]   = useState(0)
+  /* Real upload progress from XHR; null once the server has the files. */
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null)
 
   const startedRef  = useRef(0)
   const zipUrlRef   = useRef<string | null>(null)
   const abortRef    = useRef<AbortController | null>(null)
-
-  /* A cancel through toolRequest arrives as an ApiClientError whose cause is the
-     AbortError, so a deliberate stop is told apart from a real failure. */
-  const isCancellation = (e: unknown) =>
-    e instanceof ApiClientError && (e.cause as { name?: string } | undefined)?.name === 'AbortError'
+  const tasksRef    = useRef<FileTask[]>([])
+  useEffect(() => { tasksRef.current = tasks }, [tasks])
 
   /* The blob URL is kept from delivery until the next dispatch, a clear,
      or unmount — long enough for "Download again", never leaked past the
@@ -263,14 +300,30 @@ export default function BatchWorkflow() {
   }, [])
   useEffect(() => () => { revokeZip(); abortRef.current?.abort() }, [revokeZip])
 
-  /* ── Intake (shared by drop and paste) ── */
+  /* ── Intake (shared by drop and paste) ──
+     Unroutable types are refused at the door, a file already on the
+     manifest is not queued twice, and the batch stops at the engine's
+     file limit — each said in the notice slot, never silently. */
   const addFiles = useCallback((files: File[]) => {
-    const routable  = files.filter(f => operationsForType(getFileType(f)).length > 0)
-    const refused   = files.length - routable.length
-    if (routable.length) {
+    const routable = files.filter(f => operationsForType(getFileType(f)).length > 0)
+    const refused  = files.length - routable.length
+    const known    = new Set(tasksRef.current.map(t => fileKey(t.file)))
+    const fresh: File[] = []
+    let duplicates = 0
+    for (const file of routable) {
+      const key = fileKey(file)
+      if (known.has(key)) { duplicates++; continue }
+      known.add(key)
+      fresh.push(file)
+    }
+    const room    = Math.max(0, MAX_FILES - tasksRef.current.length)
+    const added   = fresh.slice(0, room)
+    const overCap = fresh.length - added.length
+
+    if (added.length) {
       setTasks(prev => [
         ...prev,
-        ...routable.map((file, i) => ({
+        ...added.map((file, i) => ({
           id: Math.random().toString(36).slice(2, 9),
           file,
           operation: defaultOpFor(file),
@@ -278,17 +331,19 @@ export default function BatchWorkflow() {
         })),
       ])
       setDelivery(null)
-      setNotice(null)
     }
-    if (refused) {
-      setNotice({ text: `${refused} file${refused > 1 ? 's' : ''} can\u2019t be routed — images, PDFs and DOCX only.`, tone: 'info' })
-    }
+
+    const parts: string[] = []
+    if (overCap) parts.push(`A batch holds up to ${MAX_FILES} files — ${overCap} not added.`)
+    if (duplicates) parts.push(`${duplicates} already in the batch.`)
+    if (refused) parts.push(`${refused} can\u2019t be routed — ${REFUSED_TYPES}.`)
+    setNotice(parts.length ? { text: parts.join(' '), tone: 'info' } : null)
   }, [])
 
   const onDrop = useCallback((accepted: File[], rejections: FileRejection[]) => {
     if (accepted.length) addFiles(accepted)
     if (rejections.length) {
-      setNotice({ text: `${rejections.length} file${rejections.length > 1 ? 's' : ''} can\u2019t be routed — images, PDFs and DOCX only.`, tone: 'info' })
+      setNotice({ text: `${rejections.length} file${rejections.length > 1 ? 's' : ''} can\u2019t be routed — ${REFUSED_TYPES}.`, tone: 'info' })
     }
   }, [addFiles])
 
@@ -343,13 +398,16 @@ export default function BatchWorkflow() {
 
   /* ── Dispatch ── */
   const startBatch = async () => {
-    if (!tasks.length || loading || overLimit) return
+    if (!tasks.length || loading || overLimit || overCount) return
     setLoading(true)
     setNotice(null)
     setDelivery(null)
+    setUploadPercent(0)
     revokeZip()
     const controller = new AbortController()
     abortRef.current = controller
+    const count = tasks.length
+    const seconds = () => Math.max(1, Math.round((Date.now() - startedRef.current) / 1000))
 
     const formData = new FormData()
     formData.append('tasks', JSON.stringify(tasks.map((t, i) => ({
@@ -358,36 +416,45 @@ export default function BatchWorkflow() {
     tasks.forEach((t, i) => formData.append(`file_${i}`, t.file))
 
     try {
-      const res = await toolRequest('/api/batch-process', {
-        method: 'POST', body: formData, signal: controller.signal,
+      const res = await uploadWithProgress('/api/batch-process', formData, {
+        signal: controller.signal,
+        // At 100% the server has every file; from then on the readout is the
+        // honest elapsed clock, not a percentage.
+        onProgress: percent => setUploadPercent(percent >= 100 ? null : percent),
       })
-      if (!res.ok) throw new Error(await getApiErrorMessage(res, 'Batch processing failed'))
+      setUploadPercent(null)
 
-      const blob = await res.blob()
-      const name = `mycloove_Batch_${Date.now()}.zip`
-      const url  = URL.createObjectURL(blob)
-      zipUrlRef.current = url
-      const failed = await readFailures(blob)
-
-      // An archive holding only failure notes is not a result: it stays
-      // available through the receipt but is not pushed into downloads.
-      const nothingConverted = failed !== null && failed.length >= tasks.length
-      if (!nothingConverted) {
-        const a = Object.assign(document.createElement('a'), { href: url, download: name })
-        document.body.appendChild(a); a.click(); document.body.removeChild(a)
+      if (!res.ok) {
+        const body = await res.clone().json().catch(() => null) as
+          { code?: string; failures?: Array<{ name?: string; error?: string }> } | null
+        if (res.status === 422 && body?.code === 'batch_failed' && Array.isArray(body.failures)) {
+          // Nothing converted: the engine sends the reasons instead of an
+          // archive of error notes, and no credit is used.
+          setDelivery({
+            count,
+            seconds: seconds(),
+            archive: null,
+            outputs: [],
+            failed: body.failures.map(f => ({ name: f.name || 'file', reason: shorten(f.error || 'Unknown error') })),
+          })
+          return
+        }
+        throw new Error(await getApiErrorMessage(res, 'Batch processing failed. Please try again.'))
       }
 
-      setDelivery({
-        count: tasks.length,
-        sizeBytes: blob.size,
-        seconds: Math.max(1, Math.round((Date.now() - startedRef.current) / 1000)),
-        name,
-        failed,
-      })
+      const blob = await res.blob()
+      const name = archiveName()
+      const url  = URL.createObjectURL(blob)
+      zipUrlRef.current = url
+      const { outputs, failed } = await readArchive(blob)
+
+      const a = Object.assign(document.createElement('a'), { href: url, download: name })
+      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+
+      setDelivery({ count, seconds: seconds(), archive: { name, sizeBytes: blob.size }, outputs, failed })
     } catch (err: unknown) {
-      if (isCancellation(err)) {
-        // deliberate cancel — nothing to report
-      } else {
+      // uploadWithProgress rejects a cancel like any failure; the signal tells them apart.
+      if (!controller.signal.aborted) {
         setNotice({
           text: err instanceof Error ? err.message : 'Batch processing failed. Please try again.',
           tone: 'error',
@@ -395,6 +462,7 @@ export default function BatchWorkflow() {
       }
     } finally {
       abortRef.current = null
+      setUploadPercent(null)
       setLoading(false)
     }
   }
@@ -404,8 +472,8 @@ export default function BatchWorkflow() {
   }
 
   const downloadAgain = () => {
-    if (!zipUrlRef.current || !delivery) return
-    const a = Object.assign(document.createElement('a'), { href: zipUrlRef.current, download: delivery.name })
+    if (!zipUrlRef.current || !delivery?.archive) return
+    const a = Object.assign(document.createElement('a'), { href: zipUrlRef.current, download: delivery.archive.name })
     document.body.appendChild(a); a.click(); document.body.removeChild(a)
   }
 
@@ -414,7 +482,7 @@ export default function BatchWorkflow() {
   const phase      = !hasStack ? 'intake' : loading ? 'dispatched' : delivery ? 'delivered' : 'manifest'
   const totalBytes = tasks.reduce((s, t) => s + t.file.size, 0)
   const overLimit  = totalBytes > MAX_TOTAL_BYTES
-
+  const overCount  = tasks.length > MAX_FILES
   const groups = GROUP_ORDER
     .map(type => ({ type, label: GROUP_LABEL[type], tasks: tasks.filter(t => getFileType(t.file) === type) }))
     .filter(g => g.tasks.length > 0)
@@ -427,7 +495,7 @@ export default function BatchWorkflow() {
     phase === 'dispatched' ? ' \u00B7 dispatching' :
     phase === 'delivered'  ? (
       deliveredFailures === 0 ? ' \u00B7 delivered'
-      : delivery && deliveredFailures >= delivery.count ? ' \u00B7 failed'
+      : delivery && !delivery.archive ? ' \u00B7 failed'
       : ` \u00B7 ${deliveredFailures} failed`
     ) :
     hasStack               ? ` \u00B7 ${tasks.length} file${tasks.length > 1 ? 's' : ''}` : ''
@@ -710,6 +778,19 @@ export default function BatchWorkflow() {
           font-variant-numeric: tabular-nums;
         }
         .bw-run-sub { font-size: 11px; color: var(--text-muted); line-height: 1.5; max-width: 36ch; }
+        /* Upload meter — the one real percentage this tool has (XHR upload
+           progress). It leaves as soon as the server holds every file. */
+        .bw-meter {
+          width: 160px; height: 3px; border-radius: 999px; overflow: hidden;
+          background: var(--border-base);
+          margin: 4px 0 2px;
+        }
+        .bw-meter-fill {
+          display: block; height: 100%;
+          background: var(--accent-start);
+          transform-origin: left center;
+          transition: transform 200ms var(--bw-ease);
+        }
 
         /* ── The delivery receipt — real facts from the blob, receipt-coded.
            It lives in the story pane: the job's third act, centered where
@@ -757,11 +838,29 @@ export default function BatchWorkflow() {
         .bw-slip-sub { font-size: 11.5px; line-height: 1.55; color: var(--text-secondary); margin: 0; }
         /* a failed file is danger, so it takes the one danger colour */
         .bw-slip-icon.is-warn { border-color: var(--brand-red); color: var(--brand-red); }
-        .bw-slip-fails {
+        /* What arrived and what did not, each under a visible caption so the
+           outcome never rests on the marker colour alone. */
+        .bw-slip-cap {
+          margin: 2px 0 -5px;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--text-muted);
+        }
+        .bw-slip-list {
           margin: 0; padding: 0; list-style: none;
           display: flex; flex-direction: column; gap: 4px;
-          font-size: 11.5px; line-height: 1.5; color: var(--text-secondary);
+          font-size: 12px; line-height: 1.5; color: var(--text-secondary);
+          overflow-wrap: anywhere;
         }
+        .bw-slip-list li { position: relative; padding-left: 12px; }
+        .bw-slip-list li::before {
+          content: '';
+          position: absolute; left: 0; top: 0.62em;
+          width: 5px; height: 5px; border-radius: 50%;
+          background: var(--text-faint);
+        }
+        .bw-slip-list li.is-ok::before { background: var(--mc-success); }
+        .bw-slip-list li.is-fail::before { background: var(--brand-red); }
         .bw-slip-dl { justify-content: center; padding: 8px 12px; font-size: 11.5px; }
         .bw-mono { font-family: ui-monospace, monospace; font-size: 10.5px; }
 
@@ -1023,6 +1122,7 @@ export default function BatchWorkflow() {
           .bw-stamp { animation: none; }
           .bw-plate { transition: none; }
           .bw-face { transition: none; }
+          .bw-meter-fill { transition: none; }
           .bw-btn:active:not(:disabled) { transform: none; }
           .bw-slip-check path { animation: none; stroke-dashoffset: 0; }
           .bw-dot { animation: none !important; }
@@ -1090,26 +1190,37 @@ export default function BatchWorkflow() {
                   </p>
                   <p className="bw-floor-sub">
                     {isDragReject
-                      ? 'Images, PDFs and DOCX files only.'
+                      ? 'Images, PDFs and Word documents only.'
                       : isDragActive
                         ? 'Each file keeps its own route.'
                         : hasStack
                           ? 'Drop, click or paste — the manifest updates on the right.'
                           : 'Images, PDFs and Word documents — mixed is fine. Each file is routed to its own process; everything returns in one archive.'}
                   </p>
-                  <p className="bw-floor-formats">JPG · PNG · WEBP · GIF · BMP · PDF · DOCX</p>
+                  <p className="bw-floor-formats">JPG · PNG · WEBP · GIF · BMP · PDF · DOCX · DOC · ODT · RTF</p>
                 </div>
               )}
 
-              {/* the runner — honest run state, no fabricated progress */}
+              {/* the runner — honest run state: the real upload percentage
+                  while files travel, then the elapsed clock while the
+                  engine works (it reports nothing per file until it ends) */}
               {loading && (
-                <div className="bw-run" role="status">
+                <div className="bw-run" role="status" aria-live="polite">
                   <span className="bw-yard-globe" aria-hidden="true">
                     <KineticSphere size={40} points={64} />
                   </span>
-                  <span className="bw-run-title">Dispatched — 5 parallel lanes · {elapsed}s</span>
+                  <span className="bw-run-title">
+                    {uploadPercent !== null
+                      ? `Uploading ${tasks.length} file${tasks.length > 1 ? 's' : ''} — ${uploadPercent}%`
+                      : `Converting — 5 parallel lanes · ${elapsed}s`}
+                  </span>
+                  {uploadPercent !== null && (
+                    <span className="bw-meter" aria-hidden="true">
+                      <span className="bw-meter-fill" style={{ transform: `scaleX(${uploadPercent / 100})` }} />
+                    </span>
+                  )}
                   <span className="bw-run-sub">
-                    Results arrive inside one archive; a failed file rides home as <span className="bw-mono">*_error.txt</span>.
+                    Each file is converted on its own: one that fails is named on the receipt, and the rest still arrive in one archive.
                   </span>
                 </div>
               )}
@@ -1117,11 +1228,12 @@ export default function BatchWorkflow() {
               {/* the delivery receipt — the job's third act, same pane */}
               {!loading && delivery && (() => {
                 const failedCount = delivery.failed?.length ?? 0
-                const allFailed = delivery.failed !== null && failedCount >= delivery.count
+                const allFailed = delivery.archive === null
                 const someFailed = failedCount > 0 && !allFailed
-                const title = delivery.failed === null
-                  ? 'Batch returned'
-                  : allFailed ? 'Nothing was converted'
+                const outputs = delivery.outputs ?? []
+                const title = allFailed
+                  ? (delivery.count > 1 ? 'Nothing was converted' : 'This file was not converted')
+                  : delivery.failed === null ? 'Batch returned'
                   : someFailed ? `Partly delivered — ${failedCount} of ${delivery.count} failed`
                   : 'Batch delivered'
                 return (
@@ -1142,34 +1254,49 @@ export default function BatchWorkflow() {
                       <p className="bw-slip-title">{title}</p>
                     </div>
                     <p className="bw-slip-sub">
-                      {delivery.count} file{delivery.count > 1 ? 's' : ''} sent, finished in {delivery.seconds}s —
-                      archive {formatSize(delivery.sizeBytes)} (<span className="bw-mono">{delivery.name}</span>).
-                      {delivery.failed === null
-                        ? <> The archive could not be read here, so check it for <span className="bw-mono">*_error.txt</span> notes.</>
-                        : allFailed ? ' It holds only the error notes below, so it was not downloaded automatically.'
-                        : someFailed ? ' The failed files are listed below; their notes are inside the archive.'
-                        : ''}
+                      {delivery.count} file{delivery.count > 1 ? 's' : ''} sent, finished in {delivery.seconds}s
+                      {delivery.archive
+                        ? <> — archive {formatSize(delivery.archive.sizeBytes)} (<span className="bw-mono">{delivery.archive.name}</span>), downloaded.</>
+                        : '. No archive was made and no credit was used — the reasons are below.'}
+                      {delivery.archive && delivery.failed === null &&
+                        <> The archive could not be read here, so check it for <span className="bw-mono">*_error.txt</span> notes.</>}
                     </p>
-                    {failedCount > 0 && (
-                      <ul className="bw-slip-fails">
-                        {delivery.failed!.slice(0, 5).map((f) => (
-                          <li key={f.name}><span className="bw-mono">{f.name}</span> — {f.reason}</li>
+                    {outputs.length > 0 && (
+                      <>
+                      <p className="bw-slip-cap">In the archive</p>
+                      <ul className="bw-slip-list">
+                        {outputs.slice(0, 5).map(name => (
+                          <li key={name} className="is-ok"><span className="bw-mono">{name}</span></li>
                         ))}
-                        {failedCount > 5 && <li>+{failedCount - 5} more inside the archive</li>}
+                        {outputs.length > 5 && <li>+{outputs.length - 5} more in the archive</li>}
                       </ul>
+                      </>
                     )}
-                    <button
-                      type="button"
-                      className="bw-btn bw-btn-quiet bw-slip-dl"
-                      onClick={(e) => {
-                        // This button sits inside the dropzone root; without this the
-                        // click bubbles up and also opens the file picker.
-                        e.stopPropagation()
-                        downloadAgain()
-                      }}
-                    >
-                      {Ic.download} {allFailed ? 'Download error notes' : 'Download again'}
-                    </button>
+                    {failedCount > 0 && (
+                      <>
+                      <p className="bw-slip-cap">Not converted</p>
+                      <ul className="bw-slip-list">
+                        {delivery.failed!.slice(0, 5).map((f, i) => (
+                          <li key={`${f.name}-${i}`} className="is-fail"><span className="bw-mono">{f.name}</span> — {f.reason}</li>
+                        ))}
+                        {failedCount > 5 && <li>+{failedCount - 5} more{allFailed ? '' : ' — notes inside the archive'}</li>}
+                      </ul>
+                      </>
+                    )}
+                    {delivery.archive && (
+                      <button
+                        type="button"
+                        className="bw-btn bw-btn-quiet bw-slip-dl"
+                        onClick={(e) => {
+                          // This button sits inside the dropzone root; without this the
+                          // click bubbles up and also opens the file picker.
+                          e.stopPropagation()
+                          downloadAgain()
+                        }}
+                      >
+                        {Ic.download} Download again
+                      </button>
+                    )}
                   </div>
                 </div>
                 )
@@ -1255,6 +1382,11 @@ export default function BatchWorkflow() {
                       {formatSize(totalBytes - MAX_TOTAL_BYTES)} over the 100 MB upload ceiling — remove files before dispatching.
                     </span>
                   )}
+                  {overCount && (
+                    <span className="bw-tally-caution">
+                      {tasks.length - MAX_FILES} over the {MAX_FILES}-file batch limit — remove files before dispatching.
+                    </span>
+                  )}
                 </div>
 
                 {/* region C — actions, pinned to the pane's floor */}
@@ -1265,7 +1397,7 @@ export default function BatchWorkflow() {
                     data-busy={loading}
                     aria-busy={loading || undefined}
                     onClick={startBatch}
-                    disabled={loading || overLimit}
+                    disabled={loading || overLimit || overCount}
                   >
                     <span className="bw-face bw-face-idle">
                       {Ic.archive} Dispatch {tasks.length} file{tasks.length > 1 ? 's' : ''} → one archive
