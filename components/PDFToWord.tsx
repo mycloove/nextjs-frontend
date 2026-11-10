@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { ApiClientError, getApiErrorMessage, toolRequest } from '@/lib/api/client'
+import { ApiClientError, getApiErrorMessage } from '@/lib/api/client'
+import { uploadWithProgress } from '@/lib/upload/uploadWithProgress'
 import KineticSphere from '@/components/KineticSphere'
 import { downloadBlob } from '@/lib/download/downloadOutputs'
 import PageThumbnail from '@/features/pdf-to-word/components/PageThumbnail'
@@ -31,8 +32,14 @@ import PageThumbnail from '@/features/pdf-to-word/components/PageThumbnail'
     - Scanned PDFs fall back to OCR in features/pdf_to_word.py.
       Bangla depends on installed language data; layout is not guaranteed.
       The backend flags OCR output (X-Conversion-Method header) and the
-      proof desk says so instead of overselling the layout.
-   - Conversion is indeterminate. No fake percentage exists.
+      proof desk says so instead of overselling the layout, including how
+      many tables were rebuilt (X-Ocr-Tables).
+   - Before upload, pdf.js reads the page count and whether the first
+     pages carry text: a password-protected PDF is refused on the spot,
+     a scan is named as one, and a scan over the engine's page limit is
+     warned about instead of failing after the upload.
+   - Progress is two honest stages: the real upload percentage, then the
+     server's work, which reports no percentage — none is invented.
    - The DOCX returned by the server is the same bytes the
      preview reads and the download saves.
    - OUTLINE lists real Word headings. Most converted files have none
@@ -832,6 +839,40 @@ function PageSheet({ page, index, total, zoom, geometry }: { page: Block[]; inde
 const isCancellation = (e: unknown) =>
   e instanceof ApiClientError && (e.cause as { name?: string } | undefined)?.name === 'AbortError'
 
+/* Mirrors the engine's PDF_TO_WORD_MAX_OCR_PAGES default
+   (pdf-microservice/features/pdf_to_word.py). The engine stays the authority;
+   this only lets the docket warn before anything is uploaded. */
+const MAX_OCR_PAGES = 60
+
+/* What the browser can learn about the PDF before upload. `scanned` is a
+   reading of the first pages only, so the copy says "looks like". */
+type DocInfo = { pages: number; scanned: boolean }
+
+/* Read page count and text presence with pdf.js (already a dependency).
+   A password-protected file is reported as `locked` so it is refused before
+   upload; any other failure returns null and the engine decides. */
+async function inspectPdf(file: File): Promise<DocInfo | 'locked' | null> {
+  try {
+    const pdfjs = await import('pdfjs-dist')
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
+    try {
+      let hasText = false
+      for (let n = 1; n <= Math.min(3, doc.numPages) && !hasText; n += 1) {
+        const page = await doc.getPage(n)
+        const content = await page.getTextContent()
+        hasText = content.items.some(item => 'str' in item && item.str.trim() !== '')
+      }
+      return { pages: doc.numPages, scanned: !hasText }
+    } finally {
+      void doc.destroy()
+    }
+  } catch (e) {
+    if ((e as { name?: string } | null)?.name === 'PasswordException') return 'locked'
+    return null
+  }
+}
+
 /* A source that already carries the brand prefix must not become
    mycloove_mycloove_… when it is converted and downloaded again. */
 const docxNameFor = (pdfName: string) =>
@@ -853,6 +894,10 @@ export default function PDFToWord() {
   const [pages, setPages] = useState<Block[][]>([])
   const [activePage, setActivePage] = useState(0)
   const [zoom, setZoom] = useState(0.9)
+  // Pre-upload reading of the PDF (page count, scan or text) and the run's
+  // real upload progress; null upload = not uploading.
+  const [docInfo, setDocInfo] = useState<DocInfo | null>(null)
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null)
 
   const abortRef = useRef<AbortController | null>(null)
   const runIdRef = useRef(0) // invalidates late preview builds when a new run starts
@@ -897,11 +942,25 @@ export default function PDFToWord() {
       }
       abortRef.current?.abort()
       runIdRef.current += 1
+      const run = runIdRef.current
       clearResult()
       setFile(pdf)
       setPhase('loaded')
       setError(null)
       setNotice(null)
+      setDocInfo(null)
+      /* Learn what this PDF is before anything is uploaded. A locked file is
+         refused here — it used to upload, spin, and come back as a vague error. */
+      void inspectPdf(pdf).then(info => {
+        if (runIdRef.current !== run) return // a newer file replaced this one
+        if (info === 'locked') {
+          setFile(null)
+          setPhase('idle')
+          setError(`${pdf.name} is password-protected. Remove the password, then convert it.`)
+          return
+        }
+        if (info) setDocInfo(info)
+      })
     },
     [clearResult],
   )
@@ -1010,11 +1069,17 @@ export default function PDFToWord() {
 
     const controller = new AbortController()
     abortRef.current = controller
+    setUploadPercent(0)
     try {
       const formData = new FormData()
       formData.append('pdf', file)
 
-      const res = await toolRequest('/api/pdf-to-word', { method: 'POST', body: formData, signal: controller.signal })
+      /* XHR upload so the docket can show real progress: the bytes going up,
+         then the server's work — two honest stages, never a made-up percent. */
+      const res = await uploadWithProgress('/api/pdf-to-word', formData, {
+        signal: controller.signal,
+        onProgress: percent => { if (run === runIdRef.current) setUploadPercent(percent) },
+      })
       if (!res.ok) {
         setError(await getApiErrorMessage(res, 'We could not convert this PDF. Please try again.'))
         setPhase('loaded')
@@ -1029,17 +1094,22 @@ export default function PDFToWord() {
       abortRef.current = null
       setOutput({ blob, name })
       // The backend reports which engine produced the file; an OCR recovery
-      // must be said out loud so the proofing desk never oversells layout.
+      // must be said out loud so the proofing desk never oversells layout —
+      // and so must what it rebuilt.
       if (res.headers.get('x-conversion-method') === 'ocr') {
+        const tables = Number.parseInt(res.headers.get('x-ocr-tables') ?? '0', 10) || 0
         setNotice(
-          'Recovered with OCR — this PDF had no text layer, so the text was re-read from the page images. Formatting follows the scan, not the original layout.',
+          'Recovered with OCR — this PDF had no text layer, so the text was re-read from the page images.'
+            + (tables > 0 ? ` ${tables} ${tables === 1 ? 'table was' : 'tables were'} rebuilt as ${tables === 1 ? 'an editable Word table' : 'editable Word tables'}.` : '')
+            + ' Formatting follows the scan, not the original layout — check names and numbers against the source.',
         )
       }
       if (autoDownload) downloadBlob(blob, name)
       setPhase('done')
       void buildPreview(blob, run)
     } catch (e) {
-      if (isCancellation(e)) {
+      // The signal, not the error text, says whether the user stopped it.
+      if (controller.signal.aborted || isCancellation(e)) {
         setPhase('loaded') // file stays loaded — retry from the station
         setPreviewStatus('idle')
         setNotice('Conversion cancelled — your PDF is still loaded, ready to retype again.')
@@ -1048,6 +1118,8 @@ export default function PDFToWord() {
       setError(e instanceof Error ? e.message : 'Failed to convert. Please try again.')
       setPhase('loaded') // file stays loaded — retry from the station
       setPreviewStatus('idle')
+    } finally {
+      if (run === runIdRef.current) setUploadPercent(null)
     }
   }
 
@@ -1062,6 +1134,7 @@ export default function PDFToWord() {
     setPhase('idle')
     setError(null)
     setNotice(null)
+    setDocInfo(null)
     clearResult()
   }
 
@@ -1721,6 +1794,10 @@ export default function PDFToWord() {
         }
         .p2w-status-dot.is-live { background: var(--p2w-blue-solid); }
         .p2w-status-dot.is-run { background: var(--p2w-blue-solid); animation: p2w-pulse 1.1s ease-in-out infinite; }
+        /* Attention without alarm: the run still works, so this is not the red
+           error treatment — full ink for the words, the coral token on the dot. */
+        .p2w-status-line.is-warn { color: var(--text-primary); }
+        .p2w-status-line.is-warn .p2w-status-dot { background: var(--p2w-coral); }
 
         .p2w-docket-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
         .p2w-ghost {
@@ -2394,7 +2471,7 @@ export default function PDFToWord() {
 
             <ul className="p2w-facts">
               <li><b>Review the layout</b>Columns, spacing and reading order can change during conversion.</li>
-              <li><b>Check table structure</b>Text PDFs may retain editable cells; OCR output may rebuild plain paragraphs.</li>
+              <li><b>Check table structure</b>Text PDFs keep editable cells; scanned tables with clear columns are rebuilt as Word tables, anything less certain stays as text.</li>
               <li><b>Scans need OCR</b>Language support depends on installed data. Compare recognized text with the source.</li>
             </ul>
           </section>
@@ -2413,7 +2490,11 @@ export default function PDFToWord() {
                   <span className="p2w-file-glyph is-pdf" aria-hidden="true">PDF</span>
                   <span className="p2w-file-text">
                     <span className="p2w-file-name" title={file.name}>{file.name}</span>
-                    <span className="p2w-file-meta">{sizeMB} MB · SOURCE</span>
+                    <span className="p2w-file-meta">
+                      {sizeMB} MB
+                      {docInfo && <> · {docInfo.pages} {docInfo.pages === 1 ? 'PAGE' : 'PAGES'}</>}
+                      {docInfo?.scanned ? ' · SCAN' : ' · SOURCE'}
+                    </span>
                   </span>
                 </div>
 
@@ -2451,14 +2532,32 @@ export default function PDFToWord() {
                     <span>Release to swap in the PDF you are holding.</span>
                   </div>
                 ) : converting ? (
-                  <div className="p2w-status-line" role="status">
+                  <div className="p2w-status-line" role="status" aria-live="polite">
                     <span className="p2w-status-dot is-run" aria-hidden="true" />
-                    <span>Rebuilding text, tables and images — long PDFs can take a moment.</span>
+                    <span>
+                      {uploadPercent !== null && uploadPercent < 100
+                        ? `Uploading — ${uploadPercent}%`
+                        : docInfo?.scanned
+                          ? `Reading ${docInfo.pages} scanned ${docInfo.pages === 1 ? 'page' : 'pages'} with OCR — about ${Math.max(5, Math.round(docInfo.pages * 2.5))} seconds.`
+                          : 'Rebuilding text, tables and images — long PDFs can take a moment.'}
+                    </span>
+                  </div>
+                ) : docInfo?.scanned && docInfo.pages > MAX_OCR_PAGES ? (
+                  <div className="p2w-status-line is-warn" role="status">
+                    <span className="p2w-status-dot" aria-hidden="true" />
+                    <span>
+                      This looks like a scan of {docInfo.pages} pages. Scans convert up to {MAX_OCR_PAGES} pages at a
+                      time — split it with Split PDF first.
+                    </span>
                   </div>
                 ) : (
                   <div className="p2w-status-line">
                     <span className="p2w-status-dot" aria-hidden="true" />
-                    <span>{notice ?? 'Ready to retype — your PDF has not been uploaded yet.'}</span>
+                    <span>
+                      {notice ?? (docInfo?.scanned
+                        ? 'This looks like a scanned PDF — the text will be re-read with OCR, tables included.'
+                        : 'Ready to retype — your PDF has not been uploaded yet.')}
+                    </span>
                   </div>
                 )}
 
