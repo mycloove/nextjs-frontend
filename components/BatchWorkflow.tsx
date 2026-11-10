@@ -22,12 +22,22 @@
     once a manifest exists the same elements compact and the copy turns
     to "Add more files". The floor never unmounts while the batch is
     editable; the swap to run/receipt is a phase change, not an append.
-  - One signature motion moment: the OVERPRINT STAMP. Routing is decided
-    once per file type — each group head carries a "route all" selector
-    (Image → PDF, PDF → Images, …) that retitles every file of that type
-    in one motion; no per-file dropdown duplicates the decision. At
-    dispatch a single overprint stamp — DISPATCHED — strikes the tally.
-    The stamp depicts the only decisions the user actually makes here.
+  - Routing is decided PER FILE: every ledger row carries its own route
+    (one PDF → Images, the next PDF → Word), because a batch is a pile of
+    different jobs, not one job repeated. There is no group-level "route
+    all": it duplicated the row decision in a second place. The row's
+    ROUTE PICKER is a hand-built listbox (a native <select> cannot style
+    its option list): each option shows what the file becomes — the
+    output's glyph, a one-line truthful hint and the real extension the
+    engine writes (utils/task_executor.py → each converter's
+    mycloove_<base>.<ext>). The menu is portalled to <body> with fixed
+    positioning so the ledger's scroll box never clips it, flips above
+    the trigger when the viewport has no room below, and closes on
+    outside press, scroll or resize. A type with a single route
+    (Word → PDF) shows the same chip without a caret: no control offers
+    a choice that isn't one.
+  - One signature motion moment: the OVERPRINT STAMP. At dispatch a single
+    overprint stamp — DISPATCHED — strikes the tally.
   - Loading borrows the house Kinetic Sphere (components/KineticSphere.tsx,
     the shared whole-surface loader) — one device at two scales, no new
     loader invented: a 40px accent sphere anchors the runner pane, a 13px
@@ -72,7 +82,8 @@
     only opacity/transform/colour animate.
 */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useId, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useDropzone, type FileRejection } from 'react-dropzone'
 import { getApiErrorMessage } from '@/lib/api/client'
 import { uploadWithProgress } from '@/lib/upload/uploadWithProgress'
@@ -81,15 +92,18 @@ import KineticSphere from '@/components/KineticSphere'
 /* ── Operation vocabulary ─────────────────────────────────────
    These six values are the backend's dispatch vocabulary
    (utils/task_executor.py OPERATIONS). Changing a value
-   here breaks the batch contract — labels may change, values may not. */
+   here breaks the batch contract — labels may change, values may not.
+   `ext` and `hint` describe what the engine really writes for that
+   route (each converter's mycloove_<base>.<ext>); keep them true. */
 const ALL_OPERATIONS = [
-  { value: 'image_to_pdf',  label: 'Image → PDF',        fileType: 'image' },
-  { value: 'pdf_to_images', label: 'PDF → Images',       fileType: 'pdf' },
-  { value: 'image_to_text', label: 'Image → Text (OCR)', fileType: 'image' },
-  { value: 'pdf_to_word',   label: 'PDF → Word',         fileType: 'pdf' },
-  { value: 'analyze_pdf',   label: 'AI Analyze',         fileType: 'pdf' },
-  { value: 'word_to_pdf',   label: 'Word → PDF',         fileType: 'word' },
+  { value: 'image_to_pdf',  label: 'Image → PDF',        fileType: 'image', ext: '.pdf',  hint: 'The image on a PDF page' },
+  { value: 'pdf_to_images', label: 'PDF → Images',       fileType: 'pdf',   ext: '.zip',  hint: 'Every page as an image, zipped' },
+  { value: 'image_to_text', label: 'Image → Text (OCR)', fileType: 'image', ext: '.txt',  hint: 'The text read out of the image' },
+  { value: 'pdf_to_word',   label: 'PDF → Word',         fileType: 'pdf',   ext: '.docx', hint: 'An editable Word document' },
+  { value: 'analyze_pdf',   label: 'AI Analyze',         fileType: 'pdf',   ext: '.txt',  hint: 'An AI summary of the first 10 pages' },
+  { value: 'word_to_pdf',   label: 'Word → PDF',         fileType: 'word',  ext: '.pdf',  hint: 'A print-ready PDF' },
 ]
+type Operation = typeof ALL_OPERATIONS[number]
 
 /* The Flask app's MAX_CONTENT_LENGTH. The UI states the ceiling before
    dispatch instead of letting a 100 MB upload fail opaquely. */
@@ -164,6 +178,11 @@ const Ic = {
       <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   ),
+  arrow: (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="5" y1="12" x2="19" y2="12" /><polyline points="13 6 19 12 13 18" />
+    </svg>
+  ),
   chevron: (
     <svg width="9" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M1 1l4 4 4-4" />
@@ -213,6 +232,206 @@ const typeLabel = (file: File) => {
   if (t === 'image') return file.type.split('/')[1]?.toUpperCase() || 'IMG'
   if (t === 'word') return extOf(file).slice(1).toUpperCase() || 'DOC'
   return '?'
+}
+
+/* ── Route picker ─────────────────────────────────────────────
+   Destination glyphs depict what the file BECOMES, so the picker reads as
+   a set of outputs, not a list of verbs. 24px grid, 1.75 stroke. */
+const routeGlyph = (value: string, s = 16) => {
+  const p = { width: s, height: s, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
+  switch (value) {
+    case 'pdf_to_images': // a stack of page images
+      return <svg {...p}><rect x="7" y="7" width="13" height="13" rx="2" /><path d="M4 16V6a2 2 0 0 1 2-2h10" /><circle cx="11.5" cy="11.5" r="1.25" /><path d="M20 16.5l-3.5-3.5-6.5 7" /></svg>
+    case 'pdf_to_word':
+      return <svg {...p}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M8.5 12l1.5 5 2-4 2 4 1.5-5" /></svg>
+    case 'image_to_text': // reading text inside a scan frame
+      return <svg {...p}><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" /><path d="M8 10h8M8 14h5" /></svg>
+    case 'analyze_pdf': // a summary drawn out of the page
+      return <svg {...p}><path d="M12 3.5l1.6 4.1 4.1 1.6-4.1 1.6L12 15l-1.6-4.2-4.1-1.6 4.1-1.6z" /><path d="M18.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" /><path d="M4 20h9" /></svg>
+    default: // image_to_pdf, word_to_pdf — a PDF page
+      return <svg {...p}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9 13h6M9 17h4" /></svg>
+  }
+}
+
+const CheckGlyph = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+)
+
+const MENU_WIDTH = 288
+const MENU_GAP = 6
+const VIEWPORT_PAD = 8
+
+/* A select-only listbox (WAI-ARIA APG pattern): the trigger opens it with
+   click, Enter, Space or the arrows; inside, arrows / Home / End move,
+   Enter or Space picks, Escape or Tab closes and focus returns to the
+   trigger. Portalled to <body> so the ledger's overflow cannot clip it. */
+function RoutePicker({ value, options, onChange, disabled, fileName }: {
+  value: string
+  options: Operation[]
+  onChange: (value: string) => void
+  disabled: boolean
+  fileName: string
+}) {
+  const uid = useId()
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number; up: boolean } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+  const current = options.find(o => o.value === value) ?? options[0]
+
+  const place = useCallback(() => {
+    const r = triggerRef.current?.getBoundingClientRect()
+    if (!r) return
+    const width = Math.min(MENU_WIDTH, window.innerWidth - VIEWPORT_PAD * 2)
+    const left = Math.max(VIEWPORT_PAD, Math.min(r.left, window.innerWidth - width - VIEWPORT_PAD))
+    // ~58px per option + header + padding — flip above when it won't fit below
+    const estimate = options.length * 58 + 44
+    const up = window.innerHeight - r.bottom < estimate + MENU_GAP && r.top > window.innerHeight - r.bottom
+    setPos(up
+      ? { left, bottom: window.innerHeight - r.top + MENU_GAP, up }
+      : { left, top: r.bottom + MENU_GAP, up })
+  }, [options.length])
+
+  const openMenu = (at?: number) => {
+    if (disabled) return
+    place()
+    setActive(at ?? Math.max(0, options.findIndex(o => o.value === value)))
+    setOpen(true)
+  }
+  const close = useCallback((refocus: boolean) => {
+    setOpen(false)
+    if (refocus) triggerRef.current?.focus()
+  }, [])
+  const pick = (i: number) => {
+    const op = options[i]
+    if (op && op.value !== value) onChange(op.value)
+    close(true)
+  }
+
+  /* a dispatch that starts while the menu is open closes it — adjusted
+     during render (React's documented pattern), not synced in an effect */
+  const [wasDisabled, setWasDisabled] = useState(disabled)
+  if (disabled !== wasDisabled) {
+    setWasDisabled(disabled)
+    if (disabled) setOpen(false)
+  }
+
+  useEffect(() => { if (open) listRef.current?.focus() }, [open])
+
+  /* outside press, scroll (anywhere but the menu) and resize close it —
+     a fixed menu must never float away from its trigger */
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node
+      if (!listRef.current?.contains(t) && !triggerRef.current?.contains(t)) close(false)
+    }
+    const onScroll = (e: Event) => { if (!listRef.current?.contains(e.target as Node)) close(false) }
+    const onResize = () => close(false)
+    document.addEventListener('pointerdown', onDown)
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onResize)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onResize)
+    }
+  }, [open, close])
+
+  const onTriggerKey = (e: ReactKeyboardEvent) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const i = options.findIndex(o => o.value === value)
+      openMenu(e.key === 'ArrowDown' ? Math.min(options.length - 1, i + 1) : Math.max(0, i - 1))
+    }
+  }
+
+  const onListKey = (e: ReactKeyboardEvent) => {
+    switch (e.key) {
+      case 'ArrowDown': e.preventDefault(); setActive(a => Math.min(options.length - 1, a + 1)); break
+      case 'ArrowUp':   e.preventDefault(); setActive(a => Math.max(0, a - 1)); break
+      case 'Home':      e.preventDefault(); setActive(0); break
+      case 'End':       e.preventDefault(); setActive(options.length - 1); break
+      case 'Enter':
+      case ' ':         e.preventDefault(); pick(active); break
+      case 'Escape':    e.preventDefault(); close(true); break
+      case 'Tab':       close(false); break
+    }
+  }
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="bw-route"
+        data-open={open ? 'true' : 'false'}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={open ? `${uid}-list` : undefined}
+        aria-label={`Convert ${fileName}: ${current.label}. Change route`}
+        onClick={() => (open ? close(false) : openMenu())}
+        onKeyDown={onTriggerKey}
+        disabled={disabled}
+      >
+        <span className="bw-route-glyph">{routeGlyph(current.value, 14)}</span>
+        <span className="bw-route-label">{current.label}</span>
+        <span className="bw-route-ext">{current.ext}</span>
+        <span className="bw-route-caret" aria-hidden="true">{Ic.chevron}</span>
+      </button>
+      {open && pos && createPortal(
+        <div
+          className="bw-menu"
+          data-up={pos.up ? 'true' : 'false'}
+          style={{ left: pos.left, top: pos.top, bottom: pos.bottom, width: Math.min(MENU_WIDTH, window.innerWidth - VIEWPORT_PAD * 2) }}
+        >
+          <p className="bw-menu-head" id={`${uid}-head`}>
+            Convert <span className="bw-menu-file">{fileName}</span> to
+          </p>
+          <ul
+            ref={listRef}
+            id={`${uid}-list`}
+            role="listbox"
+            tabIndex={-1}
+            aria-labelledby={`${uid}-head`}
+            aria-activedescendant={`${uid}-opt-${active}`}
+            className="bw-menu-list"
+            onKeyDown={onListKey}
+          >
+            {options.map((op, i) => {
+              const selected = op.value === value
+              return (
+                <li
+                  key={op.value}
+                  id={`${uid}-opt-${i}`}
+                  role="option"
+                  aria-selected={selected}
+                  className="bw-opt"
+                  data-active={i === active ? 'true' : 'false'}
+                  onPointerEnter={() => setActive(i)}
+                  onClick={() => pick(i)}
+                >
+                  <span className="bw-opt-glyph">{routeGlyph(op.value, 18)}</span>
+                  <span className="bw-opt-text">
+                    <span className="bw-opt-top">
+                      <span className="bw-opt-label">{op.label}</span>
+                      <span className="bw-opt-ext">{op.ext}</span>
+                    </span>
+                    <span className="bw-opt-hint">{op.hint}</span>
+                  </span>
+                  <span className="bw-opt-check">{selected && CheckGlyph}</span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>,
+        document.body,
+      )}
+    </>
+  )
 }
 
 /* ── Interface ─────────────────────────────────────────────── */
@@ -381,8 +600,8 @@ export default function BatchWorkflow() {
   }, [loading])
 
   /* ── Manifest edits ── */
-  const routeAll = (type: string, op: string) =>
-    setTasks(t => t.map(task => getFileType(task.file) === type ? { ...task, operation: op } : task))
+  const routeOne = (id: string, op: string) =>
+    setTasks(t => t.map(task => task.id === id ? { ...task, operation: op } : task))
 
   const removeTask = (id: string) =>
     setTasks(t => t.filter(task => task.id !== id))
@@ -926,39 +1145,16 @@ export default function BatchWorkflow() {
           color: var(--text-faint);
         }
         .bw-group-count { font-size: 10px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-        .bw-group-route { margin-left: auto; display: flex; align-items: center; gap: 5px; position: relative; }
-        .bw-group-pre { font-size: 10px; color: var(--text-faint); }
-        .bw-group-select {
-          appearance: none; -webkit-appearance: none;
-          background: transparent;
-          border: none;
-          font-family: inherit;
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--text-muted);
-          cursor: pointer;
-          padding: 4px 15px 4px 0;
-          outline: none;
-          border-radius: 4px;
-          transition: color 0.14s;
-        }
-        .bw-group-select:hover:not(:disabled) { color: var(--text-primary); }
-        .bw-group-select:focus-visible { outline: 2px solid var(--accent-start); outline-offset: 2px; }
-        .bw-group-select:disabled { opacity: 0.55; cursor: default; }
-        .bw-group-caret {
-          position: absolute; right: 0; top: 50%;
-          transform: translateY(-50%);
-          display: flex; color: var(--text-faint); pointer-events: none;
-        }
 
         /* manifest row — numbered like real ledger entries (dispatch order).
-           One quiet line per file; the route lives in the group head.
-           The row groups by background alone; no border inside the frame. */
+           Two lines per file: what it is (name, size), then where it goes
+           (its own route). The row groups by background alone; no border
+           inside the frame. */
         .bw-row {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 9px 10px 9px 11px;
+          padding: 8px 10px 8px 11px;
           background: var(--bg-item);
           border-radius: 8px;
           animation: bw-row-in 200ms var(--bw-ease) both;
@@ -994,8 +1190,159 @@ export default function BatchWorkflow() {
           min-width: 0;
         }
         .bw-row-size { font-size: 10.5px; color: var(--text-muted); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+        .bw-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+        .bw-row-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
 
-        .bw-group-select option  { background: var(--bg-card); color: var(--text-primary); }
+        /* the row's route — the one decision this ledger exists for.
+           A chip that names the destination: its glyph, its label, the
+           extension the engine writes. Card fill + inset hairline, so the
+           row keeps its border-free grouping; the caret marks it a control
+           and turns over while the menu is open. */
+        .bw-row-route { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--text-muted); }
+        .bw-row-to { display: flex; flex-shrink: 0; }
+        .bw-route {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          min-width: 0;
+          max-width: 100%;
+          height: 28px;
+          padding: 0 8px 0 4px;
+          background: var(--bg-card);
+          border: none;
+          border-radius: 8px;
+          box-shadow: inset 0 0 0 1px var(--border-card);
+          font-family: inherit;
+          color: var(--text-primary);
+          cursor: pointer;
+          transition: box-shadow 0.12s var(--bw-theme), background-color 0.35s var(--bw-theme);
+        }
+        button.bw-route:hover:not(:disabled),
+        .bw-route[data-open='true'] {
+          box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mc-accent) 55%, var(--border-card));
+        }
+        .bw-route:focus-visible { outline: 2px solid var(--mc-focus-ring); outline-offset: 2px; }
+        .bw-route:disabled { opacity: 0.55; cursor: default; }
+        .bw-route.is-fixed { cursor: default; }
+        .bw-route-glyph {
+          width: 20px; height: 20px; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          border-radius: 6px;
+          background: var(--bg-item-hover);
+          color: var(--text-secondary);
+          transition: color 0.12s var(--bw-theme), background-color 0.12s var(--bw-theme);
+        }
+        button.bw-route:hover:not(:disabled) .bw-route-glyph,
+        .bw-route[data-open='true'] .bw-route-glyph {
+          background: var(--mc-accent-subtle);
+          color: var(--mc-accent-text);
+        }
+        .bw-route-label {
+          font-size: 12px;
+          font-weight: 600;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          min-width: 0;
+        }
+        .bw-route-ext {
+          font-family: ui-monospace, monospace;
+          font-size: 12px;
+          color: var(--text-muted);
+          flex-shrink: 0;
+        }
+        .bw-route-caret {
+          display: flex; flex-shrink: 0;
+          margin-left: 1px;
+          color: var(--text-muted);
+          transition: transform 0.2s var(--bw-ease);
+        }
+        .bw-route[data-open='true'] .bw-route-caret { transform: rotate(180deg); }
+
+        /* ── The route menu — portalled to <body>, so it reads the global
+           tokens only (no --bw-*). e2 elevation: it floats over the ledger.
+           Each option is a destination: glyph tile, label, a truthful
+           one-line hint with the real extension, and a check on the
+           current route. The accent marks the chosen route only. */
+        @keyframes bw-menu-in {
+          from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+          to   { opacity: 1; transform: none; }
+        }
+        @keyframes bw-menu-in-up {
+          from { opacity: 0; transform: translateY(4px) scale(0.98); }
+          to   { opacity: 1; transform: none; }
+        }
+        .bw-menu {
+          position: fixed;
+          z-index: 1000;
+          padding: 6px;
+          background: var(--bg-card);
+          border: 1px solid var(--border-card);
+          border-radius: 14px;
+          box-shadow: var(--mc-elev-2);
+          transform-origin: top left;
+          animation: bw-menu-in var(--mc-dur-fast) var(--mc-ease-out) both;
+        }
+        .bw-menu[data-up='true'] {
+          transform-origin: bottom left;
+          animation-name: bw-menu-in-up;
+        }
+        .bw-menu-head {
+          margin: 0;
+          padding: 6px 8px 8px;
+          font-size: 12px;
+          color: var(--text-muted);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .bw-menu-file { color: var(--text-secondary); font-weight: 600; }
+        .bw-menu-list {
+          margin: 0; padding: 0; list-style: none;
+          display: flex; flex-direction: column; gap: 2px;
+          outline: none;
+        }
+        .bw-opt {
+          display: grid;
+          grid-template-columns: 32px minmax(0, 1fr) 16px;
+          align-items: center;
+          gap: 12px;
+          padding: 8px;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: background-color var(--mc-dur-instant) var(--mc-ease-in-out);
+        }
+        .bw-opt[data-active='true'] { background: var(--bg-item-hover); }
+        .bw-opt[aria-selected='true'] { background: var(--mc-accent-subtle); }
+        .bw-opt[aria-selected='true'][data-active='true'] { background: color-mix(in srgb, var(--mc-accent) 18%, transparent); }
+        /* keyboard position stays visible on the chosen row too */
+        .bw-menu-list:focus-visible .bw-opt[data-active='true'] {
+          box-shadow: inset 0 0 0 2px var(--mc-focus-ring);
+        }
+        .bw-opt-glyph {
+          width: 32px; height: 32px;
+          display: flex; align-items: center; justify-content: center;
+          border-radius: 8px;
+          background: var(--bg-item-hover);
+          color: var(--text-secondary);
+        }
+        .bw-opt[aria-selected='true'] .bw-opt-glyph { color: var(--mc-accent-text); background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mc-accent) 35%, transparent); }
+        .bw-opt-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .bw-opt-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+        .bw-opt-label {
+          font-family: 'Manrope', sans-serif;
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--text-primary);
+        }
+        .bw-opt-hint { font-size: 12px; line-height: 1.4; color: var(--text-muted); }
+        .bw-opt-ext {
+          margin-left: auto;
+          font-family: ui-monospace, monospace;
+          font-size: 12px;
+          color: var(--text-secondary);
+        }
+        .bw-opt-check { display: flex; color: var(--mc-accent-text); }
 
         /* remove */
         .bw-row-remove {
@@ -1111,6 +1458,9 @@ export default function BatchWorkflow() {
           .bw-head { padding: 12px 16px 8px; }
           .bw-tally { padding: 10px 16px; }
           .bw-actions { padding: 10px 14px 14px; }
+          /* narrow ledger: the row's type is already said by its glyph and
+             group, so the route chip gets the room for its full label */
+          .bw-row-type-label, .bw-row-to, .bw-route-ext { display: none; }
         }
 
         /* ── Reduced motion: stamps and stagger collapse to plain fades,
@@ -1126,6 +1476,8 @@ export default function BatchWorkflow() {
           .bw-btn:active:not(:disabled) { transform: none; }
           .bw-slip-check path { animation: none; stroke-dashoffset: 0; }
           .bw-dot { animation: none !important; }
+          .bw-menu { animation: none; }
+          .bw-route-caret, .bw-route, .bw-route-glyph, .bw-opt { transition: none; }
         }
       `}</style>
 
@@ -1310,28 +1662,11 @@ export default function BatchWorkflow() {
                 <div className="bw-ledger" aria-label="File manifest">
                   {groups.map(g => {
                     const ops = operationsForType(g.type)
-                    const uniform = g.tasks.every(t => t.operation === g.tasks[0].operation)
                     return (
-                      <section className="bw-group" key={g.type}>
+                      <section className="bw-group" key={g.type} aria-label={`${g.label}, ${g.tasks.length}`}>
                         <div className="bw-group-head">
                           <span className="bw-group-label">{g.label}</span>
                           <span className="bw-group-count">{g.tasks.length}</span>
-                          <span className="bw-group-route">
-                            <span className="bw-group-pre">route all</span>
-                            <select
-                              className="bw-group-select"
-                              aria-label={`Route all ${g.label.toLowerCase()}`}
-                              value={uniform ? g.tasks[0].operation : '__mixed'}
-                              onChange={e => routeAll(g.type, e.target.value)}
-                              disabled={loading}
-                            >
-                              {!uniform && <option value="__mixed" disabled>mixed</option>}
-                              {ops.map(op => (
-                                <option key={op.value} value={op.value}>{op.label}</option>
-                              ))}
-                            </select>
-                            <span className="bw-group-caret" aria-hidden="true">{Ic.chevron}</span>
-                          </span>
                         </div>
 
                         {g.tasks.map(task => {
@@ -1345,12 +1680,34 @@ export default function BatchWorkflow() {
                               <span className="bw-row-num" aria-hidden="true">
                                 {String(orderById.get(task.id) ?? 0).padStart(2, '0')}
                               </span>
-                              <span className="bw-row-type">
+                              <span className="bw-row-type" aria-hidden="true">
                                 {type === 'pdf' ? G.pdf(13) : type === 'image' ? G.img(13) : G.doc(13)}
-                                <span className="bw-row-type-label">{typeLabel(task.file)}</span>
                               </span>
-                              <span className="bw-row-name" title={task.file.name}>{task.file.name}</span>
-                              <span className="bw-row-size">{formatSize(task.file.size)}</span>
+                              <div className="bw-row-body">
+                                <div className="bw-row-line">
+                                  <span className="bw-row-name" title={task.file.name}>{task.file.name}</span>
+                                  <span className="bw-row-size">{formatSize(task.file.size)}</span>
+                                </div>
+                                <div className="bw-row-route">
+                                  <span className="bw-row-type-label">{typeLabel(task.file)}</span>
+                                  <span className="bw-row-to" aria-hidden="true">{Ic.arrow}</span>
+                                  {ops.length > 1 ? (
+                                    <RoutePicker
+                                      value={task.operation}
+                                      options={ops}
+                                      onChange={op => routeOne(task.id, op)}
+                                      disabled={loading}
+                                      fileName={task.file.name}
+                                    />
+                                  ) : ops[0] && (
+                                    <span className="bw-route is-fixed">
+                                      <span className="bw-route-glyph">{routeGlyph(ops[0].value, 14)}</span>
+                                      <span className="bw-route-label">{ops[0].label}</span>
+                                      <span className="bw-route-ext">{ops[0].ext}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                               <button
                                 type="button"
                                 className="bw-row-remove"
