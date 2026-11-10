@@ -23,16 +23,93 @@
  * actually does.
  *
  * Drag & drop uses react-dropzone — the same dependency and pattern as the
- * sibling tool components. The API contract is unchanged: form fields `pdf` +
- * `analysis_mode`, and the same response fields are consumed.
+ * sibling tools. The request is unchanged (`pdf` + `analysis_mode`, sent with
+ * uploadWithProgress for a real upload percentage); the response is the
+ * engine's structured report (features/ai_analyzer_service.py): overview,
+ * key points and sections, each citing pages the server verified were read,
+ * plus the document's language and an honest coverage note. The page count
+ * is read in the browser first (lib/pdf/pdfjsClient), so the reading state
+ * names the real number of pages and a password-locked PDF never uploads.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useDropzone, type FileRejection } from 'react-dropzone';
-import { ApiClientError, getApiErrorMessage, toolRequest } from '@/lib/api/client';
+import { getApiErrorMessage } from '@/lib/api/client';
+import { uploadWithProgress } from '@/lib/upload/uploadWithProgress';
+import { openPdf } from '@/lib/pdf/pdfjsClient';
 
 const MAX_SIZE = 50 * 1024 * 1024;
+
+/* The report as the engine returns it (features/ai_analyzer_service.py).
+   Every cited page was checked server-side against the pages actually read. */
+type KeyPoint = { text: string; pages: number[] };
+type Section = { heading: string; summary: string; pages: number[] };
+type Report = {
+  summary: string;               // plain-text rendering — what Copy and .txt carry
+  title: string;
+  overview: string;
+  keyPoints: KeyPoint[];
+  sections: Section[];
+  language: 'bn' | 'en' | 'other';
+  /* 'extractive' = no AI provider could serve; the points are quoted
+     verbatim from the document, and the report must say so. */
+  engine: 'ai' | 'extractive';
+  totalPages: number;
+  analyzedPages: number;
+  ocrPages: number[];
+  origWords: number;
+  sumWords: number;
+  processingTime: number;
+  note?: string;
+  /* The depth this report was produced with — the toggle stays live after a
+     result, so labelling the report from the toggle would relabel it. */
+  mode: 'minimal' | 'elaborate';
+};
+
+const asPages = (v: unknown): number[] =>
+  Array.isArray(v) ? v.filter((n): n is number => Number.isInteger(n) && n > 0) : [];
+
+function readReport(data: Record<string, unknown>, mode: Report['mode']): Report {
+  const coverage = (data.coverage ?? {}) as Record<string, unknown>;
+  const keyPoints = Array.isArray(data.key_points) ? data.key_points : [];
+  const sections = Array.isArray(data.sections) ? data.sections : [];
+  const str = (v: unknown) => (typeof v === 'string' ? v : '');
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  return {
+    summary: str(data.summary),
+    title: str(data.title),
+    overview: str(data.overview) || str(data.summary),
+    keyPoints: keyPoints
+      .map(p => ({ text: str((p as KeyPoint)?.text), pages: asPages((p as KeyPoint)?.pages) }))
+      .filter(p => p.text),
+    sections: sections
+      .map(s => ({ heading: str((s as Section)?.heading), summary: str((s as Section)?.summary), pages: asPages((s as Section)?.pages) }))
+      .filter(s => s.heading || s.summary),
+    language: data.language === 'bn' || data.language === 'en' ? data.language : 'other',
+    engine: data.engine === 'extractive' ? 'extractive' : 'ai',
+    totalPages: num(data.total_pages),
+    analyzedPages: num(data.analyzed_pages),
+    ocrPages: asPages(coverage.ocr_pages),
+    origWords: num(data.original_length),
+    sumWords: num(data.summary_length),
+    processingTime: num(data.processing_time_seconds),
+    note: str(data.note) || undefined,
+    mode,
+  };
+}
+
+/* [3, 4, 5, 9] → "pp. 3–5, 9" — the citation a reader can turn to. */
+function citeLabel(pages: number[]): string {
+  const runs: string[] = [];
+  let start = pages[0], prev = pages[0];
+  for (const p of [...pages.slice(1), NaN]) {
+    if (p === prev + 1) { prev = p; continue; }
+    runs.push(start === prev ? String(start) : `${start}–${prev}`);
+    start = prev = p;
+  }
+  return `${pages.length > 1 || runs[0]?.includes('–') ? 'pp.' : 'p.'} ${runs.join(', ')}`;
+}
 
 /* ── Icons ─────────────────────────────────────────────────── */
 const Ic = {
@@ -96,11 +173,6 @@ const Ic = {
       <line x1="12" y1="16" x2="12.01" y2="16"/>
     </svg>
   ),
-  eye: (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-    </svg>
-  ),
   /* Depth glyphs for the two analysis modes — the line counts are the point. */
   depthMin: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
@@ -129,32 +201,50 @@ const SCAN_LINES = [96, 88, 100, 72, 92, 84, 64];
 export default function DocumentAnalyzer() {
   const [file, setFile]         = useState<File | null>(null);
   const [loading, setLoading]   = useState(false);
-  const [summary, setSummary]   = useState<string | null>(null);
   const [analysisMode, setAnalysisMode] = useState<'minimal' | 'elaborate'>('minimal');
   const [copied, setCopied]     = useState(false);
-  const [stats, setStats]       = useState<{
-    totalPages: number; analyzedPages: number;
-    origWords: number;  sumWords: number;
-    processingTime: number; note?: string;
-    /* The depth this report was produced with — the toggle stays live after a
-       result, so labelling the report from the toggle would relabel it. */
-    mode: 'minimal' | 'elaborate';
-  } | null>(null);
+  const [report, setReport]     = useState<Report | null>(null);
   const [error, setError]       = useState<string | null>(null);
-  const [pagePreviews, setPagePreviews] = useState<{page:number;preview:string}[]|null>(null);
+  /* Read in the browser before upload: the real page count sets an honest
+     expectation, and a password-locked PDF is refused before it travels. */
+  const [pageCount, setPageCount] = useState<number | null>(null);
+  const [locked, setLocked]       = useState(false);
+  /* Real XHR upload percentage; null once the server holds the file. */
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
+  const [elapsed, setElapsed]     = useState(0);
   const abortRef = useRef<AbortController | null>(null);
-
-  /* A cancel through toolRequest arrives as an ApiClientError whose cause is the
-     AbortError, so a deliberate stop is told apart from a real failure. */
-  const isCancellation = (e: unknown) =>
-    e instanceof ApiClientError && (e.cause as { name?: string } | undefined)?.name === 'AbortError';
+  const stageRef = useRef(0);
 
   useEffect(() => () => { abortRef.current?.abort(); }, []);
 
+  /* Honest elapsed seconds while the engine works — it reports nothing per
+     page until it finishes, so no percentage is invented for that part. */
+  useEffect(() => {
+    if (!loading) return;
+    const started = Date.now();
+    setElapsed(0);
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [loading]);
+
   const stageFile = (f: File) => {
     abortRef.current?.abort();
-    setFile(f); setError(null); setSummary(null);
-    setStats(null); setPagePreviews(null); setCopied(false);
+    setFile(f); setError(null); setReport(null); setCopied(false);
+    setPageCount(null); setLocked(false);
+    const stage = ++stageRef.current;
+    openPdf(f)
+      .then(async (doc) => {
+        if (stage === stageRef.current) setPageCount(doc.numPages);
+        await doc.destroy();
+      })
+      .catch((e: unknown) => {
+        if (stage !== stageRef.current) return;
+        if ((e as { name?: string } | null)?.name === 'PasswordException') {
+          setLocked(true);
+          setError('This PDF is password-protected. Remove the password, then try again.');
+        }
+        // Any other read failure is left to the server, which names it precisely.
+      });
   };
 
   /* ── Dropzone (same dependency + pattern as the sibling tools) ── */
@@ -179,53 +269,47 @@ export default function DocumentAnalyzer() {
 
   const removeFile = () => {
     abortRef.current?.abort();
-    setFile(null); setSummary(null); setStats(null);
-    setPagePreviews(null); setError(null); setCopied(false);
+    stageRef.current++;
+    setFile(null); setReport(null); setError(null); setCopied(false);
+    setPageCount(null); setLocked(false);
   };
 
   /* ── Analyze ──
-     No fake progress phases: the server call is opaque, so the reading state
-     says one honest thing and the copy states the real expected duration. */
+     Two honest phases: the real upload percentage, then the elapsed clock
+     while the engine reads every page. */
   const handleAnalyze = async () => {
     if (!file) { setError('Please select a PDF first'); return; }
-    setLoading(true); setError(null);
+    if (locked) return;
+    setLoading(true); setError(null); setUploadPct(0);
     const controller = new AbortController();
     abortRef.current = controller;
+    const mode = analysisMode;
     const formData = new FormData();
     formData.append('pdf', file);
-    formData.append('analysis_mode', analysisMode);
+    formData.append('analysis_mode', mode);
 
     try {
-      const res = await toolRequest('/api/analyze-pdf', {
-        method: 'POST', body: formData, signal: controller.signal,
+      const res = await uploadWithProgress('/api/analyze-pdf', formData, {
+        signal: controller.signal,
+        onProgress: pct => setUploadPct(pct >= 100 ? null : pct),
       });
+      setUploadPct(null);
       if (!res.ok) {
         throw new Error(await getApiErrorMessage(res, 'The analysis could not be completed. Please try another PDF.'));
       }
-      const data = await res.json();
-      setSummary(data.summary);
-      setStats({
-        totalPages:     data.total_pages,
-        analyzedPages:  data.analyzed_pages,
-        origWords:      data.original_length,
-        sumWords:       data.summary_length,
-        processingTime: data.processing_time_seconds,
-        note:           data.note,
-        mode:           analysisMode,
-      });
-      if (data.page_previews) setPagePreviews(data.page_previews);
+      setReport(readReport(await res.json() as Record<string, unknown>, mode));
     } catch (e) {
-      if (isCancellation(e)) {
-        // deliberate cancel — nothing to report
-      } else {
-        // Surface the server's real message (e.g. an AI-provider or rate-limit
-        // reason) instead of a blanket "try another PDF".
+      // uploadWithProgress rejects a cancel like any failure; the signal tells them apart.
+      if (!controller.signal.aborted) {
+        // Surface the server's real reason (a password, a scan with no text,
+        // an unavailable AI service) instead of a blanket "try another PDF".
         setError(e instanceof Error && e.message
           ? e.message
-          : 'Could not generate analysis report. Please try another PDF.');
+          : 'Could not generate the reading report. Please try again.');
       }
     } finally {
       abortRef.current = null;
+      setUploadPct(null);
       setLoading(false);
     }
   };
@@ -234,35 +318,39 @@ export default function DocumentAnalyzer() {
     abortRef.current?.abort();
   };
 
-  /* ── Copy summary ── */
+  /* ── Copy report ── */
   const copySummary = async () => {
-    if (!summary) return;
+    if (!report?.summary) return;
     try {
-      await navigator.clipboard.writeText(summary);
+      await navigator.clipboard.writeText(report.summary);
       setCopied(true); setTimeout(() => setCopied(false), 2000);
     } catch {
       /* clipboard unavailable (e.g. insecure context) — the button simply doesn't flip */
     }
   };
 
-  /* ── Download summary ── */
+  /* ── Download report ── */
   const downloadSummary = () => {
-    if (!summary) return;
-    const blob = new Blob([summary], { type: 'text/plain' });
+    if (!report?.summary) return;
+    const blob = new Blob([report.summary], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const a = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(blob),
+      href: url,
       download: `mycloove_${(file?.name ?? 'document').replace(/\.[^.]+$/, '').replace(/[^\w.-]+/g, '_')}_summary.txt`,
     });
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   const fileSizeMB = file ? (file.size / 1024 / 1024).toFixed(2) : '0';
 
   /* Distillation meter — real numbers from the response, never invented. */
-  const rawPct   = stats && stats.origWords > 0 ? (stats.sumWords / stats.origWords) * 100 : 0;
+  const rawPct   = report && report.origWords > 0 ? (report.sumWords / report.origWords) * 100 : 0;
   const pctLabel = rawPct > 0 && rawPct < 1 ? '<1' : String(Math.round(rawPct));
   const pctWidth = Math.min(100, Math.max(1, Math.round(rawPct)));
-  const modeLabel = stats?.mode === 'elaborate' ? 'Elaborate' : 'Minimal';
+  const modeLabel = report?.mode === 'elaborate' ? 'Elaborate' : 'Minimal';
+  const langLabel = report?.language === 'bn' ? 'বাংলা' : report?.language === 'en' ? 'English' : null;
+  const pagesLabel = pageCount ? `${pageCount} page${pageCount === 1 ? '' : 's'}` : null;
 
   return (
     <>
@@ -761,57 +849,109 @@ export default function DocumentAnalyzer() {
           margin: 14px 18px 0;
           background: var(--da-wash);
           border: 1px solid var(--da-accent-border);
-          font-size: 11px; color: var(--text-secondary); line-height: 1.5;
+          font-size: 12px; color: var(--text-secondary); line-height: 1.55;
         }
-        .da-note svg { flex-shrink: 0; color: var(--da-accent-text); margin-top: 1px; }
+        .da-note svg { flex-shrink: 0; color: var(--da-accent-text); margin-top: 2px; }
 
-        .da-summary-body { padding: 18px 18px 24px; }
+        /* ══ Report body — the document's essentials ══
+           Overview in the margin rule, then numbered key points whose page
+           citations sit in the margin like a reader's pencil note. */
+        .da-body {
+          padding: 20px 18px 26px;
+          display: flex; flex-direction: column; gap: 22px;
+          max-width: calc(66ch + 36px); margin: 0 auto; width: 100%;
+          box-sizing: border-box;
+        }
+        .da-doc-title {
+          margin: 0;
+          font-family: 'Manrope', sans-serif; font-size: 17px; font-weight: 800;
+          letter-spacing: -.2px; line-height: 1.35;
+          color: var(--text-primary);
+          animation: da-fade-in .35s ease both;
+        }
         .da-summary-text {
+          margin: 0;
           font-size: 14px; line-height: 1.85;
           color: var(--text-secondary);
           white-space: pre-wrap; word-break: break-word;
-          max-width: 66ch; margin: 0 auto;
           border-left: 2px solid var(--da-accent-border);
           padding-left: 16px;
           animation: da-fade-in .45s ease both;
         }
-
-        /* ══ Page openings — margin notes ══ */
-        .da-excerpts {
-          background: var(--bg-card);
-          border: 1px solid var(--border-card);
-          border-radius: 13px; overflow: hidden;
-          animation: da-pop .28s var(--da-ease-out) both;
+        .da-block { display: flex; flex-direction: column; gap: 10px; }
+        .da-block-h {
+          margin: 0;
+          font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 800;
+          letter-spacing: .6px; text-transform: uppercase;
+          color: var(--text-muted);
         }
-        .da-excerpts-head {
-          display: flex; align-items: center; gap: 8px;
-          padding: 11px 16px;
-          border-bottom: 1px solid var(--border-card);
+        .da-points {
+          margin: 0; padding: 0; list-style: none;
+          display: flex; flex-direction: column; gap: 4px;
+        }
+        .da-point {
+          display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 12px;
+          padding: 10px 12px 10px 8px; border-radius: 10px;
+          animation: da-fade-in .4s var(--da-ease-out) both;
+          transition: background .15s;
+        }
+        .da-point:hover { background: var(--bg-item); }
+        .da-point-n {
+          width: 24px; height: 24px; border-radius: 7px;
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 800;
+          font-variant-numeric: tabular-nums;
+          color: var(--da-ink); background: var(--da-accent);
+        }
+        .da-point-text {
+          font-size: 14px; line-height: 1.7; color: var(--text-primary);
+          word-break: break-word;
+        }
+        /* page citation — the margin note; never wraps apart */
+        .da-cite {
+          display: inline-block; white-space: nowrap;
+          margin-left: 8px; vertical-align: 1px;
           font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700;
-          color: var(--text-primary);
-        }
-        .da-excerpts-head svg { color: var(--da-accent-text); }
-        .da-excerpt-list {
-          padding: 10px 14px;
-          display: flex; flex-direction: column; gap: 7px;
-          max-height: 180px; overflow-y: auto;
-        }
-        .da-excerpt {
-          display: flex; gap: 9px;
-          padding: 8px 10px; border-radius: 8px;
-          background: var(--bg-item);
-          border: 1px solid var(--border-base);
-          border-left: 2px solid var(--da-accent-border);
-          font-size: 11.5px; color: var(--text-muted);
-          line-height: 1.55;
-        }
-        .da-excerpt-pg {
-          font-family: 'Manrope', sans-serif; font-size: 10px; font-weight: 700;
+          line-height: 1.5; letter-spacing: 0; text-transform: none;
+          font-variant-numeric: tabular-nums;
           color: var(--da-accent-text);
           background: var(--da-wash);
           border: 1px solid var(--da-accent-border);
-          border-radius: 5px; padding: 1px 6px;
-          flex-shrink: 0; align-self: flex-start; margin-top: 1px;
+          border-radius: 6px; padding: 0 7px;
+        }
+        .da-sections { display: flex; flex-direction: column; }
+        .da-section {
+          padding: 12px 0 12px 16px;
+          border-left: 2px solid var(--da-hair);
+          animation: da-fade-in .45s var(--da-ease-out) both;
+        }
+        .da-section + .da-section { border-top: 1px solid var(--da-hair); }
+        .da-section-h {
+          margin: 0 0 4px;
+          display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+          font-family: 'Manrope', sans-serif; font-size: 13.5px; font-weight: 700;
+          color: var(--text-primary);
+        }
+        .da-section-h .da-cite { margin-left: 0; flex-shrink: 0; }
+        .da-section-text { margin: 0; font-size: 13.5px; line-height: 1.75; color: var(--text-secondary); }
+
+        /* Bangla: conjuncts and matras need a taller line box; no tracking. */
+        .da-body:lang(bn) .da-summary-text,
+        .da-body:lang(bn) .da-point-text,
+        .da-body:lang(bn) .da-section-text { line-height: 1.9; }
+        .da-body:lang(bn) .da-doc-title,
+        .da-body:lang(bn) .da-section-h { letter-spacing: 0; line-height: 1.6; }
+
+        /* real upload percentage — leaves once the server holds the file */
+        .da-meter {
+          width: min(240px, 80%); height: 3px; border-radius: 999px; overflow: hidden;
+          background: var(--bg-item-hover);
+        }
+        .da-meter-fill {
+          display: block; height: 100%;
+          background: var(--da-accent);
+          transform-origin: left center;
+          transition: transform .2s var(--da-ease-out);
         }
 
         /* ── Reduced motion ── */
@@ -833,7 +973,7 @@ export default function DocumentAnalyzer() {
           <span className="da-mast-mark" aria-hidden="true">{Ic.read}</span>
           <div style={{ minWidth: 0 }}>
             <p className="da-mast-title">The Reader</p>
-            <p className="da-mast-sub">Give it a document; get back the essentials — distilled, counted, and shown beside the opening lines of its first pages.</p>
+            <p className="da-mast-sub">Give it a document; get back the essentials — every page read, each key point cited to the page it came from, in the document&apos;s own language.</p>
           </div>
           <span className="da-mast-tag">mycloove · Reader</span>
         </div>
@@ -866,7 +1006,7 @@ export default function DocumentAnalyzer() {
             <p className="da-zone-sub">
               {isDragActive
                 ? 'The reader takes it from here'
-                : 'Get a distilled summary of your document — with the numbers to trust it'}
+                : 'Key points cited to their pages — English or বাংলা, typed or scanned'}
             </p>
 
             <span className="da-browse" aria-hidden="true">
@@ -874,7 +1014,7 @@ export default function DocumentAnalyzer() {
             </span>
 
             <p className="da-zone-ledger">
-              PDF only · Max 50 MB · First 10 pages read · ~30–60 seconds
+              PDF only · Max 50 MB · Every page read · Scanned pages via OCR
             </p>
           </div>
         )}
@@ -890,7 +1030,8 @@ export default function DocumentAnalyzer() {
           </div>
         )}
 
-        {/* ── C · Reading ── */}
+        {/* ── C · Reading ── two honest phases: the real upload percentage,
+            then the elapsed clock while every page is read */}
         {loading && (
           <div className="da-reading" role="status" aria-live="polite">
             <div className="da-scan-frame" aria-hidden="true">
@@ -903,23 +1044,31 @@ export default function DocumentAnalyzer() {
               <span className="da-core" aria-hidden="true">
                 <span/><span/><span/><span/><span/><span/><span/><span/><span/>
               </span>
-              Reading your document…
+              {uploadPct !== null
+                ? `Uploading — ${uploadPct}%`
+                : `Reading ${pagesLabel ?? 'your document'} · ${elapsed}s`}
             </p>
+            {uploadPct !== null && (
+              <span className="da-meter" aria-hidden="true">
+                <span className="da-meter-fill" style={{ transform: `scaleX(${uploadPct / 100})` }}/>
+              </span>
+            )}
             <p className="da-reading-sub">
-              Extracting text and distilling the summary — this usually takes 30–60 seconds.
+              Every page is read. For a long document the AI works from its most informative passages, taken across all its pages; scanned pages are read with OCR, which takes longer.
             </p>
           </div>
         )}
 
         {/* ── D · Report ── */}
-        {stats && !loading && (
+        {report && !loading && (
           <div className="da-report">
             <div className="da-report-head">
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <p className="da-report-kicker">Reading Report</p>
                 <p className="da-report-file">{file?.name}</p>
               </div>
               <div className="da-report-actions">
+                {langLabel && <span className="da-mode-chip" lang={report.language === 'bn' ? 'bn' : undefined}>{langLabel}</span>}
                 <span className="da-mode-chip">{modeLabel}</span>
                 <button className={`da-act-btn ${copied ? 'copied' : ''}`} onClick={copySummary}>
                   {copied ? Ic.check : Ic.copy} {copied ? 'Copied!' : 'Copy'}
@@ -933,7 +1082,7 @@ export default function DocumentAnalyzer() {
               </div>
             </div>
 
-            {stats.origWords > 0 && (
+            {report.origWords > 0 && (
               <div className="da-distill">
                 <p className="da-distill-head">
                   Distilled to <b>{pctLabel}%</b> of the pages read
@@ -945,56 +1094,85 @@ export default function DocumentAnalyzer() {
                   />
                 </div>
                 <div className="da-distill-labels">
-                  <span>Pages read · {stats.origWords.toLocaleString()} words</span>
-                  <span>Digest · {stats.sumWords.toLocaleString()} words</span>
+                  <span>Pages read · {report.origWords.toLocaleString()} words</span>
+                  <span>Digest · {report.sumWords.toLocaleString()} words</span>
                 </div>
               </div>
             )}
 
             <div className="da-meta">
               <div className="da-meta-item">
-                <span>Pages read</span><b>{stats.analyzedPages} / {stats.totalPages}</b>
+                <span>Pages read</span><b>{report.analyzedPages} / {report.totalPages}</b>
               </div>
+              {report.ocrPages.length > 0 && (
+                <div className="da-meta-item">
+                  <span>Read by OCR</span><b>{report.ocrPages.length}</b>
+                </div>
+              )}
               <div className="da-meta-item">
-                <span>Reading time</span><b>{stats.processingTime}s</b>
+                <span>Reading time</span><b>{report.processingTime}s</b>
               </div>
               <div className="da-meta-item">
                 <span>Mode</span><b>{modeLabel}</b>
               </div>
               <div className="da-meta-item">
-                <span>Engine</span><b className="da-engine">mycloove</b>
+                <span>Engine</span><b className="da-engine">{report.engine === 'extractive' ? 'mycloove · quotes' : 'mycloove'}</b>
               </div>
             </div>
 
-            {stats.note && (
+            {report.note && (
               <div className="da-note">
-                {Ic.info} {stats.note}
+                {Ic.info} {report.note}
               </div>
             )}
 
-            {summary && (
-              <div className="da-summary-body">
-                <p className="da-summary-text">{summary}</p>
-              </div>
-            )}
-          </div>
-        )}
+            {/* The document's own words: lang="bn" lets Bangla take its
+                font and taller line box; UI chrome around it stays English. */}
+            <div className="da-body" lang={report.language === 'bn' ? 'bn' : undefined}>
+              {report.title && <h2 className="da-doc-title">{report.title}</h2>}
+              {report.overview && <p className="da-summary-text">{report.overview}</p>}
 
-        {/* ── Page openings — margin notes. These are the first ~250
-            characters of each of the first pages, as the server sends them;
-            they are context, not citations for the summary's sentences. ── */}
-        {pagePreviews && pagePreviews.length > 0 && !loading && (
-          <div className="da-excerpts">
-            <div className="da-excerpts-head">
-              {Ic.eye} Page openings
-            </div>
-            <div className="da-excerpt-list">
-              {pagePreviews.map(p => (
-                <div key={p.page} className="da-excerpt">
-                  <span className="da-excerpt-pg">P{p.page}</span>
-                  <span>{p.preview}</span>
-                </div>
-              ))}
+              {report.keyPoints.length > 0 && (
+                <section className="da-block" aria-labelledby="da-points-h">
+                  <h3 className="da-block-h" id="da-points-h" lang="en">
+                    {report.engine === 'extractive' ? 'Key sentences, quoted' : 'Key points'}
+                  </h3>
+                  <ol className="da-points">
+                    {report.keyPoints.map((point, i) => (
+                      <li key={i} className="da-point">
+                        <span className="da-point-n" aria-hidden="true">{i + 1}</span>
+                        <span className="da-point-text">
+                          {point.text}
+                          {point.pages.length > 0 && (
+                            <span className="da-cite" lang="en">{citeLabel(point.pages)}</span>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
+
+              {report.sections.length > 0 && (
+                <section className="da-block" aria-labelledby="da-sections-h">
+                  <h3 className="da-block-h" id="da-sections-h" lang="en">Section by section</h3>
+                  <div className="da-sections">
+                    {report.sections.map((section, i) => (
+                      <article key={i} className="da-section">
+                        {(section.heading || section.pages.length > 0) && (
+                          <p className="da-section-h">
+                            <span>{section.heading}</span>
+                            {section.pages.length > 0 && (
+                              <span className="da-cite" lang="en">{citeLabel(section.pages)}</span>
+                            )}
+                          </p>
+                        )}
+                        {section.summary && <p className="da-section-text">{section.summary}</p>}
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
           </div>
         )}
@@ -1007,7 +1185,7 @@ export default function DocumentAnalyzer() {
               <div className="da-spec-glyph">{Ic.pdf}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p className="da-spec-name">{file.name}</p>
-                <p className="da-spec-meta">{fileSizeMB} MB · PDF Document</p>
+                <p className="da-spec-meta">{fileSizeMB} MB{pagesLabel ? ` · ${pagesLabel}` : ''} · PDF Document</p>
               </div>
               <button className="da-spec-remove" onClick={removeFile} disabled={loading}>
                 {Ic.close} Remove
@@ -1027,7 +1205,7 @@ export default function DocumentAnalyzer() {
                     <span className="da-mode-icon" aria-hidden="true">{Ic.depthMin}</span>
                     <span className="da-mode-name">Minimal</span>
                   </span>
-                  <span className="da-mode-desc">Tight abstract — the core points in a few sentences.</span>
+                  <span className="da-mode-desc">An overview and 3–5 key points, each cited to its page.</span>
                 </label>
                 <label className={`da-mode${analysisMode === 'elaborate' ? ' on' : ''}`}>
                   <input
@@ -1040,7 +1218,7 @@ export default function DocumentAnalyzer() {
                     <span className="da-mode-icon" aria-hidden="true">{Ic.depthMax}</span>
                     <span className="da-mode-name">Elaborate</span>
                   </span>
-                  <span className="da-mode-desc">Detailed digest — longer and more granular.</span>
+                  <span className="da-mode-desc">A fuller overview, 6–10 key points and a summary of every major section.</span>
                 </label>
               </div>
             )}
@@ -1049,7 +1227,7 @@ export default function DocumentAnalyzer() {
               className="da-go da-pop"
               data-busy={loading}
               onClick={handleAnalyze}
-              disabled={!file || loading}
+              disabled={!file || loading || locked}
               aria-busy={loading}
             >
               <span className="da-go-idle">{Ic.read} Read document</span>
