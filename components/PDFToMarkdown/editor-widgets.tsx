@@ -677,8 +677,18 @@ export function FindReplaceBar({
             <input
               className="pm-find-input"
               placeholder="Replace with…"
+              aria-label="Replace with"
+              aria-keyshortcuts="Enter"
               value={state.replace}
               onChange={(e) => setState({ replace: e.target.value })}
+              onKeyDown={(e) => {
+                // Enter replaces the current match and moves to the next, as
+                // in every editor's replace field; it used to do nothing here.
+                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && totalMatches > 0) {
+                  e.preventDefault()
+                  onReplaceOne()
+                }
+              }}
             />
           </div>
           <button

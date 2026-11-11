@@ -140,7 +140,7 @@ export function reviewIssues(review: ExtractionReview): ReviewIssue[] {
     if (!pageWarnings.has(warning)) issues.push({ id: `warning-${index}`, page: null, status: 'warning', title: 'Conversion notice', detail: describeWarning(warning) })
   })
   if (!review.diagnosticsAvailable || !review.diagnosticsComplete) issues.unshift({ id: 'diagnostics-incomplete', page: null, status: 'not_checked', title: 'Limited extraction diagnostics', detail: 'The response did not include all supported diagnostic details. This review cannot establish extraction completeness.' })
-  if (review.imageCount) issues.push({ id: 'image-delivery', page: null, status: 'not_checked', title: 'Check figures in the delivered file', detail: `${review.imageCount} image asset(s) were reported. Image references alone do not prove that their binaries are included in an export.` })
+  if (review.imageCount) issues.push({ id: 'image-delivery', page: null, status: 'not_checked', title: 'Check figures against the original', detail: `${review.imageCount} figure(s) were extracted and placed where they sit on the page. Check that each one is in the right place and that no figure is missing.` })
   issues.push(
     { id: 'names-numbers', page: null, status: 'not_checked', title: 'Compare names, dates and numbers', detail: 'These values are not automatically verified against the PDF. Review them before using the draft.' },
     { id: 'layout-content', page: null, status: 'not_checked', title: 'Check completeness and reading order', detail: 'Compare all selected pages, tables and figures with the original. A high heuristic score does not establish correctness.' },

@@ -46,12 +46,29 @@ export function ReviewDialog({ job, onEdit, onAcknowledge, onAttach, onClose }: 
     }
   }, [])
 
+  /* The native dialog only sees Esc while focus is inside it. When a control
+     that held focus unmounts or disables, focus falls to <body> and Esc did
+     nothing; close from there too. */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (dialogRef.current?.contains(document.activeElement)) return
+      event.preventDefault()
+      onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   const attach = async (source: File) => {
     setBusy('attach')
     setNotice('Checking that this is the original PDF...')
     try {
       await onAttach(job.id, source)
       setNotice('Original PDF matched. Reattachment stays in this browser.')
+      // The "Choose original PDF" button unmounts once the source is back;
+      // hand focus to the page field it is replaced by, not to <body>.
+      requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLInputElement>('input[aria-label="Original PDF page"]')?.focus())
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'The original PDF could not be attached.')
     } finally {
@@ -60,7 +77,7 @@ export function ReviewDialog({ job, onEdit, onAcknowledge, onAttach, onClose }: 
   }
 
   const downloadReport = async () => {
-    if (!review) return
+    if (!review || busy !== null) return
     setBusy('report')
     try {
       const report = await createReviewReport(review, job.markdown, sourceAvailable)
@@ -94,7 +111,10 @@ export function ReviewDialog({ job, onEdit, onAcknowledge, onAttach, onClose }: 
           <div className="mr-review-summary">
             <strong>{acknowledged}/{issues.length} acknowledged</strong>
             <span>Human review, not automatic verification. Edits reset acknowledgements.</span>
-            <button type="button" className="mr-review-button" onClick={downloadReport} disabled={busy !== null}>{Ic.download(14)} {busy === 'report' ? 'Preparing report...' : 'Review report'}</button>
+            {/* aria-disabled, not disabled: disabling the focused button while
+                the report builds threw keyboard focus out of the dialog, and
+                Esc then no longer closed it. */}
+            <button type="button" className="mr-review-button" onClick={downloadReport} aria-disabled={busy !== null} aria-busy={busy === 'report'}>{Ic.download(14)} {busy === 'report' ? 'Preparing report...' : 'Review report'}</button>
           </div>
           {review.revision > 0 && <p className="mr-review-context">The draft has changed since extraction. Page diagnostics still describe the original conversion, not the edited text.</p>}
           <div className="mr-review-tabs" role="group" aria-label="Review view">
@@ -138,7 +158,7 @@ export function ReviewDialog({ job, onEdit, onAcknowledge, onAttach, onClose }: 
                 <div className="mr-review-empty">
                   <h4>Reattach the original PDF</h4>
                   <p>The PDF is not stored with your saved draft. Reattach it to compare the original; its SHA-256 must match the conversion record.</p>
-                  <button type="button" className="mr-review-button" disabled={busy !== null || !review.source.sha256} onClick={() => inputRef.current?.click()}>{busy === 'attach' ? 'Checking original...' : 'Choose original PDF'}</button>
+                  <button type="button" className="mr-review-button" disabled={!review.source.sha256} aria-disabled={busy !== null} aria-busy={busy === 'attach'} onClick={() => { if (busy === null) inputRef.current?.click() }}>{busy === 'attach' ? 'Checking original...' : 'Choose original PDF'}</button>
                   {!review.source.sha256 && <p>No source fingerprint is available. Import the PDF again to start a source-linked review.</p>}
                 </div>
               )}

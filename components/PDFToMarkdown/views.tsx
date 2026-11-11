@@ -1163,14 +1163,31 @@ export function Workspace({
     return Array.from({ length: n }, (_, i) => i + 1).join('\n')
   }, [active])
 
-  // Simple stats for footer status bar
+  // Footer position: where the caret is, not how long the document is. "Ln"
+  // used to show the total line count, which reads as a cursor position.
+  // Keyed by document and reset on switch: swapping the textarea's value puts
+  // its caret back at the start, so a remembered position would be stale.
+  const [caret, setCaret] = useState<{ id: string | null; start: number; end: number }>({ id: activeId, start: 0, end: 0 })
+  if (caret.id !== activeId) setCaret({ id: activeId, start: 0, end: 0 })
   const cursorInfo = useMemo(() => {
-    if (!active) return { lines: 0, chars: 0 }
+    if (!active) return { lines: 0, chars: 0, line: 1, column: 1, selected: 0 }
+    const text = active.markdown
+    const start = Math.min(caret.start, text.length)
+    const end = Math.min(Math.max(caret.end, start), text.length)
+    let line = 1
+    for (let index = text.indexOf('\n'); index !== -1 && index < start; index = text.indexOf('\n', index + 1)) line++
     return {
-      lines: active.markdown.split('\n').length,
-      chars: active.markdown.length,
+      lines: text.split('\n').length,
+      chars: text.length,
+      line,
+      column: start - (text.lastIndexOf('\n', start - 1) + 1) + 1,
+      selected: end - start,
     }
-  }, [active])
+  }, [active, caret])
+  const trackCaret = (event: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    const { selectionStart, selectionEnd } = event.currentTarget
+    setCaret((current) => (current.id === activeId && current.start === selectionStart && current.end === selectionEnd ? current : { id: activeId, start: selectionStart, end: selectionEnd }))
+  }
 
 
   // Bidirectional scroll sync
@@ -1639,18 +1656,44 @@ export function Workspace({
     setFindActive(n)
     scrollToMatch(n)
   }
+  /* Replace edits used to set the document directly, so "Replace all" could
+     not be undone. They now go through commitEditorText (the native undo
+     stack) like every other edit. That command needs the textarea focused, so
+     focus is handed straight back to the find bar afterwards — pressing Enter
+     in "Replace" must keep replacing, never start typing into the document.
+     The rich editor has no textarea to write through and keeps the old path. */
+  const commitFromFindBar = (next: string) => {
+    const ta = editorRef.current
+    if (editorMode !== 'raw' || !ta) { onEdit(active.id, next); return }
+    const returnTo = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const { scrollTop, scrollLeft } = ta
+    commitEditorText(ta, next)
+    ta.scrollTop = scrollTop
+    ta.scrollLeft = scrollLeft
+    if (returnTo && returnTo !== ta && returnTo.isConnected) {
+      returnTo.focus({ preventScroll: true })
+      // "Replace all" disables itself once nothing is left to replace, which
+      // drops focus to <body> after the re-render; the replace field is the
+      // next sensible stop.
+      const bar = returnTo.closest('.pm-find-bar')
+      requestAnimationFrame(() => {
+        if (document.activeElement && document.activeElement !== document.body) return
+        const fields = bar?.querySelectorAll<HTMLInputElement>('input')
+        fields?.[fields.length - 1]?.focus({ preventScroll: true })
+      })
+    }
+    setEditedAt(Date.now())
+  }
   const replaceOne = () => {
     if (!findRegex || findMatches.length === 0) return
     const m = findMatches[effectiveFindActive]
     const before = active.markdown.slice(0, m.start)
     const after = active.markdown.slice(m.end)
-    const next = before + findState.replace + after
-    onEdit(active.id, next)
+    commitFromFindBar(before + findState.replace + after)
   }
   const replaceAll = () => {
     if (!findRegex || findMatches.length === 0) return
-    const next = active.markdown.replace(findRegex, findState.replace)
-    onEdit(active.id, next)
+    commitFromFindBar(active.markdown.replace(findRegex, findState.replace))
   }
 
   /** Line-highlight overlay for find matches. Runs each render — cheap. */
@@ -2314,6 +2357,7 @@ export function Workspace({
               className="pm-editor-textarea"
               value={active.markdown}
               onChange={handleEditorChange}
+              onSelect={trackCaret}
               onKeyDown={handleEditorKeyDown}
               onPaste={handleEditorPaste}
               onScroll={(event) => {
@@ -2434,7 +2478,11 @@ export function Workspace({
           <span className="pm-ws-foot-item pm-ws-foot-format">{Ic.markdown(11)} Markdown</span>
           <span className="pm-ws-foot-sep pm-ws-foot-sep-format" />
           <div className="pm-ws-foot-metrics">
-            <span className="pm-ws-foot-item pm-ws-foot-line">Ln {cursorInfo.lines}</span>
+            <span className="pm-ws-foot-item pm-ws-foot-line">
+              {editorMode === 'raw'
+                ? <>Ln {cursorInfo.line}, Col {cursorInfo.column}{cursorInfo.selected > 0 && <> ({cursorInfo.selected.toLocaleString()} selected)</>}</>
+                : <>{cursorInfo.lines.toLocaleString()} lines</>}
+            </span>
             <span className="pm-ws-foot-item pm-ws-foot-chars">{cursorInfo.chars.toLocaleString()} chars</span>
             <span className="pm-ws-foot-item pm-ws-foot-words">{active.stats.words.toLocaleString()} words</span>
             <span className="pm-ws-foot-item pm-ws-foot-read">~{Math.max(1, Math.ceil(active.stats.words / 200))} min read</span>

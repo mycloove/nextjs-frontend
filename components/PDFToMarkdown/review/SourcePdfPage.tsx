@@ -24,7 +24,13 @@ export function SourcePdfPage({ file, page, password, onInfo, onReady }: Props) 
   const error = failure?.file === file && failure.password === password
     ? failure.message
     : renderError?.pdf === pdf && renderError.page === page ? renderError.message : null
-  const ready = !!pdf && rendered?.pdf === pdf && rendered.page === page && rendered.width === width
+  /* Ready means "this exact page is on screen". A new width only sharpens the
+     same page, so it neither hides the canvas nor withdraws readiness. Tying
+     readiness to width made a feedback loop: the rendered page grew a
+     scrollbar, the width shrank, the canvas hid, the scrollbar went, the width
+     grew — and the reviewer's checkboxes flickered disabled forever. */
+  const ready = !!pdf && rendered?.pdf === pdf && rendered.page === page
+  const shownRef = useRef<{ pdf: PDFDocumentProxy; page: number } | null>(null)
 
   useEffect(() => {
     const host = hostRef.current
@@ -68,7 +74,8 @@ export function SourcePdfPage({ file, page, password, onInfo, onReady }: Props) 
   }, [file, password, onInfo])
 
   useEffect(() => {
-    onReady(file, page, false)
+    const sameContent = !!pdf && shownRef.current?.pdf === pdf && shownRef.current.page === page
+    if (!sameContent) onReady(file, page, false)
     if (!pdf || !width) return
     let cancelled = false
     let task: RenderTask | undefined
@@ -80,12 +87,19 @@ export function SourcePdfPage({ file, page, password, onInfo, onReady }: Props) 
         const density = Math.min(window.devicePixelRatio || 1, 2)
         const scale = Math.min(width / base.width * density, Math.sqrt(16_000_000 / (base.width * base.height)))
         const viewport = sourcePage.getViewport({ scale })
-        const canvas = canvasRef.current
-        canvas.width = Math.ceil(viewport.width)
-        canvas.height = Math.ceil(viewport.height)
-        task = sourcePage.render({ canvas, viewport })
+        // Render off screen, then copy: resizing the visible canvas clears it,
+        // which flashed the page blank on every width change.
+        const offscreen = document.createElement('canvas')
+        offscreen.width = Math.ceil(viewport.width)
+        offscreen.height = Math.ceil(viewport.height)
+        task = sourcePage.render({ canvas: offscreen, viewport })
         await task.promise
-        if (cancelled) return
+        if (cancelled || !canvasRef.current) return
+        const canvas = canvasRef.current
+        canvas.width = offscreen.width
+        canvas.height = offscreen.height
+        canvas.getContext('2d')?.drawImage(offscreen, 0, 0)
+        shownRef.current = { pdf, page }
         setRenderError(null)
         setRendered({ pdf, page, width })
         onReady(file, page, true)

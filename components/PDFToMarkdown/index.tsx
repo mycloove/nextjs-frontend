@@ -230,9 +230,13 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
       setActivePreset(loaded.options.activePreset ?? null)
 
       if (canOpen && !workspacePushedRef.current) {
-        // Re-push so Back still returns to the entry screen after a reload.
+        // Re-push so Back still returns to the entry screen after a reload —
+        // unless this history entry already is the workspace marker (a reload
+        // keeps history.state). Pushing a second one made "New" and the
+        // browser's Back need two presses after every reload.
         workspacePushedRef.current = true
-        window.history.pushState({ pmView: 'workspace' }, '')
+        const current = window.history.state as { pmView?: string } | null
+        if (current?.pmView !== 'workspace') window.history.pushState({ pmView: 'workspace' }, '')
       }
 
       if (loaded.lostInFlight > 0) {

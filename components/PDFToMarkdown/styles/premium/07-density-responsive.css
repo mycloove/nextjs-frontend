@@ -655,6 +655,13 @@
   overflow: hidden;
 }
 
+/* The caret position changes on every keystroke: tabular figures keep the
+   footer from jittering as "Ln 9" becomes "Ln 10". */
+.mr-markdown-workspace .pm-ws-foot-line {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .mr-markdown-workspace .pm-ws-footer-premium .pm-ws-foot-right {
   flex: 0 0 auto;
   margin-left: auto;
