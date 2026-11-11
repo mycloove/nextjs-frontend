@@ -3,9 +3,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   convertImagesToPdf,
   ImagesToPdfValidationError,
-  type PageSizeOption,
-  type QualityOption,
 } from '@/features/image-to-pdf/server/imagesToPdf'
+import {
+  DEFAULT_LAYOUT,
+  DEFAULT_QUALITY,
+  MARGIN_OPTIONS,
+  ORIENTATION_OPTIONS,
+  PAGE_SIZE_OPTIONS,
+  QUALITY_OPTIONS,
+} from '@/features/image-to-pdf/layout/pageLayout'
 import { beginToolQuota } from '@/lib/usage/quota'
 
 /**
@@ -27,21 +33,37 @@ const DEFAULT_MAX_FILE_BYTES = 25 * 1024 * 1024
 const DEFAULT_MAX_TOTAL_BYTES = 100 * 1024 * 1024
 const DEFAULT_MAX_IMAGES = 100
 
-const ALLOWED_PAGE_SIZES: ReadonlySet<PageSizeOption> = new Set(['original', 'a4', 'letter'])
-const ALLOWED_QUALITIES: ReadonlySet<QualityOption> = new Set(['high', 'balanced', 'small'])
-
 const IMAGE_MIME_PREFIX = 'image/'
-const IMAGE_EXTENSIONS = ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.bmp', '.tif', '.tiff']
+const IMAGE_EXTENSIONS = ['.jpeg', '.jpg', '.png', '.webp', '.gif', '.tif', '.tiff', '.avif']
+
+/** Most skipped names echoed back for the receipt; the count is always exact. */
+const MAX_SKIPPED_NAMES = 20
 
 class RequestValidationError extends Error {
-  constructor(
-    message: string,
-    readonly code: string,
-    readonly status = 400,
-  ) {
+  readonly code: string
+  readonly status: number
+  constructor(message: string, code: string, status = 400) {
     super(message)
     this.name = 'RequestValidationError'
+    this.code = code
+    this.status = status
   }
+}
+
+/** A closed-set form option: absent → the default, anything unknown → a named 400. */
+function readOption<T extends string>(
+  formData: FormData,
+  field: string,
+  allowed: readonly T[],
+  fallback: T,
+  code: string,
+): T {
+  const raw = (formData.get(field) as string | null)?.trim().toLowerCase()
+  if (!raw) return fallback
+  if (!(allowed as readonly string[]).includes(raw)) {
+    throw new RequestValidationError(`Invalid ${field} option`, code)
+  }
+  return raw as T
 }
 
 function parsePositiveInteger(rawValue: string | undefined, fallback: number) {
@@ -135,22 +157,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const pageSize = ((formData.get('pageSize') as string | null)?.trim().toLowerCase() ||
-      'original') as PageSizeOption
-    if (!ALLOWED_PAGE_SIZES.has(pageSize)) {
-      throw new RequestValidationError('Invalid page size', 'invalid_page_size')
-    }
-
-    const quality = ((formData.get('quality') as string | null)?.trim().toLowerCase() ||
-      'balanced') as QualityOption
-    if (!ALLOWED_QUALITIES.has(quality)) {
-      throw new RequestValidationError('Invalid quality option', 'invalid_quality')
-    }
+    const pageSize = readOption(formData, 'pageSize', PAGE_SIZE_OPTIONS, DEFAULT_LAYOUT.pageSize, 'invalid_page_size')
+    const quality = readOption(formData, 'quality', QUALITY_OPTIONS, DEFAULT_QUALITY, 'invalid_quality')
+    const orientation = readOption(formData, 'orientation', ORIENTATION_OPTIONS, DEFAULT_LAYOUT.orientation, 'invalid_orientation')
+    const margin = readOption(formData, 'margin', MARGIN_OPTIONS, DEFAULT_LAYOUT.margin, 'invalid_margin')
 
     quota = await beginToolQuota(request, 'image-to-pdf', formData)
     if (!quota.ok) return quota.response
 
-    const result = await convertImagesToPdf(images, { pageSize, quality })
+    const result = await convertImagesToPdf(images, { pageSize, quality, orientation, margin })
+
+    // Additive receipt headers. Names are URI-encoded JSON because a header
+    // cannot carry arbitrary (e.g. Bangla) file names as raw text.
+    const receiptHeaders: Record<string, string> = {
+      'X-Page-Count': String(result.pageCount),
+      'X-Encoded-Original': String(result.encodings.original),
+      'X-Encoded-Jpeg': String(result.encodings.jpeg),
+      'X-Encoded-Lossless': String(result.encodings.lossless),
+    }
+    if (result.failed.length) {
+      receiptHeaders['X-Skipped-Count'] = String(result.failed.length)
+      receiptHeaders['X-Skipped-Names'] = encodeURIComponent(JSON.stringify(result.failed.slice(0, MAX_SKIPPED_NAMES)))
+    }
 
     return quota.apply(new NextResponse(Buffer.from(result.bytes), {
       status: 200,
@@ -158,8 +186,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/pdf',
         'Content-Disposition': 'attachment; filename="mycloove_converted.pdf"',
         'X-Request-Id': requestId,
-        'X-Page-Count': String(result.pageCount),
-        ...(result.failed.length ? { 'X-Skipped-Count': String(result.failed.length) } : {}),
+        ...receiptHeaders,
       },
     }), { successful: true, fileName: images[0]?.name ?? null })
   } catch (error) {

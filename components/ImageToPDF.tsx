@@ -9,7 +9,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { useDropzone } from 'react-dropzone'
+import { useDropzone, type FileRejection } from 'react-dropzone'
 
 /* FLIP measures and repaints in a layout effect on the client, but this client
    component is still server-rendered (ToolWorkspace mounts it through
@@ -21,6 +21,19 @@ import { uploadWithProgress, getApiErrorMessage } from '@/lib/upload/uploadWithP
 import { usePasteFiles } from '@/lib/upload/usePasteFiles'
 import { downloadBlob } from '@/lib/download/downloadOutputs'
 import { addRecentConversion } from '@/lib/history/recentConversions'
+import {
+  DEFAULT_LAYOUT,
+  DEFAULT_QUALITY,
+  JPEG_QUALITY,
+  MARGIN_POINTS,
+  placeImage,
+  pointsToMillimetres,
+  type LayoutOptions,
+  type MarginOption,
+  type OrientationOption,
+  type PageSizeOption,
+  type QualityOption,
+} from '@/features/image-to-pdf/layout/pageLayout'
 
 /* ─────────────────────────────────────────────────────────────
    Images → PDF — "The Light Table"
@@ -28,57 +41,52 @@ import { addRecentConversion } from '@/lib/history/recentConversions'
    Design concept: this tool's single job is binding loose images
    into one ordered document, exactly like a photographer laying
    prints on a light table before sending the job to print. The
-   UI is that table: pages lie on it in true proportions, carry
-   contact-sheet frame numbers (which ARE the future page numbers
-   — entries order == FormData order == page order), and get
-   pressed into a stack ("collated") while binding.
+   UI is that table: pages lie on it as the paper they will be
+   printed on, carry contact-sheet frame numbers (which ARE the
+   future page numbers — entries order == FormData order == page
+   order), and get pressed into a stack ("collated") while binding.
 
-   Honesty notes this rewrite fixes (the old UI lied in places):
-   - Square thumbnails with object-fit: cover implied a square
-     crop. Every image is embedded uncropped, so the tiles show
-     true-ratio pages and never crop. Page size is now a real
-     choice: "Original" gives each image a page at its own
-     dimensions; A4/Letter fit the whole image inside a print
-     margin — never a crop.
-   - The size story is now stated, not implied. The route enforces
-     25 MB per image, 100 MB total and 100 images, and the browser
-     refuses an oversized set before any upload begins.
-     Photographs are re-compressed to JPEG; an already-upright
-     JPEG within the size ceiling is embedded untouched.
-   - The download name is derived from the first page instead of a
-     meaningless `SmilePDF_<timestamp>`.
-   - alert() is gone; errors surface inline and the pages stay on
-     the table for retry.
+   Truth on the table (2026-11-11 pass):
+   - Every tile is the real output page. Its paper, orientation,
+     margin and the image's place on it come from the same
+     `placeImage()` the server engine uses
+     (features/image-to-pdf/layout/pageLayout.ts), so what lies on
+     the table is what binds. A4/Letter turn landscape for a
+     landscape image ("Auto"); "Original" pages take the image's
+     shape at a printable size.
+   - Intake names every refusal the moment a file arrives — wrong
+     type, too large, too many, unreadable — instead of silently
+     dropping it. BMP is converted to PNG in the browser (the
+     server's decoder cannot read BMP; the old UI accepted it and
+     the engine skipped every one). HEIC is converted to JPEG where
+     the browser can open it (Safari) and refused by name where it
+     cannot.
+   - The receipt says what happened to each page: kept
+     pixel-exact, compressed, or embedded untouched — and names any
+     image the server could not read.
+   - An unchanged table is not bound twice: "View the bound PDF"
+     returns to the held result without another upload or credit.
 
    Everything is scoped to this file via the `i2p-` namespace and
-   consumes only surface-1 global tokens (var(--bg-item), …) plus
-   local `--i2p-*` pairs defined in both theme blocks below. The
-   identity colour is a darkroom-amber "safelight" — this surface's
-   own device, not the house coral gradient, and independent of the
-   shared card icon, which now carries the Convert tone.
+   consumes surface-1 global tokens (var(--bg-item), …) plus local
+   `--i2p-*` roles defined in both theme blocks below. The identity
+   colour is a darkroom-amber "safelight" — this surface's own
+   device (D8), refined into fill / line / soft / text roles.
 
-   Interaction pass: the surface now owns its own instrument header
-   (the workspace heading row is retired via ToolWorkspace's
-   `hideHeading`). Prints are lifted and re-slotted by direct
+   Interaction: prints are lifted and re-slotted by direct
    manipulation: a paper ghost follows the cursor while the table
-   resplices live (insert-and-shift, the merge-pdf tray semantics), so
-   the order seen during the drag is the order that ships and the page
-   numbers renumber as you move. A FLIP settle rides each reflow, and
-   the chevron buttons stay as the keyboard path so no capability
-   depends on the pointer. A press that does not clear the drag
-   threshold opens an examine overlay instead. The one working mark is a
-   Double Helix ported from
-   the LoaderUI reference set — a bound coil, which is literally this
-   tool's job, so the loader and the bind press are one device and not
-   a second signature. It is indeterminate only: the real XHR byte
-   percentage is untouched and remains the only progress this tool
-   claims.
+   resplices live (insert-and-shift, the merge-pdf tray semantics),
+   so the order seen during the drag is the order that ships. A FLIP
+   settle rides each reflow, and the chevron buttons are the
+   keyboard path, with every move announced. Each page is a button
+   that opens the examine dialog (← → between pages). The one
+   working mark is a Double Helix — a bound coil, literally this
+   tool's job — indeterminate only: the real XHR byte percentage is
+   the only progress this tool claims.
    ───────────────────────────────────────────────────────────── */
 
 type Phase = 'editing' | 'binding' | 'bound'
 type CropPosition = 'bottom' | 'bottom-right' | 'custom'
-type PageSize = 'original' | 'a4' | 'letter'
-type Quality = 'high' | 'balanced' | 'small'
 
 interface Entry {
   id: string
@@ -86,6 +94,12 @@ interface Entry {
   url: string
   w: number
   h: number
+}
+
+interface EncodingCounts {
+  original: number
+  jpeg: number
+  lossless: number
 }
 
 /* ── Tiny inline SVG icons (no external deps) ── */
@@ -161,21 +175,30 @@ const Icon = {
       <line x1="12" y1="8" x2="12.01" y2="8" />
     </svg>
   ),
+  undo: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 14 4 9 9 4" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+    </svg>
+  ),
 }
 
 /* ── Small formatting helpers ── */
+const MB = 1024 * 1024
 const fmtSize = (b: number) =>
-  b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB`
+  b >= MB ? `${(b / MB).toFixed(1)} MB`
   : b >= 1024 ? `${Math.max(1, Math.round(b / 1024))} KB`
   : `${b} B`
 
+const extensionOf = (f: File) => f.name.split('.').pop()?.toLowerCase() ?? ''
+
 const typeLabel = (f: File) => {
-  const ext = f.name.split('.').pop()?.toLowerCase() ?? ''
   const map: Record<string, string> = {
-    jpg: 'JPG', jpeg: 'JPEG', png: 'PNG', webp: 'WEBP', gif: 'GIF', bmp: 'BMP',
+    jpg: 'JPG', jpeg: 'JPEG', png: 'PNG', webp: 'WEBP', gif: 'GIF', avif: 'AVIF',
   }
-  return map[ext] ?? 'IMAGE'
+  return map[extensionOf(f)] ?? 'IMAGE'
 }
+
+const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`
 
 /* Mirrors the route's defaults (app/api/image-to-pdf/route.ts). Kept in sync
    so an oversized set is refused in the browser, before any upload begins. */
@@ -183,50 +206,118 @@ const MAX_IMAGES = 100
 const MAX_FILE_MB = 25
 const MAX_TOTAL_MB = 100
 
-const PAGE_SIZE_LABELS: Record<PageSize, string> = {
+/* How a file is taken onto the table. `direct` goes up as it is; `bmp` and
+   `heic` are re-encoded in the browser first (see the header). */
+type IntakeKind = 'direct' | 'bmp' | 'heic' | 'tiff' | 'svg' | 'other'
+const DIRECT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'])
+const DIRECT_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'])
+
+function classify(file: File): IntakeKind {
+  const type = file.type.toLowerCase()
+  const ext = extensionOf(file)
+  if (DIRECT_TYPES.has(type) || (!type && DIRECT_EXTENSIONS.has(ext))) return 'direct'
+  if (type === 'image/bmp' || type === 'image/x-ms-bmp' || ext === 'bmp') return 'bmp'
+  if (type === 'image/heic' || type === 'image/heif' || ext === 'heic' || ext === 'heif') return 'heic'
+  if (type === 'image/tiff' || ext === 'tif' || ext === 'tiff') return 'tiff'
+  if (type === 'image/svg+xml' || ext === 'svg') return 'svg'
+  return 'other'
+}
+
+const SUPPORTED_SENTENCE = 'JPG, PNG, WebP, AVIF, GIF or BMP'
+
+/** Re-encode a file the browser can open (BMP, HEIC on Safari) into one the server reads. */
+const reencodeInBrowser = (file: File, type: 'image/png' | 'image/jpeg'): Promise<File> =>
+  new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        canvas.getContext('2d')?.drawImage(img, 0, 0)
+        canvas.toBlob(blob => {
+          URL.revokeObjectURL(url)
+          if (!blob) { reject(new Error('encode')); return }
+          const base = file.name.replace(/\.[^.]+$/, '') || 'image'
+          resolve(new File([blob], `${base}.${type === 'image/png' ? 'png' : 'jpg'}`, { type, lastModified: file.lastModified }))
+        }, type, 0.92)
+      } catch (e) {
+        URL.revokeObjectURL(url)
+        reject(e instanceof Error ? e : new Error('encode'))
+      }
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode')) }
+    img.src = url
+  })
+
+const PAGE_SIZE_LABELS: Record<PageSizeOption, string> = {
   original: 'Original',
   a4: 'A4',
   letter: 'Letter',
 }
-
-const QUALITY_LABELS: Record<Quality, string> = {
+const ORIENTATION_LABELS: Record<OrientationOption, string> = {
+  auto: 'Auto',
+  portrait: 'Portrait',
+  landscape: 'Landscape',
+}
+const MARGIN_LABELS: Record<MarginOption, string> = {
+  none: 'None',
+  small: 'Small',
+  large: 'Large',
+}
+const QUALITY_LABELS: Record<QualityOption, string> = {
   high: 'High',
   balanced: 'Balanced',
   small: 'Small',
 }
 
-/* ── Crop helper (unchanged logic — the proven canvas trim) ── */
-const cropImage = (
-  file: File,
-  position: CropPosition,
-  pct: number,
-  rightPx = 0,
-  bottomPx = 0,
-): Promise<File> =>
+/* Each hint states what the choice really does to the bytes and the paper —
+   the numbers are the engine's own (pageLayout.ts). */
+const QUALITY_HINTS: Record<QualityOption, string> = {
+  high: `Sharpest. Photos at ${JPEG_QUALITY.high}% JPEG; screenshots and scans of text stay pixel-exact.`,
+  balanced: `Recommended. Photos at ${JPEG_QUALITY.balanced}%; screenshots stay pixel-exact unless that would make the file much larger.`,
+  small: `Smallest file. Photos at ${JPEG_QUALITY.small}% and about 200 dpi; fine text may soften.`,
+}
+const marginHint = (margin: MarginOption) =>
+  margin === 'none' ? 'Images run to the edge of the paper.' : `About ${Math.round((MARGIN_POINTS[margin] / 72) * 25.4)} mm of white around each image.`
+
+/* ── Trim geometry — one function for the canvas cut and the preview, so the
+   hatched area on a tile is exactly the pixels the cut removes. ── */
+interface TrimSettings {
+  on: boolean
+  position: CropPosition
+  pct: number
+  right: number
+  bottom: number
+}
+
+const trimmedSize = (w: number, h: number, t: TrimSettings) => {
+  if (!t.on) return { w, h }
+  if (t.position === 'bottom') return { w, h: Math.max(1, Math.floor(h * (100 - t.pct) / 100)) }
+  if (t.position === 'bottom-right') {
+    return { w: Math.max(1, w - Math.floor(w * t.pct / 100)), h: Math.max(1, h - Math.floor(h * t.pct / 100)) }
+  }
+  return { w: Math.max(w - t.right, 10), h: Math.max(h - t.bottom, 10) }
+}
+
+const cropImage = (file: File, trim: TrimSettings): Promise<File> =>
   new Promise((resolve, reject) => {
     const img = document.createElement('img') as HTMLImageElement
     const url = URL.createObjectURL(file)
     img.onload = () => {
       try {
-        const { width: ow, height: oh } = img
-        let cw = ow, ch = oh
-        if (position === 'bottom') {
-          ch = Math.floor(oh * (100 - pct) / 100)
-        } else if (position === 'bottom-right') {
-          ch = oh - Math.floor(oh * pct / 100)
-          cw = ow - Math.floor(ow * pct / 100)
-        } else {
-          cw = Math.max(ow - rightPx, 10)
-          ch = Math.max(oh - bottomPx, 10)
-        }
+        const { w: cw, h: ch } = trimmedSize(img.width, img.height, trim)
         const canvas = document.createElement('canvas')
         canvas.width = cw; canvas.height = ch
         canvas.getContext('2d')?.drawImage(img, 0, 0, cw, ch, 0, 0, cw, ch)
         canvas.toBlob(blob => {
           URL.revokeObjectURL(url)
           if (!blob) { reject(new Error('Could not trim image')); return }
-          resolve(new File([blob], file.name, { type: file.type, lastModified: Date.now() }))
-        }, file.type)
+          // The browser may not encode the source type (GIF) and hands back
+          // PNG instead; the file says what it really is.
+          resolve(new File([blob], file.name, { type: blob.type || file.type, lastModified: Date.now() }))
+        }, file.type, 0.95)
       } catch (e) { reject(e instanceof Error ? e : new Error('Could not trim image')) }
     }
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read image')) }
@@ -279,104 +370,244 @@ export default function ImageToPDF() {
   // binding press animation is removed after an error).
   const [settled, setSettled] = useState<Set<string>>(new Set())
 
-  // Watermark / edge-trim state — behaviour identical to before
+  // Watermark / edge-trim state
   const [autoCrop, setAutoCrop] = useState(false)
   const [cropPosition, setCropPosition] = useState<CropPosition>('bottom-right')
   const [cropPercentage, setCropPercentage] = useState(10)
   const [customWidth, setCustomWidth] = useState(200)
   const [customHeight, setCustomHeight] = useState(80)
-  // Output shape — additive to the page-order promise. Defaults keep the
-  // original "one page per image at its own size" behaviour.
-  const [pageSize, setPageSize] = useState<PageSize>('original')
-  const [quality, setQuality] = useState<Quality>('balanced')
+  // Output — defaults keep the tool's long-standing "one page per image, at
+  // its own shape" behaviour (pageLayout.ts DEFAULT_LAYOUT).
+  const [pageSize, setPageSize] = useState<PageSizeOption>(DEFAULT_LAYOUT.pageSize)
+  const [orientation, setOrientation] = useState<OrientationOption>(DEFAULT_LAYOUT.orientation)
+  const [margin, setMargin] = useState<MarginOption>(DEFAULT_LAYOUT.margin)
+  const [quality, setQuality] = useState<QualityOption>(DEFAULT_QUALITY)
 
   // Upload progress + cancellation — real byte progress from the XHR bridge.
   const [progress, setProgress] = useState<number | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  // Interaction state: direct-manipulation reorder + the examine overlay.
+  // Intake refusals, named the moment files arrive; and the screen-reader line.
+  const [intakeNotes, setIntakeNotes] = useState<string[]>([])
+  const [announcement, setAnnouncement] = useState('')
+  // "Clear the table" is undoable for a few seconds; the URLs live until then.
+  const [clearedCount, setClearedCount] = useState(0)
+  const clearedRef = useRef<{ entries: Entry[]; timer: number } | null>(null)
+
+  // Interaction state: direct-manipulation reorder + the examine dialog.
   const [dragId, setDragId] = useState<string | null>(null)
   const [ghost, setGhost] = useState<{ id: string; w: number; h: number; x: number; y: number } | null>(null)
   const [previewId, setPreviewId] = useState<string | null>(null)
   // The finished PDF is held in state, not pushed to disk: the user saves it
   // when they choose and can leave the bound view and return without binding
-  // again. These three describe the last successful bind, not the live table.
-  const [boundBlob, setBoundBlob] = useState<Blob | null>(null)
-  const [boundFileName, setBoundFileName] = useState('')
-  const [boundPages, setBoundPages] = useState(0)
-  const [boundSkipped, setBoundSkipped] = useState(0)
-  const [boundBytes, setBoundBytes] = useState(0)
+  // again. These describe the last successful bind, not the live table.
+  const [bound, setBound] = useState<{
+    blob: Blob
+    fileName: string
+    pages: number
+    bytes: number
+    skipped: string[]
+    skippedCount: number
+    encodings: EncodingCounts | null
+    paper: string
+    quality: QualityOption
+    signature: string
+  } | null>(null)
   const dragRef = useRef<{ id: string; x0: number; y0: number; active: boolean } | null>(null)
+  const suppressClickRef = useRef(false)
   const ghostRef = useRef<HTMLDivElement | null>(null)
   const grabRef = useRef({ x: 0, y: 0 })
   const tileRefs = useRef(new Map<string, HTMLDivElement>())
   const rectRef = useRef(new Map<string, DOMRect>())
+  const dialogRef = useRef<HTMLDialogElement | null>(null)
+  const returnFocusRef = useRef<HTMLElement | null>(null)
+  const entriesRef = useRef<Entry[]>([])
+  entriesRef.current = entries
 
   const idRef = useRef(0)
 
-  /* ── Add files: filter, preview-URL, then read natural dims
-     asynchronously so tiles can render true-ratio pages. ── */
-  const addFiles = useCallback((list: File[]) => {
-    const imgs = list.filter(f => f.type.startsWith('image/'))
-    if (!imgs.length) return
-    const fresh: Entry[] = imgs.map(file => ({
+  const layout: LayoutOptions = { pageSize, orientation, margin }
+  const trim: TrimSettings = { on: autoCrop, position: cropPosition, pct: cropPercentage, right: customWidth, bottom: customHeight }
+
+  /* What the next bind would produce. When it equals the last bind, the held
+     PDF is the answer — no second upload, no second credit. */
+  const signature = JSON.stringify([
+    entries.map(e => e.id),
+    layout,
+    quality,
+    autoCrop ? [cropPosition, cropPercentage, customWidth, customHeight] : null,
+  ])
+  const unchangedSinceBind = !!bound && bound.signature === signature
+
+  /* Pending undo is settled (URLs released) when it expires, when new images
+     arrive, and when the tool unmounts. */
+  const settleClear = useCallback(() => {
+    const stash = clearedRef.current
+    if (!stash) return
+    window.clearTimeout(stash.timer)
+    stash.entries.forEach(e => URL.revokeObjectURL(e.url))
+    clearedRef.current = null
+    setClearedCount(0)
+  }, [])
+
+  useEffect(() => () => {
+    entriesRef.current.forEach(e => URL.revokeObjectURL(e.url))
+    const stash = clearedRef.current
+    if (stash) {
+      window.clearTimeout(stash.timer)
+      stash.entries.forEach(e => URL.revokeObjectURL(e.url))
+    }
+  }, [])
+
+  /* ── Intake: classify, refuse by name, convert what the browser can, then
+     read natural dimensions so tiles can draw the real page. ── */
+  const addFiles = useCallback(async (list: File[]) => {
+    if (!list.length) return
+    settleClear()
+    const notes: string[] = []
+    const ready: File[] = []
+    let count = entriesRef.current.length
+    let total = entriesRef.current.reduce((sum, e) => sum + e.file.size, 0)
+
+    for (const original of list) {
+      const kind = classify(original)
+      if (kind === 'tiff') { notes.push(`${original.name}: TIFF can’t be previewed here — save it as PNG or JPG first.`); continue }
+      if (kind === 'svg') { notes.push(`${original.name}: SVG is a drawing, not a photo of one — export it as PNG first.`); continue }
+      if (kind === 'other') { notes.push(`${original.name} isn’t an image this tool can bind (${SUPPORTED_SENTENCE}).`); continue }
+      if (original.size === 0) { notes.push(`${original.name} is empty.`); continue }
+
+      let file = original
+      if (kind === 'bmp' || kind === 'heic') {
+        try {
+          file = await reencodeInBrowser(original, kind === 'bmp' ? 'image/png' : 'image/jpeg')
+          if (kind === 'heic') notes.push(`${original.name} was converted to JPEG in your browser.`)
+        } catch {
+          notes.push(kind === 'heic'
+            ? `${original.name}: this browser can’t open HEIC photos. Share it from your phone as JPEG (iPhone: Settings → Camera → Formats → Most Compatible).`
+            : `${original.name} couldn’t be opened — it may be damaged.`)
+          continue
+        }
+      }
+
+      if (file.size > MAX_FILE_MB * MB) { notes.push(`${original.name} is ${fmtSize(file.size)} — each image must be under ${MAX_FILE_MB} MB.`); continue }
+      if (count >= MAX_IMAGES) { notes.push(`${original.name} wasn’t added — one PDF holds up to ${MAX_IMAGES} images.`); continue }
+      if (total + file.size > MAX_TOTAL_MB * MB) { notes.push(`${original.name} wasn’t added — a document can hold up to ${MAX_TOTAL_MB} MB of images.`); continue }
+      count += 1
+      total += file.size
+      ready.push(file)
+    }
+
+    setIntakeNotes(notes)
+    if (!ready.length) {
+      if (notes.length) setAnnouncement(notes.length === 1 ? notes[0] : `${notes.length} files were not added.`)
+      return
+    }
+
+    const fresh: Entry[] = ready.map(file => ({
       id: `p${++idRef.current}`,
       file,
       url: URL.createObjectURL(file),
       w: 0, h: 0,
     }))
     setEntries(prev => [...prev, ...fresh])
+    setAnnouncement(`${plural(fresh.length, 'image')} added. ${plural(count, 'page')} on the table.`)
+
     for (const e of fresh) {
       const probe = new Image()
       probe.onload = () => setEntries(prev =>
         prev.map(p => (p.id === e.id ? { ...p, w: probe.naturalWidth, h: probe.naturalHeight } : p)))
+      // A file that will not decode here will not decode on the server
+      // either; say so now instead of spinning its tile forever.
+      probe.onerror = () => {
+        URL.revokeObjectURL(e.url)
+        setEntries(prev => prev.filter(p => p.id !== e.id))
+        const note = `${e.file.name} couldn’t be opened — it may be damaged, or in a format this browser can’t show — so it was taken off the table.`
+        setIntakeNotes(prev => [...prev, note])
+        setAnnouncement(note)
+      }
       probe.src = e.url
     }
-  }, [])
+  }, [settleClear])
 
   /* Ctrl+V support: pasted screenshots and copied images land on the table
      exactly like dropped ones. Only active while the table is editable. */
-  usePasteFiles(addFiles, phase === 'editing')
+  const onPaste = useCallback((files: File[]) => { void addFiles(files) }, [addFiles])
+  usePasteFiles(onPaste, phase === 'editing')
 
   /* Pages may only join the table while it is editable — dropping
      mid-bind or on the "Bound" panel would silently add invisible
-     pages to a job that is already in flight. */
-  const onDrop = useCallback((accepted: File[]) => {
-    if (phase === 'editing') addFiles(accepted)
+     pages to a job that is already in flight. Rejections from the
+     picker's filter still reach intake so they are named, not lost. */
+  const onDrop = useCallback((accepted: File[], rejected: FileRejection[]) => {
+    if (phase !== 'editing') return
+    void addFiles([...accepted, ...rejected.map(r => r.file)])
   }, [phase, addFiles])
 
   /* noClick/noKeyboard: the whole module is the drag surface, but
      clicks must reach the tiles' own buttons (reorder / remove /
-     trim) without opening the file picker. The empty zone and the
+     view) without opening the file picker. The empty zone and the
      Browse buttons call open() explicitly. */
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
-    accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp'] },
+    accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp', '.avif', '.heic', '.heif'] },
     noClick: true,
     noKeyboard: true,
   })
 
-  const move = (i: number, dir: -1 | 1) => {
-    const j = i + dir
-    if (j < 0 || j >= entries.length) return
-    setEntries(prev => {
-      const next = [...prev]
-      const tmp = next[i]; next[i] = next[j]; next[j] = tmp
-      return next
+  /* Keyboard moves keep focus on the control that made them; if that control
+     just became disabled (the page reached an end), focus takes the other
+     arrow on the same page instead of falling to <body>. */
+  const focusMoveControl = (id: string, preferred: 'earlier' | 'later') => {
+    requestAnimationFrame(() => {
+      const tile = tileRefs.current.get(id)
+      const want = tile?.querySelector<HTMLButtonElement>(`[data-move="${preferred}"]`)
+      const other = tile?.querySelector<HTMLButtonElement>(`[data-move="${preferred === 'earlier' ? 'later' : 'earlier'}"]`)
+      ;(want && !want.disabled ? want : other)?.focus()
     })
   }
 
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir
+    if (j < 0 || j >= entries.length) return
+    const id = entries[i].id
+    reorder(i, j)
+    setAnnouncement(`Page ${i + 1} moved to position ${j + 1} of ${entries.length}.`)
+    focusMoveControl(id, dir === -1 ? 'earlier' : 'later')
+  }
+
   const removeAt = (i: number) => {
-    setEntries(prev => {
-      URL.revokeObjectURL(prev[i].url)
-      return prev.filter((_, idx) => idx !== i)
+    const target = entries[i]
+    if (!target) return
+    URL.revokeObjectURL(target.url)
+    const next = entries.filter((_, idx) => idx !== i)
+    setEntries(next)
+    setAnnouncement(`Page ${i + 1} removed. ${plural(next.length, 'page')} on the table.`)
+    // Focus lands on the page that took this slot, else the one before it.
+    const neighbour = next[i] ?? next[i - 1]
+    requestAnimationFrame(() => {
+      if (neighbour) tileRefs.current.get(neighbour.id)?.querySelector<HTMLButtonElement>('.i2p-view')?.focus()
     })
   }
 
   const clearTable = () => {
-    entries.forEach(e => URL.revokeObjectURL(e.url))
+    settleClear()
+    const stash = entries
     setEntries([])
     setError(null)
+    setIntakeNotes([])
+    setClearedCount(stash.length)
+    setAnnouncement(`Table cleared — ${plural(stash.length, 'page')} removed. Undo is available for 10 seconds.`)
+    clearedRef.current = { entries: stash, timer: window.setTimeout(settleClear, 10_000) }
+  }
+
+  const undoClear = () => {
+    const stash = clearedRef.current
+    if (!stash) return
+    window.clearTimeout(stash.timer)
+    clearedRef.current = null
+    setEntries(stash.entries)
+    setClearedCount(0)
+    setAnnouncement(`${plural(stash.entries.length, 'page')} put back on the table.`)
   }
 
   /* ── Direct manipulation: lift a print and re-slot it, live ──
@@ -389,14 +620,14 @@ export default function ImageToPDF() {
      the cursor (the lift) and the origin slot opens as a dashed placeholder
      (the gap). Mouse only: touch keeps the chevron buttons so a vertical page
      scroll is never hijacked. A press that never clears the 6px threshold stays
-     a click and opens the examine overlay instead. */
+     a click, and the page button opens the examine dialog. */
   const captureRects = () => {
     const m = new Map<string, DOMRect>()
     tileRefs.current.forEach((el, id) => m.set(id, el.getBoundingClientRect()))
     rectRef.current = m
   }
 
-  const reorder = (from: number, to: number) => {
+  function reorder(from: number, to: number) {
     if (from === to) return
     captureRects()
     setEntries(prev => {
@@ -438,25 +669,16 @@ export default function ImageToPDF() {
     node.style.transform = `translate3d(${clientX - grabRef.current.x}px, ${clientY - grabRef.current.y}px, 0) rotate(-2deg)`
   }
 
-  const startDrag = (e: ReactPointerEvent<HTMLDivElement>, index: number) => {
-    if (phase !== 'editing') return
-    if (e.button !== 0) return
-    if ((e.target as HTMLElement).closest('button')) return
-    const entry = entries[index]
-    if (!entry) return
-    dragRef.current = { id: entry.id, x0: e.clientX, y0: e.clientY, active: false }
-    // Only the mouse is captured. Touch/pen presses are still recorded so their
-    // release opens the examine overlay, but they never capture the pointer —
-    // that would hijack a vertical page scroll.
-    if (e.pointerType === 'mouse') e.currentTarget.setPointerCapture(e.pointerId)
-  }
+  /* The press is followed at window level, not through pointer capture: a live
+     reorder moves the grabbed tile's DOM node, and moving a node silently
+     drops its capture — the drag used to go dead mid-gesture. */
+  const dragListenersRef = useRef<(() => void) | null>(null)
 
-  const onDragMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== 'mouse') return
+  const followPointer = (clientX: number, clientY: number) => {
     const d = dragRef.current
     if (!d) return
     if (!d.active) {
-      if (Math.abs(e.clientX - d.x0) < 6 && Math.abs(e.clientY - d.y0) < 6) return
+      if (Math.abs(clientX - d.x0) < 6 && Math.abs(clientY - d.y0) < 6) return
       // Lift: size the ghost from the very paper the user grabbed, so it is the
       // same print at the same scale, and record where within it they held it.
       const tileEl = tileRefs.current.get(d.id)
@@ -465,50 +687,68 @@ export default function ImageToPDF() {
       const w = rect?.width ?? 120
       const h = rect?.height ?? 160
       grabRef.current = rect
-        ? { x: e.clientX - rect.left, y: e.clientY - rect.top }
+        ? { x: clientX - rect.left, y: clientY - rect.top }
         : { x: w / 2, y: h / 2 }
       d.active = true
       setDragId(d.id)
-      setGhost({ id: d.id, w, h, x: e.clientX - grabRef.current.x, y: e.clientY - grabRef.current.y })
+      setGhost({ id: d.id, w, h, x: clientX - grabRef.current.x, y: clientY - grabRef.current.y })
     }
-    positionGhost(e.clientX, e.clientY)
+    positionGhost(clientX, clientY)
     // Live splice: whichever slot the pointer is over becomes the drag's home,
     // and every tile between reflows by one. The ghost is pointer-transparent,
     // so the element under the cursor is always a real tile.
-    const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
+    const el = document.elementFromPoint(clientX, clientY) as HTMLElement | null
     const tile = el?.closest('[data-i2p-index]') as HTMLElement | null
     if (!tile?.dataset.i2pIndex) return
     const overIndex = Number(tile.dataset.i2pIndex)
-    const currentIndex = entries.findIndex(x => x.id === d.id)
+    const currentIndex = entriesRef.current.findIndex(x => x.id === d.id)
     if (currentIndex !== -1 && overIndex !== currentIndex) reorder(currentIndex, overIndex)
   }
 
-  const endDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+  const finishDrag = (cancelled: boolean) => {
+    dragListenersRef.current?.()
+    dragListenersRef.current = null
     const d = dragRef.current
     dragRef.current = null
-    const el = e.currentTarget
-    if (el.hasPointerCapture?.(e.pointerId)) el.releasePointerCapture(e.pointerId)
-    if (!d) return
-    if (d.active) {
-      // The order is already correct (it was applied live) — just put the paper
-      // down and close the gap.
-      setDragId(null)
-      setGhost(null)
-    } else {
-      // A press with no drag is a look, not a move — open the examine overlay.
-      setPreviewId(d.id)
+    if (!d?.active) return
+    // The order is already correct (it was applied live) — put the paper down,
+    // close the gap, and keep the click that follows from opening the dialog.
+    suppressClickRef.current = !cancelled
+    // Only the click that ends this very gesture is swallowed.
+    window.setTimeout(() => { suppressClickRef.current = false }, 0)
+    setDragId(null)
+    setGhost(null)
+    const list = entriesRef.current
+    const index = list.findIndex(x => x.id === d.id)
+    if (!cancelled && index !== -1) setAnnouncement(`Page moved to position ${index + 1} of ${list.length}.`)
+  }
+
+  const startDrag = (e: ReactPointerEvent<HTMLDivElement>, index: number) => {
+    suppressClickRef.current = false
+    if (phase !== 'editing') return
+    // Mouse only: on touch a vertical swipe must stay a page scroll.
+    if (e.pointerType !== 'mouse' || e.button !== 0) return
+    // The page itself is a button (it opens the examine dialog) and is the
+    // grip; the small controls around it are not.
+    if ((e.target as HTMLElement).closest('button:not(.i2p-view)')) return
+    const entry = entries[index]
+    if (!entry) return
+    dragListenersRef.current?.()
+    dragRef.current = { id: entry.id, x0: e.clientX, y0: e.clientY, active: false }
+    const onMove = (ev: PointerEvent) => followPointer(ev.clientX, ev.clientY)
+    const onUp = () => finishDrag(false)
+    const onCancel = () => finishDrag(true)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onCancel)
+    dragListenersRef.current = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onCancel)
     }
   }
 
-  /* A cancelled pointer (touch scroll taking over) is neither a move nor a
-     look: drop the pending press without opening the overlay. */
-  const cancelDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
-    dragRef.current = null
-    setDragId(null)
-    setGhost(null)
-    const el = e.currentTarget
-    if (el.hasPointerCapture?.(e.pointerId)) el.releasePointerCapture(e.pointerId)
-  }
+  useEffect(() => () => dragListenersRef.current?.(), [])
 
   /* Seat the lifted paper under the cursor the instant it mounts. After this,
      positionGhost owns the transform directly, so a table re-render from a live
@@ -519,13 +759,40 @@ export default function ImageToPDF() {
     node.style.transform = `translate3d(${ghost.x}px, ${ghost.y}px, 0) rotate(-2deg)`
   }, [ghost])
 
-  /* The examine overlay closes on Escape anywhere the table is on screen. */
+  /* ── The examine dialog ──
+     A native modal <dialog>: focus is held inside, Esc closes it, and focus
+     returns to the page that opened it. ← → walk the table. */
+  const openPreview = (id: string, trigger: HTMLElement | null) => {
+    if (suppressClickRef.current) { suppressClickRef.current = false; return }
+    returnFocusRef.current = trigger
+    setPreviewId(id)
+  }
+
+  const closePreview = useCallback(() => setPreviewId(null), [])
+
   useEffect(() => {
-    if (!previewId) return
-    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') setPreviewId(null) }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (previewId && !dialog.open) {
+      dialog.showModal()
+      // Start on the close control, not on whichever arrow happens to be
+      // first and enabled; ← → work from anywhere inside.
+      dialog.querySelector<HTMLButtonElement>('.i2p-lightbox-close')?.focus()
+    }
+    if (!previewId && dialog.open) dialog.close()
   }, [previewId])
+
+  useEffect(() => {
+    if (previewId) return
+    const target = returnFocusRef.current
+    returnFocusRef.current = null
+    if (target?.isConnected) target.focus()
+  }, [previewId])
+
+  // A page removed or cleared while open closes the dialog with it.
+  useEffect(() => {
+    if (previewId && !entries.some(e => e.id === previewId)) setPreviewId(null)
+  }, [entries, previewId])
 
   /* The download tells the truth about what it is: the job is
      named after its first page, the way a print job is, and carries
@@ -535,39 +802,46 @@ export default function ImageToPDF() {
     return entries.length === 1 ? `mycloove_${base}.pdf` : `mycloove_${base}-and-${entries.length - 1}-more.pdf`
   }
 
+  const paperSentence = () => {
+    if (pageSize === 'original') return 'pages follow each image’s shape'
+    const turn = orientation === 'auto' ? 'turned to suit each image' : orientation
+    return `${PAGE_SIZE_LABELS[pageSize]}, ${turn}, ${margin === 'none' ? 'no margin' : `${MARGIN_LABELS[margin].toLowerCase()} margin`}`
+  }
+
   const bind = async () => {
     if (!entries.length || phase === 'binding') return
+    if (unchangedSinceBind) { setPhase('bound'); return }
     if (entries.length > MAX_IMAGES) {
       setError(`Up to ${MAX_IMAGES} images can be bound at once — this set has ${entries.length}.`)
       return
     }
-    const oversized = entries.find(e => e.file.size > MAX_FILE_MB * 1024 * 1024)
+    const oversized = entries.find(e => e.file.size > MAX_FILE_MB * MB)
     if (oversized) {
       setError(`${oversized.file.name} is ${fmtSize(oversized.file.size)} — each image must be under ${MAX_FILE_MB} MB.`)
       return
     }
     const total = entries.reduce((sum, e) => sum + e.file.size, 0)
-    if (total > MAX_TOTAL_MB * 1024 * 1024) {
+    if (total > MAX_TOTAL_MB * MB) {
       setError(`This set is ${fmtSize(total)} — the limit is ${MAX_TOTAL_MB} MB per document.`)
       return
     }
     setPhase('binding')
     setError(null)
+    setIntakeNotes([])
     setProgress(0)
+    setAnnouncement(`Binding ${plural(entries.length, 'page')}.`)
     const abort = new AbortController()
     abortRef.current = abort
     try {
       const formData = new FormData()
       for (const e of entries) {
-        const f = autoCrop
-          ? await cropImage(e.file, cropPosition, cropPercentage, customWidth, customHeight)
-          : e.file
-        formData.append('images', f)
+        formData.append('images', autoCrop ? await cropImage(e.file, trim) : e.file)
       }
       formData.append('pageSize', pageSize)
+      formData.append('orientation', orientation)
+      formData.append('margin', margin)
       formData.append('quality', quality)
-      // Real upload progress + a working cancel, via the XHR bridge. The old
-      // fetch silently froze on large sets with no way to stop it.
+      // Real upload progress + a working cancel, via the XHR bridge.
       const res = await uploadWithProgress('/api/images-to-pdf', formData, {
         onProgress: setProgress,
         signal: abort.signal,
@@ -577,31 +851,52 @@ export default function ImageToPDF() {
       }
       const blob = await res.blob()
       const name = boundName()
+      const header = (key: string) => res.headers.get(key)
+      const count = (key: string) => {
+        const value = Number.parseInt(header(key) ?? '', 10)
+        return Number.isFinite(value) ? value : null
+      }
       // The engine skips images it cannot decode and says so in headers; the
       // page count shown must be the document's, not the number of tiles sent.
-      const skipped = Number.parseInt(res.headers.get('X-Skipped-Count') ?? '0', 10) || 0
-      const reportedPages = Number.parseInt(res.headers.get('X-Page-Count') ?? '', 10)
-      const pages = Number.isFinite(reportedPages) ? reportedPages : Math.max(0, entries.length - skipped)
+      const skippedCount = count('X-Skipped-Count') ?? 0
+      let skipped: string[] = []
+      try {
+        const raw = header('X-Skipped-Names')
+        if (raw) skipped = (JSON.parse(decodeURIComponent(raw)) as unknown[]).filter((n): n is string => typeof n === 'string')
+      } catch { /* names are a courtesy; the count above is the fact */ }
+      const pages = count('X-Page-Count') ?? Math.max(0, entries.length - skippedCount)
+      const original = count('X-Encoded-Original')
+      const jpeg = count('X-Encoded-Jpeg')
+      const lossless = count('X-Encoded-Lossless')
       // Hold the document instead of auto-saving it: the download fires only
-      // when the user asks, so the result stays available and a re-bind is
-      // never needed just to get the file again.
-      setBoundBlob(blob)
-      setBoundFileName(name)
-      setBoundPages(pages)
-      setBoundSkipped(skipped)
-      setBoundBytes(blob.size)
+      // when the user asks, so the result stays available.
+      setBound({
+        blob,
+        fileName: name,
+        pages,
+        bytes: blob.size,
+        skipped,
+        skippedCount,
+        encodings: original !== null && jpeg !== null && lossless !== null ? { original, jpeg, lossless } : null,
+        paper: paperSentence(),
+        quality,
+        signature,
+      })
       addRecentConversion({
         toolId: 'image-to-pdf',
         label: 'Images to PDF',
         filename: name,
         sizeBytes: blob.size,
       })
+      setAnnouncement(`Bound: ${plural(pages, 'page')}, ${fmtSize(blob.size)}.${skippedCount ? ` ${plural(skippedCount, 'image')} could not be read and ${skippedCount === 1 ? 'was' : 'were'} left out.` : ''}`)
       setPhase('bound')
     } catch (e) {
       if (e instanceof Error && e.name === 'ApiClientError' && /cancelled/i.test(e.message)) {
         setError(null) // A deliberate cancel is not an error — pages stay put.
+        setAnnouncement('Binding cancelled. Your pages are still on the table.')
       } else {
-        setError(e instanceof Error ? e.message : 'Binding failed — please try again.')
+        const reason = (e instanceof Error ? e.message : '').replace(/[.\s]+$/, '')
+        setError(reason ? `Binding failed: ${reason}.` : 'Binding failed — please try again.')
       }
       setPhase('editing') // pages stay on the table; retry is one click away
     } finally {
@@ -617,23 +912,21 @@ export default function ImageToPDF() {
   /* The download the user asked for — the only place the finished bytes leave
      the page. Held blobs survive repeated clicks. */
   const downloadBound = () => {
-    if (boundBlob) downloadBlob(boundBlob, boundFileName || 'pages.pdf')
+    if (bound) downloadBlob(bound.blob, bound.fileName || 'pages.pdf')
   }
 
   const reset = () => {
+    settleClear()
     entries.forEach(e => URL.revokeObjectURL(e.url))
     setEntries([])
     setSettled(new Set())
     setPhase('editing')
     setError(null)
+    setIntakeNotes([])
     setPreviewId(null)
     setDragId(null)
     setGhost(null)
-    setBoundBlob(null)
-    setBoundFileName('')
-    setBoundPages(0)
-    setBoundSkipped(0)
-    setBoundBytes(0)
+    setBound(null)
   }
 
   const totalBytes = entries.reduce((s, e) => s + e.file.size, 0)
@@ -643,24 +936,137 @@ export default function ImageToPDF() {
   const previewIndex = previewEntry ? entries.indexOf(previewEntry) : -1
   const ghostEntry = ghost ? entries.find(e => e.id === ghost.id) ?? null : null
 
+  const stepPreview = (dir: -1 | 1) => {
+    if (previewIndex === -1) return
+    const next = entries[previewIndex + dir]
+    if (next) setPreviewId(next.id)
+  }
+
   const cropSentence =
     cropPosition === 'bottom-right'
-      ? `bottom ${cropPercentage}% and right ${cropPercentage}% of every page`
+      ? `bottom ${cropPercentage}% and right ${cropPercentage}% of every image`
       : cropPosition === 'bottom'
-      ? `the bottom ${cropPercentage}% of every page`
-      : `${customWidth}px from the right and ${customHeight}px from the bottom of every page`
+      ? `the bottom ${cropPercentage}% of every image`
+      : `${customWidth}px from the right and ${customHeight}px from the bottom of every image`
+
+  /* ── The page as it will print ──
+     The same placeImage() the engine runs decides the paper and where the
+     image sits on it. With a trim on, the whole image is drawn with the strip
+     to be removed hatched — seeing the cut matters more than the few percent
+     the kept part grows by on a fixed page. Orientation is still decided by
+     the trimmed size, exactly as the engine will decide it. */
+  const pageGeometry = (e: Entry) => {
+    if (!e.w || !e.h) return { ar: 0.75, left: 0, top: 0, width: 100, height: 100, page: null }
+    const kept = trimmedSize(e.w, e.h, trim)
+    const resolved: LayoutOptions = pageSize !== 'original' && orientation === 'auto'
+      ? { ...layout, orientation: kept.w > kept.h ? 'landscape' : 'portrait' }
+      : layout
+    const page = placeImage(resolved, { width: e.w, height: e.h })
+    return {
+      ar: page.width / page.height,
+      left: (page.image.x / page.width) * 100,
+      top: ((page.height - page.image.y - page.image.height) / page.height) * 100,
+      width: (page.image.width / page.width) * 100,
+      height: (page.image.height / page.height) * 100,
+      page,
+    }
+  }
+
+  const cutFor = (e: Entry) => {
+    const style: CSSProperties =
+      cropPosition === 'custom'
+        ? ({ '--cut-r': Math.min(1, customWidth / (e.w || 1)), '--cut-b': Math.min(1, customHeight / (e.h || 1)) } as CSSProperties)
+        : ({ '--cut': cropPercentage } as CSSProperties)
+    const className =
+      cropPosition === 'custom' ? 'i2p-cut--custom'
+      : cropPosition === 'bottom' ? 'i2p-cut--bottom'
+      : 'i2p-cut--corner'
+    return { style, className }
+  }
+
+  const renderPaper = (e: Entry) => {
+    const geo = pageGeometry(e)
+    const cut = cutFor(e)
+    return (
+      <div className="i2p-page" style={{ '--ar': geo.ar } as CSSProperties}>
+        <div
+          className="i2p-print"
+          style={{ left: `${geo.left}%`, top: `${geo.top}%`, width: `${geo.width}%`, height: `${geo.height}%` }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={e.url} alt="" draggable={false} />
+          {autoCrop && e.w > 0 && (
+            <span className={`i2p-cut ${cut.className}`} style={cut.style} aria-hidden="true" />
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const paperFacts = (e: Entry) => {
+    const page = pageGeometry(e).page
+    if (!page) return 'Reading the image…'
+    if (pageSize === 'original') return 'The page takes this image’s shape'
+    const turned = page.width > page.height ? 'landscape' : 'portrait'
+    return `${PAGE_SIZE_LABELS[pageSize]} ${turned} · ${pointsToMillimetres(page.width)} × ${pointsToMillimetres(page.height)} mm`
+  }
+
+  const encodingSentence = (enc: EncodingCounts, q: QualityOption) => {
+    const parts: string[] = []
+    if (enc.lossless) parts.push(`${enc.lossless} kept pixel-exact`)
+    if (enc.jpeg) parts.push(`${enc.jpeg} compressed as JPEG at ${JPEG_QUALITY[q]}%`)
+    if (enc.original) parts.push(`${enc.original} embedded untouched`)
+    return parts.join(' · ')
+  }
+
+  const outputBadge = pageSize === 'original'
+    ? `${PAGE_SIZE_LABELS[pageSize]} · ${QUALITY_LABELS[quality]}`
+    : `${PAGE_SIZE_LABELS[pageSize]} · ${ORIENTATION_LABELS[orientation]} · ${QUALITY_LABELS[quality]}`
+
+  /* One segmented radio group. Real radios (visually hidden, still focusable)
+     give the native keyboard model: Tab into the group, arrows to choose. */
+  const segment = <T extends string>(
+    name: string,
+    legend: string,
+    value: T,
+    options: readonly T[],
+    labels: Record<T, string>,
+    onChange: (next: T) => void,
+    hint: string,
+  ) => (
+    <fieldset className="i2p-field">
+      <legend className="i2p-sub-label">{legend}</legend>
+      <div className="i2p-seg">
+        {options.map(option => (
+          <label key={option} className="i2p-seg-opt">
+            <input
+              type="radio"
+              name={name}
+              value={option}
+              checked={value === option}
+              onChange={() => onChange(option)}
+            />
+            <span>{labels[option]}</span>
+          </label>
+        ))}
+      </div>
+      <p className="i2p-field-hint">{hint}</p>
+    </fieldset>
+  )
+
+  const progressLabel = progress === null ? '' : progress < 100 ? `Uploading ${progress}%` : 'Binding on the server…'
 
   return (
     <>
       <style>{`
         /* ── Local palette (both themes) ───────────────────────
-           Darkroom safelight amber is this tool's identity — this
-           surface's own device, not the house coral and not the
-           shared card icon (which carries the Convert tone).
-           Structural chrome stays on surface-1 tokens so both
-           themes hold automatically. */
+           Darkroom safelight amber is this tool's identity (D8),
+           refined into roles: fill (--i2p-bind-bg), line, soft wash,
+           and a text role that holds 4.5:1 on paper. Structural
+           chrome stays on surface-1 tokens so both themes hold. */
         .i2p {
-          --i2p-amber:        #ffb454;
+          --i2p-amber:        #ffb454;   /* icons, focus ring, marks */
+          --i2p-amber-text:   #ffb454;   /* amber used as text */
           --i2p-amber-soft:   rgba(255, 180, 84, 0.12);
           --i2p-amber-line:   rgba(255, 180, 84, 0.38);
           --i2p-bind-bg:      #f2a93b;   /* solid in both themes */
@@ -670,16 +1076,20 @@ export default function ImageToPDF() {
           --i2p-checker:      rgba(255, 255, 255, 0.03);
           --i2p-danger-text:  #ff8d84;
           --i2p-danger-bg:    rgba(255, 90, 80, 0.08);
+          --i2p-danger-bg-hover: rgba(255, 90, 80, 0.14);
           --i2p-danger-line:  rgba(255, 90, 80, 0.24);
           --i2p-mark-back:    rgba(255, 255, 255, 0.08);
           --i2p-mark-line:    rgba(255, 255, 255, 0.16);
           --i2p-mark-text:    rgba(0, 0, 0, 0.22);
           --i2p-ease:   cubic-bezier(0.16, 1, 0.3, 1);
           --i2p-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+          --i2p-state:  cubic-bezier(0.4, 0, 0.2, 1);
           display: flex; flex-direction: column; gap: 16px;
         }
         [data-theme='light'] .i2p {
           --i2p-amber:        #a86a0d;
+          /* #a86a0d text measured 4.44:1 on white; this step holds AA. */
+          --i2p-amber-text:   #96600c;
           --i2p-amber-soft:   rgba(190, 120, 14, 0.09);
           --i2p-amber-line:   rgba(190, 120, 14, 0.34);
           --i2p-paper-edge:   rgba(0, 0, 0, 0.12);
@@ -687,6 +1097,7 @@ export default function ImageToPDF() {
           --i2p-checker:      rgba(0, 0, 0, 0.024);
           --i2p-danger-text:  #b3261e;
           --i2p-danger-bg:    rgba(179, 38, 30, 0.06);
+          --i2p-danger-bg-hover: rgba(179, 38, 30, 0.11);
           --i2p-danger-line:  rgba(179, 38, 30, 0.2);
           --i2p-mark-back:    rgba(0, 0, 0, 0.05);
           --i2p-mark-line:    rgba(0, 0, 0, 0.14);
@@ -698,6 +1109,10 @@ export default function ImageToPDF() {
           outline-offset: 2px;
           border-radius: 6px;
         }
+        .i2p-sr {
+          position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+          overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+        }
 
         /* ── Empty state: the invitation ───────────────────────
            No template dashed-box-with-icon-ring. Ghost pages
@@ -705,11 +1120,11 @@ export default function ImageToPDF() {
         .i2p-zone {
           position: relative;
           border: 1px solid var(--border-base);
-          border-radius: 12px;
-          padding: 48px 24px 44px;
+          border-radius: 14px;
+          padding: 48px 24px 40px;
           display: flex; flex-direction: column; align-items: center; text-align: center;
           cursor: pointer;
-          transition: border-color 0.25s var(--i2p-ease), background 0.25s var(--i2p-ease), box-shadow 0.25s var(--i2p-ease);
+          transition: border-color 0.2s var(--i2p-ease), background 0.2s var(--i2p-ease), box-shadow 0.2s var(--i2p-ease);
         }
         .i2p-zone:hover { border-color: var(--i2p-amber-line); background: var(--bg-item); }
         .i2p.is-over .i2p-zone {
@@ -718,7 +1133,7 @@ export default function ImageToPDF() {
           box-shadow: 0 0 0 1px var(--i2p-amber-line), 0 14px 44px rgba(255, 180, 84, 0.1);
         }
 
-        .i2p-ghosts { position: relative; width: 168px; height: 128px; margin-bottom: 22px; }
+        .i2p-ghosts { position: relative; width: 168px; height: 128px; margin-bottom: 24px; }
         .i2p-ghost {
           position: absolute; bottom: 0; left: 50%;
           width: 74px; aspect-ratio: 0.74;
@@ -733,7 +1148,7 @@ export default function ImageToPDF() {
              left:50% alone sat the whole fan ~34px right. */
           translate: calc(var(--x) - 50%) 0;
           rotate: var(--r);
-          transition: rotate 0.5s var(--i2p-spring), translate 0.5s var(--i2p-spring), border-color 0.25s;
+          transition: rotate 0.36s var(--i2p-spring), translate 0.36s var(--i2p-spring), border-color 0.2s;
         }
         .i2p-ghost:nth-child(1) { --x: -52px; --r: -13deg; width: 64px; opacity: 0.45; z-index: 1; }
         .i2p-ghost:nth-child(2) { --x: 0px;   --r: 0deg;   opacity: 0.85; z-index: 3; }
@@ -748,22 +1163,27 @@ export default function ImageToPDF() {
           font-family: 'Manrope', sans-serif;
           font-size: 17px; font-weight: 700; letter-spacing: -0.2px;
           color: var(--text-primary);
-          margin-bottom: 7px;
+          margin: 0 0 8px;
         }
         .i2p-zone-sub {
           font-size: 13px; line-height: 1.6;
           color: var(--text-muted);
-          max-width: 44ch;
-          margin-bottom: 20px;
+          max-width: 46ch;
+          margin: 0 0 20px;
         }
-        .i2p-chips { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-top: 18px; }
+        .i2p-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 20px; }
         .i2p-chip {
           font-family: ui-monospace, 'Cascadia Code', monospace;
-          font-size: 10px; font-weight: 600; letter-spacing: 0.6px;
-          padding: 3px 9px; border-radius: 20px;
+          font-size: 12px; font-weight: 600; letter-spacing: 0.4px;
+          padding: 2px 10px; border-radius: 999px;
           background: var(--bg-item);
           border: 1px solid var(--border-base);
           color: var(--text-muted);
+        }
+        .i2p-zone-limits {
+          margin: 12px 0 0;
+          font-size: 12px; color: var(--text-muted);
+          font-variant-numeric: tabular-nums;
         }
 
         /* ── Buttons ── */
@@ -777,13 +1197,13 @@ export default function ImageToPDF() {
           padding: 11px 20px;
           cursor: pointer;
           box-shadow: 0 3px 16px rgba(242, 169, 59, 0.28);
-          transition: transform 0.18s var(--i2p-ease), box-shadow 0.18s var(--i2p-ease);
+          transition: transform 0.12s var(--i2p-ease), box-shadow 0.12s var(--i2p-ease);
         }
         .i2p-browse-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(242, 169, 59, 0.36); }
-        .i2p-browse-btn:active { transform: translateY(0); }
+        .i2p-browse-btn:active { transform: scale(0.97); transition-duration: 0.08s; }
         .i2p-browse-btn--ghost {
           background: transparent;
-          color: var(--i2p-amber);
+          color: var(--i2p-amber-text);
           border: 1px solid var(--i2p-amber-line);
           box-shadow: none;
           padding: 8px 14px;
@@ -793,10 +1213,10 @@ export default function ImageToPDF() {
         /* ── Loaded: the add-rail (the table stays open) ── */
         .i2p-rail {
           display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-          padding: 12px 14px;
+          padding: 12px 16px;
           border: 1px dashed var(--border-base);
-          border-radius: 12px;
-          transition: border-color 0.25s var(--i2p-ease), background 0.25s var(--i2p-ease);
+          border-radius: 14px;
+          transition: border-color 0.2s var(--i2p-ease), background 0.2s var(--i2p-ease);
         }
         .i2p-rail:hover { border-color: var(--i2p-amber-line); background: var(--bg-item); }
         .i2p.is-over .i2p-rail {
@@ -807,32 +1227,64 @@ export default function ImageToPDF() {
         .i2p-rail-icon {
           width: 34px; height: 34px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          border-radius: 9px;
+          border-radius: 10px;
           color: var(--i2p-amber);
           background: var(--i2p-amber-soft);
           border: 1px solid var(--i2p-amber-line);
         }
-        .i2p-rail-text { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; flex: 1; min-width: 180px; }
+        .i2p-rail-text { font-size: 13px; color: var(--text-muted); line-height: 1.5; flex: 1; min-width: 180px; }
         .i2p-rail-text b { color: var(--text-secondary); font-weight: 600; }
 
-        /* ── Trim (watermark) sidecar panel ── */
+        /* ── Intake notes and the clear-undo ──
+           Refusals are named in the refusal colour and stay until
+           dismissed or replaced by the next drop — never a toast. */
+        .i2p-note, .i2p-err {
+          display: flex; align-items: flex-start; gap: 10px;
+          padding: 12px 14px;
+          border-radius: 10px;
+          background: var(--i2p-danger-bg);
+          border: 1px solid var(--i2p-danger-line);
+          color: var(--i2p-danger-text);
+          font-size: 13px; line-height: 1.55;
+        }
+        .i2p-note svg, .i2p-err svg { flex-shrink: 0; margin-top: 2px; }
+        .i2p-note ul { margin: 0; padding: 0; list-style: none; flex: 1; display: grid; gap: 4px; overflow-wrap: anywhere; }
+        .i2p-note-x {
+          width: 24px; height: 24px; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          border-radius: 6px; border: 0;
+          background: transparent; color: inherit;
+          cursor: pointer;
+        }
+        .i2p-note-x:hover { background: var(--i2p-danger-bg-hover); }
+        .i2p-err--receipt { text-align: left; margin-top: 16px; max-width: 60ch; }
+        .i2p-undo {
+          display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+          padding: 8px 8px 8px 16px;
+          border-radius: 10px;
+          border: 1px solid var(--border-base);
+          background: var(--bg-item);
+          font-size: 13px; color: var(--text-secondary);
+        }
+
+        /* ── Sidecar panels: trim, output ── */
         .i2p-panel {
           background: var(--bg-item);
           border: 1px solid var(--border-base);
-          border-radius: 12px;
+          border-radius: 14px;
           overflow: hidden;
         }
         .i2p-panel-head {
-          display: flex; align-items: center; gap: 11px;
+          display: flex; align-items: center; gap: 12px;
           width: 100%;
-          padding: 13px 15px;
+          padding: 12px 16px;
           cursor: pointer;
           user-select: none;
           /* Reset so the head can be a real <button> (keyboard-accessible trim
              toggle) without the UA button chrome; the panel supplies the frame. */
           font: inherit; text-align: left;
           background: transparent; border: 0; color: inherit;
-          transition: background 0.15s;
+          transition: background 0.12s var(--i2p-state);
         }
         .i2p-panel-head:hover { background: var(--bg-item-hover); }
         /* A panel with nothing to toggle keeps the same head rhythm but
@@ -841,16 +1293,16 @@ export default function ImageToPDF() {
         .i2p-panel-head--static:hover { background: transparent; }
         .i2p-toggle-track {
           width: 36px; height: 20px; flex-shrink: 0;
-          border-radius: 20px;
-          border: 1.5px solid var(--border-base);
+          border-radius: 999px;
+          border: 1.5px solid var(--text-muted);
           background: var(--bg-item);
           position: relative;
-          transition: background 0.2s, border-color 0.2s;
+          transition: background 0.2s var(--i2p-state), border-color 0.2s var(--i2p-state);
         }
         .i2p-toggle-track.on { background: var(--i2p-bind-bg); border-color: transparent; }
         .i2p-toggle-thumb {
           position: absolute; top: 2px; left: 2px;
-          width: 14px; height: 14px; border-radius: 50%;
+          width: 13px; height: 13px; border-radius: 50%;
           background: #fff;
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
           transition: transform 0.2s var(--i2p-ease);
@@ -865,34 +1317,87 @@ export default function ImageToPDF() {
         .i2p-panel-label svg { color: var(--text-muted); }
         .i2p-panel-badge {
           font-family: ui-monospace, 'Cascadia Code', monospace;
-          font-size: 9.5px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
-          padding: 3px 9px; border-radius: 20px;
+          font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
+          padding: 2px 10px; border-radius: 999px;
           background: var(--i2p-amber-soft);
           border: 1px solid var(--i2p-amber-line);
-          color: var(--i2p-amber);
+          color: var(--i2p-amber-text);
+          white-space: nowrap;
         }
         .i2p-panel-body {
-          padding: 4px 15px 15px;
-          display: flex; flex-direction: column; gap: 15px;
+          padding: 16px;
+          display: flex; flex-direction: column; gap: 16px;
           border-top: 1px solid var(--border-base);
         }
-
-        .i2p-sub-label {
-          font-size: 10px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase;
-          color: var(--text-faint);
-          display: block; margin-bottom: 9px;
+        .i2p-output {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 20px 24px;
         }
+
+        .i2p-field { border: 0; margin: 0; padding: 0; min-width: 0; }
+        .i2p-sub-label {
+          font-size: 12px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+          color: var(--text-muted);
+          display: block; margin-bottom: 8px; padding: 0;
+        }
+        .i2p-field-hint {
+          margin: 8px 0 0;
+          font-size: 12px; line-height: 1.5;
+          color: var(--text-muted);
+        }
+
+        /* Segmented choice: real radios, visually hidden but focusable, so the
+           group keeps the native keyboard model (Tab in, arrows to choose). */
+        .i2p-seg {
+          display: inline-flex; flex-wrap: wrap; gap: 2px;
+          padding: 3px;
+          border-radius: 10px;
+          background: var(--bg-card);
+          border: 1px solid var(--border-base);
+        }
+        .i2p-seg-opt { position: relative; display: block; }
+        .i2p-seg-opt input {
+          position: absolute; inset: 0;
+          width: 100%; height: 100%; margin: 0;
+          opacity: 0; cursor: pointer;
+        }
+        .i2p-seg-opt span {
+          display: block;
+          padding: 6px 12px;
+          border-radius: 7px;
+          font-size: 13px; font-weight: 600;
+          color: var(--text-muted);
+          transition: background 0.12s var(--i2p-state), color 0.12s var(--i2p-state);
+        }
+        .i2p-seg-opt:hover span { color: var(--text-primary); background: var(--bg-item-hover); }
+        .i2p-seg-opt input:checked + span {
+          color: var(--i2p-amber-text);
+          background: var(--i2p-amber-soft);
+          box-shadow: inset 0 0 0 1px var(--i2p-amber-line);
+        }
+        .i2p-seg-opt input:focus-visible + span { outline: 2px solid var(--i2p-amber); outline-offset: 2px; }
+
         .i2p-radio-group { display: flex; flex-direction: column; gap: 6px; }
         .i2p-radio-row {
+          position: relative;
           display: flex; align-items: center; gap: 10px;
-          padding: 9px 12px;
+          padding: 8px 12px;
           border-radius: 10px;
           border: 1px solid var(--border-base);
           background: var(--bg-card);
           cursor: pointer;
-          transition: border-color 0.15s, background 0.15s;
+          transition: border-color 0.12s var(--i2p-state), background 0.12s var(--i2p-state);
           user-select: none;
         }
+        /* The radio stays in the accessibility tree and the tab order; the
+           drawn dot is its face. */
+        .i2p-radio-row input {
+          position: absolute; inset: 0;
+          width: 100%; height: 100%; margin: 0;
+          opacity: 0; cursor: pointer;
+        }
+        .i2p-radio-row:has(input:focus-visible) { outline: 2px solid var(--i2p-amber); outline-offset: 2px; }
         .i2p-radio-row:hover { background: var(--bg-item-hover); }
         .i2p-radio-row.selected {
           border-color: var(--i2p-amber-line);
@@ -900,131 +1405,139 @@ export default function ImageToPDF() {
         }
         .i2p-radio-dot {
           width: 16px; height: 16px; border-radius: 50%;
-          border: 1.5px solid var(--border-base);
+          border: 1.5px solid var(--text-muted);
           display: flex; align-items: center; justify-content: center;
           flex-shrink: 0;
-          transition: border-color 0.15s;
+          transition: border-color 0.12s var(--i2p-state);
         }
         .i2p-radio-row.selected .i2p-radio-dot { border-color: var(--i2p-amber); }
         .i2p-radio-inner {
           width: 8px; height: 8px; border-radius: 50%;
           background: var(--i2p-amber);
           transform: scale(0);
-          transition: transform 0.15s var(--i2p-ease);
+          transition: transform 0.12s var(--i2p-ease);
         }
         .i2p-radio-row.selected .i2p-radio-inner { transform: scale(1); }
-        .i2p-radio-text { font-size: 12.5px; font-weight: 500; color: var(--text-secondary); }
-        .i2p-radio-hint { font-size: 10.5px; color: var(--text-label); margin-left: auto; text-align: right; }
+        .i2p-radio-text { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+        .i2p-radio-hint { font-size: 12px; color: var(--text-muted); margin-left: auto; text-align: right; }
 
         .i2p-select {
           background: var(--bg-card);
           border: 1px solid var(--border-base);
           border-radius: 8px;
-          padding: 8px 10px;
-          font-size: 12px;
+          padding: 8px 28px 8px 10px;
+          font-size: 13px;
           color: var(--text-primary);
-          cursor: pointer; outline: none;
-          transition: border-color 0.15s;
+          cursor: pointer;
+          transition: border-color 0.12s var(--i2p-state);
           -webkit-appearance: none; appearance: none;
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
-          background-repeat: no-repeat; background-position: right 8px center; padding-right: 26px;
+          background-repeat: no-repeat; background-position: right 10px center;
         }
-        .i2p-select:focus { border-color: var(--i2p-amber-line); }
+        .i2p-select:hover { border-color: var(--i2p-amber-line); }
         .i2p-select option { background: var(--bg-card); color: var(--text-primary); }
 
-        .i2p-custom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .i2p-field-label { font-size: 10.5px; color: var(--text-muted); margin-bottom: 5px; }
+        .i2p-custom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .i2p-field-label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
         .i2p-number-input {
           width: 100%;
           background: var(--bg-card);
           border: 1px solid var(--border-base);
           border-radius: 8px;
           padding: 8px 10px;
-          font-size: 12px;
+          font-size: 13px;
           color: var(--text-primary);
-          outline: none;
-          transition: border-color 0.15s;
+          font-variant-numeric: tabular-nums;
+          transition: border-color 0.12s var(--i2p-state);
         }
-        .i2p-number-input:focus { border-color: var(--i2p-amber-line); }
+        .i2p-number-input:hover { border-color: var(--i2p-amber-line); }
 
         .i2p-info {
           display: flex; align-items: flex-start; gap: 8px;
           padding: 10px 12px;
-          border-radius: 9px;
+          border-radius: 10px;
           background: var(--i2p-amber-soft);
           border: 1px solid var(--i2p-amber-line);
-          font-size: 11.5px; line-height: 1.55;
-          color: var(--i2p-amber);
+          font-size: 12px; line-height: 1.55;
+          color: var(--i2p-amber-text);
         }
-        .i2p-info svg { flex-shrink: 0; margin-top: 1px; }
+        .i2p-info svg { flex-shrink: 0; margin-top: 2px; }
 
         /* ── The table ── */
-        .i2p-table-head { display: flex; align-items: center; justify-content: space-between; }
+        .i2p-table-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
         .i2p-table-title {
           font-family: 'Manrope', sans-serif;
-          font-size: 13px; font-weight: 700;
+          font-size: 14px; font-weight: 700;
           color: var(--text-primary);
-          display: flex; align-items: center; gap: 9px;
+          display: flex; align-items: center; gap: 8px;
+          margin: 0;
         }
         .i2p-count-badge {
           font-family: ui-monospace, 'Cascadia Code', monospace;
-          font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
-          padding: 2px 8px; border-radius: 20px;
+          font-size: 12px; font-weight: 700;
+          padding: 2px 8px; border-radius: 999px;
           background: var(--i2p-amber-soft);
           border: 1px solid var(--i2p-amber-line);
-          color: var(--i2p-amber);
+          color: var(--i2p-amber-text);
+          font-variant-numeric: tabular-nums;
         }
         .i2p-clear-btn {
           display: flex; align-items: center; gap: 6px;
-          font-size: 11.5px; font-weight: 500;
+          font-size: 12px; font-weight: 500;
           color: var(--text-muted);
-          padding: 6px 11px; border-radius: 8px;
+          padding: 6px 12px; border-radius: 8px;
           border: 1px solid var(--border-base);
           background: transparent;
           cursor: pointer;
-          transition: color 0.15s, background 0.15s, border-color 0.15s;
+          transition: color 0.12s var(--i2p-state), background 0.12s var(--i2p-state), border-color 0.12s var(--i2p-state);
         }
-        .i2p-clear-btn:hover {
+        .i2p-clear-btn:hover:not(:disabled) {
           color: var(--i2p-danger-text);
           background: var(--i2p-danger-bg);
           border-color: var(--i2p-danger-line);
         }
+        .i2p-clear-btn:disabled { opacity: 0.5; cursor: progress; }
 
         /* The light-table surface itself: a whisper of the
            transparency checkerboard says "this is a viewing
            surface", nothing more. */
         .i2p-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
           gap: 12px;
-          padding: 14px;
+          margin: 0;
+          padding: 16px;
+          list-style: none;
           border: 1px solid var(--border-base);
-          border-radius: 12px;
+          border-radius: 14px;
           background: repeating-conic-gradient(var(--i2p-checker) 0% 25%, transparent 0% 50%) 0 0 / 18px 18px;
         }
+        .i2p-slot { min-width: 0; margin: 0; padding: 0; }
 
         .i2p-tile {
           display: grid;
           grid-template-rows: auto 1fr auto;
-          row-gap: 7px;
-          height: 224px;
-          padding: 8px 9px 9px;
+          row-gap: 8px;
+          height: 232px;
+          padding: 8px;
           border-radius: 10px;
           background: var(--bg-item);
           border: 1px solid transparent;
-          transition: border-color 0.15s, background 0.15s, transform 0.3s var(--i2p-ease), opacity 0.3s var(--i2p-ease);
+          user-select: none;
+          transition: border-color 0.12s var(--i2p-state), background 0.12s var(--i2p-state), transform 0.36s var(--i2p-ease), opacity 0.36s var(--i2p-ease);
         }
         .i2p-tile:hover { border-color: var(--border-base); background: var(--bg-item-hover); }
         .i2p-tile--new {
-          animation: i2p-tile-in 0.55s var(--i2p-spring) backwards;
+          animation: i2p-tile-in 0.36s var(--i2p-spring) backwards;
           animation-delay: var(--d, 0ms);
         }
 
-        .i2p-tile-top { display: flex; align-items: center; justify-content: space-between; height: 20px; }
+        .i2p-tile-top { display: flex; align-items: center; justify-content: space-between; height: 24px; }
         .i2p-frame {
           font-family: ui-monospace, 'Cascadia Code', monospace;
-          font-size: 10.5px; font-weight: 600; letter-spacing: 1px;
+          font-size: 12px; font-weight: 600; letter-spacing: 1px;
           color: var(--text-muted);
+          font-variant-numeric: tabular-nums;
           display: inline-flex; align-items: center; gap: 6px;
         }
         .i2p-frame::before {
@@ -1035,7 +1548,7 @@ export default function ImageToPDF() {
           border-radius: 2px;
         }
         .i2p-x {
-          width: 22px; height: 22px;
+          width: 24px; height: 24px;
           border-radius: 50%;
           border: 1px solid var(--border-base);
           background: var(--bg-card);
@@ -1043,32 +1556,37 @@ export default function ImageToPDF() {
           display: flex; align-items: center; justify-content: center;
           cursor: pointer;
           opacity: 0;
-          transition: opacity 0.15s, color 0.15s, border-color 0.15s, background 0.15s;
+          transition: opacity 0.12s var(--i2p-state), color 0.12s var(--i2p-state), border-color 0.12s var(--i2p-state), background 0.12s var(--i2p-state);
         }
         .i2p-tile:hover .i2p-x, .i2p-x:focus-visible { opacity: 1; }
-        .i2p-x:hover { color: var(--i2p-danger-text); border-color: var(--i2p-danger-line); background: var(--i2p-danger-bg); }
+        .i2p-x:hover:not(:disabled) { color: var(--i2p-danger-text); border-color: var(--i2p-danger-line); background: var(--i2p-danger-bg); }
+        .i2p-x:disabled { cursor: progress; }
 
-        /* ── The page: true-ratio, paper, uncropped ──
-           The wrap is a size container, so the page box can be
-           computed against the wrap's own box via cq units: the
-           min() pair fits the image's aspect ratio inside the
-           available area in BOTH axes — the exact double-clamp
-           that only replaced elements get for free. This is what
-           keeps every tile honest: the paper frame IS the page
-           the route will emit (addPage([image.width, image.height])). */
-        .i2p-page-wrap {
+        /* ── The page: the real output sheet ──
+           The page button is a size container, so the sheet is fitted to
+           the available area in BOTH axes via cq units — the exact
+           double-clamp only replaced elements get for free. --ar is the
+           output page's aspect from placeImage(); the print inside is
+           positioned in percent of that sheet, so margin and orientation
+           are drawn at true proportion. */
+        .i2p-view {
           container-type: size;
           display: grid;
           place-items: center;
           min-height: 0;
+          width: 100%;
+          padding: 0; margin: 0;
+          border: 0; background: transparent; color: inherit; font: inherit;
+          cursor: grab;
         }
+        .i2p-tile--placeholder .i2p-view { cursor: grabbing; }
         .i2p-page {
           position: relative;
           width: 100%; height: 100%;
           max-width: 100%; max-height: 100%;
           background: #ffffff;
           border: 1px solid var(--i2p-paper-edge);
-          border-radius: 3px;
+          border-radius: 2px;
           box-shadow: var(--i2p-paper-shadow);
           overflow: hidden;
         }
@@ -1078,11 +1596,10 @@ export default function ImageToPDF() {
             height: min(100cqh, calc(100cqw / var(--ar, 1)));
           }
         }
-        .i2p-page img {
+        .i2p-print { position: absolute; }
+        .i2p-print img {
           display: block;
           width: 100%; height: 100%;
-          object-fit: contain;
-          border-radius: 2px;
         }
 
         /* ── Live trim preview: hatched exactly over the pixels
@@ -1098,23 +1615,23 @@ export default function ImageToPDF() {
         .i2p-cut--corner  { right: 0; bottom: 0; width: calc(var(--cut, 0) * 1%); height: calc(var(--cut, 0) * 1%); border-top: 1.5px dashed rgba(255, 200, 120, 0.85); border-left: 1.5px dashed rgba(255, 200, 120, 0.85); }
         .i2p-cut--custom  { right: 0; bottom: 0; width: calc(var(--cut-r, 0) * 100%); height: calc(var(--cut-b, 0) * 100%); border-top: 1.5px dashed rgba(255, 200, 120, 0.85); border-left: 1.5px dashed rgba(255, 200, 120, 0.85); }
 
-        .i2p-meta { display: flex; align-items: center; gap: 6px; }
+        .i2p-meta { display: flex; align-items: center; gap: 4px; }
         .i2p-move {
-          width: 22px; height: 22px; flex-shrink: 0;
+          width: 24px; height: 24px; flex-shrink: 0;
           border-radius: 6px;
           border: 1px solid transparent;
           background: transparent;
-          color: var(--text-faint);
+          color: var(--text-muted);
           display: flex; align-items: center; justify-content: center;
           cursor: pointer;
-          transition: color 0.15s, background 0.15s, border-color 0.15s, opacity 0.15s;
+          transition: color 0.12s var(--i2p-state), background 0.12s var(--i2p-state), border-color 0.12s var(--i2p-state), opacity 0.12s var(--i2p-state);
         }
-        .i2p-move:hover:not(:disabled) { color: var(--i2p-amber); background: var(--i2p-amber-soft); border-color: var(--i2p-amber-line); }
-        .i2p-move:disabled { opacity: 0.22; cursor: default; }
+        .i2p-move:hover:not(:disabled) { color: var(--i2p-amber-text); background: var(--i2p-amber-soft); border-color: var(--i2p-amber-line); }
+        .i2p-move:disabled { opacity: 0.3; cursor: default; }
         .i2p-meta-text {
           flex: 1; min-width: 0;
           font-family: ui-monospace, 'Cascadia Code', monospace;
-          font-size: 9.5px; letter-spacing: 0.2px;
+          font-size: 12px;
           color: var(--text-muted);
           font-variant-numeric: tabular-nums;
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -1124,9 +1641,9 @@ export default function ImageToPDF() {
         /* ── Bind bar ── */
         .i2p-bind {
           display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-          padding: 14px 16px;
+          padding: 16px;
           border: 1px solid var(--border-base);
-          border-radius: 12px;
+          border-radius: 14px;
           background: var(--bg-item);
         }
         .i2p-bind-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -1135,41 +1652,30 @@ export default function ImageToPDF() {
           color: var(--text-primary);
           font-variant-numeric: tabular-nums;
         }
-        .i2p-bind-sub { font-size: 11.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+        .i2p-bind-sub { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
         .i2p-bind-btn {
-          display: inline-flex; align-items: center; gap: 9px;
+          display: inline-flex; align-items: center; gap: 8px;
           font-family: 'Manrope', sans-serif;
           font-size: 14px; font-weight: 700; letter-spacing: -0.2px;
           color: var(--i2p-bind-ink);
           background: var(--i2p-bind-bg);
-          border: none; border-radius: 11px;
-          padding: 13px 24px;
+          border: none; border-radius: 10px;
+          padding: 12px 24px;
           cursor: pointer;
           box-shadow: 0 4px 22px rgba(242, 169, 59, 0.3);
-          transition: transform 0.18s var(--i2p-ease), box-shadow 0.18s var(--i2p-ease), opacity 0.18s;
+          transition: transform 0.12s var(--i2p-ease), box-shadow 0.12s var(--i2p-ease), opacity 0.12s;
           white-space: nowrap;
         }
-        .i2p-bind-btn:hover:not(:disabled) { transform: translateY(-1.5px); box-shadow: 0 8px 30px rgba(242, 169, 59, 0.4); }
-        .i2p-bind-btn:active:not(:disabled) { transform: translateY(0); }
+        .i2p-bind-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 30px rgba(242, 169, 59, 0.4); }
+        .i2p-bind-btn:active:not(:disabled) { transform: scale(0.97); transition-duration: 0.08s; }
         .i2p-bind-btn:disabled { opacity: 0.82; cursor: progress; box-shadow: none; }
         .i2p-bind-btn svg { flex-shrink: 0; }
-
-        .i2p-err {
-          display: flex; align-items: flex-start; gap: 9px;
-          padding: 12px 14px;
-          border-radius: 10px;
-          background: var(--i2p-danger-bg);
-          border: 1px solid var(--i2p-danger-line);
-          color: var(--i2p-danger-text);
-          font-size: 12.5px; line-height: 1.55;
-        }
-        .i2p-err svg { flex-shrink: 0; margin-top: 1px; }
 
         /* ── Upload progress (real bytes, from the XHR bridge) ── */
         .i2p-progress {
           position: relative;
           width: 100%;
-          height: 22px;
+          height: 24px;
           border-radius: 8px;
           background: var(--bg-item);
           border: 1px solid var(--border-base);
@@ -1177,84 +1683,85 @@ export default function ImageToPDF() {
           flex-basis: 100%;
         }
         .i2p-progress-fill {
-          position: absolute; inset: 0 auto 0 0;
+          position: absolute; inset: 0;
+          transform-origin: left center;
           background: linear-gradient(90deg, var(--i2p-amber-soft), var(--i2p-bind-bg));
-          transition: width 0.25s var(--i2p-ease);
+          transition: transform 0.2s var(--i2p-ease);
         }
         .i2p-progress-pct {
           position: absolute; inset: 0;
           display: flex; align-items: center; justify-content: center;
           font-family: ui-monospace, 'Cascadia Code', monospace;
-          font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px;
+          font-size: 12px; font-weight: 700;
           color: var(--text-primary);
+          font-variant-numeric: tabular-nums;
         }
         .i2p-cancel-btn {
           font-family: 'Manrope', sans-serif;
-          font-size: 12px; font-weight: 700;
+          font-size: 13px; font-weight: 700;
           color: var(--i2p-danger-text);
           background: var(--i2p-danger-bg);
           border: 1px solid var(--i2p-danger-line);
           border-radius: 10px;
           padding: 10px 16px;
           cursor: pointer;
-          transition: background 0.15s;
+          transition: background 0.12s var(--i2p-state);
         }
-        .i2p-cancel-btn:hover { background: rgba(255, 90, 80, 0.14); }
+        .i2p-cancel-btn:hover { background: var(--i2p-danger-bg-hover); }
 
-        /* ── Bound state ── */
+        /* ── Bound state: the receipt ── */
         .i2p-bound {
           display: flex; flex-direction: column; align-items: center; text-align: center;
-          padding: 48px 24px 44px;
+          padding: 48px 24px 40px;
           border: 1px solid var(--border-base);
-          border-radius: 12px;
+          border-radius: 14px;
         }
-        .i2p-bound-mark { animation: i2p-doc-in 0.6s var(--i2p-spring) backwards; margin-bottom: 18px; }
+        .i2p-bound-mark { animation: i2p-doc-in 0.36s var(--i2p-spring) backwards; margin-bottom: 16px; }
         .i2p-bound-title {
           font-family: 'Manrope', sans-serif;
-          font-size: 22px; font-weight: 800; letter-spacing: -0.4px;
+          font-size: 22px; font-weight: 700; letter-spacing: -0.4px;
           color: var(--text-primary);
-          margin-bottom: 8px;
+          margin: 0 0 8px;
         }
         .i2p-bound-name {
           font-family: ui-monospace, 'Cascadia Code', monospace;
-          font-size: 12.5px;
-          color: var(--i2p-amber);
-          margin-bottom: 5px;
+          font-size: 13px;
+          color: var(--i2p-amber-text);
+          margin: 0 0 4px;
           word-break: break-all;
         }
-        .i2p-bound-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; }
+        .i2p-bound-sub { font-size: 13px; color: var(--text-muted); margin: 0 0 4px; font-variant-numeric: tabular-nums; }
+        .i2p-bound-enc { font-size: 13px; color: var(--text-secondary); margin: 0; font-variant-numeric: tabular-nums; }
         .i2p-bound-actions {
           display: flex; align-items: center; justify-content: center;
-          gap: 10px; flex-wrap: wrap;
-          margin-bottom: 12px;
+          gap: 12px; flex-wrap: wrap;
+          margin: 20px 0 12px;
         }
         .i2p-download-btn { box-shadow: 0 4px 22px rgba(242, 169, 59, 0.34); }
         .i2p-bound-back {
           display: inline-flex; align-items: center; gap: 6px;
-          font-size: 12px; font-weight: 500;
+          font-size: 13px; font-weight: 500;
           color: var(--text-muted);
           background: transparent; border: none;
           padding: 6px 10px; border-radius: 8px;
           cursor: pointer;
-          transition: color 0.15s, background 0.15s;
+          transition: color 0.12s var(--i2p-state), background 0.12s var(--i2p-state);
         }
-        .i2p-bound-back:hover { color: var(--i2p-amber); background: var(--i2p-amber-soft); }
+        .i2p-bound-back:hover { color: var(--i2p-amber-text); background: var(--i2p-amber-soft); }
 
-        /* ── The instrument header ──
-           The surface names itself now that the workspace heading row is
-           retired. Mark carries the only amber; the title is plain ink. */
-        .i2p-head { display: flex; align-items: center; gap: 11px; }
+        /* ── The instrument header ── */
+        .i2p-head { display: flex; align-items: center; gap: 12px; }
         .i2p-head-mark {
           width: 34px; height: 34px; flex-shrink: 0;
           display: flex; align-items: center; justify-content: center;
-          border-radius: 9px;
+          border-radius: 10px;
           color: var(--i2p-amber);
           background: var(--i2p-amber-soft);
           border: 1px solid var(--i2p-amber-line);
         }
         .i2p-head-title {
           font-family: 'Manrope', sans-serif;
-          font-size: 20px; font-weight: 800; letter-spacing: -0.4px;
+          font-size: 20px; font-weight: 700; letter-spacing: -0.4px;
           color: var(--text-primary);
           margin: 0;
         }
@@ -1262,11 +1769,9 @@ export default function ImageToPDF() {
         /* ── The Double Helix working mark ──
            Two counter-phased dots per strand, weaving on --i2p-amp. Dot size
            and travel are custom properties, so one mark scales from the bind
-           button down to the tile meta without redrawing it — the button mark
-           is deliberately chunky (3px dots, wider travel) so it reads clearly
-           against the amber while the job runs. Colour is inherited
-           (currentColor): the bind button's dark ink on amber, amber in the
-           tile meta. Indeterminate — it never carries a percentage. */
+           button down to the tile meta without redrawing it. Colour is
+           inherited (currentColor). Indeterminate — it never carries a
+           percentage. */
         .i2p-helix {
           display: flex; justify-content: space-between;
           --i2p-amp: 6px;   /* vertical travel of each dot */
@@ -1279,7 +1784,7 @@ export default function ImageToPDF() {
           margin-top: calc(var(--i2p-dot) / -2);
           border-radius: 50%;
           background: currentColor;
-          animation: i2p-wv 1.1s ease-in-out infinite;
+          animation: i2p-wv 1.1s var(--i2p-state) infinite;
           animation-delay: calc(var(--n) * -0.13s);
         }
         .i2p-helix u::after { opacity: 0.82; animation-delay: calc(var(--n) * -0.13s - 0.55s); }
@@ -1289,82 +1794,85 @@ export default function ImageToPDF() {
         }
 
         /* ── Direct manipulation ──
-           The print is grabbable; once lifted, its origin tile becomes a dashed
-           placeholder (the gap that travels with the reorder) and a paper ghost
-           follows the cursor. The FLIP settle rides the tile's own transform
-           transition (see .i2p-tile), so no extra motion token. */
-        .i2p-tile { user-select: none; }
-        .i2p-page-wrap { cursor: grab; }
+           Once lifted, the origin tile becomes a dashed placeholder (the gap
+           that travels with the reorder) and a paper ghost follows the cursor.
+           The FLIP settle rides the tile's own transform transition. */
         .i2p-tile--placeholder {
           border-color: var(--i2p-amber-line);
           background: var(--i2p-amber-soft);
           box-shadow: none;
         }
         .i2p-tile--placeholder .i2p-tile-top,
-        .i2p-tile--placeholder .i2p-page-wrap,
+        .i2p-tile--placeholder .i2p-view,
         .i2p-tile--placeholder .i2p-meta { opacity: 0; }
         .i2p-ghost-card {
           position: fixed; left: 0; top: 0; z-index: 70;
+          container-type: size;
+          display: grid; place-items: center;
           pointer-events: none;
-          border-radius: 4px; overflow: hidden;
-          background: #ffffff;
-          border: 1px solid var(--i2p-paper-edge);
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
           will-change: transform;
           opacity: 0.97;
         }
-        .i2p-ghost-card img { display: block; width: 100%; height: 100%; object-fit: contain; }
+        .i2p-ghost-card .i2p-page { box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4); }
 
-        /* ── Examine overlay ── */
+        /* ── Examine dialog (native modal) ── */
         .i2p-lightbox {
-          position: fixed; inset: 0; z-index: 60;
-          display: flex; align-items: center; justify-content: center;
-          padding: 24px;
+          padding: 0; border: 0; margin: auto;
+          background: transparent;
+          max-width: none; max-height: none;
+          overflow: visible;
+          color: var(--text-primary);
+        }
+        .i2p-lightbox[open] { animation: i2p-fade 0.2s var(--i2p-ease) both; }
+        .i2p-lightbox::backdrop {
           background: rgba(6, 4, 1, 0.72);
           -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
-          animation: i2p-fade 0.18s var(--i2p-ease) both;
         }
         .i2p-lightbox-card {
           position: relative;
-          display: flex; flex-direction: column; gap: 12px;
-          max-width: min(86vw, 720px); max-height: 88vh;
-          padding: 14px;
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 12px 16px;
+          width: min(92vw, 760px);
+          padding: 16px;
           border-radius: 14px;
           background: var(--bg-card);
           border: 1px solid var(--border-base);
           box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
-          animation: i2p-card-in 0.28s var(--i2p-spring) both;
+          animation: i2p-card-in 0.2s var(--i2p-ease) both;
         }
-        .i2p-lightbox-img {
-          max-width: 100%; max-height: 68vh;
-          object-fit: contain;
-          border-radius: 6px;
-          background: #ffffff;
-          border: 1px solid var(--i2p-paper-edge);
+        .i2p-lightbox-stage {
+          grid-column: 1 / -1;
+          container-type: size;
+          height: min(64vh, 620px);
+          display: grid; place-items: center;
         }
-        .i2p-lightbox-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-right: 30px; }
+        .i2p-lightbox-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
         .i2p-lightbox-frame {
           font-family: ui-monospace, 'Cascadia Code', monospace;
-          font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-          color: var(--i2p-amber);
+          font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+          color: var(--i2p-amber-text);
+          font-variant-numeric: tabular-nums;
         }
         .i2p-lightbox-name {
-          font-size: 13px; font-weight: 600; color: var(--text-primary);
+          font-size: 14px; font-weight: 600; color: var(--text-primary);
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         .i2p-lightbox-facts {
           font-family: ui-monospace, 'Cascadia Code', monospace;
-          font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+          font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums;
         }
+        .i2p-lightbox-nav { display: flex; align-items: flex-end; gap: 8px; }
+        .i2p-lightbox-nav .i2p-move { width: 36px; height: 36px; border-color: var(--border-base); }
         .i2p-lightbox-close {
-          position: absolute; top: 10px; right: 10px;
-          width: 28px; height: 28px; border-radius: 50%;
+          position: absolute; top: 12px; right: 12px; z-index: 1;
+          width: 32px; height: 32px; border-radius: 50%;
           border: 1px solid var(--border-base);
-          background: var(--bg-item);
+          background: var(--bg-card);
           color: var(--text-muted);
           display: flex; align-items: center; justify-content: center;
           cursor: pointer;
-          transition: color 0.15s, border-color 0.15s, background 0.15s;
+          transition: color 0.12s var(--i2p-state), border-color 0.12s var(--i2p-state), background 0.12s var(--i2p-state);
         }
         .i2p-lightbox-close:hover { color: var(--i2p-danger-text); border-color: var(--i2p-danger-line); background: var(--i2p-danger-bg); }
 
@@ -1372,7 +1880,7 @@ export default function ImageToPDF() {
            One orchestrated moment (the collate press), everything
            else quick and quiet. */
         @keyframes i2p-tile-in {
-          from { transform: translateY(14px) scale(0.94); opacity: 0; }
+          from { transform: translateY(8px) scale(0.96); opacity: 0; }
         }
         @keyframes i2p-doc-in {
           from { transform: scale(0.5) rotate(-6deg); opacity: 0; }
@@ -1405,12 +1913,15 @@ export default function ImageToPDF() {
         }
 
         @media (max-width: 640px) {
-          .i2p-zone { padding: 36px 16px 34px; }
-          .i2p-grid { grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 10px; padding: 10px; }
-          .i2p-tile { height: 198px; }
+          .i2p-zone { padding: 36px 16px 32px; }
+          .i2p-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; padding: 8px; }
+          .i2p-tile { height: 208px; }
           .i2p-bind { flex-direction: column; align-items: stretch; }
           .i2p-bind-btn { justify-content: center; width: 100%; }
           .i2p-radio-hint { display: none; }
+          .i2p-output { grid-template-columns: 1fr; }
+          .i2p-lightbox-card { padding: 12px; }
+          .i2p-lightbox-stage { height: min(56vh, 520px); }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -1425,13 +1936,13 @@ export default function ImageToPDF() {
 
       <div {...getRootProps({ className: `i2p${isDragActive ? ' is-over' : ''}` })}>
         <input {...getInputProps()} />
+        <p className="i2p-sr" role="status" aria-live="polite">{announcement}</p>
 
         {/* ── The instrument header ──
             The workspace heading row (eyebrow + title + description) is retired
             via ToolWorkspace `hideHeading`, so this surface names itself. The
             mark is the tool's own subject — stacked pages on a binding spine —
-            and the only amber on the row; the surface keeps its accessible name
-            from ToolWorkspace's `aria-label`. */}
+            and the only amber on the row. */}
         <header className="i2p-head">
           <span className="i2p-head-mark" aria-hidden="true">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -1443,24 +1954,26 @@ export default function ImageToPDF() {
           <h1 className="i2p-head-title">Images to PDF</h1>
         </header>
 
-        {phase === 'bound' ? (
-          /* ── Bound: the closing beat ── */
+        {phase === 'bound' && bound ? (
+          /* ── Bound: the receipt ── */
           <div className="i2p-bound">
             <BoundDoc />
             <p className="i2p-bound-title">Bound.</p>
-            <p className="i2p-bound-name">{boundFileName || boundName()}</p>
+            <p className="i2p-bound-name">{bound.fileName}</p>
             <p className="i2p-bound-sub">
-              {boundPages} page{boundPages === 1 ? '' : 's'}
-              {boundBytes ? ` · ${fmtSize(boundBytes)}` : ''} · ready when you are
+              {plural(bound.pages, 'page')} · {fmtSize(bound.bytes)} · {bound.paper}
             </p>
-            {boundSkipped > 0 && (
-              <div className="i2p-err" role="status">
+            {bound.encodings && encodingSentence(bound.encodings, bound.quality) && (
+              <p className="i2p-bound-enc">{encodingSentence(bound.encodings, bound.quality)}</p>
+            )}
+            {bound.skippedCount > 0 && (
+              <div className="i2p-err i2p-err--receipt" role="status">
                 {Icon.alert}
                 <span>
-                  {boundSkipped === 1
-                    ? '1 image could not be read and was left out of the PDF.'
-                    : `${boundSkipped} images could not be read and were left out of the PDF.`}
-                  {' '}Go back to the table to check the set.
+                  {bound.skippedCount === 1
+                    ? '1 image could not be read and was left out of the PDF'
+                    : `${bound.skippedCount} images could not be read and were left out of the PDF`}
+                  {bound.skipped.length ? `: ${bound.skipped.join(', ')}${bound.skipped.length < bound.skippedCount ? ', …' : ''}.` : '.'}
                 </span>
               </div>
             )}
@@ -1480,47 +1993,71 @@ export default function ImageToPDF() {
           <>
             {/* ── Empty state / add rail ── */}
             {n === 0 ? (
-              <div
-                className="i2p-zone"
-                role="button"
-                tabIndex={0}
-                onClick={open}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() }
-                }}
-              >
-                <div className="i2p-ghosts" aria-hidden="true">
-                  <span className="i2p-ghost" />
-                  <span className="i2p-ghost" />
-                  <span className="i2p-ghost" />
+              <>
+                {clearedCount > 0 && (
+                  <div className="i2p-undo">
+                    <span>Table cleared — {plural(clearedCount, 'page')} removed.</span>
+                    <button type="button" className="i2p-browse-btn i2p-browse-btn--ghost" onClick={undoClear}>
+                      {Icon.undo}&nbsp;Undo
+                    </button>
+                  </div>
+                )}
+                <div
+                  className="i2p-zone"
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Choose images to bind into a PDF"
+                  onClick={open}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() }
+                  }}
+                >
+                  <div className="i2p-ghosts" aria-hidden="true">
+                    <span className="i2p-ghost" />
+                    <span className="i2p-ghost" />
+                    <span className="i2p-ghost" />
+                  </div>
+                  <p className="i2p-zone-title">
+                    {isDragActive ? 'Release to lay them on the table' : 'Lay your images on the table'}
+                  </p>
+                  <p className="i2p-zone-sub">
+                    {isDragActive
+                      ? 'Each one becomes a page, in the order you add them.'
+                      : 'Every image becomes one page, never cropped. Drop them in any order and rearrange before binding.'}
+                  </p>
+                  <span className="i2p-browse-btn" aria-hidden="true">
+                    {Icon.image}&nbsp;Browse images
+                  </span>
+                  <div className="i2p-chips" aria-hidden="true">
+                    {['JPG', 'PNG', 'WEBP', 'AVIF', 'GIF', 'BMP', 'Ctrl+V'].map(f => (
+                      <span key={f} className="i2p-chip">{f}</span>
+                    ))}
+                  </div>
+                  <p className="i2p-zone-limits">Up to {MAX_IMAGES} images · {MAX_FILE_MB} MB each · {MAX_TOTAL_MB} MB in total</p>
                 </div>
-                <p className="i2p-zone-title">
-                  {isDragActive ? 'Release to lay them on the table' : 'Lay your images on the table'}
-                </p>
-                <p className="i2p-zone-sub">
-                  {isDragActive
-                    ? 'Each one becomes a page, in the order you add them.'
-                    : 'Every image becomes one page — at its own size, uncropped. Drop them in any order and rearrange before binding.'}
-                </p>
-                <button type="button" className="i2p-browse-btn">
-                  {Icon.image}&nbsp;Browse images
-                </button>
-                <div className="i2p-chips" aria-hidden="true">
-                  {['JPG', 'PNG', 'WEBP', 'GIF', 'BMP', '⌘/Ctrl+V'].map(f => (
-                    <span key={f} className="i2p-chip">{f}</span>
-                  ))}
-                </div>
-              </div>
+              </>
             ) : (
               <div className="i2p-rail">
                 <span className="i2p-rail-icon" aria-hidden="true">{Icon.image}</span>
                 <span className="i2p-rail-text">
                   {isDragActive
                     ? <b>Release to add to the table.</b>
-                    : <>Drop more images anywhere — <b>or</b></>}
+                    : <>Drop or paste more images anywhere — <b>or</b></>}
                 </span>
                 <button type="button" className="i2p-browse-btn i2p-browse-btn--ghost" onClick={open}>
                   Browse
+                </button>
+              </div>
+            )}
+
+            {intakeNotes.length > 0 && (
+              <div className="i2p-note" role="status">
+                {Icon.alert}
+                <ul>
+                  {intakeNotes.map((note, i) => <li key={i}>{note}</li>)}
+                </ul>
+                <button type="button" className="i2p-note-x" onClick={() => setIntakeNotes([])} aria-label="Dismiss these notes">
+                  {Icon.close}
                 </button>
               </div>
             )}
@@ -1547,8 +2084,8 @@ export default function ImageToPDF() {
 
                 {autoCrop && (
                   <div className="i2p-panel-body" id="i2p-trim-body">
-                    <div>
-                      <span className="i2p-sub-label">Watermark position</span>
+                    <fieldset className="i2p-field">
+                      <legend className="i2p-sub-label">Watermark position</legend>
                       <div className="i2p-radio-group">
                         {[
                           { value: 'bottom-right', label: 'Bottom-right corner', hint: 'Recommended for Adobe watermarks' },
@@ -1561,24 +2098,24 @@ export default function ImageToPDF() {
                           >
                             <input
                               type="radio"
-                              name="cropPos"
+                              name="i2p-crop-position"
                               value={opt.value}
                               checked={cropPosition === opt.value}
                               onChange={e => setCropPosition(e.target.value as CropPosition)}
-                              style={{ display: 'none' }}
                             />
-                            <div className="i2p-radio-dot"><div className="i2p-radio-inner" /></div>
+                            <span className="i2p-radio-dot" aria-hidden="true"><span className="i2p-radio-inner" /></span>
                             <span className="i2p-radio-text">{opt.label}</span>
                             <span className="i2p-radio-hint">{opt.hint}</span>
                           </label>
                         ))}
                       </div>
-                    </div>
+                    </fieldset>
 
                     {(cropPosition === 'bottom' || cropPosition === 'bottom-right') && (
-                      <div>
-                        <span className="i2p-sub-label">Trim amount</span>
+                      <div className="i2p-field">
+                        <label className="i2p-sub-label" htmlFor="i2p-trim-amount">Trim amount</label>
                         <select
+                          id="i2p-trim-amount"
                           className="i2p-select"
                           value={cropPercentage}
                           onChange={e => setCropPercentage(parseInt(e.target.value))}
@@ -1594,32 +2131,32 @@ export default function ImageToPDF() {
                     )}
 
                     {cropPosition === 'custom' && (
-                      <div>
-                        <span className="i2p-sub-label">Pixel dimensions</span>
+                      <fieldset className="i2p-field">
+                        <legend className="i2p-sub-label">Pixels to trim</legend>
                         <div className="i2p-custom-grid">
                           <div>
-                            <p className="i2p-field-label">Trim from right (px)</p>
+                            <label className="i2p-field-label" htmlFor="i2p-trim-right">From the right (px)</label>
                             <input
-                              type="number" min="0" max="1000"
+                              id="i2p-trim-right"
+                              type="number" min="0" max="1000" inputMode="numeric"
                               value={customWidth}
-                              onChange={e => setCustomWidth(parseInt(e.target.value) || 0)}
+                              onChange={e => setCustomWidth(Math.min(1000, Math.max(0, parseInt(e.target.value) || 0)))}
                               className="i2p-number-input"
                             />
                           </div>
                           <div>
-                            <p className="i2p-field-label">Trim from bottom (px)</p>
+                            <label className="i2p-field-label" htmlFor="i2p-trim-bottom">From the bottom (px)</label>
                             <input
-                              type="number" min="0" max="1000"
+                              id="i2p-trim-bottom"
+                              type="number" min="0" max="1000" inputMode="numeric"
                               value={customHeight}
-                              onChange={e => setCustomHeight(parseInt(e.target.value) || 0)}
+                              onChange={e => setCustomHeight(Math.min(1000, Math.max(0, parseInt(e.target.value) || 0)))}
                               className="i2p-number-input"
                             />
                           </div>
                         </div>
-                        <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '8px', lineHeight: 1.5 }}>
-                          Adobe watermarks typically sit ~80–100 px from the right and bottom edges.
-                        </p>
-                      </div>
+                        <p className="i2p-field-hint">Adobe watermarks typically sit ~80–100 px from the right and bottom edges.</p>
+                      </fieldset>
                     )}
 
                     <div className="i2p-info">
@@ -1635,9 +2172,8 @@ export default function ImageToPDF() {
             )}
 
             {/* ── Output sidecar — the paper each page lands on ──
-               Page size and compression change the bytes the user
-               actually downloads, so they are stated plainly and kept
-               next to the table rather than buried at bind time. */}
+               Every choice here redraws the table, because the tiles are
+               laid out by the engine's own geometry. */}
             {n > 0 && (
               <div className="i2p-panel">
                 <div className="i2p-panel-head i2p-panel-head--static">
@@ -1645,46 +2181,27 @@ export default function ImageToPDF() {
                     {Icon.page}
                     Output
                   </span>
-                  <span className="i2p-panel-badge">
-                    {PAGE_SIZE_LABELS[pageSize]} · {QUALITY_LABELS[quality]}
-                  </span>
+                  <span className="i2p-panel-badge">{outputBadge}</span>
                 </div>
-                <div className="i2p-panel-body">
-                  <div>
-                    <span className="i2p-sub-label">Page size</span>
-                    <select
-                      className="i2p-select"
-                      value={pageSize}
-                      onChange={e => setPageSize(e.target.value as PageSize)}
-                    >
-                      <option value="original">Original — one page per image, at its own size</option>
-                      <option value="a4">A4 — fit each image on an A4 page</option>
-                      <option value="letter">Letter — fit each image on a US Letter page</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <span className="i2p-sub-label">Compression</span>
-                    <select
-                      className="i2p-select"
-                      value={quality}
-                      onChange={e => setQuality(e.target.value as Quality)}
-                    >
-                      <option value="high">High — best quality, larger file</option>
-                      <option value="balanced">Balanced — recommended for photos and scans</option>
-                      <option value="small">Small — smallest file, for sharing</option>
-                    </select>
-                  </div>
-
-                  <div className="i2p-info">
-                    {Icon.info}
-                    <span>
-                      {pageSize === 'original'
-                        ? 'Pages keep each image’s own proportions, uncropped. Images over 4000 px on the long side are scaled down — beyond that, print detail stops improving.'
-                        : `Each image is fitted whole inside a ${PAGE_SIZE_LABELS[pageSize]} page with a print margin — never cropped.`}{' '}
-                      Photos are re-compressed; an upright JPEG already within the size ceiling is embedded untouched. For text or screenshots, High keeps the most detail.
-                    </span>
-                  </div>
+                <div className="i2p-panel-body i2p-output">
+                  {segment(
+                    'i2p-page-size', 'Page size', pageSize, ['original', 'a4', 'letter'] as const, PAGE_SIZE_LABELS, setPageSize,
+                    pageSize === 'original'
+                      ? 'Each page takes its image’s shape. Scans keep their real size; photos and screenshots get a page no larger than A4.'
+                      : `Each image is fitted whole on ${pageSize === 'a4' ? 'an A4' : 'a US Letter'} page — never cropped.`,
+                  )}
+                  {pageSize !== 'original' && segment(
+                    'i2p-orientation', 'Orientation', orientation, ['auto', 'portrait', 'landscape'] as const, ORIENTATION_LABELS, setOrientation,
+                    orientation === 'auto' ? 'Landscape images get landscape pages, the rest portrait.' : `Every page is ${orientation}.`,
+                  )}
+                  {pageSize !== 'original' && segment(
+                    'i2p-margin', 'Margin', margin, ['none', 'small', 'large'] as const, MARGIN_LABELS, setMargin,
+                    marginHint(margin),
+                  )}
+                  {segment(
+                    'i2p-quality', 'Quality', quality, ['high', 'balanced', 'small'] as const, QUALITY_LABELS, setQuality,
+                    QUALITY_HINTS[quality],
+                  )}
                 </div>
               </div>
             )}
@@ -1693,95 +2210,89 @@ export default function ImageToPDF() {
             {n > 0 && (
               <>
                 <div className="i2p-table-head">
-                  <span className="i2p-table-title">
+                  <h2 className="i2p-table-title">
                     The table
-                    <span className="i2p-count-badge">{n} PAGE{n > 1 ? 'S' : ''}</span>
-                  </span>
-                  <button type="button" className="i2p-clear-btn" onClick={clearTable}>
+                    <span className="i2p-count-badge">{plural(n, 'page')}</span>
+                  </h2>
+                  <button type="button" className="i2p-clear-btn" onClick={clearTable} disabled={phase === 'binding'}>
                     {Icon.trash} Clear the table
                   </button>
                 </div>
 
-                <div className={`i2p-grid${phase === 'binding' ? ' is-binding' : ''}`}>
+                <ol className={`i2p-grid${phase === 'binding' ? ' is-binding' : ''}`} aria-label="Pages in binding order">
                   {entries.map((e, i) => {
-                    const ar = e.w > 0 && e.h > 0 ? e.w / e.h : 1
                     const isNew = !settled.has(e.id)
-                    const cutStyle: CSSProperties =
-                      cropPosition === 'custom'
-                        ? ({ '--cut-r': Math.min(1, customWidth / (e.w || 1)), '--cut-b': Math.min(1, customHeight / (e.h || 1)) } as CSSProperties)
-                        : ({ '--cut': cropPercentage } as CSSProperties)
-                    const cutClass =
-                      cropPosition === 'custom' ? 'i2p-cut--custom'
-                      : cropPosition === 'bottom' ? 'i2p-cut--bottom'
-                      : 'i2p-cut--corner'
                     return (
-                      <div
+                      <li
                         key={e.id}
-                        ref={el => { if (el) tileRefs.current.set(e.id, el); else tileRefs.current.delete(e.id) }}
-                        data-i2p-index={i}
-                        className={`i2p-tile${isNew ? ' i2p-tile--new' : ''}${dragId === e.id ? ' i2p-tile--placeholder' : ''}`}
-                        style={{ '--d': `${i * 45}ms`, '--i': i, '--ar': ar } as CSSProperties}
-                        onPointerDown={ev => startDrag(ev, i)}
-                        onPointerMove={onDragMove}
-                        onPointerUp={endDrag}
-                        onPointerCancel={cancelDrag}
-                        onAnimationEnd={ev => {
-                          if (ev.animationName === 'i2p-tile-in') {
-                            setSettled(s => { const next = new Set(s); next.add(e.id); return next })
-                          }
-                        }}
+                        className="i2p-slot"
                       >
-                        <div className="i2p-tile-top">
-                          <span className="i2p-frame" aria-hidden="true">
-                            {String(i + 1).padStart(2, '0')}
-                          </span>
+                        <div
+                          ref={el => { if (el) tileRefs.current.set(e.id, el); else tileRefs.current.delete(e.id) }}
+                          data-i2p-index={i}
+                          className={`i2p-tile${isNew ? ' i2p-tile--new' : ''}${dragId === e.id ? ' i2p-tile--placeholder' : ''}`}
+                          style={{ '--d': `${Math.min(i, 10) * 45}ms`, '--i': i } as CSSProperties}
+                          onPointerDown={ev => startDrag(ev, i)}
+                          onAnimationEnd={ev => {
+                            if (ev.animationName === 'i2p-tile-in') {
+                              setSettled(s => { const next = new Set(s); next.add(e.id); return next })
+                            }
+                          }}
+                        >
+                          <div className="i2p-tile-top">
+                            <span className="i2p-frame" aria-hidden="true">
+                              {String(i + 1).padStart(2, '0')}
+                            </span>
+                            <button
+                              type="button"
+                              className="i2p-x"
+                              onClick={() => removeAt(i)}
+                              disabled={phase === 'binding'}
+                              aria-label={`Remove page ${i + 1}, ${e.file.name}`}
+                            >
+                              {Icon.close}
+                            </button>
+                          </div>
+
                           <button
                             type="button"
-                            className="i2p-x"
-                            onClick={() => removeAt(i)}
-                            aria-label={`Remove page ${i + 1}`}
+                            className="i2p-view"
+                            onClick={ev => openPreview(e.id, ev.currentTarget)}
+                            aria-label={`Page ${i + 1}: ${e.file.name}. Open a larger view`}
                           >
-                            {Icon.close}
+                            {renderPaper(e)}
                           </button>
-                        </div>
 
-                        <div className="i2p-page-wrap">
-                          <div className="i2p-page">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={e.url} alt={e.file.name} draggable={false} />
-                            {autoCrop && e.w > 0 && (
-                              <span className={`i2p-cut ${cutClass}`} style={cutStyle} aria-hidden="true" />
-                            )}
+                          <div className="i2p-meta">
+                            <button
+                              type="button"
+                              className="i2p-move"
+                              data-move="earlier"
+                              disabled={i === 0 || phase === 'binding'}
+                              onClick={() => move(i, -1)}
+                              aria-label={`Move page ${i + 1} earlier`}
+                            >
+                              {Icon.chevronLeft}
+                            </button>
+                            <span className="i2p-meta-text" title={`${e.file.name} · ${typeLabel(e.file)} · ${fmtSize(e.file.size)}`}>
+                              {e.w > 0 ? `${e.w}×${e.h}` : <I2PHelix size={12} className="i2p-meta-helix" />}
+                            </span>
+                            <button
+                              type="button"
+                              className="i2p-move"
+                              data-move="later"
+                              disabled={i === entries.length - 1 || phase === 'binding'}
+                              onClick={() => move(i, 1)}
+                              aria-label={`Move page ${i + 1} later`}
+                            >
+                              {Icon.chevronRight}
+                            </button>
                           </div>
                         </div>
-
-                        <div className="i2p-meta">
-                          <button
-                            type="button"
-                            className="i2p-move"
-                            disabled={i === 0}
-                            onClick={() => move(i, -1)}
-                            aria-label={`Move page ${i + 1} earlier`}
-                          >
-                            {Icon.chevronLeft}
-                          </button>
-                          <span className="i2p-meta-text" title={e.file.name}>
-                            {e.w > 0 ? `${e.w}×${e.h}` : <I2PHelix size={11} className="i2p-meta-helix" />} · {typeLabel(e.file)} · {fmtSize(e.file.size)}
-                          </span>
-                          <button
-                            type="button"
-                            className="i2p-move"
-                            disabled={i === entries.length - 1}
-                            onClick={() => move(i, 1)}
-                            aria-label={`Move page ${i + 1} later`}
-                          >
-                            {Icon.chevronRight}
-                          </button>
-                        </div>
-                      </div>
+                      </li>
                     )
                   })}
-                </div>
+                </ol>
               </>
             )}
 
@@ -1791,27 +2302,42 @@ export default function ImageToPDF() {
                 <div className="i2p-bind">
                   <div className="i2p-bind-info">
                     <span className="i2p-bind-line">
-                      {n} page{n > 1 ? 's' : ''} · {fmtSize(totalBytes)} on the table
+                      {plural(n, 'page')} · {fmtSize(totalBytes)} on the table
                     </span>
                     <span className="i2p-bind-sub">
-                      {autoCrop ? 'Edges trimmed · pages bound in table order' : 'Pages bound in table order'}
+                      {unchangedSinceBind
+                        ? 'Nothing changed since the last bind — that PDF is ready'
+                        : autoCrop ? 'Edges trimmed · pages bound in table order' : 'Pages bound in table order'}
                     </span>
                   </div>
                   {phase === 'binding' && progress !== null && (
-                    <div className="i2p-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-                      <div className="i2p-progress-fill" style={{ width: `${progress}%` }} />
-                      <span className="i2p-progress-pct">{progress}%</span>
+                    <div
+                      className="i2p-progress"
+                      role="progressbar"
+                      aria-label="Upload"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={progress}
+                      aria-valuetext={progressLabel}
+                    >
+                      <div className="i2p-progress-fill" style={{ transform: `scaleX(${progress / 100})` }} />
+                      <span className="i2p-progress-pct">{progressLabel}</span>
                     </div>
                   )}
                   <button type="button" className="i2p-bind-btn" onClick={bind} disabled={phase === 'binding'}>
                     {phase === 'binding' ? (
                       <>
                         <I2PHelix size={18} />
-                        Collating {n} page{n > 1 ? 's' : ''}…
+                        Collating {plural(n, 'page')}…
+                      </>
+                    ) : unchangedSinceBind ? (
+                      <>
+                        View the bound PDF
+                        {Icon.arrowRight}
                       </>
                     ) : (
                       <>
-                        Bind {n} page{n > 1 ? 's' : ''} to PDF
+                        Bind {plural(n, 'page')} to PDF
                         {Icon.arrowRight}
                       </>
                     )}
@@ -1826,9 +2352,7 @@ export default function ImageToPDF() {
                 {error && (
                   <div className="i2p-err" role="alert">
                     {Icon.alert}
-                    <span>
-                      Binding failed — {error}. Your pages are still on the table.
-                    </span>
+                    <span>{error} Your pages are still on the table.</span>
                   </div>
                 )}
               </>
@@ -1848,46 +2372,55 @@ export default function ImageToPDF() {
             aria-hidden="true"
             style={{ width: ghost.w, height: ghost.h }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={ghostEntry.url} alt="" draggable={false} />
+            {renderPaper(ghostEntry)}
           </div>
         )}
 
-        {/* ── Examine overlay ──
-            Lifting a print to the light to look at it: true-ratio, uncropped,
-            with only facts the client actually holds (dimensions, type, size).
-            Click-scrim or Escape closes; the shell carries the dialog role so
-            the table underneath stays the page's own content. */}
-        {previewEntry && (
-          <div
-            className="i2p-lightbox"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Page ${previewIndex + 1} of ${n}: ${previewEntry.file.name}`}
-            onClick={() => setPreviewId(null)}
-          >
-            <div className="i2p-lightbox-card" onClick={ev => ev.stopPropagation()}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="i2p-lightbox-img" src={previewEntry.url} alt={previewEntry.file.name} />
+        {/* ── Examine dialog ──
+            Lifting a print to the light: the real output page, larger, with only
+            facts the client actually holds. */}
+        <dialog
+          ref={dialogRef}
+          className="i2p-lightbox"
+          aria-label={previewEntry ? `Page ${previewIndex + 1} of ${n}: ${previewEntry.file.name}` : 'Page preview'}
+          onCancel={ev => { ev.preventDefault(); closePreview() }}
+          onClick={ev => { if (ev.target === ev.currentTarget) closePreview() }}
+          onKeyDown={ev => {
+            if (ev.key === 'ArrowLeft') { ev.preventDefault(); stepPreview(-1) }
+            if (ev.key === 'ArrowRight') { ev.preventDefault(); stepPreview(1) }
+          }}
+        >
+          {previewEntry && (
+            <div className="i2p-lightbox-card">
+              <div className="i2p-lightbox-stage">{renderPaper(previewEntry)}</div>
               <div className="i2p-lightbox-meta">
                 <span className="i2p-lightbox-frame">Page {previewIndex + 1} / {n}</span>
                 <span className="i2p-lightbox-name" title={previewEntry.file.name}>{previewEntry.file.name}</span>
                 <span className="i2p-lightbox-facts">
-                  {previewEntry.w > 0 ? `${previewEntry.w}×${previewEntry.h} · ` : ''}
+                  {previewEntry.w > 0 ? `${previewEntry.w}×${previewEntry.h} px · ` : ''}
                   {typeLabel(previewEntry.file)} · {fmtSize(previewEntry.file.size)}
                 </span>
+                <span className="i2p-lightbox-facts">{paperFacts(previewEntry)}</span>
+              </div>
+              <div className="i2p-lightbox-nav">
+                <button type="button" className="i2p-move" onClick={() => stepPreview(-1)} disabled={previewIndex <= 0} aria-label="Previous page">
+                  {Icon.chevronLeft}
+                </button>
+                <button type="button" className="i2p-move" onClick={() => stepPreview(1)} disabled={previewIndex >= n - 1} aria-label="Next page">
+                  {Icon.chevronRight}
+                </button>
               </div>
               <button
                 type="button"
                 className="i2p-lightbox-close"
-                onClick={() => setPreviewId(null)}
+                onClick={closePreview}
                 aria-label="Close preview"
               >
                 {Icon.close}
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </dialog>
       </div>
     </>
   )
