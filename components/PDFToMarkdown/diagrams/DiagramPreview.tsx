@@ -2,12 +2,15 @@
 
 import { Fragment, useMemo } from 'react'
 import { renderMarkdownToHtml } from '../utils'
+import { resolveFigureSources, type FigureMap } from '../figures'
 import { parseDiagramFences } from './fence-parser'
 import { DiagramBlock } from './DiagramBlock'
 
 type DiagramPreviewProps = {
   markdown: string
   theme: 'light' | 'dark'
+  /** Extracted PDF figures, so `assets/…` images render from their bytes. */
+  figures?: FigureMap
 }
 
 type PreviewPart =
@@ -36,11 +39,12 @@ function buildPreviewParts(markdown: string): PreviewPart[] {
   return parts
 }
 
-export function DiagramPreview({ markdown, theme }: DiagramPreviewProps) {
+export function DiagramPreview({ markdown, theme, figures }: DiagramPreviewProps) {
   const parts = useMemo(() => buildPreviewParts(markdown), [markdown])
+  const render = (source: string) => resolveFigureSources(renderMarkdownToHtml(source), figures)
 
   if (parts.length === 1 && parts[0].kind === 'markdown') {
-    return <div className="mr-diagram-preview" dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(markdown) }} />
+    return <div className="mr-diagram-preview" dangerouslySetInnerHTML={{ __html: render(markdown) }} />
   }
 
   return (
@@ -50,7 +54,7 @@ export function DiagramPreview({ markdown, theme }: DiagramPreviewProps) {
           {part.kind === 'diagram' ? (
             <DiagramBlock block={part.block} theme={theme} />
           ) : part.source.trim() ? (
-            <div dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(part.source) }} />
+            <div dangerouslySetInnerHTML={{ __html: render(part.source) }} />
           ) : null}
         </Fragment>
       ))}

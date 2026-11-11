@@ -11,7 +11,7 @@
     "pdf-editor:unit": "npm run test:pdf-editor",
     "test:pdf-tools": "node --experimental-strip-types --test lib/pdf/*.test.ts features/merge-pdf/server/*.test.ts features/merge-pdf/components/parts/*.test.ts features/split-pdf/server/*.test.ts features/split-pdf/components/*.test.ts features/rotate-pdf/server/*.test.ts",
     "test:pdf-to-images": "node --experimental-strip-types --test features/pdf-to-images/*.test.ts",
-    "test:mr-markdown": "node --experimental-strip-types --test components/PDFToMarkdown/merge/*.test.ts components/PDFToMarkdown/utils.test.ts components/PDFToMarkdown/settings/connections/*.test.ts",
+    "test:mr-markdown": "node --experimental-strip-types --test components/PDFToMarkdown/merge/*.test.ts components/PDFToMarkdown/utils.test.ts components/PDFToMarkdown/figures.test.ts components/PDFToMarkdown/settings/connections/*.test.ts",
     "mr-markdown:unit": "npm run test:mr-markdown",
     "test:mr-resume": "node --experimental-strip-types --test --test-reporter=spec features/mr-resume/components/*.test.ts",
     "test:mr-resume:latex": "node --experimental-strip-types --test --test-reporter=spec features/mr-resume/latex/*.test.ts features/mr-resume/latex/server/*.test.ts",

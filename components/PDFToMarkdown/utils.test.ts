@@ -13,6 +13,7 @@ import {
   sanitizeExportFilename,
   createBrokenImagePlaceholder,
   resolveSourcedDocumentId,
+  conversionSummary,
 } from './utils.ts'
 import { CHEATSHEET_ITEMS } from './cheatsheet-data.ts'
 
@@ -734,3 +735,14 @@ test('the same path on another branch is a different document', () => {
   assert.equal(resolveSourcedDocumentId(jobs, 'github:me/repo@release/1.0:README.md'), null)
 })
 
+
+test('the conversion receipt names what needs a second look', () => {
+  const clean = conversionSummary('report', { pages: 3, extraction: { summary: { ocr_pages: 0, methods: { unavailable: 0 } } } }, 0)
+  assert.deepEqual(clean, { message: 'report converted · 3 pages', notice: false })
+
+  const partial = conversionSummary('scan', { pages: 1, extraction: { summary: { ocr_pages: 1, methods: { unavailable: 2 } } } }, 1)
+  assert.equal(partial.notice, true)
+  assert.equal(partial.message, 'scan converted · 1 page · 1 page read with OCR — check names and numbers · 2 pages could not be read · 1 figure too large to include')
+
+  assert.deepEqual(conversionSummary('odd', { pages: 'x', extraction: null }, 0), { message: 'odd converted', notice: false })
+})

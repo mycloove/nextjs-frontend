@@ -391,6 +391,19 @@
   opacity: 1;
   color: var(--accent);
 }
+/* One export at a time: the other formats rest while one renders, and the one
+   in flight keeps full ink beside its spinner. */
+.mr-markdown-workspace .pm-export-format-btn:disabled,
+.mr-markdown-workspace .pm-export-format-btn:disabled:hover {
+  cursor: progress;
+  transform: none;
+  background: transparent;
+  color: var(--text-muted);
+}
+.mr-markdown-workspace .pm-export-format-btn:disabled:hover svg { opacity: 0.65; color: inherit; }
+.mr-markdown-workspace .pm-export-format-btn[aria-busy="true"] { color: var(--text); }
+.mr-markdown-workspace .mr-export-btn[aria-busy="true"] { cursor: progress; }
+.mr-markdown-workspace .mr-export-menu [role="menuitem"]:disabled { cursor: progress; opacity: 0.55; }
 
 /* Export copy button */
 .mr-markdown-workspace .pm-export-copy-btn {

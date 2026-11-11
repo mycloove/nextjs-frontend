@@ -36,7 +36,7 @@ import { Ic } from './icons'
 import { MrMarkdownBrandLogo } from './MrMarkdownBrandLogo'
 import {
   Job, HistoryEntry, Toast, Mode,
-  cx, genId, stripName, downloadBlob, sanitizeExportFilename, escapeHtml, timeAgo,
+  cx, genId, stripName, downloadBlob, sanitizeExportFilename, escapeHtml, timeAgo, humanBytes, conversionSummary, shortcutLabel,
   createStructuredExport, MrMarkdownExportFormat,
   computeStats, computeConfidence, renderMarkdownToHtml, validatePageRange,
   generateTOC, cleanupMarkdown, injectFrontmatter, chunkMarkdown,
@@ -52,10 +52,25 @@ import { diagramExportStyles, renderMarkdownForExport } from './diagrams/export'
 import { KATEX_CLASS, KATEX_VERSION } from './math'
 import { loadSession, saveSession, serializeSession, hydrateJob } from './session'
 import type { OpenDocumentResult } from './settings/settingsContext'
+import { figuresFromResponse, pickFigures, prepareFiguresForExport, referencedFigurePaths, resolveFigureSources, selectFiguresWithin, type FigureMap } from './figures'
+import { loadFigures, pruneFigures, saveFigures } from './figure-store'
+import { parseDiagramFences } from './diagrams/fence-parser'
 
 /* ── Config ─────────────────────────────────────────────────── */
 const BATCH_LIMIT      = 15
 const CONCURRENCY      = 2
+/* Mirrors the route's PDF_TO_MARKDOWN_MAX_FILE_BYTES default, so an oversized
+   file is refused at the drop instead of after a full upload. The route stays
+   the authority. */
+const MAX_PDF_BYTES    = 50 * 1024 * 1024
+/* Mirrors markdown_to_pdf.py MAX_RENDERED_HTML_BYTES: a PDF export whose
+   rendered HTML (figures inlined) is larger is refused there with a vague
+   "payload too large", so it is explained here before the upload. */
+const MAX_PDF_EXPORT_HTML_BYTES = 8_000_000
+/* Mirror export_routes.py MAX_EXPORT_ASSETS / MAX_EXPORT_ASSET_BYTES: past
+   either, /api/export/docx refuses the whole document. */
+const DOCX_MAX_ASSETS = 32
+const DOCX_MAX_ASSET_BYTES = 12 * 1024 * 1024
 const HISTORY_KEY      = 'pm.history.v2'
 const HISTORY_MAX      = 40
 /* "Pick up where you left off": how many recent items rest collapsed in the
@@ -226,6 +241,24 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
         setBootNotice('Older documents were trimmed to keep this session within its storage limit.')
       }
     }
+
+    /* Figures live in IndexedDB, not the session: bring them back for every
+       restored document that references any, then drop figures nothing can
+       reach any more (not in the session, not in the recent-documents list). */
+    const restoredDocs = loaded ? loaded.docs.map((doc) => ({ id: doc.id, markdown: doc.markdown })) : []
+    const wanting = restoredDocs.filter((doc) => referencedFigurePaths(doc.markdown).length > 0)
+    void Promise.all(wanting.map(async (doc) => [doc.id, await loadFigures(doc.id)] as const)).then((results) => {
+      const found = new Map(results.filter((entry): entry is readonly [string, FigureMap] => !!entry[1]))
+      if (found.size) setJobs((prev) => prev.map((job) => (found.has(job.id) && !job.figures ? { ...job, figures: found.get(job.id) } : job)))
+      const lost = wanting.length - found.size
+      if (lost > 0) setBootNotice(`Figures in ${lost} restored document${lost === 1 ? '' : 's'} could not be loaded in this browser; they show as placeholders.`)
+      const keep = new Set(restoredDocs.map((doc) => doc.id))
+      try {
+        const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]') as Array<{ id?: unknown }>
+        for (const entry of stored) if (typeof entry?.id === 'string') keep.add(entry.id)
+      } catch { /* an unreadable history keeps nothing extra */ }
+      void pruneFigures(keep)
+    })
     hydratedRef.current = true
     setBooted(true)
   }, [])
@@ -280,6 +313,21 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
      FILE INTAKE
      ═══════════════════════════════════════════════════════════════════════ */
 
+  /* One PDF dropped onto an idle workspace converts straight away — a queue
+     with a separate "Convert (1)" button was a step with nothing to decide.
+     Several files (or files added beside an existing queue) still wait in the
+     queue, where reviewing the batch first is meaningful. */
+  const [autoStartId, setAutoStartId] = useState<string | null>(null)
+
+  /* One controller per in-flight conversion, so Cancel stops exactly that file.
+     The route links the browser's abort to its upstream call, so a cancelled
+     conversion is not charged. */
+  const conversionsRef = useRef(new Map<string, AbortController>())
+
+  const cancelJob = useCallback((id: string) => {
+    conversionsRef.current.get(id)?.abort()
+  }, [])
+
   const addFiles = useCallback((files: File[]) => {
     const pdfFiles = files.filter((file) => (
       file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
@@ -288,35 +336,46 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
     if (rejectedCount > 0) {
       toast('error', 'PDF to Markdown accepts PDF files only')
     }
-    if (!pdfFiles.length) return
-
-    setNewDocumentMode(false)
-    setJobs((prev) => {
-      const room = BATCH_LIMIT - prev.length
-      if (room <= 0) {
-        toast('error', `Batch limit is ${BATCH_LIMIT} files`)
-        return prev
+    // Refused at the drop, named, so a 60 MB file never uploads just to fail.
+    const sized = pdfFiles.filter((file) => {
+      if (file.size === 0) { toast('error', `${file.name} is empty`); return false }
+      if (file.size > MAX_PDF_BYTES) {
+        toast('error', `${file.name} is ${humanBytes(file.size)} — the limit is ${humanBytes(MAX_PDF_BYTES)} per PDF`)
+        return false
       }
-      const accepted = pdfFiles.slice(0, room).map<Job>((f) => ({
-        id: genId(),
-        file: f,
-        title: stripName(f.name) || 'Untitled document',
-        status: 'idle',
-        progress: 0,
-        markdown: '',
-        html: '',
-        confidence: 0,
-        stats: { headings: 0, lists: 0, codeBlocks: 0, tables: 0, links: 0, words: 0, tokens: 0 },
-        passwordAttempts: 0,
-        aiActions: {},
-      }))
-      if (pdfFiles.length > room) toast('info', `Only added first ${room} — batch limit reached`)
-      else toast('success', `${accepted.length} file${accepted.length > 1 ? 's' : ''} queued`)
-      return [...prev, ...accepted]
+      return true
     })
-  }, [toast])
+    if (!sized.length) return
+
+    const room = BATCH_LIMIT - jobs.length
+    if (room <= 0) {
+      toast('error', `Batch limit is ${BATCH_LIMIT} files`)
+      return
+    }
+    const accepted = sized.slice(0, room).map<Job>((f) => ({
+      id: genId(),
+      file: f,
+      title: stripName(f.name) || 'Untitled document',
+      status: 'idle',
+      progress: 0,
+      markdown: '',
+      html: '',
+      confidence: 0,
+      stats: { headings: 0, lists: 0, codeBlocks: 0, tables: 0, links: 0, words: 0, tokens: 0 },
+      passwordAttempts: 0,
+      aiActions: {},
+    }))
+    const queueIsIdle = !converting && !jobs.some((j) => j.status === 'idle' || j.status === 'error' || j.status === 'converting')
+    setNewDocumentMode(false)
+    setJobs((prev) => [...prev, ...accepted])
+    if (sized.length > room) toast('info', `Only added first ${room} — batch limit reached`)
+    if (accepted.length === 1 && queueIsIdle) setAutoStartId(accepted[0].id)
+    else toast('success', `${accepted.length} file${accepted.length > 1 ? 's' : ''} queued`)
+  }, [jobs, converting, toast])
 
   const removeJob = useCallback((id: string) => {
+    // Removing a file mid-conversion stops its request too.
+    conversionsRef.current.get(id)?.abort()
     setJobs((prev) => prev.filter((j) => j.id !== id))
     setActiveJobId((cur) => (cur === id ? null : cur))
   }, [])
@@ -329,16 +388,20 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
      CONVERSION — preserves backend contract
      ═══════════════════════════════════════════════════════════════════════ */
 
-  const convertOne = useCallback(async (job: Job, passwordOverride?: string) => {
+  /** Resolves true when the document converted and is ready to open. */
+  const convertOne = useCallback(async (job: Job, passwordOverride?: string): Promise<boolean> => {
     if (!validatePageRange(pageRange)) {
       updateJob(job.id, { status: 'error', error: 'Bad page range' })
-      return
+      return false
     }
     // No honest percentage is available — the backend streams no progress — so
     // the per-file bar is indeterminate. (The old random ticker fabricated a
     // number that climbed to 88% and then jumped, which is exactly the "never
     // lie about progress" rule this repo holds.)
-    updateJob(job.id, { status: 'converting', progress: 0, error: undefined })
+    updateJob(job.id, { status: 'converting', progress: 0, error: undefined, receiving: false })
+    const controller = new AbortController()
+    conversionsRef.current.set(job.id, controller)
+    const name = stripName(job.file.name)
 
     try {
       // Backend contract (see nextjs-frontend/app/api/pdf-to-markdown/route.ts):
@@ -372,7 +435,7 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
       const pw = passwordOverride ?? job.password
       if (pw) fd.append('password', pw)
 
-      const res = await toolRequest('/api/pdf-to-markdown', { method: 'POST', body: fd })
+      const res = await toolRequest('/api/pdf-to-markdown', { method: 'POST', body: fd, signal: controller.signal })
 
       if (res.status === 423) {
         const err = await res.json().catch(() => ({ code: 'password_required' }))
@@ -383,14 +446,19 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
           error: invalidPassword ? 'Incorrect password. Try again.' : undefined,
           passwordAttempts: job.passwordAttempts + 1,
         })
-        return
+        return false
       }
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
         updateJob(job.id, { status: 'error', progress: 0, error: err.error || 'Conversion failed' })
-        toast('error', `${stripName(job.file.name)}: ${err.error || 'failed'}`)
-        return
+        toast('error', `${name}: ${err.error || 'failed'}`)
+        return false
       }
+      // The service has answered and the route has already settled the charge.
+      // From here a Cancel would only throw away a result the user has paid
+      // for, so the request stops being cancellable.
+      conversionsRef.current.delete(job.id)
+      updateJob(job.id, { receiving: true })
       const data = await res.json()
       if (!data || typeof data.markdown !== 'string') throw new Error('The processor did not return a Markdown document.')
       const md: string = data.markdown
@@ -399,29 +467,45 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
       const html = renderMarkdownToHtml(md)
       const sourceHash = REVIEW_PILOT_ENABLED ? await job.file.arrayBuffer().then(sha256Bytes).catch(() => null) : null
       const extractionReview = REVIEW_PILOT_ENABLED ? createExtractionReview(data, { name: job.file.name, size: job.file.size, sha256: sourceHash }) : undefined
+      const received = figuresFromResponse(data)
+      const figures = pickFigures(md, received.figures)
+      const figureCount = Object.keys(figures).length
       updateJob(job.id, {
         status: 'done',
-        progress: 100,
+        progress: 100, receiving: false,
         markdown: md,
         html,
         confidence,
         stats,
         pages: data.pages,
         processedAt: Date.now(),
+        figures: figureCount ? figures : undefined,
         ...(extractionReview ? { extractionReview, sourcePdf: job.file } : {}),
       })
       pushHistory({
         id: job.id, name: job.file.name, markdown: md,
         ts: Date.now(), words: stats.words, confidence,
       })
-      const hasNotices = Array.isArray(data.warnings) && data.warnings.length > 0
-      toast(hasNotices ? 'info' : 'success', hasNotices
-        ? `${stripName(job.file.name)} returned extraction notices. Compare the output with the original before using it.`
-        : `${stripName(job.file.name)} converted. Review the result against the original.`)
+      const summary = conversionSummary(name, data, received.omitted.length)
+      toast(summary.notice ? 'info' : 'success', summary.message)
+      if (figureCount) {
+        void saveFigures(job.id, figures).then((saved) => {
+          if (!saved) toast('info', `${name}: figures are shown now, but this browser cannot keep them after a reload.`)
+        })
+      }
+      return true
     } catch (e) {
+      if (controller.signal.aborted) {
+        updateJob(job.id, { status: 'idle', progress: 0, error: undefined, receiving: false })
+        toast('info', `Stopped converting ${name}.`)
+        return false
+      }
       const msg = e instanceof Error ? e.message : 'Network error'
-      updateJob(job.id, { status: 'error', progress: 0, error: msg })
+      updateJob(job.id, { status: 'error', progress: 0, error: msg, receiving: false })
       toast('error', msg)
+      return false
+    } finally {
+      conversionsRef.current.delete(job.id)
     }
   }, [mode, bijoy, bilingual, pageRange, language, updateJob, pushHistory, toast])
 
@@ -438,41 +522,55 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
     }
   }, [])
 
-  const runQueue = useCallback(async () => {
-    const queue = jobs.filter((j) => j.status === 'idle' || j.status === 'error')
+  /* Convert a set of jobs with bounded concurrency, then open the first one
+     *this run* produced — not whichever older document happens to sit first
+     in the list (that used to open a previous session's document). */
+  const runJobs = useCallback(async (queue: Job[]) => {
     if (queue.length === 0) { toast('info', 'Nothing to convert'); return }
+    const pending = [...queue]
+    const succeeded: string[] = []
     setConverting(true)
-    // Concurrency limiter
     const workers = new Array(CONCURRENCY).fill(0).map(async () => {
       while (true) {
-        const next = queue.shift()
+        const next = pending.shift()
         if (!next) break
-        await convertOne(next)
+        if (await convertOne(next)) succeeded.push(next.id)
       }
     })
     await Promise.all(workers)
     setConverting(false)
-    // Auto-open workspace if any succeeded
-    setJobs((prev) => {
-      const firstDone = prev.find((j) => j.status === 'done')
-      if (firstDone && !activeJobId) {
-        setActiveJobId(firstDone.id)
-        enterWorkspace()
-      }
-      return prev
-    })
-  }, [jobs, convertOne, toast, activeJobId, enterWorkspace])
+    const first = queue.find((job) => succeeded.includes(job.id))
+    if (first) {
+      setActiveJobId(first.id)
+      enterWorkspace()
+    }
+  }, [convertOne, toast, enterWorkspace])
 
-  const submitPassword = useCallback((id: string, pw: string) => {
+  const runQueue = useCallback(() => {
+    void runJobs(jobs.filter((j) => j.status === 'idle' || j.status === 'error'))
+  }, [jobs, runJobs])
+
+  useEffect(() => {
+    if (!autoStartId) return
+    const job = jobs.find((j) => j.id === autoStartId && j.status === 'idle')
+    setAutoStartId(null)
+    if (job) void runJobs([job])
+  }, [autoStartId, jobs, runJobs])
+
+  const submitPassword = useCallback(async (id: string, pw: string) => {
     const j = jobs.find((x) => x.id === id)
     if (!j) return
     updateJob(id, { password: pw })
-    convertOne({ ...j, password: pw }, pw)
-  }, [jobs, convertOne, updateJob])
+    const othersBusy = jobs.some((x) => x.id !== id && (x.status === 'converting' || x.status === 'idle'))
+    if (await convertOne({ ...j, password: pw }, pw) && !othersBusy) {
+      setActiveJobId(id)
+      enterWorkspace()
+    }
+  }, [jobs, convertOne, updateJob, enterWorkspace])
 
   const retryJob = useCallback((id: string) => {
     const j = jobs.find((x) => x.id === id)
-    if (j) convertOne({ ...j, status: 'idle' })
+    if (j) void convertOne({ ...j, status: 'idle' })
   }, [jobs, convertOne])
 
   const openJob = useCallback((id: string) => {
@@ -495,6 +593,12 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
     setJobs((prev) => (prev.find((j) => j.id === synth.id) ? prev : [synth, ...prev]))
     setActiveJobId(synth.id)
     enterWorkspace()
+    // A history entry is the conversion's own id, so its figures are keyed by it.
+    if (referencedFigurePaths(h.markdown).length) {
+      void loadFigures(h.id).then((figures) => {
+        if (figures) setJobs((prev) => prev.map((j) => (j.id === h.id && !j.figures ? { ...j, figures } : j)))
+      })
+    }
   }, [enterWorkspace])
 
   const openBlankEditor = useCallback(() => {
@@ -552,13 +656,17 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
   */
   const addMergedDocument = useCallback((markdown: string, title: string) => {
     const name = title.trim() || 'Merged document'
-    const merged = buildDocument(markdown, name)
+    // The collated text references its sources' figures by path; carry the
+    // bytes it still uses so the merged document shows and exports them too.
+    const figures = pickFigures(markdown, ...jobs.map((j) => j.figures))
+    const merged = { ...buildDocument(markdown, name), ...(Object.keys(figures).length ? { figures } : {}) }
     setJobs((prev) => [merged, ...prev])
     setActiveJobId(merged.id)
     setMergeOpen(false)
     enterWorkspace()
     toast('success', `Collated ${name}.md`)
-  }, [buildDocument, enterWorkspace, toast])
+    if (merged.figures) void saveFigures(merged.id, merged.figures)
+  }, [jobs, buildDocument, enterWorkspace, toast])
 
   /*
     Open a document handed over from Connections — today a GitHub file. Identity
@@ -703,16 +811,48 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
     }
   }, [jobs, activeJobId, toast])
 
+  /* Which export is being built. One at a time: a second click (or ⌘S) while a
+     PDF or DOCX is still rendering used to start a duplicate upload. */
+  const [exporting, setExporting] = useState<MrMarkdownExportFormat | null>(null)
+  const exportingRef = useRef(false)
+
   const downloadActive = useCallback(async (fmt: MrMarkdownExportFormat) => {
     const j = jobs.find((x) => x.id === activeJobId)
-    if (!j) return
+    if (!j || exportingRef.current) return
+    exportingRef.current = true
+    setExporting(fmt)
     const base = `mycloove_${sanitizeExportFilename(j.title || stripName(j.file.name))}`
+    /* Word export stages at most DOCX_MAX_ASSETS files of DOCX_MAX_ASSET_BYTES
+       each and refuses the whole request past that; ship the figures that fit
+       (after the diagrams, which must all travel) and name the rest. */
+    let figuresForExport = j.figures
+    let overLimit: string[] = []
+    if (fmt === 'docx') {
+      const diagrams = parseDiagramFences(j.markdown).filter((block) => block.attributes.code_block !== true).length
+      const fit = selectFiguresWithin(j.markdown, j.figures, {
+        maxCount: Math.max(0, DOCX_MAX_ASSETS - diagrams),
+        maxBytes: DOCX_MAX_ASSET_BYTES,
+      })
+      figuresForExport = fit.figures
+      overLimit = fit.excluded
+    }
+    /* Extracted figures ride beside diagrams: the Markdown points at
+       images/<name>, the files travel in the same folder, and rendered HTML
+       carries the bytes inline (see figures.ts). */
+    const prepared = prepareFiguresForExport(j.markdown, figuresForExport)
+    const unavailable = prepared.missing.filter((path) => !overLimit.includes(path))
+    const renderExport = async (theme: 'light' | 'dark') => {
+      const exported = await renderMarkdownForExport(prepared.markdown, theme)
+      return {
+        ...exported,
+        html: resolveFigureSources(exported.html, j.figures),
+        assets: [...exported.assets, ...prepared.assets],
+      }
+    }
+    const pageTheme = () => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light') as 'light' | 'dark'
     try {
       if (fmt === 'md') {
-        const exported = await renderMarkdownForExport(
-          j.markdown,
-          document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
-        )
+        const exported = await renderExport(pageTheme())
         if (!exported.assets.length) {
           downloadBlob(j.markdown, `${base}.md`, 'text/markdown;charset=utf-8')
         } else {
@@ -729,8 +869,11 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
           if (exported.warnings.length) toast('info', `${exported.warnings.length} diagram(s) kept as source`)
         }
       } else if (fmt === 'pdf') {
-        const exported = await renderMarkdownForExport(j.markdown, 'light')
+        const exported = await renderExport('light')
         assertCompleteDiagramExport(exported)
+        if (new TextEncoder().encode(exported.html).byteLength > MAX_PDF_EXPORT_HTML_BYTES) {
+          throw new Error(`This document's figures are too large for a PDF export (${humanBytes(MAX_PDF_EXPORT_HTML_BYTES)} limit). Export HTML or MD instead — they keep every figure.`)
+        }
         const fd = new FormData()
         fd.append('md_file', new File([j.markdown], `${base}.md`, { type: 'text/markdown' }))
         fd.append('rendered_html', exported.html)
@@ -743,10 +886,7 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
         downloadBlob(await response.blob(), `${base}.pdf`, 'application/pdf')
         if (exported.warnings.length) toast('info', `${exported.warnings.length} diagram(s) exported as source`)
       } else if (fmt === 'html') {
-        const exported = await renderMarkdownForExport(
-          j.markdown,
-          document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
-        )
+        const exported = await renderExport(pageTheme())
         // Standalone artifacts must render math on their own: inject the KaTeX
         // stylesheet (CDN) and the block styles only when math is present, so
         // math-free documents stay fully offline-identical.
@@ -764,10 +904,7 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
         downloadBlob(html, `${base}.html`, 'text/html;charset=utf-8')
         if (exported.warnings.length) toast('info', `${exported.warnings.length} diagram(s) kept as source`)
       } else if (fmt === 'json') {
-        const exported = await renderMarkdownForExport(
-          j.markdown,
-          document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
-        )
+        const exported = await renderExport(pageTheme())
         const payload = createStructuredExport({
           source: j.file.name,
           pages: j.pages,
@@ -786,7 +923,7 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
         downloadBlob(JSON.stringify(payload, null, 2), `${base}.json`, 'application/json;charset=utf-8')
         if (exported.warnings.length) toast('info', `${exported.warnings.length} diagram(s) kept as source`)
       } else if (fmt === 'docx') {
-        const exported = await renderMarkdownForExport(j.markdown, 'light')
+        const exported = await renderExport('light')
         const fd = new FormData()
         fd.append('markdown', exported.markdown)
         fd.append('filename', base)
@@ -813,9 +950,18 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
         downloadBlob(JSON.stringify(payload, null, 2), `${base}.chunks.json`, 'application/json;charset=utf-8')
       }
       toast('success', `Downloaded ${fmt.toUpperCase()}`)
+      if (fmt !== 'chunks' && unavailable.length) {
+        toast('info', `${unavailable.length} figure${unavailable.length === 1 ? ' is' : 's are'} not available in this browser and stayed as ${unavailable.length === 1 ? 'a link' : 'links'}.`)
+      }
+      if (overLimit.length) {
+        toast('info', `${overLimit.length} figure${overLimit.length === 1 ? '' : 's'} exceeded Word export limits (${DOCX_MAX_ASSETS} files, ${humanBytes(DOCX_MAX_ASSET_BYTES)} each) and stayed as ${overLimit.length === 1 ? 'a link' : 'links'}. HTML and MD keep every figure.`)
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'The export could not be completed.'
       toast('error', message)
+    } finally {
+      exportingRef.current = false
+      setExporting(null)
     }
   }, [jobs, activeJobId, toast])
 
@@ -883,15 +1029,15 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
 
   const cmdActions: CmdAction[] = useMemo(() => {
     const acts: CmdAction[] = []
-    acts.push({ id: 'new-document', group: 'Actions', label: 'Open blank editor', icon: Ic.edit(13), kbd: '⌘↵', fn: openBlankEditor })
+    acts.push({ id: 'new-document', group: 'Actions', label: 'Open blank editor', icon: Ic.edit(13), kbd: shortcutLabel('↵'), fn: openBlankEditor })
     acts.push({ id: 'collate', group: 'Actions', label: 'Collate documents', icon: Ic.collate(13), fn: () => setMergeOpen(true) })
     acts.push({ id: 'run', group: 'Actions', label: 'Convert queued files', icon: Ic.play(13), fn: runQueue })
     acts.push({ id: 'back', group: 'Navigation', label: 'New document dashboard', icon: Ic.chevron(13), fn: goToDashboard })
-    acts.push({ id: 'focus', group: 'Navigation', label: focusMode ? 'Exit focus mode' : 'Enter focus mode', icon: Ic.focus(13), kbd: '⌘/', fn: () => setFocusMode(!focusMode) })
+    acts.push({ id: 'focus', group: 'Navigation', label: focusMode ? 'Exit focus mode' : 'Enter focus mode', icon: Ic.focus(13), kbd: shortcutLabel('/'), fn: () => setFocusMode(!focusMode) })
     acts.push({ id: 'help', group: 'Help', label: 'Show keyboard shortcuts', icon: Ic.kbd(13), kbd: '?', fn: () => setHelpOpen(true) })
     if (activeJobId) {
-      acts.push({ id: 'copy', group: 'Editor', label: 'Copy markdown', icon: Ic.copy(13), kbd: '⌘C', fn: copyActive })
-      acts.push({ id: 'dl-md', group: 'Export', label: 'Download .md', icon: Ic.download(13), kbd: '⌘S', fn: () => downloadActive('md') })
+      acts.push({ id: 'copy', group: 'Editor', label: 'Copy markdown', icon: Ic.copy(13), kbd: shortcutLabel('C'), fn: copyActive })
+      acts.push({ id: 'dl-md', group: 'Export', label: 'Download .md', icon: Ic.download(13), kbd: shortcutLabel('S'), fn: () => downloadActive('md') })
       acts.push({ id: 'dl-html', group: 'Export', label: 'Download .html', icon: Ic.download(13), fn: () => downloadActive('html') })
       acts.push({ id: 'dl-json', group: 'Export', label: 'Download .json', icon: Ic.download(13), fn: () => downloadActive('json') })
       acts.push({ id: 'dl-docx', group: 'Export', label: 'Download .docx', icon: Ic.download(13), fn: () => downloadActive('docx') })
@@ -1069,6 +1215,7 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
           onResetSourcedDocument={resetSourcedDocument}
           aiBusy={aiBusy}
           sessionSave={sessionSave}
+          exporting={exporting}
         />
         <CommandPalette open={cmdkOpen} actions={cmdActions} creditState={creditState} onClose={() => setCmdkOpen(false)} />
         <ShortcutsModal open={helpOpen} onClose={() => setHelpOpen(false)} />
@@ -1119,8 +1266,8 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
                 <button type="button" className="pm-btn pm-btn-lg pm-entry-cta" onClick={scrollToConverter}>{Ic.upload(15)} Import a document</button>
               </div>
               <div className="pm-entry-meta">
-                <span><span className="pm-kbd">⌘ K</span> Command palette</span>
-                <span><span className="pm-kbd">⌘ ↵</span> Blank editor</span>
+                <span><span className="pm-kbd">{shortcutLabel('K')}</span> Command palette</span>
+                <span><span className="pm-kbd">{shortcutLabel('↵')}</span> Blank editor</span>
               </div>
             </div>
             <aside
@@ -1188,7 +1335,7 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
               <button type="button" className="pm-start-choice" onClick={openBlankEditor}>
                 <span className="pm-fresh-glyph" aria-hidden="true"><i /><i /><i /></span>
                 <span className="pm-start-choice-copy"><strong>Blank Markdown</strong><small>Write from scratch</small></span>
-                <span className="pm-start-choice-tail"><span className="pm-kbd">⌘ ↵</span>{Ic.arrow(15)}</span>
+                <span className="pm-start-choice-tail"><span className="pm-kbd">{shortcutLabel('↵')}</span>{Ic.arrow(15)}</span>
               </button>
               <div className="pm-start-panel-divider" />
               <div className="pm-start-presets-head"><span>Conversion preset</span><small>mode · language</small></div>
@@ -1233,6 +1380,7 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
                   job={j}
                   onRemove={removeJob}
                   onRetry={retryJob}
+                  onCancel={cancelJob}
                   onSubmitPassword={submitPassword}
                   onOpen={openJob}
                 />
@@ -1276,7 +1424,7 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
                 {Ic.kbd(13)} <span>Shortcuts</span> <span className="pm-kbd">?</span>
               </button>
               <button className="pm-footer-action" type="button" onClick={() => setCmdkOpen(true)}>
-                {Ic.cmd(13)} <span>Command palette</span> <span className="pm-kbd">⌘K</span>
+                {Ic.cmd(13)} <span>Command palette</span> <span className="pm-kbd">{shortcutLabel('K')}</span>
               </button>
             </div>
           </div>

@@ -248,7 +248,9 @@ function walk(node: Node): string {
     }
 
     case 'img': {
-      const src = el.getAttribute('src') || ''
+      // An extracted figure renders from its bytes but is written back as
+      // its `assets/…` path (see figures.ts) — never as inline base64.
+      const src = el.getAttribute('data-mr-figure') || el.getAttribute('src') || ''
       const alt = el.getAttribute('alt') || ''
       return src ? `![${alt}](${src})` : ''
     }

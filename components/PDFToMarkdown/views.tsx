@@ -26,6 +26,7 @@ import type { CreditBalanceState } from '@/lib/usage/credit-types'
 import CreditCost from '@/components/tools/CreditCost'
 import type { NavigationAvailability } from '@/components/tools/toolNavigation'
 import { DiagramPreview } from './diagrams/DiagramPreview'
+import { resolveFigureSources } from './figures'
 import { DiagramInsertMenu } from './diagrams/DiagramInsertMenu'
 import type { DiagramTemplate } from './diagrams/types'
 import { isSelectionInsideDiagramFence, normalizeDiagramClipboardText } from './diagrams/clipboard'
@@ -33,7 +34,7 @@ import { loadWorkspacePrefs, saveWorkspacePrefs } from './session'
 import { MergeDialog } from './merge/MergeDialog'
 import {
   Job, HistoryEntry, Mode, MrMarkdownExportFormat, humanBytes, timeAgo, renderMarkdownToHtml, cx, escapeHtml,
-  createBrokenImagePlaceholder,
+  createBrokenImagePlaceholder, shortcutLabel,
 } from './utils'
 
 import {
@@ -297,11 +298,12 @@ export function UsageBar({ used, limit, plan }: { used: number; limit: number; p
    ═══════════════════════════════════════════════════════════════════════ */
 
 export function JobItem({
-  job, onRemove, onRetry, onSubmitPassword, onOpen,
+  job, onRemove, onRetry, onCancel, onSubmitPassword, onOpen,
 }: {
   job: Job
   onRemove: (id: string) => void
   onRetry: (id: string) => void
+  onCancel: (id: string) => void
   onSubmitPassword: (id: string, pw: string) => void
   onOpen: (id: string) => void
 }) {
@@ -330,7 +332,7 @@ export function JobItem({
           {job.status === 'error' && <span style={{ color: 'var(--pm-danger)' }}>· {job.error}</span>}
         </div>
         {job.status === 'converting' && (
-          <div className="pm-progress-track">
+          <div className="pm-progress-track" role="progressbar" aria-label={`Converting ${job.file.name}`}>
             <div className="pm-progress-fill pm-progress-indeterminate" />
           </div>
         )}
@@ -364,7 +366,12 @@ export function JobItem({
             {Ic.refresh(12)} Retry
           </button>
         )}
-        <button className="pm-btn pm-btn-icon pm-btn-icon-sm" onClick={() => onRemove(job.id)} title="Remove">
+        {job.status === 'converting' && !job.receiving && (
+          <button type="button" className="pm-btn pm-btn-sm pm-btn-ghost" onClick={() => onCancel(job.id)}>
+            Cancel
+          </button>
+        )}
+        <button className="pm-btn pm-btn-icon pm-btn-icon-sm" onClick={() => onRemove(job.id)} title="Remove" aria-label={`Remove ${job.file.name}`}>
           {Ic.close(12)}
         </button>
       </div>
@@ -561,6 +568,7 @@ export function Workspace({
   onResetSourcedDocument,
   aiBusy,
   sessionSave,
+  exporting,
 }: {
   accountState: AccountViewerState
   creditState: CreditBalanceState
@@ -603,6 +611,8 @@ export function Workspace({
   aiBusy: string | null
   /** Outcome of the orchestrator's latest autosave write (null before the first). */
   sessionSave: { at: number; ok: boolean } | null
+  /** The export being built right now, if any — exports run one at a time. */
+  exporting: MrMarkdownExportFormat | null
 }) {
   const active = jobs.find((j) => j.id === activeId) || null
   const [preview, setPreview] = useState<'preview' | 'raw' | 'outline'>('preview')
@@ -1018,7 +1028,7 @@ export function Workspace({
 
 
 
-  const html = useMemo(() => (active ? renderMarkdownToHtml(active.markdown) : ''), [active])
+  const html = useMemo(() => (active ? resolveFigureSources(renderMarkdownToHtml(active.markdown), active.figures) : ''), [active])
 
   useEffect(() => {
     const richEditor = richEditorRef.current
@@ -1759,7 +1769,7 @@ export function Workspace({
           <button className="mr-command-trigger" onClick={onOpenCmdk} aria-label="Search or run a command" title="Command palette (Ctrl+K)">
           <span className="mr-command-icon" aria-hidden="true">{Ic.search(15)}</span>
           <span className="mr-command-label">Search tools and commands</span>
-          <span className="mr-command-hint"><span>Ctrl</span><span>K</span></span>
+          <span className="mr-command-hint"><span>{shortcutLabel('K').startsWith('⌘') ? '⌘' : 'Ctrl'}</span><span>K</span></span>
           </button>
         </div>
 
@@ -1776,8 +1786,8 @@ export function Workspace({
             <span className="mr-new-plus" aria-hidden="true">＋</span><span>New</span>
           </button>
           <div className="mr-export-wrap" ref={exportWrapRef}>
-            <button className="mr-export-btn" onClick={() => setExportMenuOpen((v) => !v)} aria-label="Export document" aria-expanded={exportMenuOpen} aria-haspopup="menu" aria-controls="mr-export-menu">
-              {Ic.download(14)} <span className="mr-export-btn-label">Export</span><span className="mr-export-caret" aria-hidden="true" />
+            <button className="mr-export-btn" onClick={() => setExportMenuOpen((v) => !v)} aria-label={exporting ? `Exporting ${exporting.toUpperCase()}` : 'Export document'} aria-busy={exporting !== null} aria-expanded={exportMenuOpen} aria-haspopup="menu" aria-controls="mr-export-menu">
+              {exporting ? Ic.spinner(14) : Ic.download(14)} <span className="mr-export-btn-label">{exporting ? 'Exporting…' : 'Export'}</span><span className="mr-export-caret" aria-hidden="true" />
             </button>
             <div id="mr-export-menu" className={cx('mr-export-menu', exportMenuOpen && 'mr-export-menu-open')} role="menu" aria-hidden={!exportMenuOpen}>
                 {([
@@ -1785,7 +1795,7 @@ export function Workspace({
                   ['html', 'Web page', 'HTML'], ['json', 'Structured data', 'JSON'], ['chunks', 'AI-ready chunks', 'AI'],
                 ] as const).map(([fmt, label, ext]) => (
                   <div key={fmt} role="none">
-                    <button role="menuitem" tabIndex={exportMenuOpen ? 0 : -1} className={cx('mr-export-option', fmt === 'json' && 'mr-export-group-start')} aria-describedby={exportMenuOpen && (fmt === 'pdf' || fmt === 'docx') ? `mr-export-cost-${fmt}` : undefined} onClick={() => { onDownload(fmt); setExportMenuOpen(false) }}>
+                    <button role="menuitem" tabIndex={exportMenuOpen ? 0 : -1} disabled={exporting !== null} aria-busy={exporting === fmt} className={cx('mr-export-option', fmt === 'json' && 'mr-export-group-start')} aria-describedby={exportMenuOpen && (fmt === 'pdf' || fmt === 'docx') ? `mr-export-cost-${fmt}` : undefined} onClick={() => { onDownload(fmt); setExportMenuOpen(false) }}>
                       <span className="mr-export-format">{ext}</span><span className="mr-export-label">{label}</span>
                     </button>
                     {exportMenuOpen && (fmt === 'pdf' || fmt === 'docx') && creditState.snapshot?.prices[fmt === 'pdf' ? 'markdown-to-pdf' : 'pdf-to-markdown']?.enabled !== false ? <div id={`mr-export-cost-${fmt}`} className="mr-credit-cost mr-export-credit-cost"><CreditCost toolId={fmt === 'pdf' ? 'markdown-to-pdf' : 'pdf-to-markdown'} creditState={creditState} showActionLabel={false} /></div> : null}
@@ -2369,7 +2379,7 @@ export function Workspace({
               </nav>
             ) : preview === 'preview' ? (
               active.markdown.trim()
-                ? <DiagramPreview markdown={active.markdown} theme={mrTheme} />
+                ? <DiagramPreview markdown={active.markdown} theme={mrTheme} figures={active.figures} />
                 : (
                   <div className="pm-preview-empty">
                     {Ic.markdown(40)}
@@ -2397,9 +2407,11 @@ export function Workspace({
                 key={fmt}
                 className={cx('pm-export-format-btn', fmt === 'md' && 'pm-export-format-btn-active')}
                 onClick={() => onDownload(fmt)}
-                title={`Download ${label}`}
+                disabled={exporting !== null}
+                aria-busy={exporting === fmt}
+                title={exporting === fmt ? `Exporting ${label}…` : `Download ${label}`}
               >
-                {icon}<span>{label}</span>
+                {exporting === fmt ? Ic.spinner(12) : icon}<span>{label}</span>
               </button>
             ))}
           </div>
@@ -2415,8 +2427,8 @@ export function Workspace({
       {/* Footer status bar — premium */}
       <div className="pm-ws-footer pm-ws-footer-premium">
         <div className="pm-ws-foot-primary">
-          <span className="pm-ws-foot-item pm-ws-foot-status">
-            <span className="pm-ws-foot-dot" /> Ready
+          <span className="pm-ws-foot-item pm-ws-foot-status" role="status">
+            <span className="pm-ws-foot-dot" /> {exporting ? `Exporting ${exporting === 'chunks' ? 'AI chunks' : exporting.toUpperCase()}…` : 'Ready'}
           </span>
           <span className="pm-ws-foot-sep" />
           <span className="pm-ws-foot-item pm-ws-foot-format">{Ic.markdown(11)} Markdown</span>

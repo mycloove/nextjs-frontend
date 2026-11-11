@@ -2,6 +2,7 @@
 
 import { extractMath, restoreMathTokens } from './math.ts'
 import type { ExtractionReview } from './review/model.ts'
+import type { FigureMap } from './figures.ts'
 // Syntax highlighting: core build + explicitly registered languages keeps the
 // bundle small (the full highlight.js build is ~1MB). Rendered markup uses
 // hljs-* classes colored by the workspace theme in 02-workspace-layout.css,
@@ -170,6 +171,15 @@ export interface Job {
    * documents.
    */
   githubBase?: { markdown: string; sha: string | null }
+  /**
+   * Extracted PDF figures, `assets/<name>` → data URL (see figures.ts). Kept in
+   * memory and IndexedDB, never in the localStorage session. Absent when the
+   * document has none or they could not be restored.
+   */
+  figures?: FigureMap
+  /** The service has answered and the result is downloading: no longer
+   *  cancellable, because the conversion has already been charged. */
+  receiving?: boolean
 }
 
 /**
@@ -314,6 +324,41 @@ export const computeStats = (md: string): Job['stats'] => {
 }
 
 /* ── Heuristic text signal when the API doesn't send one ─────── */
+/**
+ * A shortcut as this platform writes it: `⌘K` on Apple devices, `Ctrl+K`
+ * elsewhere (Windows users saw `⌘` everywhere). Client-only callers: the
+ * workspace renders after the session restore, never on the server.
+ */
+export const shortcutLabel = (key: string): string => {
+  const apple = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent)
+  if (apple) return `⌘${key}`
+  return `Ctrl+${key === '↵' ? 'Enter' : key}`
+}
+
+/**
+ * The one-line receipt shown when a conversion finishes: what came back and,
+ * plainly, what needs a second look. Reads only the response's content-free
+ * extraction summary; `notice` is true whenever anything needs checking, so a
+ * partial result is never announced as a clean success.
+ */
+export function conversionSummary(name: string, data: unknown, omittedFigures: number): { message: string; notice: boolean } {
+  const record = data && typeof data === 'object' ? data as Record<string, unknown> : {}
+  const extraction = record.extraction && typeof record.extraction === 'object' ? record.extraction as Record<string, unknown> : {}
+  const summary = extraction.summary && typeof extraction.summary === 'object' ? extraction.summary as Record<string, unknown> : {}
+  const methods = summary.methods && typeof summary.methods === 'object' ? summary.methods as Record<string, unknown> : {}
+  const count = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0)
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+
+  const pages = count(record.pages)
+  const ocrPages = count(summary.ocr_pages)
+  const unreadable = count(methods.unavailable)
+  const parts = [`${name} converted${pages ? ` · ${plural(pages, 'page')}` : ''}`]
+  if (ocrPages) parts.push(`${plural(ocrPages, 'page')} read with OCR — check names and numbers`)
+  if (unreadable) parts.push(`${plural(unreadable, 'page')} could not be read`)
+  if (omittedFigures) parts.push(`${plural(omittedFigures, 'figure')} too large to include`)
+  return { message: parts.join(' · '), notice: ocrPages + unreadable + omittedFigures > 0 }
+}
+
 /**
  * Estimates a text-structure signal from the Markdown content — garbled
  * characters, OCR noise, boilerplate and fragmentation all reduce the score;

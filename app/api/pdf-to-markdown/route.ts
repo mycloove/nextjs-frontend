@@ -169,6 +169,13 @@ export async function POST(request: NextRequest) {
     )
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
+    // The editor's Cancel closes the browser request while the conversion is
+    // still running. Without this link the upstream conversion would finish
+    // anyway and be charged for a result nobody receives; aborting it releases
+    // the reserved slot instead. (Once the service has answered, the editor
+    // stops offering Cancel — the charge is settled below.)
+    const onClientAbort = () => controller.abort()
+    request.signal.addEventListener('abort', onClientAbort, { once: true })
 
     let response: Response
     try {
@@ -181,6 +188,13 @@ export async function POST(request: NextRequest) {
       })
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
+        if (request.signal.aborted) {
+          return quota.apply(jsonError({
+            error: 'Conversion cancelled',
+            code: 'request_cancelled',
+            request_id: requestId,
+          }, 499))
+        }
         return quota.apply(jsonError({
           error: 'Conversion service timed out',
           code: 'upstream_timeout',
@@ -196,6 +210,7 @@ export async function POST(request: NextRequest) {
       }, 502))
     } finally {
       clearTimeout(timeout)
+      request.signal.removeEventListener('abort', onClientAbort)
     }
 
     if (!response.ok) {
