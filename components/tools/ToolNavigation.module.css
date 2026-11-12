@@ -49,12 +49,16 @@
 .shortcutHint {
   padding: 1px 6px;
   border: 1px solid var(--tn-divider);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--tn-secondary);
   font: 500 12px/1.4 var(--mc-font-ui), system-ui, sans-serif;
 }
 
+/* ── Trigger ──────────────────────────────────────────────────────────────
+   While the index is unfolded, a short rule under "Tools" marks where it
+   hangs from — the same ink the panel's travelling edge carries. */
 .trigger {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -67,125 +71,465 @@
   color: var(--tn-text);
   font: 600 13px var(--mc-font-ui), system-ui, sans-serif;
   cursor: pointer;
+  transition: background-color 120ms var(--tn-ease);
+}
+
+.trigger::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--sh-brand, var(--tn-signal));
+  transform: scaleX(0);
+  transition: transform 200ms var(--tn-ease);
 }
 
 .trigger:hover,
 .trigger[aria-expanded='true'] { background: color-mix(in srgb, var(--tn-text) 7%, transparent); }
+.trigger[aria-expanded='true']::after { transform: scaleX(1); }
 .trigger[aria-expanded='true'] svg { transform: rotate(180deg); }
 .trigger svg { transition: transform 200ms var(--tn-ease); }
 
 .trigger:focus-visible,
 .dialog :is(a, button, input):focus-visible {
-  outline: 2px solid var(--tn-text);
+  outline: 2px solid var(--tx-ink, var(--tn-text));
   outline-offset: 2px;
 }
 
+/* ── The unfolding index ──────────────────────────────────────────────────
+   Instrument concept: the bar's bottom hairline is a drawer edge. Hovering
+   "Tools" draws a lit segment out along that edge from under the trigger,
+   then the edge travels down the page and the index is revealed behind it —
+   the bar unfolding, not a box popping up. Everything else is quiet.
+
+   Material is the bar's own (--sh-*, inherited from SiteHeader; the dialog is
+   its DOM descendant even in the top layer), so the panel reads as the same
+   sheet as the bar in both themes. --tn-* stays the host-overridable fallback.
+
+   Mechanics: --tn-p (registered, so it interpolates) runs 0 → 1 as the edge
+   travels. The panel is revealed through a mask whose leading edge is a
+   --tx-feather-tall fade rather than a hard cut, so content materialises as
+   the light passes instead of being sliced. The mask's travel is
+   (100% + feather) so at 1 the fade has left the panel entirely. ::after draws
+   the edge at the fade's front, and lands on the bottom hairline.
+
+   Timing (owner direction, 2026-11-12: "smoother, more premium" — longer than
+   the house 360ms on purpose): the old reveal ran the house arrival curve over
+   ~745px in 360ms and measured 98.7% open 40ms after it started, which read
+   as a snap. The drawer now travels on the sheet curve (0.32, 0.72, 0, 1) —
+   a gentle start, a long soft landing — for 560ms, starting 90ms after the
+   edge begins to draw out. Closing is a quicker fold-up on the state curve.
+   Open and close are both transitions, so a reversal mid-flight eases back
+   from where it is; @starting-style gives the open its start, allow-discrete
+   keeps the panel painted while it folds away. */
+@property --tn-p {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
 .dialog {
+  --tx-canvas: var(--sh-canvas, var(--tn-surface));
+  --tx-raise: var(--sh-surface, var(--tn-surface));
+  --tx-ink: var(--sh-ink, var(--tn-text));
+  --tx-muted: var(--sh-muted, var(--tn-secondary));
+  --tx-line: var(--sh-line, var(--tn-divider));
+  --tx-edge: var(--sh-brand, var(--tn-signal));
+  --tx-hover: color-mix(in srgb, var(--tx-ink) 5%, transparent);
+  /* The header shell's own column (min(100% − 64px, 1216px)), so the index
+     lines up under the lockup and the account control. */
+  --tx-gutter: max(32px, calc((100% - 1216px) / 2));
+  --tx-ease-state: cubic-bezier(0.4, 0, 0.2, 1);
+  --tx-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --tx-feather: 56px;
+  /* The fade's front edge, and the point where it is fully opaque. */
+  --tx-front: calc(var(--tn-p) * (100% + var(--tx-feather)));
+  --tx-solid: calc(var(--tx-front) - var(--tx-feather));
+  --tn-p: 0;
   position: fixed;
+  inset: auto;
   margin: 0;
   padding: 0;
-  max-width: calc(100vw - 16px);
-  border: 1px solid color-mix(in srgb, var(--tn-divider) 82%, var(--tn-text));
-  border-radius: 16px;
-  background: var(--tn-surface);
-  color: var(--tn-text);
+  max-width: none;
+  flex-direction: column;
+  border: 0;
+  border-bottom: 1px solid var(--tx-line);
+  border-radius: 0;
+  background: var(--tx-canvas);
+  color: var(--tx-ink);
   font: 400 13px/1.5 var(--mc-font-ui), var(--mc-font-bn), system-ui, sans-serif;
-  box-shadow: 0 32px 90px rgba(0, 0, 0, .32), 0 1px 0 color-mix(in srgb, var(--tn-text) 8%, transparent) inset;
+  box-shadow: var(--mc-elev-2, 0 12px 32px rgba(0, 0, 0, 0.4));
   overflow: hidden;
   overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, #000 var(--tx-solid), transparent var(--tx-front));
+  mask-image: linear-gradient(to bottom, #000 var(--tx-solid), transparent var(--tx-front));
+  pointer-events: none;
+  transition:
+    --tn-p 300ms var(--tx-ease-state),
+    display 300ms allow-discrete,
+    overlay 300ms allow-discrete;
 }
 
 .dialog[open] {
+  --tn-p: 1;
   display: flex;
-  flex-direction: column;
-  animation: indexArrival 240ms var(--tn-ease) both;
-  transform-origin: top right;
+  pointer-events: auto;
+  transition:
+    --tn-p 560ms var(--tx-ease-drawer) 90ms,
+    display 650ms allow-discrete,
+    overlay 650ms allow-discrete;
 }
 
-.dialog::backdrop { background: color-mix(in srgb, var(--bg-overlay, #080910) 74%, transparent); backdrop-filter: blur(3px); }
-.dialogHeading { display: flex; flex: 0 0 auto; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 20px 12px; }
-.headingCopy { min-width: 0; }
-.brandLine { display: flex; align-items: center; gap: 12px; }
-.eyebrow { padding-left: 12px; border-left: 1px solid var(--tn-divider); color: var(--tn-secondary); font-size: 12px; font-weight: 650; letter-spacing: .1em; }
-.dialogHeading h2 { margin: 8px 0 0; font: 650 19px/1.25 var(--mc-font-ui), system-ui, sans-serif; letter-spacing: -.03em; }
-.close { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; border: 1px solid var(--tn-divider); border-radius: 10px; color: var(--tn-secondary); background: transparent; cursor: pointer; transition: transform 120ms ease-out; }
-.close:hover { color: var(--tn-text); background: color-mix(in srgb, var(--tn-text) 6%, transparent); transform: translateY(-1px); }
-.search { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; margin: 0 20px 10px; padding: 0 12px; min-height: 40px; border: 1px solid var(--tn-divider); border-radius: 10px; background: color-mix(in srgb, var(--tn-text) 3%, var(--tn-surface)); color: var(--tn-secondary); }
+@starting-style {
+  .dialog[open] { --tn-p: 0; }
+}
+
+/* Settled: no mask at all, so nothing is ever painted through a gradient
+   while the user reads or scrolls the index. */
+.dialog[open][data-settled] {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.dialog:focus { outline: none; }
+
+/* The travelling edge. It draws out from the trigger along the bar's hairline
+   first (scaleX from --tn-origin), rides the fade's front down, and comes to
+   rest on the bottom hairline before dimming into it. Lit at the trigger and
+   fading toward the sides, with a soft bloom under it, so it reads as one
+   light source passing down the sheet rather than an orange border. */
+.dialog::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: min(max(0px, calc(var(--tx-front) - 2px)), calc(100% - 2px));
+  z-index: 3;
+  height: 2px;
+  background:
+    radial-gradient(closest-side, var(--tx-edge), transparent),
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--tx-edge) 35%, var(--tx-line)) 20% 80%, transparent);
+  background-repeat: no-repeat;
+  background-size: 720px 2px, 100% 1px;
+  background-position: calc(var(--tn-origin, 50%) - 360px) 0, 0 0;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tx-edge) 55%, transparent));
+  transform-origin: var(--tn-origin, 50%) 0;
+  transform: scaleX(0);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 200ms var(--tx-ease-state), opacity 200ms var(--tx-ease-state);
+}
+
+.dialog[open]::after {
+  transform: scaleX(1);
+  opacity: 0;
+  transition: transform 280ms var(--tn-ease), opacity 320ms var(--tx-ease-state) 560ms;
+}
+
+@starting-style {
+  .dialog[open]::after { transform: scaleX(0); opacity: 1; }
+}
+
+/* The page under the index dims; the bar it hangs from does not, so the
+   bar still reads as the thing that opened. The backdrop still spans the bar
+   for pointer events — a press there closes the index. */
+.dialog::backdrop {
+  background: linear-gradient(
+    to bottom,
+    transparent var(--tn-veil-top, 0px),
+    color-mix(in srgb, var(--bg-overlay, #080910) 62%, transparent) var(--tn-veil-top, 0px)
+  );
+  opacity: 0;
+  transition: opacity 300ms var(--tx-ease-state), display 300ms allow-discrete, overlay 300ms allow-discrete;
+}
+
+.dialog[open]::backdrop { opacity: 1; transition: opacity 480ms var(--tx-ease-state) 60ms, display 480ms allow-discrete, overlay 480ms allow-discrete; }
+
+@starting-style {
+  .dialog[open]::backdrop { opacity: 0; }
+}
+
+/* Content travels with the drawer: each block slides down from slightly
+   above and resolves as the edge passes it, in reading order (--i per block),
+   on the same drawer curve — so the sheet seems to carry its contents down
+   rather than uncover a static page. Only during the unfold: once settled,
+   filtering and searching respond at once instead of replaying it. */
+.dialog[open]:not([data-settled]) :is(.dialogHeading, .categoryBar, .group, .recent, .rail, .dialogFoot) {
+  animation: indexRise 520ms var(--tx-ease-drawer) both;
+  animation-delay: calc(130ms + var(--i, 0) * 45ms);
+}
+.dialog[open] .categoryBar { --i: 1; }
+.dialog[open] .dialogFoot { --i: 8; }
+.dialog[open]:not([data-settled]) :is(.group, .recent, .rail) { animation-delay: calc(190ms + var(--i, 0) * 45ms); }
+
+@keyframes indexRise {
+  from { opacity: 0; transform: translateY(-14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Folding away: the contents dim first, so the fold-up reads as the sheet
+   closing over them rather than slicing through text. */
+.dialog > * { transition: opacity 180ms var(--tx-ease-state); }
+.dialog:not([open]) > * { opacity: 0; }
+
+/* ── Heading row: name · search · close ── */
+.dialogHeading {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 24px;
+  padding: 24px var(--tx-gutter) 16px;
+}
+.headingCopy { flex: 0 0 auto; min-width: 0; }
+.eyebrow { color: var(--tx-muted); font-size: 12px; font-weight: 650; letter-spacing: .1em; }
+.dialogHeading h2 { margin: 4px 0 0; font: 650 20px/1.25 var(--mc-font-ui), system-ui, sans-serif; letter-spacing: -.03em; }
+
+.search {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+  max-width: 520px;
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0 12px;
+  border: 1px solid var(--tx-line);
+  border-radius: 10px;
+  background: var(--tx-raise);
+  color: var(--tx-muted);
+  transition: border-color 120ms var(--tn-ease);
+}
 .search:focus-within { padding-inline: 11px; border: 2px solid var(--tn-signal); }
 .search > svg { flex: 0 0 16px; }
-.search input { width: 100%; min-width: 0; height: 38px; border: 0; border-radius: 0; padding: 0 4px; background: transparent; color: var(--tn-text); font: inherit; }
+.search input { width: 100%; min-width: 0; height: 40px; border: 0; border-radius: 0; padding: 0 4px; background: transparent; color: var(--tx-ink); font: inherit; font-size: 14px; }
 .dialog .search input:focus-visible { outline: none; }
-.search input::placeholder { color: var(--tn-secondary); opacity: 1; }
+.search input::placeholder { color: var(--tx-muted); opacity: 1; }
 .search input::-webkit-search-cancel-button { display: none; }
-.search button { flex: 0 0 auto; min-height: 40px; border: 0; padding: 0 4px; background: transparent; color: var(--tn-text); font: 500 12px/1.4 var(--mc-font-ui), system-ui, sans-serif; cursor: pointer; }
-.categoryBar { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 6px; margin: 0 20px 10px; }
-.categoryBar button { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 10px; border: 1px solid var(--tn-divider); border-radius: 8px; background: transparent; color: var(--tn-secondary); font: 550 12px/1.2 var(--mc-font-ui), system-ui, sans-serif; white-space: nowrap; cursor: pointer; transition: transform 120ms ease-out; }
-.categoryBar button:hover { color: var(--tn-text); transform: translateY(-1px); }
-.categoryBar .categoryActive { border-color: color-mix(in srgb, var(--tn-signal) 42%, var(--tn-divider)); background: color-mix(in srgb, var(--tn-signal) 10%, var(--tn-surface)); color: var(--tn-text); }
-.categoryCount { color: var(--tn-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
-.index { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 16px 16px; }
-.groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 8px 16px; }
-.group,
-.workspaces { min-width: 0; }
-.workspaces { padding-top: 8px; border-top: 1px solid var(--tn-divider); }
-.groups h3 { margin: 0 0 4px; padding: 7px 8px; color: var(--tn-secondary); font-size: 12px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; }
-.groups ul { list-style: none; margin: 0; padding: 0; }
-.groups li { display: flex; align-items: center; min-width: 0; margin-bottom: 2px; border: 1px solid transparent; border-radius: 10px; }
-.groups li:hover { border-color: var(--tn-divider); background: color-mix(in srgb, var(--tn-text) 4%, var(--tn-surface)); }
-.groups .currentRow { border-color: color-mix(in srgb, var(--tn-signal) 35%, var(--tn-divider)); background: color-mix(in srgb, var(--tn-signal) 8%, var(--tn-surface)); }
-.entry { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 0; min-height: 54px; padding: 8px; border-radius: 9px; color: var(--tn-text); text-decoration: none; }
-.entry[aria-disabled='true'] { cursor: not-allowed; }
-.glyph { display: flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; height: 32px; border: 1px solid var(--tn-divider); border-radius: 9px; background: color-mix(in srgb, var(--tn-text) 3%, var(--tn-surface)); color: var(--tn-text); }
-.glyph svg { width: 20px; height: 20px; }
-/* Inside the 32px aria-hidden glyph tile: an icon, not readable text, so the 12px floor does not apply. */
-.formatGlyph { font-size: 7px; font-weight: 700; letter-spacing: -.025em; }
+.search button { flex: 0 0 auto; min-height: 40px; border: 0; padding: 0 4px; background: transparent; color: var(--tx-ink); font: 500 12px/1.4 var(--mc-font-ui), system-ui, sans-serif; cursor: pointer; }
+
+.close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--tx-line);
+  border-radius: 10px;
+  color: var(--tx-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 120ms var(--tn-ease), background-color 120ms var(--tn-ease);
+}
+.close:hover { color: var(--tx-ink); background: var(--tx-hover); }
+
+/* ── Category filter: engraved tabs on a hairline ── */
+.categoryBar {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  margin: 0 var(--tx-gutter);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--tx-line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.categoryBar::-webkit-scrollbar { display: none; }
+.categoryBar button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--tx-muted);
+  font: 550 12px/1.2 var(--mc-font-ui), system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 120ms var(--tn-ease), background-color 120ms var(--tn-ease), border-color 120ms var(--tn-ease);
+}
+.categoryBar button:hover { color: var(--tx-ink); background: var(--tx-hover); }
+.categoryBar .categoryActive { border-color: color-mix(in srgb, var(--tx-ink) 45%, var(--tx-line)); background: var(--tx-raise); color: var(--tx-ink); }
+.categoryCount { color: var(--tx-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* ── The index ── */
+.index { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px var(--tx-gutter) 24px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: 32px; }
+.layoutSingle { grid-template-columns: minmax(0, 1fr); }
+.main { display: flex; min-width: 0; flex-direction: column; gap: 20px; }
+
+.layout h3 { margin: 0 0 8px; padding: 0 8px; color: var(--tx-muted); font-size: 12px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; }
+.layout ul { list-style: none; margin: 0; padding: 0; }
+
+/* Groups flow into balanced columns in reading order; a group never splits. */
+.columns { columns: 3 236px; column-gap: 24px; }
+.group { break-inside: avoid; min-width: 0; padding-bottom: 16px; }
+/* One category shown: its own entries spread across the width instead. */
+.columnsOne { columns: auto; }
+.columnsOne ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 24px; }
+
+.layout li { position: relative; display: flex; align-items: center; min-width: 0; margin-bottom: 2px; border-radius: 10px; transition: background-color 120ms var(--tn-ease); }
+.layout li:hover { background: var(--tx-hover); }
+.layout .currentRow { background: color-mix(in srgb, var(--tn-signal) 9%, transparent); }
+.layout .currentRow::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 2px; border-radius: 2px; background: var(--tx-edge); }
+
+.entry { display: flex; flex: 1; align-items: center; gap: 12px; min-width: 0; min-height: 56px; padding: 8px; border-radius: 10px; color: var(--tx-ink); text-decoration: none; }
+.entry[aria-disabled='true'] { cursor: not-allowed; opacity: .62; }
+
+/* Card marks: the home page's 56px layered icon, scaled into a 40px slot.
+   On row hover the two tiles part exactly as they do on a home card. */
+.mark { position: relative; display: block; flex: 0 0 40px; width: 40px; height: 40px; }
+.markScale { position: absolute; top: 0; left: 0; display: block; width: 56px; height: 56px; transform: scale(.7143); transform-origin: 0 0; }
+.markSmall { flex-basis: 28px; width: 28px; height: 28px; }
+.markSmall .markScale { transform: scale(.5); }
+.markScale > * > :first-child,
+.markScale > * > :last-child { transition: transform 400ms cubic-bezier(0.25, 1, 0.3, 1); }
+
+@media (hover: hover) and (pointer: fine) {
+  .layout li:hover .markScale > * > :first-child,
+  .entry:focus-visible .markScale > * > :first-child { transform: translate3d(-3px, -3px, -16px) rotate(-3deg); }
+  .layout li:hover .markScale > * > :last-child,
+  .entry:focus-visible .markScale > * > :last-child { transform: translate3d(3px, 3px, 16px) rotate(3deg); }
+}
+
 .entryCopy { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
-.entryTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 7px; font-size: 13px; font-weight: 600; line-height: 1.35; }
+.entryTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 14px; font-weight: 600; line-height: 1.35; }
 .current { padding: 2px 6px; border: 1px solid color-mix(in srgb, var(--tn-signal) 38%, transparent); border-radius: 6px; color: var(--tn-signal); font-size: 12px; font-weight: 650; line-height: 1.2; }
-.description { color: var(--tn-secondary); font-size: 12px; line-height: 1.4; }
-.newTab { display: grid; flex: 0 0 40px; place-items: center; align-self: stretch; width: 40px; min-height: 44px; border-radius: 8px; color: var(--tn-secondary); }
-.newTab:hover { color: var(--tn-text); background: color-mix(in srgb, var(--tn-text) 5%, transparent); }
-.empty { padding: 32px 8px; text-align: center; }
-.empty strong { font-size: 15px; }
-.empty p { margin: 8px 0; color: var(--tn-secondary); }
-.empty button { min-height: 40px; padding: 0 12px; border: 1px solid var(--tn-divider); border-radius: 8px; background: transparent; color: var(--tn-text); font: inherit; cursor: pointer; }
-.dialogFoot { display: flex; flex: 0 0 auto; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 12px 24px; border-top: 1px solid var(--tn-divider); color: var(--tn-secondary); }
-.dialogFoot p { margin: 0; max-width: 560px; font-size: 12px; line-height: 1.6; }
+.description { display: -webkit-box; overflow: hidden; color: var(--tx-muted); font-size: 12px; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+
+/* New-tab escape: always present (touch has no hover), quiet until its row is in play. */
+.newTab { display: grid; flex: 0 0 40px; place-items: center; align-self: stretch; width: 40px; min-height: 44px; border-radius: 8px; color: var(--tx-muted); transition: color 120ms var(--tn-ease), background-color 120ms var(--tn-ease), opacity 120ms var(--tn-ease); }
+.newTab:hover { color: var(--tx-ink); background: var(--tx-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .newTab { opacity: 0; }
+  .layout li:hover .newTab,
+  .layout li:focus-within .newTab { opacity: 1; }
+}
+
+/* Recent: the user's own last tools, as a row of chips above the shelves. */
+.recent ul { display: flex; flex-wrap: wrap; gap: 8px; }
+.recentChip { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 12px 4px 6px; border: 1px solid var(--tx-line); border-radius: 999px; background: var(--tx-raise); color: var(--tx-ink); font-size: 13px; font-weight: 600; text-decoration: none; transition: border-color 120ms var(--tn-ease); }
+.recentChip:hover { border-color: color-mix(in srgb, var(--tx-ink) 28%, var(--tx-line)); }
+.recentChip[aria-disabled='true'] { cursor: not-allowed; opacity: .62; }
+.recentLabel { white-space: nowrap; }
+.recentNote { color: var(--tx-muted); font-weight: 500; }
+.recent li { margin: 0; }
+.recent li:hover { background: transparent; }
+
+/* Workspaces: standalone apps, set apart on a raised rail. */
+.rail { min-width: 0; padding: 16px 8px 8px; border: 1px solid var(--tx-line); border-radius: 14px; background: var(--tx-raise); }
+.railNote { margin: -4px 8px 12px; color: var(--tx-muted); font-size: 12px; line-height: 1.45; }
+
+.empty { padding: 40px 8px; text-align: center; }
+.empty strong { font-size: 16px; }
+.empty p { margin: 8px 0 16px; color: var(--tx-muted); }
+.empty button { min-height: 40px; padding: 0 16px; border: 1px solid var(--tx-line); border-radius: 8px; background: transparent; color: var(--tx-ink); font: inherit; cursor: pointer; }
+
+.dialogFoot { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 16px; padding: 12px var(--tx-gutter); border-top: 1px solid var(--tx-line); color: var(--tx-muted); }
+.dialogFoot p { margin: 0; max-width: 640px; font-size: 12px; line-height: 1.6; }
 .results { display: block; flex: 0 0 auto; font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
 .availabilityNote { white-space: nowrap; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
-@keyframes indexArrival { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+/* Home-only card marks (ToolIndexMark): the same tile material as
+   LayeredIcon, coloured per destination through --mark-* on the root. */
+.homeMark { position: relative; display: block; width: 56px; height: 56px; perspective: 800px; transform-style: preserve-3d; isolation: isolate; }
+.homeBack,
+.homeFront { position: absolute; display: flex; width: 38px; height: 38px; align-items: center; justify-content: center; border-radius: 10px; }
+.homeBack {
+  top: 0;
+  left: 0;
+  z-index: 1;
+  color: var(--mark-ink);
+  background: linear-gradient(145deg, #ffffff, #eff3f6);
+  border: 1px solid rgba(18, 21, 28, 0.08);
+  box-shadow: 0 7px 15px -9px rgba(18, 21, 28, 0.16), 0 1px 2px rgba(18, 21, 28, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  font: 800 13px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif;
+  letter-spacing: -0.3px;
+  transform: translateZ(-8px);
+}
+.homeBack svg { width: 18px; height: 18px; }
+.homeFront {
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--mark-top), var(--mark-bottom));
+  box-shadow: 0 10px 20px -9px var(--mark-shadow), 0 2px 5px -3px rgba(15, 23, 42, 0.26), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  transform: translateZ(8px);
+}
+.homeInset { position: absolute; inset: 0; border: 1px solid rgba(255, 255, 255, 0.32); border-radius: inherit; pointer-events: none; }
+:global(html[data-theme='dark']) .homeBack {
+  color: var(--mark-dark-ink);
+  background: linear-gradient(145deg, #262b30, #151a1f);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 9px 17px -10px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+:global(html[data-theme='dark']) .homeFront {
+  background: linear-gradient(135deg, var(--mark-dark-top), var(--mark-dark-bottom));
+  box-shadow: 0 10px 20px -9px var(--mark-dark-shadow), 0 2px 5px -3px rgba(0, 0, 0, 0.42), inset 0 1px 1px rgba(255, 255, 255, 0.28);
+}
+
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .columns { columns: 2 236px; }
+  .rail ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 4px 16px; }
+}
 
 @media (max-width: 820px) {
   .shortcutHint { display: none; }
-}
-
-@media (max-width: 700px) {
-  .groups { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .dialog { border-radius: 14px; }
-  .dialogHeading { padding: 16px 16px 10px; }
-  .dialogHeading h2 { margin-top: 8px; font-size: 18px; }
-  .search { margin-inline: 16px; }
-  .categoryBar { gap: 6px; margin-inline: 16px; }
-  .categoryBar button { min-height: 36px; }
-  .index { padding: 4px 12px 12px; }
-  .dialogFoot { flex-direction: column; gap: 5px; padding: 12px 16px; }
-  .results { text-align: left; }
+  .dialogHeading { flex-wrap: wrap; gap: 12px 16px; }
+  .headingCopy { flex: 1 1 auto; }
+  .search { order: 3; flex: 1 1 100%; max-width: none; margin-left: 0; }
 }
 
 @media (max-width: 640px) {
   /* The account button's docked badge already shows the balance here. */
   .creditPill { display: none; }
+  .dialog { --tx-gutter: 16px; }
+  .dialogHeading { padding-top: 16px; }
+  .dialogHeading h2 { margin-top: 4px; font-size: 18px; }
+  .columns { columns: 1; }
+  .index { padding-top: 12px; }
+  .dialogFoot { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .results { text-align: left; }
 }
 
-@media (max-width: 380px) {
+@media (max-width: 390px) {
   .trigger { padding-inline: 8px; }
+  .trigger::after { left: 8px; right: 8px; }
+  .dialog { --tx-gutter: 12px; }
 }
 
+/* Short viewports (landscape phones, a mobile keyboard up): the heading and
+   filters alone would fill the panel, so the whole index scrolls as one. */
+@media (max-height: 560px) {
+  .dialog { overflow-y: auto; }
+  .index { flex: 0 0 auto; overflow: visible; }
+}
+
+/* Reduced motion: the index appears and disappears in place — no travelling
+   edge, no wipe, no rise, no tile parting. */
 @media (prefers-reduced-motion: reduce) {
-  .dialog[open] { animation: none; }
+  .dialog,
+  .dialog[open],
+  .dialog::backdrop,
+  .dialog[open]::backdrop {
+    transition: none;
+  }
+  .dialog[open] { -webkit-mask-image: none; mask-image: none; }
+  .dialog::after { display: none; }
+  .dialog[open]:not([data-settled]) :is(.dialogHeading, .categoryBar, .group, .recent, .rail, .dialogFoot) { animation: none; }
+  .dialog > *,
+  .trigger::after,
   .trigger svg,
   .close,
-  .categoryBar button { transition: none; }
+  .categoryBar button,
+  .markScale > * > :first-child,
+  .markScale > * > :last-child { transition: none; }
 }
