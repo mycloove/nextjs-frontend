@@ -13,7 +13,7 @@ import { ChangeEvent, DragEvent as ReactDragEvent, useEffect, useMemo, useRef, u
 import './home.css'
 import './theme.css'
 
-type ToolGroup = 'Convert' | 'Extract' | 'Ask AI' | 'Advanced' | 'Edit'
+type ToolGroup = 'Convert' | 'Organize' | 'Extract' | 'Ask AI' | 'Advanced' | 'Edit'
 type Filter = 'All' | ToolGroup | 'Favorites'
 
 type Tool = {
@@ -43,10 +43,10 @@ const tools: Tool[] = [
   { id: 'batch', label: 'Batch Process', description: 'Run one repeatable workflow across multiple files at once.', group: 'Advanced', badge: 'Batch', format: 'Multi-file', cta: 'Build a batch', keywords: 'bulk multiple automation workflow files', route: '/batch-process', icon: 'batch', accent: 'indigo' },
   { id: 'fasta-tool', label: 'FASTA Tools', description: 'Inspect and work with biological sequences in one workspace.', group: 'Advanced', badge: 'Developer', format: 'FASTA + sequence', cta: 'Inspect sequence', keywords: 'dna biology bioinformatics sequence fasta fa', route: '/fasta-tools', icon: 'dna', accent: 'indigo' },
   { id: 'bijoy-converter', label: 'Bijoy to Unicode', description: 'Convert legacy Bijoy-encoded Bangla text into clean, searchable Unicode.', group: 'Extract', badge: 'Bangla', format: 'Bijoy to Unicode', cta: 'Convert Bijoy text', keywords: 'bijoy unicode bangla bengali legacy convert text', route: '/bijoy-converter', icon: 'search', accent: 'emerald' },
-  { id: 'merge-pdf', label: 'Merge PDF', description: 'Combine multiple PDFs into one clean document.', group: 'Convert', badge: 'Multi-file', format: 'PDF + PDF', cta: 'Combine PDFs', keywords: 'merge combine join append stack documents one', route: '/merge-pdf', icon: 'merge', accent: 'coral' },
-  { id: 'split-pdf', label: 'Split PDF', description: 'Cut one PDF into parts by page ranges.', group: 'Convert', badge: 'Precise', format: 'PDF to PDFs', cta: 'Split pages', keywords: 'split cut divide extract pages range separate', route: '/split-pdf', icon: 'split', accent: 'coral' },
-  { id: 'rotate-pdf', label: 'Rotate PDF', description: 'Turn every page — or just a range — by 90°, 180° or 270°.', group: 'Convert', badge: 'Quarter-turn', format: 'PDF in, PDF out', cta: 'Rotate pages', keywords: 'rotate turn sideways upside down landscape portrait angle', route: '/rotate-pdf', icon: 'rotate', accent: 'coral' },
-  { id: 'compress-pdf', label: 'Compress PDF', description: 'Shrink PDF file size by resampling heavy images, text stays selectable.', group: 'Convert', badge: 'Smaller files', format: 'PDF to smaller PDF', cta: 'Compress PDF', keywords: 'compress shrink reduce size optimize smaller compact', route: '/compress-pdf', icon: 'compress', accent: 'coral' },
+  { id: 'merge-pdf', label: 'Merge PDF', description: 'Combine multiple PDFs into one clean document.', group: 'Organize', badge: 'Multi-file', format: 'PDF + PDF', cta: 'Combine PDFs', keywords: 'merge combine join append stack documents one', route: '/merge-pdf', icon: 'merge', accent: 'coral' },
+  { id: 'split-pdf', label: 'Split PDF', description: 'Cut one PDF into parts by page ranges.', group: 'Organize', badge: 'Precise', format: 'PDF to PDFs', cta: 'Split pages', keywords: 'split cut divide extract pages range separate', route: '/split-pdf', icon: 'split', accent: 'coral' },
+  { id: 'rotate-pdf', label: 'Rotate PDF', description: 'Turn every page — or just a range — by 90°, 180° or 270°.', group: 'Organize', badge: 'Quarter-turn', format: 'PDF in, PDF out', cta: 'Rotate pages', keywords: 'rotate turn sideways upside down landscape portrait angle', route: '/rotate-pdf', icon: 'rotate', accent: 'coral' },
+  { id: 'compress-pdf', label: 'Compress PDF', description: 'Shrink PDF file size by resampling heavy images, text stays selectable.', group: 'Organize', badge: 'Smaller files', format: 'PDF to smaller PDF', cta: 'Compress PDF', keywords: 'compress shrink reduce size optimize smaller compact', route: '/compress-pdf', icon: 'compress', accent: 'coral' },
   { id: 'document-ai', label: 'Document AI', description: 'Ask a document questions and keep the answers beside the pages.', group: 'Ask AI', badge: 'Chat', format: 'PDF + chat', cta: 'Open the reading room', keywords: 'chat rag document ai ask questions', route: '/document-ai', icon: 'sparkle', accent: 'indigo' },
   { id: 'pdf-editor', label: 'PDF Editor', description: 'Change the text that is actually in the file, then export those bytes.', group: 'Edit', badge: 'Structural', format: 'PDF in, PDF out', cta: 'Edit the PDF', keywords: 'edit text redact wysiwyg pages', route: '/pdf-editor', icon: 'document', accent: 'indigo' },
   { id: 'image-editor', label: 'Image Editor', description: 'Crop, resize, and compress an image on the canvas before you export it.', group: 'Edit', badge: 'Canvas', format: 'Image to image', cta: 'Open the darkroom', keywords: 'crop resize compress enhance photo', route: '/image-editor', icon: 'images', accent: 'emerald' },
@@ -103,10 +103,13 @@ const layeredIconVariants: Record<string, LayeredIconVariant> = {
   'pdf-editor': 'pdf-editor',
 }
 
-const filters: Filter[] = ['All', 'Convert', 'Extract', 'Edit', 'Ask AI', 'Advanced']
+/* Merge, Split, Rotate and Compress change a PDF's pages, not its format, so
+   they count under Organize rather than inflating Convert. */
+const filters: Filter[] = ['All', 'Convert', 'Organize', 'Extract', 'Edit', 'Ask AI', 'Advanced']
 const filterLabels: Record<Filter, string> = {
   All: 'All tools',
   Convert: 'Convert',
+  Organize: 'Organize',
   Extract: 'Extract',
   Edit: 'Edit',
   'Ask AI': 'Ask AI',
@@ -412,7 +415,7 @@ export default function Home() {
         ? matchingQuery.length
         : matchingQuery.filter((tool) => tool.group === item).length
       return next
-    }, { All: 0, Convert: 0, Extract: 0, Edit: 0, 'Ask AI': 0, Advanced: 0, Favorites: 0 })
+    }, { All: 0, Convert: 0, Organize: 0, Extract: 0, Edit: 0, 'Ask AI': 0, Advanced: 0, Favorites: 0 })
     counts.Favorites = matchingQuery.filter((tool) => favorites.includes(tool.id)).length
     return counts
   }, [catalogueTools, favorites, query])
@@ -546,49 +549,56 @@ export default function Home() {
             <span className="home-hero-orb orb-2" />
             <span className="home-hero-grid-bg" />
           </div>
+          {/*
+            The hero is the product: the headline, then the file intake right
+            under it, so the page's one real action is above the fold. The cube
+            stays as the signature, smaller, with the live workspace card set in
+            front of it — the card answers the intake on the left.
+          */}
           <div className="home-container home-hero-grid">
             <div className="home-hero-copy">
               <p className="home-eyebrow">Focused tools. Calm workflow.</p>
               <h1 id="hero-title"><span className="home-hero-title-line">Every document task,</span><span className="home-hero-title-line"><em>one calm workspace.</em></span></h1>
               <p className="home-lede">Convert, extract, edit, and understand your files without wrestling with a complicated app.</p>
+
+              <div className="home-intake" role="group" aria-labelledby="intake-title">
+                <p className="home-workflow-kicker">Start with a file</p>
+                <h2 id="intake-title">Drop it in. <em>We&apos;ll guide the next step.</em></h2>
+                <div className="home-hero-actions">
+                  {/* The dropzone label below is the keyboard control (Enter/Space); the
+                      visually hidden input stays out of the tab order so focus never
+                      lands on something the reader cannot see. */}
+                  <input ref={fileInputRef} id="heroFile" className="home-file-input" type="file" tabIndex={-1} accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.gif,.bmp,.md,.markdown,.txt,.fasta,.fa,.fas" onChange={onFileChange} aria-describedby="hero-file-note" />
+                  <label className={`home-dropzone${dragActive ? ' drag-active' : ''}${selectedFileName ? ' has-file' : ''}${fileError ? ' has-error' : ''}`} htmlFor="heroFile" tabIndex={0} role="button" aria-label={selectedFileName ? `Replace selected file, ${selectedFileName}` : 'Choose or drop a supported file'} onKeyDown={onDropzoneKeyDown} onDragEnter={(event) => { event.preventDefault(); setDragActive(true) }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false) }} onDrop={onFileDrop}>
+                    <span className="home-dropzone-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span>
+                    <span className="home-dropzone-copy"><b>{selectedFileName ? selectedFileName : 'Drop a file here'}</b><small>{selectedFileName ? `${fileTypeLabel} selected · ready for your next step` : 'PDF, Word, image, Markdown, or FASTA · up to 50 MB'}</small></span>
+                    <span className="home-dropzone-browse">{selectedFileName ? 'Replace file' : 'Browse files'} <i aria-hidden="true">↗</i></span>
+                  </label>
+                  {selectedFileName && <button type="button" className="home-file-remove" onClick={clearSelectedFile} aria-label={`Remove ${selectedFileName}`}>Remove file</button>}
+                </div>
+                <p id="hero-file-note" className={`home-file-note${fileError ? ' error' : ''}`} role={fileError ? 'alert' : undefined} aria-live="polite">{fileNote}</p>
+                <div className="home-quick-actions" aria-label="Popular tools"><span>Popular:</span>{quickTools.map((tool) => <Link key={tool.id} href={tool.route} onClick={() => addRecent(tool.id)}>{tool.label}<i aria-hidden="true">→</i></Link>)}<a className="home-quick-all" href="#tools">All tools<i aria-hidden="true">↓</i></a></div>
+                <ul className="home-benefits"><li>Guest access for many tools</li><li>Review before you export</li><li>Focused document tasks</li></ul>
+              </div>
             </div>
 
-            <div className="home-visual">
-              <QuantumCube />
+            <div className="home-hero-stage">
+              <div className="home-hero-cube">
+                <QuantumCube compact />
+              </div>
+              <div className="home-workspace-pane" aria-label="Suggested tools preview">
+                <div className="home-workspace-card">
+                  <div className="home-workspace-header"><span className="home-window-dots" aria-hidden="true"><i/><i/><i/></span><small>YOUR WORKSPACE</small><b aria-hidden="true">•••</b></div>
+                  <div className="home-preview-file"><span className="home-preview-file-icon">{fileKind === 'image' ? 'IMG' : fileKind === 'word' ? 'DOC' : fileKind === 'markdown' ? 'MD' : fileKind === 'sequence' ? 'FA' : 'PDF'}</span><span><b>{selectedFileName || 'Quarterly report.pdf'}</b><small>{selectedFileName ? `${fileTypeLabel} · ready to process` : 'Your document is in good hands'}</small></span><i className="home-preview-check" aria-label="Ready">✓</i></div>
+                  <div className="home-preview-divider"/>
+                  <small className="home-preview-label">{selectedFileName ? 'Recommended next steps' : 'A simpler way to work'}</small>
+                  <div className="home-preview-actions">{recommendedTools.slice(0, 3).map((tool, index) => <Link href={tool.route} key={tool.id} onClick={() => addRecent(tool.id)} className={`${index === 0 ? 'primary ' : ''}accent-${tool.accent}`}><span className="preview-action-icon"><ToolIcon name={tool.icon}/></span><span><b>{tool.label}</b><small>{index === 0 ? 'Best match for your file' : tool.badge}</small></span><i aria-hidden="true">→</i></Link>)}</div>
+                  <div className="home-preview-footer"><span><i/> Ready when you are</span><small>File handling varies by tool</small></div>
+                </div>
+                <b className="home-format-pill">Smart suggestions</b>
+                <small className="home-processing"><i/> Private workspace</small>
+              </div>
             </div>
-          </div>
-        </section>
-
-        <section className="home-file-workflow home-container" aria-label="File workflow">
-          <div className="home-workspace-pane" aria-label="Suggested tools preview">
-            <div className="home-orbit"/><div className="home-glow"/>
-            <div className="home-workspace-card">
-              <div className="home-workspace-header"><span className="home-window-dots" aria-hidden="true"><i/><i/><i/></span><small>YOUR WORKSPACE</small><b aria-hidden="true">•••</b></div>
-              <div className="home-preview-file"><span className="home-preview-file-icon">{fileKind === 'image' ? 'IMG' : fileKind === 'word' ? 'DOC' : fileKind === 'markdown' ? 'MD' : fileKind === 'sequence' ? 'FA' : 'PDF'}</span><span><b>{selectedFileName || 'Quarterly report.pdf'}</b><small>{selectedFileName ? `${fileTypeLabel} · ready to process` : 'Your document is in good hands'}</small></span><i className="home-preview-check" aria-label="Ready">✓</i></div>
-              <div className="home-preview-divider"/>
-              <small className="home-preview-label">{selectedFileName ? 'Recommended next steps' : 'A simpler way to work'}</small>
-              <div className="home-preview-actions">{recommendedTools.slice(0, 3).map((tool, index) => <Link href={tool.route} key={tool.id} onClick={() => addRecent(tool.id)} className={`${index === 0 ? 'primary ' : ''}accent-${tool.accent}`}><span className="preview-action-icon"><ToolIcon name={tool.icon}/></span><span><b>{tool.label}</b><small>{index === 0 ? 'Best match for your file' : tool.badge}</small></span><i aria-hidden="true">→</i></Link>)}</div>
-              <div className="home-preview-footer"><span><i/> Ready when you are</span><small>File handling varies by tool</small></div>
-            </div>
-            <b className="home-format-pill">Smart suggestions</b>
-            <small className="home-processing"><i/> Private workspace</small>
-          </div>
-
-          <div className="home-upload-pane">
-            <p className="home-workflow-kicker">Start with a file</p>
-            <h2>Drop it in.<br/><em>We&apos;ll guide the next step.</em></h2>
-            <div className="home-hero-actions">
-              <input ref={fileInputRef} id="heroFile" className="home-file-input" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.gif,.bmp,.md,.markdown,.txt,.fasta,.fa,.fas" onChange={onFileChange} aria-describedby="hero-file-note" />
-              <label className={`home-dropzone${dragActive ? ' drag-active' : ''}${selectedFileName ? ' has-file' : ''}${fileError ? ' has-error' : ''}`} htmlFor="heroFile" tabIndex={0} role="button" aria-label={selectedFileName ? `Replace selected file, ${selectedFileName}` : 'Choose or drop a supported file'} onKeyDown={onDropzoneKeyDown} onDragEnter={(event) => { event.preventDefault(); setDragActive(true) }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false) }} onDrop={onFileDrop}>
-                <span className="home-dropzone-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg></span>
-                <span className="home-dropzone-copy"><b>{selectedFileName ? selectedFileName : 'Drop a file here'}</b><small>{selectedFileName ? `${fileTypeLabel} selected · ready for your next step` : 'PDF, Word, image, Markdown, or FASTA · up to 50 MB'}</small></span>
-                <span className="home-dropzone-browse">{selectedFileName ? 'Replace file' : 'Browse files'} <i aria-hidden="true">↗</i></span>
-              </label>
-              {selectedFileName && <button type="button" className="home-file-remove" onClick={clearSelectedFile} aria-label={`Remove ${selectedFileName}`}>Remove file</button>}
-            </div>
-            <p id="hero-file-note" className={`home-file-note${fileError ? ' error' : ''}`} role={fileError ? 'alert' : undefined} aria-live="polite">{fileNote}</p>
-            <div className="home-quick-actions" aria-label="Popular tools"><span>Popular:</span>{quickTools.map((tool) => <Link key={tool.id} href={tool.route} onClick={() => addRecent(tool.id)}>{tool.label}<i aria-hidden="true">→</i></Link>)}</div>
-            <ul className="home-benefits"><li>Guest access for many tools</li><li>Review before you export</li><li>Focused document tasks</li></ul>
           </div>
         </section>
 
@@ -621,25 +631,13 @@ export default function Home() {
 
         <section className="home-tools" id="tools" aria-labelledby="tools-title">
           <div className="home-container">
-            <div className="home-section-heading"><div><p>Tool library</p><h2 id="tools-title">Choose the tool.<br/>Keep the task in focus.</h2></div></div>
-            <article className="home-resume-feature" aria-labelledby="resume-feature-title">
-              <div className="home-resume-feature-art" aria-hidden="true">
-                <span className="home-resume-page"><i/><i/><i/><i/><b/><i/><i/><i/></span>
-                <span className="home-resume-page-back" />
-              </div>
-              <div className="home-resume-feature-copy">
-                <span className="home-resume-kicker">A new document studio</span>
-                <h3 id="resume-feature-title">Make your next chapter<br/>read like you.</h3>
-                <p>Build a resume, academic CV, biodata, or statement of purpose. Shape every section in a live, bilingual workspace.</p>
-                <div className="home-resume-tags"><span>Resume</span><span>বাংলা + English</span><span>LaTeX source</span></div>
-              </div>
-              <Link className="home-resume-action" href="/mr-resume">
-                Open Mr.Resume
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8h10M8 3l5 5-5 5" /></svg>
-              </Link>
-            </article>
-            <div className="home-tool-controls">
+            {/* The heading and the search share one row, so the library's
+                first cards sit one control strip below its title. */}
+            <div className="home-section-heading home-library-head">
+              <div><p>Tool library</p><h2 id="tools-title">Choose the tool. <span>Keep the task in focus.</span></h2></div>
               <div className="home-search"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input ref={searchInputRef} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder='Try “edit Word”, “OCR”, or “Bangla PDF”' aria-label="Search tools by task, format, or outcome" aria-controls="tool-results" />{query ? <button type="button" onClick={() => { setQuery(''); searchInputRef.current?.focus() }} aria-label="Clear search">×</button> : <kbd aria-hidden="true">Ctrl K</kbd>}</div>
+            </div>
+            <div className="home-tool-controls">
               <div className="home-filter-strip">
                 <div className="home-filters" role="group" aria-label="Filter tools by outcome">
                   {filters.map((item) => <button type="button" key={item} className={filter === item ? 'active' : ''} onClick={() => setFilter(item)} aria-pressed={filter === item} aria-controls="tool-results"><span>{filterLabels[item]}</span><small>{filterCounts[item]}</small></button>)}
@@ -718,6 +716,27 @@ export default function Home() {
                 </article>
               </div>
             })}</div> : <div className="home-empty" id="tool-results"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><h3>{status === 'ready' && openTools.length === 0 ? 'Nothing is open' : filter === 'Favorites' ? 'No saved tools yet' : 'No matching tools found'}</h3><p>{status === 'ready' && openTools.length === 0 ? 'Every instrument on the bench is withdrawn. They return here when an admin opens them.' : filter === 'Favorites' ? 'Select the star on any tool to keep your everyday workflows close.' : `We could not find a tool for “${query || filter}”. Try a format such as PDF, Word, image, or OCR.`}</p><div>{filter === 'Favorites' && catalogueTools.length > 0 && <button type="button" className="home-button home-button-primary" onClick={() => setFilter('All')}>Browse all tools</button>}{catalogueTools.length > 0 && <button type="button" className="home-button home-button-secondary" onClick={() => { setQuery(''); setFilter('All'); searchInputRef.current?.focus() }}>{filter === 'Favorites' ? 'Search tools' : 'Clear and search again'}</button>}</div></div>}
+
+            {/* Mr.Resume is a writing studio, not a converter: it closes the
+                library as its own route card instead of standing between the
+                library's title and its search, where it pushed every tool
+                card a screen further down. */}
+            <article className="home-resume-feature" aria-labelledby="resume-feature-title">
+              <div className="home-resume-feature-art" aria-hidden="true">
+                <span className="home-resume-page"><i/><i/><i/><i/><b/><i/><i/><i/></span>
+                <span className="home-resume-page-back" />
+              </div>
+              <div className="home-resume-feature-copy">
+                <span className="home-resume-kicker">A new document studio</span>
+                <h3 id="resume-feature-title">Make your next chapter<br/>read like you.</h3>
+                <p>Build a resume, academic CV, biodata, or statement of purpose. Shape every section in a live, bilingual workspace.</p>
+                <div className="home-resume-tags"><span>Resume</span><span>বাংলা + English</span><span>LaTeX source</span></div>
+              </div>
+              <Link className="home-resume-action" href="/mr-resume">
+                Open Mr.Resume
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8h10M8 3l5 5-5 5" /></svg>
+              </Link>
+            </article>
           </div>
         </section>
 

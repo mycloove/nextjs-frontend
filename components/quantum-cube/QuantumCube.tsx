@@ -83,7 +83,9 @@ function Face({ className, icons = {}, hole = 5 }: { className: string; icons?: 
   return <div className={`${styles.face} ${className}`} aria-hidden="true">{Array.from({ length: 9 }, (_, index) => { const position = index + 1; return <div className={`${styles.cubie}${position === hole ? ` ${styles.cubieHole}` : ''}`} key={position}>{icons[position] && <CubeIcon icon={icons[position]} />}</div> })}</div>
 }
 
-export default function QuantumCube() {
+/* `compact` is the home hero's size: the cube shares its column with the live
+   workspace card there, so it gives up height, never proportions. */
+export default function QuantumCube({ compact = false }: { compact?: boolean }) {
   const reference = useRef<HTMLElement>(null)
   const [paused, setPaused] = useState(false)
 
@@ -95,5 +97,5 @@ export default function QuantumCube() {
     return () => observer.disconnect()
   }, [])
 
-  return <section ref={reference} className={`${styles.showcase}${paused ? ` ${styles.animPaused}` : ''}`} aria-label="Floating 3D tools cube"><div className={styles.glow} aria-hidden="true" /><div className={styles.stage}><div className={styles.scene}><div className={styles.cube}><div className={styles.core} aria-hidden="true"><Image className={styles.coreLogo} src="/quantum-core-octopus.png" alt="" width={58} height={58} priority /></div><Face className={styles.faceFront} icons={{ 2: cubeIcons.markdown, 4: cubeIcons.pdfToWord, 6: cubeIcons.imageToPdf, 8: cubeIcons.markdownToPdf }} /><Face className={styles.faceRight} icons={{ 3: cubeIcons.analyzer, 6: cubeIcons.pdfToImages }} /><Face className={styles.faceLeft} icons={{ 4: cubeIcons.imageToText }} /><Face className={styles.faceTop} icons={{ 6: cubeIcons.batch }} /><Face className={styles.faceBack} icons={{ 1: cubeIcons.wordToPdf }} /><Face className={styles.faceBottom} icons={{ 9: cubeIcons.fasta }} /></div></div></div></section>
+  return <section ref={reference} className={`${styles.showcase}${compact ? ` ${styles.compact}` : ''}${paused ? ` ${styles.animPaused}` : ''}`} aria-label="Floating 3D tools cube"><div className={styles.glow} aria-hidden="true" /><div className={styles.stage}><div className={styles.scene}><div className={styles.cube}><div className={styles.core} aria-hidden="true"><Image className={styles.coreLogo} src="/quantum-core-octopus.png" alt="" width={58} height={58} priority /></div><Face className={styles.faceFront} icons={{ 2: cubeIcons.markdown, 4: cubeIcons.pdfToWord, 6: cubeIcons.imageToPdf, 8: cubeIcons.markdownToPdf }} /><Face className={styles.faceRight} icons={{ 3: cubeIcons.analyzer, 6: cubeIcons.pdfToImages }} /><Face className={styles.faceLeft} icons={{ 4: cubeIcons.imageToText }} /><Face className={styles.faceTop} icons={{ 6: cubeIcons.batch }} /><Face className={styles.faceBack} icons={{ 1: cubeIcons.wordToPdf }} /><Face className={styles.faceBottom} icons={{ 9: cubeIcons.fasta }} /></div></div></div></section>
 }

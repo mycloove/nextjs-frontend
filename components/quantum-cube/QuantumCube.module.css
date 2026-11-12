@@ -432,6 +432,24 @@
   .stage { transform: scale(0.46); }
 }
 
+/* ── Compact (home hero) ───────────────────────────────────────────
+   Same geometry, one uniform scale; the showcase box shrinks with it so the
+   hero column is sized by what is actually painted. */
+.showcase.compact { min-height: 400px; }
+.compact .stage { transform: scale(0.68); }
+.compact .glow { width: 420px; height: 420px; }
+
+@media (max-width: 900px) {
+  .showcase.compact { min-height: 340px; }
+  .compact .stage { transform: scale(0.62); }
+}
+
+@media (max-width: 480px) {
+  .showcase.compact { min-height: 280px; }
+  .compact .stage { transform: scale(0.5); }
+  .compact .glow { width: 300px; height: 300px; }
+}
+
 
 /* ── Reduced motion ────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {

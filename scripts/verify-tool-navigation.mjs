@@ -54,9 +54,9 @@ const workspaces = [
   { id: 'document-ai', href: '/document-ai', label: 'Document AI', header: '.doc-ai-shell .topbar', surface: '.doc-ai-shell .content-row', anchors: ['.doc-ai-shell', '.doc-ai-shell .topbar', '.doc-ai-shell .sidebar', '.doc-ai-shell .panel-chat', '.doc-ai-shell .composer-wrap', '.doc-ai-shell .right-panel', '.doc-ai-shell .status-footer'] },
   { id: 'image-editor', href: '/image-editor', label: 'Image Editor', header: '.ie-topbar', surface: '.ie-editor-wrap', anchors: ['.ie-page', '.ie-topbar', '.ie-topbar-left', '.ie-topbar-right', '.ie-editor-wrap', '.ie-container', '.ie-main', '.ie-footer'] },
 ]
-const home = { id: 'home', href: '/', label: 'Home', header: '.home-topbar', surface: '.home-hero', anchors: ['.home-topbar', '.home-nav-shell', '.home-brand', '.home-desktop-nav', '.home-nav-actions', '.home-hero', '.home-hero-copy', '#hero-title', '.home-visual', '.home-file-workflow'] }
+const home = { id: 'home', href: '/', label: 'Home', header: 'header', surface: '.home-hero', anchors: ['header', '.home-hero', '.home-hero-copy', '#hero-title', '.home-intake', '.home-hero-stage'] }
 const allDestinations = [...tools, ...workspaces]
-const maskSelectors = ['nextjs-portal', '[class*="AnimatedBrandLogo"][class*="eyes"]', '.home-visual']
+const maskSelectors = ['nextjs-portal', '[class*="AnimatedBrandLogo"][class*="eyes"]', '.home-hero-cube']
 const report = {
   version: 1, mode: baselineMode ? 'baseline' : 'verification', baseURL: baseURL.origin,
   startedAt: new Date().toISOString(), runDir, mocks: 'Disposable guest; 18 enabled tools; valid legacy CreditSnapshot. All browser API traffic intercepted. All unplanned mutations blocked.',
@@ -209,7 +209,7 @@ async function fingerprint(page, spec) {
     const content = gate ? document.querySelector('h1')?.parentElement : document.querySelector(selectors.content)
     const surface = gate ? content : document.querySelector(selectors.surface)
     const chrome = header || content
-    const masked = (el) => !!el.closest('nextjs-portal, .home-visual, [class*="AnimatedBrandLogo"][class*="eyes"]')
+    const masked = (el) => !!el.closest('nextjs-portal, .home-hero-cube, [class*="AnimatedBrandLogo"][class*="eyes"]')
     const tree = protectedCase && chrome ? [chrome, ...chrome.querySelectorAll('*')].filter((el) => !masked(el)).slice(0, 220).map(node) : null
     return {
       geometry: { header: rect(header), content: rect(content), surface: rect(surface) },

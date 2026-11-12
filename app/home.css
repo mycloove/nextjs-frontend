@@ -185,7 +185,7 @@ html[data-theme="dark"] .home-page {
 
 /* ── HERO ──────────────────────────────────────────────────────── */
 .home-hero {
-  padding: 56px 0 88px;
+  padding: 48px 0 64px;
   overflow: hidden;
   position: relative;
 }
@@ -245,11 +245,11 @@ html[data-theme="dark"] .home-hero-grid-bg {
 
 .home-hero-grid {
   display: grid;
-  /* The wider copy column keeps the display lines readable beside the visual
-     at desktop widths without changing the visual's space. */
-  grid-template-columns: 1.1fr .9fr;
+  /* The copy column carries the headline and the intake; the stage keeps the
+     cube and the workspace card at their natural widths beside it. */
+  grid-template-columns: minmax(0, 1.08fr) minmax(400px, .92fr);
   align-items: center;
-  gap: 72px;
+  gap: 64px;
   position: relative;
   z-index: 1;
 }
@@ -323,7 +323,6 @@ html[data-theme="dark"] .home-hero-grid-bg {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 30px;
 }
 
 .home-file-input {
@@ -650,28 +649,15 @@ html[data-theme="dark"] .home-file-note.error {
   font-weight: 800;
 }
 
-/* Hero visual */
-.home-file-workflow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, .92fr);
-  align-items: center;
-  gap: 72px;
-  padding: 40px 0 96px;
-  margin-top: 12px;
+/* ── Intake (hero, left column) ─────────────────────────────────
+   The page's one real action sits directly under the headline. It used to be
+   a second hero-sized band below the first, which put the first tool card two
+   screens down. Its heading drops to a label-sized h2: the h1 is the claim,
+   this is the instruction. */
+.home-intake {
+  margin-top: 32px;
+  padding-top: 24px;
   border-top: 1px solid var(--line-soft);
-}
-
-.home-workspace-pane {
-  position: relative;
-  display: grid;
-  min-height: 400px;
-  place-items: center;
-  animation: home-fade-up 700ms var(--ease-out) 100ms both;
-}
-
-.home-upload-pane {
-  min-width: 0;
-  animation: home-fade-up 700ms var(--ease-out) 180ms both;
 }
 
 /* Same kicker device as the hero eyebrow — the page's one section-opener
@@ -680,7 +666,7 @@ html[data-theme="dark"] .home-file-note.error {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   color: var(--brand-text);
   font-family: var(--font-display);
   font-size: 11px;
@@ -697,48 +683,50 @@ html[data-theme="dark"] .home-file-note.error {
   background: var(--brand);
 }
 
-.home-upload-pane h2 {
-  max-width: 520px;
-  margin: 0 0 22px;
+.home-intake h2 {
+  margin: 0 0 16px;
   font-family: var(--font-display);
-  font-size: clamp(30px, 3.1vw, 48px);
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: -.04em;
-  line-height: 1.02;
+  letter-spacing: -.02em;
+  line-height: 1.3;
 }
 
-.home-upload-pane h2 em {
+.home-intake h2 em {
   color: var(--brand-text);
   font-style: normal;
 }
 
-.home-visual {
+/* ── Stage (hero, right column) ─────────────────────────────────
+   The cube and the live workspace card share one grid cell: the cube holds
+   the upper right, the card settles over its lower left. The card's own
+   backdrop blur turns the cube behind it into depth rather than noise. */
+.home-hero-stage {
   position: relative;
-  min-height: 400px;
   display: grid;
-  place-items: center;
+  min-height: 640px;
   animation: home-fade-up 800ms var(--ease-out) 120ms both;
 }
 
-/* A static hairline ring — the frame the preview panel sits in. It used to
-   rotate on a 40s loop with a coral counterweight dot; a frame that revolves
-   around a panel that doesn't was motion for its own sake. */
-.home-orbit {
-  position: absolute;
-  width: 380px;
-  height: 380px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
+/* The showcase box is taller than the cube it paints; the negative margin
+   lifts that empty band out of the stage so the card overlaps only the cube's
+   lower-left corner, never its core. */
+.home-hero-cube {
+  grid-area: 1 / 1;
+  align-self: start;
+  justify-self: end;
+  width: min(100%, 400px);
+  margin-top: -56px;
+  pointer-events: none;
 }
 
-.home-glow {
-  position: absolute;
-  width: 280px;
-  height: 280px;
-  background: var(--brand-soft);
-  filter: blur(12px);
-  border-radius: 50%;
-  opacity: 0.6;
+.home-hero-stage .home-workspace-pane {
+  position: relative;
+  z-index: 2;
+  grid-area: 1 / 1;
+  align-self: end;
+  justify-self: start;
+  width: min(100%, 410px);
 }
 
 /*
@@ -1006,7 +994,7 @@ html[data-theme="dark"] .home-file-note.error {
   z-index: 3;
   /* Aligned to the card's divider row, not the header: at 65px the sticker sat
      across the file row and read as overlap noise; the divider is its shelf. */
-  top: 126px;
+  top: 112px;
   left: -18px;
   padding: 10px 14px;
   border: 1px solid var(--line);
@@ -1019,11 +1007,13 @@ html[data-theme="dark"] .home-file-note.error {
   letter-spacing: 0.02em;
 }
 
+/* Hangs above the card's top-right corner, under the cube: lower down it
+   covered the third suggestion's arrow; this high it clears the header label. */
 .home-processing {
   position: absolute;
   z-index: 3;
-  right: -18px;
-  bottom: 48px;
+  top: -24px;
+  right: -16px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1324,7 +1314,9 @@ html[data-theme="dark"] .home-preview-file-icon {
 
 /* ── TOOLS ─────────────────────────────────────────────────────── */
 .home-tools {
-  padding: 88px 0 96px;
+  padding: 64px 0 96px;
+  /* Anchor jumps (#tools, Ctrl+K) land the kicker clear of the 72px bar. */
+  scroll-margin-top: 16px;
   position: relative;
   overflow: hidden;
   /* The second wash used to be violet (rgba(91, 75, 196, .055)) — a hue the
@@ -1390,6 +1382,17 @@ html[data-theme="dark"] .home-preview-file-icon {
   background: var(--brand);
 }
 
+/* The library head carries the search on its right, so the first control
+   strip under the title is the filter row and the cards follow it. */
+.home-library-head .home-search {
+  flex: 0 1 440px;
+  margin-bottom: 4px;
+}
+
+.home-library-head h2 > span {
+  display: block;
+}
+
 .home-section-heading h2,
 .home-trust h2 {
   margin: 8px 0 0;
@@ -1409,7 +1412,7 @@ html[data-theme="dark"] .home-preview-file-icon {
   align-items: center;
   gap: 28px;
   min-height: 218px;
-  margin-top: 30px;
+  margin-top: 48px;
   padding: 24px 30px;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -1536,7 +1539,7 @@ html[data-theme="dark"] .home-preview-file-icon {
   display: flex;
   gap: 18px;
   align-items: center;
-  margin: 40px 0 16px;
+  margin: 24px 0 16px;
 }
 
 .home-search {
@@ -3354,13 +3357,42 @@ html[data-theme="dark"] .home-card-layered-icon-front {
 }
 
 /* ── RESPONSIVE ────────────────────────────────────────────────── */
-@media (max-width: 900px) {
+/* Laptop widths keep the two-column hero: the stage narrows and the headline
+   steps down so "Every document task," holds one line beside it. */
+@media (min-width: 901px) and (max-width: 1180px) {
   .home-hero-grid {
-    gap: 32px;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, .8fr);
+    gap: 48px;
   }
 
-  .home-file-workflow {
-    gap: 34px;
+  .home-hero-copy h1 {
+    font-size: 44px;
+  }
+
+  .home-hero-cube {
+    width: min(100%, 360px);
+  }
+
+  .home-hero-stage .home-workspace-pane {
+    width: min(100%, 370px);
+  }
+}
+
+@media (max-width: 900px) {
+  /* Stacked: the intake first (it is the action), the stage under it. */
+  .home-hero-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+
+  .home-hero-copy {
+    width: min(100%, 640px);
+  }
+
+  .home-hero-stage {
+    width: min(100%, 560px);
+    min-height: 620px;
+    margin-inline: auto;
   }
 
   .home-tool-grid {
@@ -3406,22 +3438,6 @@ html[data-theme="dark"] .home-card-layered-icon-front {
   }
 }
 
-@media (max-width: 840px) {
-  .home-file-workflow {
-    grid-template-columns: 1fr;
-    gap: 30px;
-  }
-
-  .home-workspace-pane {
-    min-height: 380px;
-  }
-
-  .home-upload-pane {
-    width: min(100%, 620px);
-    margin-inline: auto;
-  }
-}
-
 @media (max-width: 760px) {
   .home-resume-feature {
     grid-template-columns: 100px minmax(0, 1fr);
@@ -3442,16 +3458,6 @@ html[data-theme="dark"] .home-card-layered-icon-front {
 
   .aurora-grid {
     grid-template-columns: 1fr;
-  }
-
-  .home-file-workflow {
-    grid-template-columns: 1fr;
-    gap: 26px;
-    padding-bottom: 58px;
-  }
-
-  .home-workspace-pane {
-    min-height: 360px;
   }
 }
 
@@ -3481,22 +3487,21 @@ html[data-theme="dark"] .home-card-layered-icon-front {
     padding: 38px 0 44px;
   }
 
+  .home-hero-stage {
+    min-height: 556px;
+  }
+
   .home-hero-grid {
-    grid-template-columns: 1fr;
+    gap: 16px;
   }
 
-  .home-visual {
-    min-height: 360px;
-    order: unset;
+  .home-hero-cube {
+    justify-self: center;
+    margin-top: -64px;
   }
 
-  .home-orbit {
-    width: 280px;
-    height: 280px;
-  }
-
-  .home-workspace-card {
-    width: min(100%, 390px);
+  .home-hero-stage .home-workspace-pane {
+    width: 100%;
   }
 
   .home-format-pill {
@@ -3522,6 +3527,10 @@ html[data-theme="dark"] .home-card-layered-icon-front {
 
   .home-section-heading {
     display: block;
+  }
+
+  .home-library-head .home-search {
+    margin: 20px 0 0;
   }
 
   .home-recent-heading {
@@ -3726,7 +3735,7 @@ html[data-theme="dark"] .home-card-layered-icon-front {
   .home-format-pill,
   .home-processing,
   .home-hero-orb,
-  .home-orbit {
+  .home-hero-stage {
     animation: none !important;
   }
 
