@@ -76,6 +76,8 @@ export const nameLexicon: Readonly<Record<string, string>> = Object.freeze({
   mondal: 'মণ্ডল', mandal: 'মণ্ডল', majumder: 'মজুমদার', mazumder: 'মজুমদার',
   sarkar: 'সরকার', sarker: 'সরকার', sikder: 'সিকদার', talukder: 'তালুকদার',
   bhattacharya: 'ভট্টাচার্য', chakraborty: 'চক্রবর্তী', chattopadhyay: 'চট্টোপাধ্যায়',
+  // Conventional romanizations no sound rule can read back.
+  roy: 'রায়', ray: 'রায়',
 })
 
 /** The complete 64-district bank; aliases are separate so coverage is auditable. */
@@ -251,8 +253,33 @@ export const commonLexicon: Readonly<Record<string, string>> = Object.freeze({
   november: 'নভেম্বর', december: 'ডিসেম্বর', disembar: 'ডিসেম্বর',
 })
 
+/**
+ * English words Bangla writes in its own script, keyed by their English
+ * spelling. English spelling is not phonetic ("computer", "mobile"), so
+ * neither the sound rules nor the word reader can recover these; without this
+ * bank they came out as invented spellings. Words a resume normally keeps in
+ * English (software, manager, design ...) stay in banglish.ts's keep-list.
+ */
+export const loanLexicon: Readonly<Record<string, string>> = Object.freeze({
+  computer: 'কম্পিউটার', laptop: 'ল্যাপটপ', mobile: 'মোবাইল', internet: 'ইন্টারনেট', website: 'ওয়েবসাইট', video: 'ভিডিও',
+  printer: 'প্রিন্টার', camera: 'ক্যামেরা', television: 'টেলিভিশন', radio: 'রেডিও', bank: 'ব্যাংক', hospital: 'হাসপাতাল',
+  doctor: 'ডাক্তার', nurse: 'নার্স', police: 'পুলিশ', station: 'স্টেশন', bus: 'বাস', train: 'ট্রেন', ticket: 'টিকিট',
+  hotel: 'হোটেল', restaurant: 'রেস্টুরেন্ট', market: 'মার্কেট', road: 'রোড', park: 'পার্ক', class: 'ক্লাস', course: 'কোর্স',
+  certificate: 'সার্টিফিকেট', training: 'ট্রেনিং', result: 'রেজাল্ট', board: 'বোর্ড', group: 'গ্রুপ', number: 'নম্বর',
+  form: 'ফর্ম', file: 'ফাইল', report: 'রিপোর্ট', meeting: 'মিটিং', seminar: 'সেমিনার', workshop: 'ওয়ার্কশপ',
+  program: 'প্রোগ্রাম', programme: 'প্রোগ্রাম', company: 'কোম্পানি', limited: 'লিমিটেড', factory: 'ফ্যাক্টরি',
+  garments: 'গার্মেন্টস', bonus: 'বোনাস', card: 'কার্ড', passport: 'পাসপোর্ট', visa: 'ভিসা', license: 'লাইসেন্স',
+  licence: 'লাইসেন্স', driver: 'ড্রাইভার', teacher: 'টিচার', student: 'স্টুডেন্ট', admission: 'অ্যাডমিশন',
+  account: 'অ্যাকাউন্ট', accounting: 'অ্যাকাউন্টিং', accountant: 'অ্যাকাউন্ট্যান্ট', marketing: 'মার্কেটিং', sales: 'সেলস',
+  customer: 'কাস্টমার', service: 'সার্ভিস', supervisor: 'সুপারভাইজার', officer: 'অফিসার', executive: 'এক্সিকিউটিভ',
+  director: 'ডিরেক্টর', chairman: 'চেয়ারম্যান', secretary: 'সেক্রেটারি', committee: 'কমিটি', club: 'ক্লাব', union: 'ইউনিয়ন',
+  ward: 'ওয়ার্ড', post: 'পোস্ট', code: 'কোড', level: 'লেভেল', grade: 'গ্রেড', semester: 'সেমিস্টার', session: 'সেশন',
+  department: 'ডিপার্টমেন্ট', faculty: 'ফ্যাকাল্টি', institute: 'ইনস্টিটিউট', academy: 'একাডেমি', centre: 'সেন্টার', center: 'সেন্টার',
+  cricket: 'ক্রিকেট', football: 'ফুটবল', photo: 'ফটো', signature: 'সিগনেচার', blood: 'ব্লাড', national: 'ন্যাশনাল',
+})
+
 export const resumeLexicon: Readonly<Record<string, string>> = Object.freeze({ ...addressLexicon, ...educationLexicon, ...careerLexicon })
-export const lexicon: Readonly<Record<string, string>> = Object.freeze({ ...commonLexicon, ...resumeLexicon, ...nameLexicon })
+export const lexicon: Readonly<Record<string, string>> = Object.freeze({ ...loanLexicon, ...commonLexicon, ...resumeLexicon, ...nameLexicon })
 
 /** Explicit bilingual suggestions only: these are not a free-prose translation engine. */
 export const resumePhrases: Readonly<Record<string, string>> = Object.freeze({

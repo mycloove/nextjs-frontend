@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type RefObject, type SyntheticEvent } from 'react'
-import { convertTailForCaret, previewForCaret, type BanglishContext } from './banglish'
+import { convertTailForCaret, prepareBanglish, previewForCaret, type BanglishContext } from './banglish'
 import { isSingleTypingInsertion, replaceBanglishSource, restoreBanglishAtCaret, type BanglishSource } from './banglishEditing'
 import styles from './MrResumeStudio.module.css'
 
@@ -50,6 +50,14 @@ export default function BanglishInput({ id, className, inputRef, value, onValueC
   const listId = `banglish-readings-${useId()}`
   const hintId = `${listId}-hint`
   const options = { context, learned, force: phonetic }
+
+  // The word index is built once, off the typing path: the first converted
+  // word should feel exactly like the hundredth.
+  useEffect(() => {
+    if (!enabled) return
+    const timer = window.setTimeout(prepareBanglish, 150)
+    return () => window.clearTimeout(timer)
+  }, [enabled])
 
   useEffect(() => {
     const caret = pendingCaret.current

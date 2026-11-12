@@ -2,8 +2,9 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
-import { activeFilterCount, categoryCounts, defaultGalleryQuery, filterTemplates, hasAtsStructure, parseGalleryQuery, resolveTemplateRequest, serializeGalleryQuery, templateBadges, templateCategories, templateHref, type TemplateCard } from './templateCatalog.ts'
+import { activeFilterCount, cardBadges, categoryCounts, defaultGalleryQuery, filterTemplates, hasAtsStructure, parseGalleryQuery, resolveTemplateRequest, serializeGalleryQuery, templateBadges, templateCategories, templateHref, wantsSample, type TemplateCard } from './templateCatalog.ts'
 import { regularTemplateCards } from './regularTemplateCards.ts'
+import { resumeSpecimen } from './resumeSpecimens.ts'
 import { resumeTemplates } from './resumeTemplates.ts'
 import { getResumeLayout, partitionSections, resumeLayouts } from './resumeLayouts.ts'
 import { latexTemplateCards } from '../latex/latexTemplateCards.ts'
@@ -51,6 +52,19 @@ test('badges are derived: ATS needs one English column without photo, and LaTeX 
   for (const item of cards) for (const badge of templateBadges(item)) assert.match(badge.label.bn, /[\u0980-\u09ff]|English|ATS/u)
 })
 
+test('a gallery card never cuts a notice for space, and shows at most three badges', () => {
+  const altacv = latexTemplateCards.find((item) => item.id === 'altacv')!
+  assert.deepEqual(cardBadges(altacv).map((badge) => badge.id), ['language', 'consent', 'adapted'], 'The download and the adaptation are what a guest must see first')
+  for (const item of cards) {
+    const shown = cardBadges(item)
+    assert.ok(shown.length <= 3, item.id)
+    const notices = templateBadges(item).filter((badge) => badge.tone === 'notice')
+    for (const notice of notices) assert.ok(shown.some((badge) => badge.id === notice.id), `${item.id} hides ${notice.id}`)
+    assert.ok(!shown.some((badge) => badge.id === 'browser'), 'Only the exception to in-browser compiling is card-level news')
+  }
+  assert.ok(templateBadges(latexTemplateCards.find((item) => item.id === 'career-source')!).some((badge) => badge.id === 'browser'), 'The preview keeps the full list')
+})
+
 test('deep-link ids are an allowlist per editor', () => {
   assert.equal(resolveTemplateRequest('regular', null, cards), null)
   assert.equal(resolveTemplateRequest('regular', '', cards), null)
@@ -58,6 +72,13 @@ test('deep-link ids are an allowlist per editor', () => {
   assert.deepEqual(resolveTemplateRequest('latex', 'job-resume', cards), { kind: 'unknown' }, 'A Regular id never reaches the LaTeX editor')
   assert.deepEqual(resolveTemplateRequest('regular', 'altacv', cards), { kind: 'unknown' })
   assert.equal(templateHref('latex', 'a b'), '/mr-resume/latex?template=a%20b')
+  // The sample start is a Regular-only choice and must be asked for exactly.
+  assert.equal(templateHref('regular', 'job-resume'), '/mr-resume/regular-editor?template=job-resume')
+  assert.equal(templateHref('regular', 'job-resume', true), '/mr-resume/regular-editor?template=job-resume&sample=1')
+  assert.equal(templateHref('latex', 'altacv', true), '/mr-resume/latex?template=altacv')
+  assert.equal(wantsSample('regular', new URLSearchParams('template=job-resume&sample=1')), true)
+  for (const query of ['template=job-resume', 'template=job-resume&sample=0', 'template=job-resume&sample=true', 'template=job-resume&sample=']) assert.equal(wantsSample('regular', new URLSearchParams(query)), false, query)
+  assert.equal(wantsSample('latex', new URLSearchParams('template=altacv&sample=1')), false)
 })
 
 test('Regular cards mirror the real templates and every category has something in it', () => {
@@ -99,7 +120,7 @@ test('every gallery card has a real-output thumbnail bound to the exact template
     assert.ok(Number.isInteger(thumbnail.pages) && thumbnail.pages >= 1)
     assert.ok(thumbnail.width === 480 && thumbnail.height > 600, `${item.id}: portrait card image`)
     const expected = item.editor === 'regular'
-      ? regularTemplateFingerprint(resumeTemplates.find((template) => template.id === item.id)!)
+      ? regularTemplateFingerprint(resumeTemplates.find((template) => template.id === item.id)!, resumeSpecimen(item.id))
       : latexArchiveTemplates.find((archive) => archive.id === item.id)?.sha256 ?? latexTemplateFingerprint(latexSourceTemplates.find((template) => template.id === item.id))
     assert.equal(thumbnail.sourceSha256, expected, `${item.editor}:${item.id}: the template changed; re-render its thumbnail`)
   }

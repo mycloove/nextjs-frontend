@@ -18,7 +18,7 @@ type Props = {
   language: HomeLanguage
   latexFull: boolean
   onNavigate: (card: TemplateCard) => void
-  onUse: (card: TemplateCard) => void
+  onUse: (card: TemplateCard, sample?: boolean) => void
   onClose: () => void
 }
 
@@ -98,7 +98,9 @@ export default function ResumeTemplatePreview({ card, origin, list, language, la
       </details>}
       <div className={styles.previewActions}>
         <p className={styles.helper} id="resume-preview-apply">{blocked ? t(homeText.latexLimitNote) : t(card.editor === 'regular' ? homeText.regularApplyNote : homeText.latexApplyNote)}</p>
-        <button type="button" className={styles.primary} disabled={blocked} aria-describedby="resume-preview-apply" onClick={() => onUse(card)}><span>{t(homeText.useInEditor)}</span><HomeIcon name="arrow" /></button>
+        <button type="button" className={styles.primary} disabled={blocked} aria-describedby="resume-preview-apply" onClick={() => onUse(card)}><span>{t(card.editor === 'regular' ? homeText.useOutline : homeText.useInEditor)}</span><HomeIcon name="arrow" /></button>
+        {/* The page pictured is the template with its sample text; this starts from exactly that. */}
+        {card.editor === 'regular' && <button type="button" className={styles.secondary} aria-describedby="resume-preview-apply" onClick={() => onUse(card, true)}>{t(homeText.useSample)}</button>}
       </div>
     </div>
   </dialog>

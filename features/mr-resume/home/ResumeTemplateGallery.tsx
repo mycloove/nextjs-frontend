@@ -1,7 +1,7 @@
 'use client'
 
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import { activeFilterCount, categoryCounts, defaultGalleryQuery, filterTemplates, templateBadges, templateCategories, type GalleryEditor, type GalleryQuery, type TemplateCard } from '../components/templateCatalog'
+import { activeFilterCount, cardBadges, categoryCounts, defaultGalleryQuery, filterTemplates, templateCategories, type GalleryEditor, type GalleryQuery, type TemplateCard } from '../components/templateCatalog'
 import { galleryCards, thumbnailFor } from './galleryCards'
 import { homeText, pick, type HomeLanguage } from './homeText'
 import { HomeIcon } from './homeIcons'
@@ -12,7 +12,7 @@ type Props = {
   language: HomeLanguage
   query: GalleryQuery
   onQuery: (query: GalleryQuery) => void
-  onUse: (editor: GalleryEditor, id: string) => void
+  onUse: (editor: GalleryEditor, id: string, sample?: boolean) => void
   /** The template the stored Regular draft was started from, if any. */
   regularTemplateId: string | null
   latexFull: boolean
@@ -67,7 +67,6 @@ export default function ResumeTemplateGallery({ language, query, onQuery, onUse,
 
   return <section id="templates" className={styles.gallery} aria-labelledby={`${id}-title`}>
     <header className={styles.galleryHead}>
-      <p className={styles.eyebrow}>{t(homeText.galleryEyebrow)}</p>
       <h2 id={`${id}-title`}>{t(homeText.galleryTitle)}</h2>
       <p className={styles.galleryLead}>{t(homeText.galleryLead)}</p>
     </header>
@@ -79,6 +78,7 @@ export default function ResumeTemplateGallery({ language, query, onQuery, onUse,
         </button>)}
       </div>
       <label className={styles.search}><span className={styles.srOnly}>{t(homeText.search)}</span><HomeIcon name="search" /><input type="search" value={query.text} placeholder={t(homeText.searchPlaceholder)} maxLength={80} onChange={(event) => onQuery({ ...query, text: event.target.value })} /></label>
+      <button type="button" className={styles.filterButton} aria-expanded={filtersOpen} aria-controls={`${id}-filters`} onClick={() => setFiltersOpen((open) => !open)}><HomeIcon name="filter" />{t(homeText.filters)}{filters > 0 && <small>{numerals(filters, language)}</small>}</button>
     </div>
 
     <div className={styles.galleryBody} role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${query.editor}`}>
@@ -92,16 +92,13 @@ export default function ResumeTemplateGallery({ language, query, onQuery, onUse,
       </nav>
 
       <div className={styles.galleryMain}>
-        <div className={styles.filterBar}>
-          <button type="button" className={styles.filterButton} aria-expanded={filtersOpen} aria-controls={`${id}-filters`} onClick={() => setFiltersOpen((open) => !open)}><HomeIcon name="filter" />{t(homeText.filters)}{filters > 0 && <small>{numerals(filters, language)}</small>}</button>
-          <p className={styles.resultCount} aria-live="polite">{t(homeText.showing)} {numerals(results.length, language)} {t(homeText.of)} {numerals(drawerTotal, language)}</p>
-        </div>
         <div id={`${id}-filters`} className={styles.filters} data-open={filtersOpen || undefined}>{filterControls}</div>
+        <p className={styles.resultCount} aria-live="polite">{t(homeText.showing)} {numerals(results.length, language)} {t(homeText.of)} {numerals(drawerTotal, language)}</p>
 
         {results.length ? <ul className={styles.cardGrid}>
           {results.map((card) => {
             const thumb = thumbnailFor(card)
-            const badges = templateBadges(card).slice(0, 3)
+            const badges = cardBadges(card)
             const current = card.editor === 'regular' && card.id === regularTemplateId
             return <li key={`${card.editor}:${card.id}`} className={styles.card}>
               <button type="button" className={styles.cardPreview} aria-haspopup="dialog" aria-label={`${t(homeText.preview)}: ${t(card.name)}`} onClick={(event) => open(card, event.currentTarget)}>
@@ -129,6 +126,6 @@ export default function ResumeTemplateGallery({ language, query, onQuery, onUse,
       </div>
     </div>
 
-    {preview && <ResumeTemplatePreview card={preview.card} origin={preview.origin} list={results} language={language} latexFull={latexFull} onNavigate={(card) => setPreview({ card, origin: null, trigger: preview.trigger })} onUse={(card) => onUse(card.editor, card.id)} onClose={() => { const trigger = preview.trigger; setPreview(null); requestAnimationFrame(() => trigger?.focus({ preventScroll: true })) }} />}
+    {preview && <ResumeTemplatePreview card={preview.card} origin={preview.origin} list={results} language={language} latexFull={latexFull} onNavigate={(card) => setPreview({ card, origin: null, trigger: preview.trigger })} onUse={(card, sample) => onUse(card.editor, card.id, sample)} onClose={() => { const trigger = preview.trigger; setPreview(null); requestAnimationFrame(() => trigger?.focus({ preventScroll: true })) }} />}
   </section>
 }

@@ -120,8 +120,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 2,
-    "sha256": "473a4b4c5649c50a9d3a177aca8bd9754ac9b64f809354476f48c79157af1d20",
-    "sourceSha256": "de5dcc09e1bde423c0645a2da87e4a960c65d898b738dfcbffbd20237eb139c1"
+    "sha256": "0821cd800b67aae0c20325dfaf77c2fd462235d2a284ca53fc6b659422b40431",
+    "sourceSha256": "c917b4950492e055d663977fc9c14c856c275d376cf4626de9c2e169a69fee8a"
   },
   "regular:admission-sop": {
     "card": "/mr-resume/templates/regular/admission-sop.webp",
@@ -129,8 +129,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "ccfaef00169e2a07853eb3246382be85277962c5694e4715237ff895cf810868",
-    "sourceSha256": "5c7c28bdf0b405390c65bc12170af011097a5aee147fc924df003cc10f8360b6"
+    "sha256": "a9c795afa2f955a5634707eb1aaac1ba3e8bba55c44e4007c48f632af1be0f97",
+    "sourceSha256": "654e370b4eda4bc4b95cfeb47e1330e4c219d2908cde538b8d6602db05a39c85"
   },
   "regular:bank-officer": {
     "card": "/mr-resume/templates/regular/bank-officer.webp",
@@ -138,8 +138,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 2,
-    "sha256": "e892b75649eda0b67454805be207551c2fff907c11bed3c290f7df41c6efb51e",
-    "sourceSha256": "bce741d0a2a6b6ab0b919ef4135125a3f20b0ccf54eafa37120e97b754c439a7"
+    "sha256": "1587a87bfb491dbdf7570934a374b820cea569d33a51a6c6093d61088c0bd2e9",
+    "sourceSha256": "f219fc09f4c7d32a062f14d960f1a07ec1c2fdf88c7b1e4800e40d9af29125e5"
   },
   "regular:bcs-biodata-en": {
     "card": "/mr-resume/templates/regular/bcs-biodata-en.webp",
@@ -147,8 +147,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "e402e5976b5710d3def6e50075ee0d62e9464a00401e154f8e033ab661db0901",
-    "sourceSha256": "a8b071823e2b01d2f11ac0bd12c64f892f7f45542752e2ad56b85836ca005702"
+    "sha256": "5df1a0b04f0b4595fd5d734080cb4f395c60be82897281b8e69fa935c28b29fd",
+    "sourceSha256": "15b33ca416398f534b6bc38777405f555e9353670cf5a0d54c92135340829d9c"
   },
   "regular:corporate-en": {
     "card": "/mr-resume/templates/regular/corporate-en.webp",
@@ -156,8 +156,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "e078d1f484c2d4bde0966c0c1933ccdd5ae3114c8f429948e64e8cb8a9891c8a",
-    "sourceSha256": "cc2d7e65d93fc6a01ab96ba0be368d076e5123783baac108fed582d80a86e16a"
+    "sha256": "f400bb1c916fe1cb6ad21292989a182ca6bb29ae6bfd43023645c10375bf0c1e",
+    "sourceSha256": "60b767ca865fc5abc66ca343204e0f9c4729e8a7a93c18d04a4021a0dab29312"
   },
   "regular:corporate-sidebar": {
     "card": "/mr-resume/templates/regular/corporate-sidebar.webp",
@@ -165,8 +165,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "81ebca8cb8a75b354a5bf56a7304df6072d91dd5c6ab7e6b4c072163973a38d2",
-    "sourceSha256": "9e30e8b4fb5f2faeb90ac1632761c3cefa79a06e2bd31b8d4c24aed6c31a358a"
+    "sha256": "2f48f993a64a393c1c8951d436a5092e1f827015e2570ae5fd0ce3981af6a758",
+    "sourceSha256": "41c0019b0a6e745b95b8081b4eb545afa7977dfb894b2327844864f6cee86922"
   },
   "regular:cover-letter-en": {
     "card": "/mr-resume/templates/regular/cover-letter-en.webp",
@@ -174,8 +174,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "f049abca7cfdb33bc8974703802d20e4580effd16bd1ae32d41c30a10b718616",
-    "sourceSha256": "85c1bbc2c22417022865191188e81918f5c08d67cd0d40e238a4a0184011ce04"
+    "sha256": "8ecddf53621cb60020046bd11f05d99ebba511d28bd6bfa638743235a8142d8b",
+    "sourceSha256": "ba7e1ec743e3c20e9674dc5381a58b719373b629278cf531787edb18d2679e6f"
   },
   "regular:creative-portfolio": {
     "card": "/mr-resume/templates/regular/creative-portfolio.webp",
@@ -183,26 +183,26 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "4fe6d5f0767e0538d7bf3521c06b1a7f7fea41cef1ec9a16193d4132335e5764",
-    "sourceSha256": "61367d45681e16cd1de16e0ffe43ba5f0f776c082fb01823e28fdcc48d74bf9b"
+    "sha256": "6c01a22b5ae798b3a98bc9b282b761cf20b29c2170a696cfd1323c0851cc639b",
+    "sourceSha256": "14ee5842ad249686b8d7cd5a7c9b2bb66b20e5e4f097833d33da288753606c92"
   },
   "regular:engineering-cv": {
     "card": "/mr-resume/templates/regular/engineering-cv.webp",
     "full": "/mr-resume/templates/regular/engineering-cv@full.webp",
     "width": 480,
     "height": 679,
-    "pages": 2,
-    "sha256": "8382dd409a9331846afa391f0648856de796b10d3fdb587bb0a054cd5722768e",
-    "sourceSha256": "12de335c3d8b530a342f606878dd76b2ff4844e54caf9de859cfaa44466630a4"
+    "pages": 1,
+    "sha256": "6df315e99e7e2a64ebfd77c24639a1e666db83ab5206a612c5e76723dc61b60b",
+    "sourceSha256": "9de5b57a7e7a38c96040f092213035252b67b7ee9d8bf312d217a5c7c60a27a1"
   },
   "regular:executive-leader": {
     "card": "/mr-resume/templates/regular/executive-leader.webp",
     "full": "/mr-resume/templates/regular/executive-leader@full.webp",
     "width": 480,
     "height": 679,
-    "pages": 1,
-    "sha256": "7e28d05d796e25c66381a29e7d70550d028907a041f29dcd795322c6a4f678ad",
-    "sourceSha256": "6117f81ecef358e6399686f318358490e076a6d9d894e983fcef54946403fc59"
+    "pages": 2,
+    "sha256": "77fcfff221fa5928b5b7263b33b0b33eb14b5357adadb84bb15f2e4cc635b050",
+    "sourceSha256": "1028de5276602a94292397d82dbded7d622cf418d13c87fdaeb44c900072c67f"
   },
   "regular:fresh-graduate": {
     "card": "/mr-resume/templates/regular/fresh-graduate.webp",
@@ -210,8 +210,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "1f93591f8503c8dafea991f0111a55044d3b830f6800510e74383aba35f94480",
-    "sourceSha256": "35a377f6d9cb59c05792835f6226ec53cbdc6b42fee9f4dd92321bcebe974c71"
+    "sha256": "eabc9163f881a973b7488898995561ac17ac8f893c5283b1111f67fe3fd1773b",
+    "sourceSha256": "628bc01bc78b27fa8fb7a12db7ae1f641221b35f22caaa1fd7cc36a6b6d89948"
   },
   "regular:fresher-en": {
     "card": "/mr-resume/templates/regular/fresher-en.webp",
@@ -219,8 +219,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "65187a3d55449f05e2a64138b17fb0f080d2a015ae614160a647e5d0d47ea8e1",
-    "sourceSha256": "8f2555caaaa7310bf437b2c9f10ac032808ab73a325a419110b87529eb16591f"
+    "sha256": "eba060137b2808cea2230ac4806e9ae9cd333c204f0b0b514508e2f5dd74619b",
+    "sourceSha256": "8da52aa75fdbe06b7bb476c847b6b14a102f57ea3545d6a0d303846534927a18"
   },
   "regular:government-biodata": {
     "card": "/mr-resume/templates/regular/government-biodata.webp",
@@ -228,8 +228,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "677eae8e718b2b7d4ffbc9e4e4e45f05b2284739912e5b52c295c28523d1ab24",
-    "sourceSha256": "b871164401aa4a12dfbe9aa5588730fa835b38f8d08baf436d74bdaec9ac55ee"
+    "sha256": "4dd622497da8e5357e5e59420c56599561036e7590865d5d3cbdcdd3bf07ff26",
+    "sourceSha256": "9acc4cf17f0b907c9ee78e50f9308ae63f97b079d9ad0c713c9275e49ba17f7c"
   },
   "regular:healthcare-cv": {
     "card": "/mr-resume/templates/regular/healthcare-cv.webp",
@@ -237,8 +237,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "43bcbc444f1ef07e0c365240a1e1cb3319d5a3b68272e5f1df7027dcb289acab",
-    "sourceSha256": "6b7336765f33f2def49c85e84a31ebdff1db61e88023379c25e39287da571f98"
+    "sha256": "55d8fef14392964c7939a67346dd9d53b9da3fc3f5bdde7a1a4f4925639d74c8",
+    "sourceSha256": "f2112c34405abbb7d96e27e9479352fbfec3b690662531da7e5648698c07fb0b"
   },
   "regular:job-resume": {
     "card": "/mr-resume/templates/regular/job-resume.webp",
@@ -246,8 +246,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 2,
-    "sha256": "7198f71ed0d5d8bc23d51a3013843c9eab17cc62b83f850bba671e30c28fb6b8",
-    "sourceSha256": "ad4a65e18f7ec0f3d88f768a3afb04ec0e3142522363ff67bef68f361f0c4433"
+    "sha256": "894d9a546bc9f37c0838b5760809ead082589e9c9a8e404a613dea5cb60121c8",
+    "sourceSha256": "8a205ac779d435fa7ca1bc1cab25dd1321bf5e8d5996ef1765ac0162c04611a8"
   },
   "regular:latex-classic": {
     "card": "/mr-resume/templates/regular/latex-classic.webp",
@@ -255,8 +255,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 2,
-    "sha256": "153f57e196ba652517c0e773d40525550967506e4a2a4b0e2887cccade45e436",
-    "sourceSha256": "b585929a7314c6f07caf4f727b896fbd7591d6a8dddc2301c5890a73e68af6bc"
+    "sha256": "e40d7979722eadf951e22c016fb791183d2b9580c07594008c2245b3860b26a3",
+    "sourceSha256": "ba083cd764794d17ec7b3942302a12e99747c7f0bf1e3fca18cf069ab20d1459"
   },
   "regular:marketing-sales": {
     "card": "/mr-resume/templates/regular/marketing-sales.webp",
@@ -264,17 +264,17 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "2993e770af8098ce0925ced3d0ce0cdf83d38b6e5d87cc0fe40294fff32a8f0d",
-    "sourceSha256": "10da664772f732fce240c8e945fa6e2fcade916a91f303efd20d7e9bc4a6bdd2"
+    "sha256": "7fde057291e6397293826a64f5a27e3704723e81fc7556428a24150e2902fbb6",
+    "sourceSha256": "ceb0902d1b2f889afc5dbe62bc5fc7093c42d9a5e42191e0b8f9f79de3a6f9de"
   },
   "regular:ngo-development": {
     "card": "/mr-resume/templates/regular/ngo-development.webp",
     "full": "/mr-resume/templates/regular/ngo-development@full.webp",
     "width": 480,
     "height": 679,
-    "pages": 2,
-    "sha256": "b69fb23f52981b261b88478039da9a2b7b49479d3af494a554741cf84090c9b0",
-    "sourceSha256": "1993254e3e4824df7e1b22a2f017aedf7b7263d48d36a94b04fc57981851e284"
+    "pages": 1,
+    "sha256": "ba83bc8cf63a23736e693dfad60b6277f65e9dd50f1dd6254217784789f7dfd0",
+    "sourceSha256": "f38c1525f5d2baa8dd7eb7d603db3fe3e2203d5298f35dfa05c3076244377d40"
   },
   "regular:personal-biodata": {
     "card": "/mr-resume/templates/regular/personal-biodata.webp",
@@ -282,8 +282,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "f957e5a356d3843da14d7d8c54ebf4b3a0a250ce25d78f15477d90f58be26853",
-    "sourceSha256": "ac4a4eac2c64e288deb8993b4685f8c7de38a03fa32b52a0b865d8fa7ced293e"
+    "sha256": "5e119e3b878db78b3279d1c5a44026a1dd573fc1f3a4a24f859e55fa07ef06c8",
+    "sourceSha256": "fe9b25fc3aebfa214e444781c557df8fd556837b978fb7d4d0db7db009898f1b"
   },
   "regular:school-teacher-en": {
     "card": "/mr-resume/templates/regular/school-teacher-en.webp",
@@ -291,8 +291,8 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "c5e7f9504d6cc45c8deda9304ab39f9cefead7b63be6b9d28cce360bfe9f9db6",
-    "sourceSha256": "2ade3d51786318574c08092d3a80059924cf57fcb3fe75c43ace7aea881d5177"
+    "sha256": "21139c914e7570943552547381a01a5003e3889ea222f0d3fb47f29e73c9c859",
+    "sourceSha256": "108164fafbae3e029cf8c55480a53f028891cc423ba962a8beeb0a6c4da57e10"
   },
   "regular:software-engineer": {
     "card": "/mr-resume/templates/regular/software-engineer.webp",
@@ -300,16 +300,16 @@ export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = {
     "width": 480,
     "height": 679,
     "pages": 1,
-    "sha256": "c97b5a93133cbceb5cf75f58299d1b16cdf25e613ea142d73eff4265c9f48e4d",
-    "sourceSha256": "5566e8211d9f7de09fd05b733bd50490e0ad39f063b226b636c30f60c6d5d7ee"
+    "sha256": "3f5f5a3cb8dc6216141267081d4de321b4f83149f3f8a7e7d6c80f89f098e753",
+    "sourceSha256": "39b5e77be952111afbbf2d3d0255ae037c77880b724da626a018d16cc62d774c"
   },
   "regular:teacher-cv": {
     "card": "/mr-resume/templates/regular/teacher-cv.webp",
     "full": "/mr-resume/templates/regular/teacher-cv@full.webp",
     "width": 480,
     "height": 679,
-    "pages": 2,
-    "sha256": "f60a7af0f38e566e01235a7dc6daf82eaa4be0d88d17e51f2b9c00a7918e2a38",
-    "sourceSha256": "d173ae4fed47cd90b945af1ebd96f390e997b4f76452df42c64fcb9011a0a7d4"
+    "pages": 1,
+    "sha256": "20cf4cb4659ad994c7d25a4b61950ce31c2bd271fcb82b3e5654a9043d972caf",
+    "sourceSha256": "3ffddfa57220e79e329d5d6f24245ef7cc2bff8a05e391e5cdb0549ac3c61e07"
   }
 }

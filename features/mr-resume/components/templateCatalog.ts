@@ -104,6 +104,19 @@ export function templateBadges(card: TemplateCard): TemplateBadge[] {
   return badges
 }
 
+/**
+ * The few badges a gallery card has room for. A notice (a download the guest
+ * must agree to, an adapted third-party source) is never the one cut for
+ * space: it is what they need to know before choosing. "Compiles in browser"
+ * is the LaTeX drawer's default, so on a card only its exception is shown.
+ */
+export function cardBadges(card: TemplateCard, limit = 3): TemplateBadge[] {
+  const badges = templateBadges(card).filter((badge) => badge.id !== 'browser')
+  const notices = badges.filter((badge) => badge.tone === 'notice').slice(0, limit)
+  const facts = badges.filter((badge) => badge.tone !== 'notice').slice(0, limit - notices.length)
+  return [...facts, ...notices]
+}
+
 // ---------------------------------------------------------------------------
 // Gallery query: the URL is the state (shareable, Back-button friendly).
 
@@ -190,7 +203,8 @@ export function activeFilterCount(query: GalleryQuery) {
 // ---------------------------------------------------------------------------
 // Deep links: /mr-resume/regular-editor?template=<id> and /mr-resume/latex?template=<id>
 
-export type TemplateRequest = { readonly editor: GalleryEditor; readonly id: string; readonly sequence: number }
+/** `sample`: fill the Regular template with its specimen (resumeSpecimens.ts) instead of bracketed prompts. */
+export type TemplateRequest = { readonly editor: GalleryEditor; readonly id: string; readonly sequence: number; readonly sample: boolean }
 /** An allowlist per editor: a Regular id never reaches the LaTeX editor, and arbitrary text never reaches either. */
 export function resolveTemplateRequest(editor: GalleryEditor, value: string | null, cards: readonly TemplateCard[]): { kind: 'template'; card: TemplateCard } | { kind: 'unknown' } | null {
   if (value === null || value === '') return null
@@ -198,6 +212,11 @@ export function resolveTemplateRequest(editor: GalleryEditor, value: string | nu
   return card ? { kind: 'template', card } : { kind: 'unknown' }
 }
 
-export function templateHref(editor: GalleryEditor, id: string) {
-  return `${editor === 'regular' ? '/mr-resume/regular-editor' : '/mr-resume/latex'}?template=${encodeURIComponent(id)}`
+/** The sample start exists only in the Regular editor; a LaTeX starter is its own source. */
+export function wantsSample(editor: GalleryEditor, params: URLSearchParams): boolean {
+  return editor === 'regular' && params.get('sample') === '1'
+}
+
+export function templateHref(editor: GalleryEditor, id: string, sample = false) {
+  return `${editor === 'regular' ? '/mr-resume/regular-editor' : '/mr-resume/latex'}?template=${encodeURIComponent(id)}${sample && editor === 'regular' ? '&sample=1' : ''}`
 }

@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { EDITOR_LANGUAGE_KEY } from '../components/editorLanguage'
 import { REGULAR_DRAFT_KEY, summarizeStoredDraft, type StoredDraftSummary } from '../components/resumeDraft'
 import { defaultGalleryQuery, parseGalleryQuery, serializeGalleryQuery, type GalleryEditor, type GalleryQuery } from '../components/templateCatalog'
 import { LATEX_DATABASE } from '../latex/types'
-import { galleryCards, thumbnailFor } from './galleryCards'
+import { galleryCards } from './galleryCards'
 import { compareRows, homeText, pick, type HomeLanguage } from './homeText'
 import { HomeIcon } from './homeIcons'
 import ResumeHomeNavbar from './ResumeHomeNavbar'
@@ -53,7 +53,7 @@ function relativeTime(iso: string, language: HomeLanguage) {
   return format.format(Math.round(seconds), 'second')
 }
 
-export default function ResumeHome({ onOpenEditor, onOpenTemplate }: { onOpenEditor: (editor: GalleryEditor) => void; onOpenTemplate: (editor: GalleryEditor, id: string) => void }) {
+export default function ResumeHome({ onOpenEditor, onOpenTemplate }: { onOpenEditor: (editor: GalleryEditor) => void; onOpenTemplate: (editor: GalleryEditor, id: string, sample?: boolean) => void }) {
   const search = useSyncExternalStore(subscribeHomeState, () => window.location.search, () => '')
   const storedLanguage = useSyncExternalStore(subscribeHomeState, () => readStorage(EDITOR_LANGUAGE_KEY), () => null)
   const storedDraft = useSyncExternalStore(subscribeHomeState, () => readStorage(REGULAR_DRAFT_KEY), () => null)
@@ -93,47 +93,34 @@ export default function ResumeHome({ onOpenEditor, onOpenTemplate }: { onOpenEdi
 
   const counts = { regular: galleryCards.filter((card) => card.editor === 'regular').length, latex: galleryCards.filter((card) => card.editor === 'latex').length }
   const latexFull = latex.status === 'ready' && latex.count >= LATEX_PROJECT_LIMIT
-  // Each drawer shows real sorts from its own case: actual first pages, not mock-ups.
-  const specimen = {
-    regular: ['corporate-sidebar', 'creative-portfolio', 'government-biodata'].map((id) => thumbnailFor({ editor: 'regular', id })),
-    latex: ['altacv', 'modern-source', 'bd-biodata-source'].map((id) => thumbnailFor({ editor: 'latex', id })),
-  }
   const showContinue = draft.status !== 'none' || latex.status === 'ready' || latex.status === 'unreadable'
 
   return <div ref={scroller} className={styles.home} lang={language === 'bn' ? 'bn' : 'en'} data-language={language}>
     <a className={styles.skip} href="#templates">{t(homeText.skip)}</a>
     <ResumeHomeNavbar language={language} onLanguage={changeLanguage} scroller={scroller} />
     <main className={styles.main}>
-      <section className={styles.hero} aria-labelledby="resume-home-title">
-        <p className={styles.eyebrow}>{t(homeText.eyebrow)}</p>
-        <h1 id="resume-home-title" className={styles.title}>{t(homeText.title)}</h1>
-        <p className={styles.lead}>{t(homeText.lead)}</p>
-      </section>
+      <div className={styles.intro}>
+        <section className={styles.hero} aria-labelledby="resume-home-title">
+          <p className={styles.eyebrow}>{t(homeText.eyebrow)}</p>
+          <h1 id="resume-home-title" className={styles.title}>{t(homeText.title)}</h1>
+          <p className={styles.lead}>{t(homeText.lead)}</p>
+        </section>
 
-      <section className={styles.drawers} aria-label={t(homeText.drawer)}>
-        {(['regular', 'latex'] as const).map((editor) => {
-          const regular = editor === 'regular'
-          const thumbs = specimen[editor]
-          return <article key={editor} className={styles.drawer} data-editor={editor} aria-labelledby={`drawer-${editor}`}>
-            <div className={styles.drawerSpecimen} aria-hidden="true">
-              {!regular && <span className={styles.specimenSource}><code><b>\documentclass</b>{'{'}article{'}'}</code><code><em>\section</em>{'{'}Experience{'}'}</code><code className={styles.sourceIndent}>\textbf{'{'}Data Analyst{'}'}</code><code><em>\end</em>{'{'}document{'}'}</code></span>}
-              {/* Pre-sized WebP renders of real output (render-thumbnails.mjs); next/image would only re-encode them. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {thumbs.map((thumb, index) => thumb && <img key={thumb.card} src={thumb.card} alt="" width={thumb.width} height={thumb.height} style={{ '--sort': index } as CSSProperties} />)}
-            </div>
-            <div className={styles.drawerCopy}>
-              <p className={styles.drawerIndex}><HomeIcon name={regular ? 'page' : 'source'} />{t(regular ? homeText.regularIndex : homeText.latexIndex)}</p>
+        <section className={styles.drawers} aria-label={t(homeText.drawer)}>
+          {(['regular', 'latex'] as const).map((editor) => {
+            const regular = editor === 'regular'
+            return <article key={editor} className={styles.drawer} data-editor={editor} aria-labelledby={`drawer-${editor}`}>
+              <div className={styles.drawerHead}>
+                <p className={styles.drawerIndex}><HomeIcon name={regular ? 'page' : 'source'} />{t(regular ? homeText.regularIndex : homeText.latexIndex)}</p>
+                <button type="button" className={styles.textButton} aria-label={`${t(homeText.openEditor)}: ${regular ? 'Regular' : 'LaTeX'}`} onClick={() => onOpenEditor(editor)}>{t(homeText.openEditor)}</button>
+              </div>
               <h2 id={`drawer-${editor}`}>{t(regular ? homeText.regularTitle : homeText.latexTitle)}</h2>
               <p>{t(regular ? homeText.regularBody : homeText.latexBody)}</p>
-              <ul className={styles.facts}>{t(regular ? homeText.regularFacts : homeText.latexFacts).map((fact) => <li key={fact}><HomeIcon name="check" />{fact}</li>)}</ul>
-              <div className={styles.drawerActions}>
-                <button type="button" className={styles.primary} onClick={() => showDrawer(editor)}><span>{t(homeText.browseTemplates)}</span><span className={styles.count}>{language === 'bn' ? counts[editor].toLocaleString('bn-BD') : counts[editor]}</span><HomeIcon name="arrow" /></button>
-                <button type="button" className={styles.secondary} aria-label={`${t(homeText.openEditor)}: ${regular ? 'Regular' : 'LaTeX'}`} onClick={() => onOpenEditor(editor)}>{t(homeText.openEditor)}</button>
-              </div>
-            </div>
-          </article>
-        })}
-      </section>
+              <button type="button" className={`${styles.primary} ${styles.drawerBrowse}`} onClick={() => showDrawer(editor)}><span>{t(homeText.browseTemplates)}</span><span className={styles.count}>{language === 'bn' ? counts[editor].toLocaleString('bn-BD') : counts[editor]}</span><HomeIcon name="arrow" /></button>
+            </article>
+          })}
+        </section>
+      </div>
 
       {showContinue && <section className={styles.continue} aria-labelledby="resume-continue-title">
         <h2 id="resume-continue-title">{t(homeText.continueTitle)}</h2>

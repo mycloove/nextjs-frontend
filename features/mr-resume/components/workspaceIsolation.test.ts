@@ -127,14 +127,20 @@ test('the route selects the gallery home or an editor without restoring a confli
 })
 
 test('gallery deep links are validated per editor, handed over once and removed from the URL', () => {
-  assert.match(host, /new URLSearchParams\(window\.location\.search\)\.get\('template'\)/u)
+  assert.match(host, /const params = new URLSearchParams\(window\.location\.search\)\s+const value = params\.get\('template'\)/u)
   assert.match(host, /resolveTemplateRequest\(mode, value, mode === 'regular' \? regularTemplateCards : latexTemplateCards\)/u)
   assert.match(host, /router\.replace\(editorPaths\[mode\], \{ scroll: false \}\)/u)
+  // The sample start is read through the catalog's own rule, never trusted from the raw query.
+  assert.match(host, /sample: wantsSample\(mode, params\)/u)
   assert.match(host, /templateRequest=\{templateRequest\?\.editor === 'regular' \? templateRequest : null\}/u)
   assert.match(host, /templateRequest=\{templateRequest\?\.editor === 'latex' \? templateRequest : null\}/u)
-  // Regular never replaces an existing draft without the library's confirm dialog.
-  assert.match(regular, /if \(!hadStoredDraftRef\.current && saveState === 'fresh'\) \{ applyTemplate\(template\); return \}/u)
-  assert.match(regular, /setRequestedTemplate\(\{ template, sequence: templateRequest\.sequence \}\)/u)
+  // Regular never replaces an existing draft without the library's confirm dialog,
+  // and the dialog is told whether it is the outline or the sample text being offered.
+  assert.match(regular, /if \(!hadStoredDraftRef\.current && saveState === 'fresh'\) \{ applyTemplate\(template, templateRequest\.sample\); return \}/u)
+  assert.match(regular, /setRequestedTemplate\(\{ template, sequence: templateRequest\.sequence, sample: templateRequest\.sample \}\)/u)
+  // Sample text reaches a draft only through that explicit flag: the default is the bracketed outline.
+  assert.match(regular, /function applyTemplate\(template: ResumeTemplate, sample = false\)/u)
+  assert.match(regular, /const specimen = sample \? resumeSpecimen\(template\.id\) : undefined/u)
   // LaTeX always adds a new project and refuses at the eight-project limit first.
   assert.match(latex, /current\.projects\.length >= LOCAL_LATEX_LIMITS\.projects\) \{ current\.notify\('error'/u)
   assert.doesNotMatch(latex, /applyProject\(createTemplateProject/u)

@@ -1,8 +1,10 @@
-/** On-device Banglish: protected data -> learned spelling -> word banks -> phonetics.
+/** On-device Banglish: protected data -> learned spelling -> word banks -> known words -> phonetics.
  * A proposal is not a translation or an accuracy guarantee. Unknown glyphs survive.
  */
-import { addressLexicon, careerLexicon, commonLexicon, educationLexicon, nameLexicon, resumeLexicon } from './banglishLexicon.ts'
+import { addressLexicon, careerLexicon, commonLexicon, educationLexicon, loanLexicon, nameLexicon, resumeLexicon } from './banglishLexicon.ts'
 import { isValidSpellingChoice } from './banglishLearn.ts'
+import { acceptableCost, createWordIndex, type BanglaWordIndex } from './banglishMatch.ts'
+import { banglaWordLists } from './banglishWords.ts'
 export { lexicon } from './banglishLexicon.ts'
 
 export type BanglishContext = 'general' | 'name' | 'address' | 'education' | 'career'
@@ -48,10 +50,72 @@ function bankReading(word: string, options: BanglishOptions): string | undefined
     : options.context === 'education' ? educationLexicon : options.context === 'career' ? careerLexicon : commonLexicon
   // Vocabulary objects have prototypes. Only authored entries are readings, never
   // inherited properties such as "constructor" or "toString".
-  for (const bank of [contextBank, nameLexicon, resumeLexicon, commonLexicon]) {
+  for (const bank of [contextBank, nameLexicon, resumeLexicon, commonLexicon, loanLexicon]) {
     if (Object.hasOwn(bank, key) && typeof bank[key] === 'string') return bank[key]
   }
   return undefined
+}
+
+let wordIndex: BanglaWordIndex | undefined
+/** Built on first use, so the index costs nothing until someone actually types Banglish. */
+function knownWords(): BanglaWordIndex {
+  return wordIndex ??= createWordIndex([
+    { pool: 'core', words: banglaWordLists.core },
+    { pool: 'general', words: [...banglaWordLists.formal, ...Object.values(commonLexicon), ...Object.values(careerLexicon), ...Object.values(educationLexicon), ...Object.values(loanLexicon)] },
+    { pool: 'verb', words: banglaWordLists.verbs },
+    { pool: 'place', words: Object.values(addressLexicon) },
+    { pool: 'name', words: [...Object.values(nameLexicon), ...banglaWordLists.names] },
+  ])
+}
+
+/**
+ * Builds the word index ahead of the first keystroke. It takes a fraction of a
+ * second once; a field calls this while idle so that cost never lands on a key.
+ */
+export function prepareBanglish(): void {
+  knownWords()
+}
+
+/**
+ * Real Bangla words these letters can be read as, closest first. The banks
+ * above only know the exact romanizations someone listed; this reads any
+ * casual spelling ("dhonnobad", "donnobad", "dhonyobad") against the word
+ * itself. `slack` admits looser readings as alternatives, never as the answer.
+ */
+function knownReadings(word: string, options: BanglishOptions, slack = 0): string[] {
+  const limit = acceptableCost(word.length) + slack
+  return knownWords().find(word, options.context ?? 'general', 4).filter((match) => match.cost <= limit).map((match) => match.text)
+}
+
+/** In a name field a leading capital is name case, not a retroflex or long-vowel marker. */
+function phoneticSource(word: string, options: BanglishOptions): string {
+  if (options.context !== 'name' || options.force) return word
+  return /^[A-Z][a-z]*$/u.test(word) ? word.toLowerCase() : word.replace(/^(Sh|[TDNR])/u, (first) => first.toLowerCase())
+}
+
+/** "icche", "hocche": in casual typing cch is always চ্ছ, never ক + চ. Explicit phonetic mode is left exact. */
+function casualSource(word: string, options: BanglishOptions): string {
+  return options.force ? word : word.replace(/cch(?!h)/gu, 'chchh')
+}
+
+/**
+ * Two known words written as one: "jonmodin" is জন্ম + দিন, "nurjahan" নূর + জাহান.
+ * Tried only when no single word fits, and only when both halves are close
+ * readings on their own, so it cannot invent a compound out of loose guesses.
+ */
+function compoundReading(word: string, options: BanglishOptions): string | undefined {
+  if (!/^[a-zA-Z]{6,40}$/u.test(word)) return undefined
+  const context = options.context ?? 'general'
+  let best: { text: string; cost: number } | undefined
+  for (let split = 3; split <= word.length - 3; split++) {
+    const head = knownWords().find(word.slice(0, split), context, 1)[0]
+    if (!head || !head.whole || head.cost > 0.25) continue
+    const tail = knownWords().find(word.slice(split), context, 1)[0]
+    if (!tail || tail.cost > 0.25) continue
+    const cost = head.cost + tail.cost + 0.3
+    if (!best || cost < best.cost) best = { text: head.text + tail.text, cost }
+  }
+  return best && best.cost <= acceptableCost(word.length) ? best.text : undefined
 }
 
 function protectsData(word: string): boolean {
@@ -129,7 +193,7 @@ function consonant(word: string, index: number): Unit | null {
   return null
 }
 
-function ruleConvert(word: string): string {
+function ruleConvert(word: string, casual = false): string {
   let out = ''
   let cluster: Unit[] = []
   const flush = () => { out += cluster.map((unit, index) => `${index && cluster[index - 1].letter !== 'ৎ' ? HASANTA : ''}${unit.letter}`).join(''); cluster = [] }
@@ -164,8 +228,15 @@ function ruleConvert(word: string): string {
       const digraph = word.slice(index, index + 2).toLowerCase()
       const key = VOWELS[digraph] ? digraph : lower
       const vowel = ch === 'I' && key === 'i' ? ['ঈ', 'ী'] : ch === 'U' && key === 'u' ? ['ঊ', 'ূ'] : ch === 'O' && key === 'o' ? ['ও', 'ো'] : VOWELS[key]
-      if (!cluster.length) out += vowel[0]
-      else {
+      if (!cluster.length) {
+        // Casual typing leaves the glide out: "mia" is মিয়া, "manie" মানিয়ে, "khaoa" খাওয়া.
+        // Bangla does not write আ or এ straight after another vowel, so nothing real is lost.
+        // Explicit phonetic mode keeps the letters exactly as typed.
+        const afterVowel = casual && /[\u0985-\u0994\u09be-\u09cc]$/u.test(out)
+        if (afterVowel && (ch === 'a' || ch === 'e') && key === lower) out += `য়${vowel[1]}`
+        else if (afterVowel && ch === 'o' && key === 'o') out += 'ও'
+        else out += vowel[0]
+      } else {
         const joined = cluster.length > 1 || cluster.some((item) => item.letter.includes(HASANTA))
         const next = word[index + 1] ?? ''
         const implicit = ch === 'o' && key === 'o' && ((/^[b-df-hj-np-tv-z]$/iu.test(next) && (cluster.length === 1 || cluster.at(-1)?.key === 'r')) || (!next && joined))
@@ -184,19 +255,33 @@ function ruleConvert(word: string): string {
 export function convertWord(word: string, options: BanglishOptions = {}): string | null {
   if (!isBanglishTransliterable(word, options)) return null
   if (!options.force) {
+    // "dhonnobad," in pasted or practice text: the sentence mark is not part of
+    // the word, and an English word keeps its Latin letters with or without it.
+    const marked = /^([a-zA-Z]+)([.!?;,]+)$/u.exec(word)
+    if (marked && !marked[2].includes(',,')) {
+      const inner = convertWord(marked[1], options)
+      return inner === null ? null : inner + marked[2]
+    }
     const exact = bankReading(word, options)
     if (exact) return exact
+    const known = knownReadings(word, options)[0] ?? compoundReading(word, options)
+    if (known) return known
   }
-  const source = options.context === 'name' && !options.force ? word.replace(/^(Sh|[TDNR])/u, (first) => first.toLowerCase()) : word
-  return ruleConvert(source)
+  return ruleConvert(casualSource(phoneticSource(word, options), options), !options.force)
 }
 
 export function suggestReadings(word: string, options: BanglishOptions = {}): string[] {
   if (!isBanglishTransliterable(word, options)) return []
   const candidates: string[] = []
-  const add = (reading: string | null) => { if (reading && !candidates.includes(reading)) candidates.push(reading) }
+  const add = (reading: string | null | undefined) => { if (reading && !candidates.includes(reading)) candidates.push(reading) }
   add(convertWord(word, options))
   if (!options.force && options.learned) add(bankReading(word, { context: options.context }) ?? null)
+  // The nearest other real word, then the plain phonetic spelling, so a guest
+  // can always reach exactly what the letters say.
+  const known = options.force ? [] : knownReadings(word, options, 0.75)
+  add(known.find((reading) => reading !== candidates[0]))
+  add(ruleConvert(casualSource(phoneticSource(word, options), options), !options.force))
+  for (const reading of known) add(reading)
   add(ruleConvert(word))
   const retro = word.replace(/[tdn]/gu, (letter) => letter.toUpperCase())
   if (retro !== word) add(ruleConvert(retro))

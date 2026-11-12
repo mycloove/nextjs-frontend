@@ -1,12 +1,13 @@
 // Renders every gallery thumbnail from the template's REAL output and writes
 // templateThumbnails.ts. Nothing is drawn by hand:
 //   - Regular: the editor page itself, opened through the gallery deep link
-//     (/mr-resume/regular-editor?template=<id>) in a fresh browser profile.
+//     with the template's specimen (/mr-resume/regular-editor?template=<id>&sample=1)
+//     in a fresh browser profile: the page a guest gets from "Start with the sample text".
 //   - LaTeX: the pinned browser compiler's PDF (browser/gallery-smoke.mjs fixtures),
 //     page 1 rasterised with PDF.js.
 //
 // Run (Node >= 22.12, with the frontend dev server on BASE_URL):
-//   node --experimental-strip-types features/mr-resume/home/render-thumbnails.mjs [--base=http://localhost:3000] [--only=regular|latex]
+//   node --experimental-strip-types features/mr-resume/home/render-thumbnails.mjs [--base=http://localhost:3000] [--only=regular|latex] [--id=<regular template id>]
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
@@ -23,15 +24,26 @@ const publicRoot = path.join(frontend, 'public')
 const outputRoot = path.join(publicRoot, 'mr-resume', 'templates')
 const base = process.argv.find((item) => item.startsWith('--base='))?.slice(7) ?? 'http://localhost:3000'
 const only = process.argv.find((item) => item.startsWith('--only='))?.slice(7)
+// One Regular template while iterating on its specimen: --only=regular --id=<template id>
+const onlyId = process.argv.find((item) => item.startsWith('--id='))?.slice(5)
 const CARD_WIDTH = 480, FULL_WIDTH = 1100
 
 const { resumeTemplates } = await import('../components/resumeTemplates.ts')
+const { resumeSpecimen } = await import('../components/resumeSpecimens.ts')
 const { latexTemplateCards } = await import('../latex/latexTemplateCards.ts')
 const { latexSourceTemplates } = await import('../latex/templates.ts')
 const { latexArchiveTemplates } = await import('../latex/archiveTemplates.ts')
 const { regularTemplateFingerprint, latexTemplateFingerprint } = await import('./thumbnailFingerprints.ts')
 const manifestPath = path.join(here, 'templateThumbnails.ts')
-const existing = await readFile(manifestPath, 'utf8').then((text) => JSON.parse(text.slice(text.indexOf('= {') + 2).replace(/\n$/, ''))).catch(() => ({}))
+// The pictures not rendered in this run (--only, --id) keep their manifest rows.
+// The object is read from its own declaration: the first "= {" in the file is the
+// type above it, and reading from there silently dropped every other entry.
+const MANIFEST_DECLARATION = 'export const templateThumbnails: Readonly<Record<string, TemplateThumbnail>> = '
+const existing = await readFile(manifestPath, 'utf8').then((text) => {
+  const start = text.indexOf(MANIFEST_DECLARATION)
+  if (start < 0) throw new Error(`${manifestPath} has no templateThumbnails declaration to merge into`)
+  return JSON.parse(text.slice(start + MANIFEST_DECLARATION.length))
+}, (error) => { if (error.code === 'ENOENT') return {}; throw error })
 const thumbnails = { ...existing }
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex')
 
@@ -58,13 +70,16 @@ const hideEditorChrome = `
 
 async function renderRegular(browser) {
   for (const template of resumeTemplates) {
+    if (onlyId && template.id !== onlyId) continue
+    const specimen = resumeSpecimen(template.id)
+    if (!specimen) throw new Error(`Regular template ${template.id} has no specimen to picture`)
     const context = await browser.newContext({ viewport: { width: 1680, height: 1300 }, deviceScaleFactor: 2, colorScheme: 'light' })
     await context.addInitScript(() => { localStorage.setItem('smilepdf-theme', 'light'); localStorage.setItem('mr-resume:editor-language:v1', 'English') })
     const page = await context.newPage()
-    await page.goto(`${base}/mr-resume/regular-editor?template=${template.id}`, { waitUntil: 'networkidle', timeout: 180000 })
+    await page.goto(`${base}/mr-resume/regular-editor?template=${template.id}&sample=1`, { waitUntil: 'networkidle', timeout: 180000 })
     const paper = page.locator(`article[data-layout="${template.layout}"]`)
     await paper.waitFor({ timeout: 60000 })
-    await page.waitForFunction((name) => document.querySelector('article[data-layout] h2')?.textContent?.includes(name), template.fullName, { timeout: 60000 })
+    await page.waitForFunction((name) => document.querySelector('article[data-layout] h2')?.textContent?.includes(name), specimen.fullName, { timeout: 60000 })
     await page.addStyleTag({ content: hideEditorChrome })
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(400)
@@ -77,7 +92,9 @@ async function renderRegular(browser) {
     const png = await page.screenshot({ clip: box })
     // The editor's own measure: content taller than one sheet spills onto more pages.
     const pages = Math.max(1, Math.ceil((height - 2) / pageHeight))
-    await store('regular', template.id, png, pages, regularTemplateFingerprint(template))
+    await store('regular', template.id, png, pages, regularTemplateFingerprint(template, specimen))
+    // A specimen that spills a few lines onto a second sheet is worth trimming; this says by how much.
+    console.log(`      ${template.id} fills ${(height / pageHeight).toFixed(2)} sheet(s)`)
     await context.close()
   }
 }

@@ -26,6 +26,7 @@ import ResumeLanguageSuggestions, { type LanguageProposal } from './ResumeLangua
 import ResumeTemplateLibrary from './ResumeTemplateLibrary'
 import { DEFAULT_RESUME_LAYOUT, getResumeLayout, partitionSections, resumeLayoutIds, resumeLayouts, type ResumeLayoutId } from './resumeLayouts'
 import type { TemplateRequest } from './templateCatalog'
+import { resumeSpecimen } from './resumeSpecimens'
 
 type Purpose = 'Resume' | 'Career profile' | 'Academic CV' | 'Biodata' | 'Statement of purpose' | 'Cover letter'
 type ProfileAlign = 'left' | 'center' | 'right'
@@ -353,7 +354,7 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
   const [confirmFresh, setConfirmFresh] = useState(false)
   const [templateId, setTemplateId] = useState<string | null>(null)
   const [layout, setLayout] = useState<ResumeLayoutId>(DEFAULT_RESUME_LAYOUT)
-  const [requestedTemplate, setRequestedTemplate] = useState<{ template: ResumeTemplate; sequence: number } | null>(null)
+  const [requestedTemplate, setRequestedTemplate] = useState<{ template: ResumeTemplate; sequence: number; sample: boolean } | null>(null)
   const handledTemplateRef = useRef(0)
   const hadStoredDraftRef = useRef(false)
   const templateHandledRef = useRef(onTemplateHandled)
@@ -459,8 +460,12 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
     setActive('profile'); setInspector('section')
   }
 
-  function applyTemplate(template: ResumeTemplate) {
+  function applyTemplate(template: ResumeTemplate, sample = false) {
     if (restoreBlockedRef.current) { setNotice('The stored draft could not be restored. Start fresh explicitly before replacing it.'); return }
+    // Opt-in only (the gallery's "Start with the sample text"): the words are
+    // about an invented person, and the notice below says so, so they cannot
+    // quietly pass for the guest's own record.
+    const specimen = sample ? resumeSpecimen(template.id) : undefined
     const backup = captureDraft()
     let stored = false
     try { window.localStorage.setItem(TEMPLATE_BACKUP_KEY, encodeResumeDraft(backup)); stored = true } catch { /* Session restore copy still survives. */ }
@@ -472,9 +477,11 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
     const english = template.language === 'English'
     const accentColor = template.accentColor
     const accentIndex = accents.findIndex((item) => item.color === accentColor)
-    applyDraft({ ...backup, documentTitle: template.name, fullName: template.fullName, purpose: template.purpose, enabled: [...template.enabled], customSections: [], content: { ...Object.fromEntries(sections.map((section) => [section.id, ''])), ...template.content }, titles: template.titles ? { ...template.titles } : {}, sectionDividers: template.rulesUnderHeadings ? Object.fromEntries(template.enabled.filter((id) => id !== 'profile').map((id) => [id, { enabled: true, style: 'solid' as const, color: '#1f1f1f', thickness: 0.6, underHeading: true }])) : {}, headingIcons: {}, language: english ? 'English' : 'Bangla', banglishMode: !english, format: 'Visual', pageSize: 'A4', font: template.font, fontSize: template.settings?.fontSize ?? 11, leading: template.settings?.leading ?? 1.65, sectionGap: template.settings?.sectionGap ?? 24, margin: template.settings?.margin ?? 18, accent: accentColor ? (accentIndex >= 0 ? accentIndex : CUSTOM_ACCENT) : 0, customAccentColor: accentColor ?? backup.customAccentColor, profileAlign: template.profileAlign ?? 'left', layout: template.layout, profileImage: null, profileImageDisplay: null, photoShape: 'square', photoSize: profilePhotoBounds.initial, photoBackground: 'none', templateId: template.id })
+    applyDraft({ ...backup, documentTitle: template.name, fullName: specimen?.fullName ?? template.fullName, purpose: template.purpose, enabled: [...template.enabled], customSections: [], content: { ...Object.fromEntries(sections.map((section) => [section.id, ''])), ...(specimen?.content ?? template.content) }, titles: template.titles ? { ...template.titles } : {}, sectionDividers: template.rulesUnderHeadings ? Object.fromEntries(template.enabled.filter((id) => id !== 'profile').map((id) => [id, { enabled: true, style: 'solid' as const, color: '#1f1f1f', thickness: 0.6, underHeading: true }])) : {}, headingIcons: {}, language: english ? 'English' : 'Bangla', banglishMode: !english, format: 'Visual', pageSize: 'A4', font: template.font, fontSize: template.settings?.fontSize ?? 11, leading: template.settings?.leading ?? 1.65, sectionGap: template.settings?.sectionGap ?? 24, margin: template.settings?.margin ?? 18, accent: accentColor ? (accentIndex >= 0 ? accentIndex : CUSTOM_ACCENT) : 0, customAccentColor: accentColor ?? backup.customAccentColor, profileAlign: template.profileAlign ?? 'left', layout: template.layout, profileImage: null, profileImageDisplay: null, photoShape: 'square', photoSize: profilePhotoBounds.initial, photoBackground: 'none', templateId: template.id })
     setSaveState('fresh'); setSavedAt(null); selectSection('profile', true)
-    setNotice(stored ? 'Template applied. Your previous draft has a restore copy on this device.' : 'Template applied. The restore copy is available in this session only because device storage is unavailable.')
+    // An unavailable restore copy is the more urgent thing to say; the sample text is also flagged in the outline panel.
+    setNotice(!stored ? 'Template applied. The restore copy is available in this session only because device storage is unavailable.'
+      : specimen ? 'Template applied with sample text about an invented person. Replace every line with your own details.' : 'Template applied. Your previous draft has a restore copy on this device.')
   }
 
   function restoreTemplateBackup() {
@@ -674,9 +681,9 @@ export default function MrResumeStudio({ embedded = false, workspaceActive = tru
     const template = resumeTemplates.find((item) => item.id === templateRequest.id)
     if (!template) { setNotice('That template is no longer available. Your draft is unchanged.'); return }
     if (restoreBlockedRef.current) { setNotice('The stored draft could not be restored. Start fresh explicitly before replacing it.'); return }
-    if (!hadStoredDraftRef.current && saveState === 'fresh') { applyTemplate(template); return }
+    if (!hadStoredDraftRef.current && saveState === 'fresh') { applyTemplate(template, templateRequest.sample); return }
     setMobilePanel('sections')
-    setRequestedTemplate({ template, sequence: templateRequest.sequence })
+    setRequestedTemplate({ template, sequence: templateRequest.sequence, sample: templateRequest.sample })
     setNotice('Review the template, then choose whether to replace the current draft.')
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs per request sequence, not per keystroke
   }, [restored, templateRequest])
