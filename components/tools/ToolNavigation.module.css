@@ -1,4 +1,6 @@
-.navbar,
+/* The tool header's roles for the controls it carries (credit readout, tool
+   index trigger). The bar itself is components/site-header/SiteHeader. */
+.chassis,
 .switcher {
   --tn-surface: var(--bg-card);
   --tn-text: var(--text-primary);
@@ -19,49 +21,6 @@
   --tn-divider: var(--tool-nav-divider, var(--divider));
   --tn-signal: var(--tool-nav-signal, var(--accent-tag-text));
 }
-
-.navbar {
-  height: 62px;
-  flex: 0 0 62px;
-  width: 100%;
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  border-bottom: 1px solid var(--border-base);
-  background: var(--bg-topbar);
-  backdrop-filter: blur(12px);
-}
-
-.navbarInner {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 0 32px;
-}
-
-.aligned { z-index: 30; }
-.aligned .navbarInner {
-  width: min(100%, 1280px);
-  margin: 0 auto;
-}
-
-.identity,
-.brand,
-.controls {
-  display: flex;
-  align-items: center;
-}
-
-.identity { min-width: 0; gap: 16px; }
-.brand { flex: 0 0 auto; gap: 12px; text-decoration: none; }
-.wordmark { display: flex; }
-.rule { height: 20px; width: 1px; flex: 0 0 1px; background: var(--tn-divider); }
-.toolName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
-/* The breadcrumb's middle step: where this tool lives, quieter than its name. */
-.crumbGroup { flex: 0 0 auto; color: var(--tn-secondary); font-size: 13px; white-space: nowrap; }
-.controls { flex: 0 0 auto; gap: 12px; }
 
 /* Credit pill (§7.3): a readout. Low balance changes the words as well as the colour. */
 .creditPill {
@@ -95,32 +54,6 @@
   font: 500 12px/1.4 var(--mc-font-ui), system-ui, sans-serif;
 }
 
-.merge {
-  --tn-text: #f0efe8;
-  --tn-secondary: #b5b9ae;
-  --tn-divider: #3d4238;
-  --tool-nav-surface: #20231f;
-  --tool-nav-text: #f0efe8;
-  --tool-nav-secondary: #b5b9ae;
-  --tool-nav-divider: #3d4238;
-  --tool-nav-signal: #cce0b8;
-  border-color: #3d4238;
-  background: color-mix(in srgb, #20231f 94%, transparent);
-}
-
-:global([data-theme='light']) .merge {
-  --tn-text: #272923;
-  --tn-secondary: #6e7268;
-  --tn-divider: #dadbd1;
-  --tool-nav-surface: #fffefa;
-  --tool-nav-text: #272923;
-  --tool-nav-secondary: #6e7268;
-  --tool-nav-divider: #dadbd1;
-  --tool-nav-signal: #405444;
-  border-color: #dadbd1;
-  background: color-mix(in srgb, #fffefa 94%, transparent);
-}
-
 .trigger {
   display: inline-flex;
   align-items: center;
@@ -141,7 +74,6 @@
 .trigger[aria-expanded='true'] svg { transform: rotate(180deg); }
 .trigger svg { transition: transform 200ms var(--tn-ease); }
 
-.brand:focus-visible,
 .trigger:focus-visible,
 .dialog :is(a, button, input):focus-visible {
   outline: 2px solid var(--tn-text);
@@ -225,22 +157,11 @@
 
 @keyframes indexArrival { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-@media (max-width: 960px) {
-  /* The group step goes first: the tool name matters more than its shelf. */
-  .crumbStep { display: none; }
-}
-
 @media (max-width: 820px) {
-  .navbarInner { padding: 0 18px; }
   .shortcutHint { display: none; }
 }
 
 @media (max-width: 700px) {
-  .navbarInner { gap: 12px; }
-  .identity { gap: 12px; }
-  /* Keep the tool's name on phones (it used to vanish); the mark alone carries the brand. */
-  .wordmark { display: none; }
-  .controls { gap: 8px; }
   .groups { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .dialog { border-radius: 14px; }
   .dialogHeading { padding: 16px 16px 10px; }
@@ -254,22 +175,12 @@
 }
 
 @media (max-width: 640px) {
-  .brand { gap: 9px; }
   /* The account button's docked badge already shows the balance here. */
   .creditPill { display: none; }
 }
 
 @media (max-width: 380px) {
-  .navbarInner { padding: 0 8px; gap: 8px; }
-  .aligned .navbarInner { width: calc(100% - 16px); }
-  .identity { gap: 8px; }
-  .controls { gap: 4px; }
   .trigger { padding-inline: 8px; }
-  .toolName { font-size: 12px; }
-}
-
-@media (max-width: 420px) {
-  .brand { gap: 7px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

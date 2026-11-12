@@ -108,3 +108,6 @@ html[data-theme='light'] .shellMerge { background: #f4f3ef; color: #272923; }
 /* The page heading for tools that hide the visible heading row: present for
    assistive technology and document outline, out of the layout entirely. */
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* The header's skip-link target: focus lands here without a ring around the whole workspace. */
+.content:focus { outline: none; }

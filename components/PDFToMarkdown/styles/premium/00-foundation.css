@@ -124,15 +124,10 @@
   --pm-brand-300:#76e0d2;--pm-brand-400:#4bd2c1;--pm-brand-500:#35c7b5;--pm-brand-600:#28a898;
   --pm-sh-sm:0 1px 3px rgba(0,0,0,.25);--pm-sh-md:0 10px 30px rgba(0,0,0,.25);--pm-sh-lg:0 22px 65px rgba(0,0,0,.45);
 }
-.pm-studio-topbar{position:sticky;top:0;z-index:40;height:70px;border-bottom:1px solid var(--pm-border-base);background:color-mix(in srgb,var(--pm-bg-canvas) 82%,transparent);backdrop-filter:blur(22px) saturate(1.35)}
-.pm-studio-topbar-inner{width:min(1280px,calc(100% - 48px));height:100%;margin:auto;display:flex;align-items:center;gap:26px}
-.pm-studio-brand{display:flex;align-items:center;gap:10px;color:var(--pm-text-primary);text-decoration:none;font-size:14px;font-weight:700;letter-spacing:-.025em;white-space:nowrap}
-.pm-studio-mark{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:var(--pm-text-primary);color:var(--pm-text-inverse);font-family:var(--pm-font-mono);font-size:13px;box-shadow:var(--pm-sh-sm)}
-.pm-studio-brand small{padding:4px 7px;border:1px solid color-mix(in srgb,var(--pm-brand-500) 28%,transparent);border-radius:99px;background:color-mix(in srgb,var(--pm-brand-500) 8%,transparent);color:var(--pm-brand-500);font-family:var(--pm-font-mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase}
+/* The entry screen's bar is the shared site header (components/site-header); `.pm-studio-topbar` stays on it only as a verified contract hook. */
 .pm-studio-workspace{min-width:190px;display:flex;align-items:center;gap:9px;padding:7px 10px;border:1px solid var(--pm-border-base);border-radius:10px;color:var(--pm-text-secondary)}
 .pm-workspace-avatar{width:25px;height:25px;display:grid;place-items:center;border-radius:7px;background:var(--pm-bg-active);color:var(--pm-brand-500);font:600 10px var(--pm-font-mono)}
 .pm-studio-workspace>span:last-child{display:flex;flex-direction:column;font-size:11px}.pm-studio-workspace small{margin-top:2px;color:var(--pm-text-muted);font-size:9px}
-.pm-studio-nav{margin-left:auto;display:flex;align-items:center;gap:4px}.pm-studio-nav a,.pm-studio-nav button{padding:8px 11px;border:0;border-radius:8px;background:transparent;color:var(--pm-text-muted);font:500 11.5px var(--pm-font-sans);text-decoration:none;cursor:pointer}.pm-studio-nav a:hover,.pm-studio-nav button:hover{background:var(--pm-bg-hover);color:var(--pm-text-primary)}
 .pm-theme-button{width:34px;height:34px;display:grid;place-items:center;border:0;border-radius:9px;background:transparent;color:var(--pm-text-muted);cursor:pointer}.pm-theme-button:hover{background:var(--pm-bg-hover);color:var(--pm-text-primary)}.pm-theme-sun{display:none}[data-theme='dark'] .pm-theme-moon{display:none}[data-theme='dark'] .pm-theme-sun{display:block}
 .pm-profile{width:32px;height:32px;display:grid;place-items:center;border:2px solid var(--pm-bg-surface);border-radius:50%;background:linear-gradient(135deg,#c07d2b,#8d551b);color:#fff;font-size:10px;font-weight:700;box-shadow:0 0 0 1px var(--pm-border-strong)}
 .pm-shell{width:min(1180px,calc(100% - 48px));margin:auto;padding:64px 0 42px}
@@ -147,8 +142,8 @@
 .pm-btn-primary{background:var(--pm-brand-500);border-color:var(--pm-brand-500);box-shadow:var(--pm-sh-sm)}.pm-btn-primary:hover:not(:disabled){background:var(--pm-brand-400);box-shadow:var(--pm-sh-md)}
 .pm-card{border-color:var(--pm-border-base);box-shadow:var(--pm-sh-sm)}.pm-presets{margin:18px 0 28px}.pm-footer{margin-top:40px}
 @media(max-width:940px){.pm-studio-hero{grid-template-columns:1fr;gap:30px}.pm-studio-overview{max-width:430px}.pm-studio-workspace{display:none}}
-@media(max-width:700px){.pm-studio-topbar-inner,.pm-shell{width:min(100% - 28px,620px)}.pm-studio-nav{display:none}.pm-shell{padding-top:42px}.pm-studio-hero{margin-bottom:34px}.pm-studio-hero h1{font-size:clamp(40px,13vw,62px)}.pm-studio-hero-copy>p{font-size:13px}.pm-converter-head{padding:21px 18px 18px}.pm-converter-head>strong{display:none}.pm-dropzone{min-height:315px;margin:14px;padding:25px 15px}.pm-studio-trust{flex-direction:column;gap:8px}}
-@media(max-width:460px){.pm-studio-brand>span:nth-child(2),.pm-studio-brand small{display:none}.pm-studio-actions{flex-direction:column}.pm-studio-actions .pm-btn{width:100%}.pm-profile{display:none}}
+@media(max-width:700px){.pm-shell{width:min(100% - 28px,620px)}.pm-shell{padding-top:42px}.pm-studio-hero{margin-bottom:34px}.pm-studio-hero h1{font-size:clamp(40px,13vw,62px)}.pm-studio-hero-copy>p{font-size:13px}.pm-converter-head{padding:21px 18px 18px}.pm-converter-head>strong{display:none}.pm-dropzone{min-height:315px;margin:14px;padding:25px 15px}.pm-studio-trust{flex-direction:column;gap:8px}}
+@media(max-width:460px){.pm-studio-actions{flex-direction:column}.pm-studio-actions .pm-btn{width:100%}.pm-profile{display:none}}
 
 /* Light-theme override (auto adapts to your existing app theme toggle) */
 [data-theme='light'] .pm-root,

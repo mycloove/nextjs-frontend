@@ -1,11 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
-import AnimatedBrandLogo from '@/components/animated-brand-logo/AnimatedBrandLogo'
-import AuthNavButton from '@/components/AuthNavButton'
 import CreditCost from '@/components/tools/CreditCost'
-import ToolSwitcher from '@/components/tools/ToolSwitcher'
+import ToolNavbar from '@/components/tools/ToolNavbar'
 import {
   ActionButton,
   DownloadIcon,
@@ -278,25 +275,17 @@ export default function CompressPdfTool() {
       <DropAnywhere spec={SPEC} onFiles={addFiles} enabled={!running} />
       {picker.input}
 
-      <header className="acx-sitebar" data-tool-navbar="compress-pdf">
-        <div className="acx-sitebar-inner">
-          <div className="acx-breadcrumb">
-            <Link href="/" className="acx-logo-link" aria-label="mycloove home">
-              <AnimatedBrandLogo />
-            </Link>
-            <span className="acx-site-separator" aria-hidden="true">/</span>
-            <span className="acx-site-brand">mycloove</span>
-            <span className="acx-site-separator" aria-hidden="true">/</span>
-            <b>{tool.label}</b>
-          </div>
-          <div className="acx-site-actions">
-            <ToolSwitcher toolId="compress-pdf" availability={availability} shortcut />
-            <AuthNavButton chrome="tool" accountState={accountState} creditState={creditState} creditDisplayToolId="compress-pdf" />
-          </div>
-        </div>
-      </header>
+      {/* `.acx-sitebar` is a verified contract hook (scripts/verify-tool-navigation.mjs). */}
+      <ToolNavbar
+        toolId="compress-pdf"
+        className="acx-sitebar"
+        skipTo="#compress-main"
+        accountState={accountState}
+        creditState={creditState}
+        availability={availability}
+      />
 
-      <div className="acx-main">
+      <div className="acx-main" id="compress-main" tabIndex={-1}>
         <section className="acx-scale" aria-label="Document size">
           <p className="acx-scale-label" aria-hidden="true">TARGET_MASS</p>
           <div className={`acx-dial${running ? ' working' : ''}`}>

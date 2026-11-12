@@ -59,12 +59,10 @@ const layeredIconVariants: Record<ToolId, LayeredIconVariant> = {
 
 export default function ToolWorkspace({
   toolId,
-  topbarVariant,
   hideHeading,
   headingOwnedByTool,
 }: {
   toolId: ToolId
-  topbarVariant?: 'aligned'
   /* Opt-in: drop the whole heading row — the layered identity mark, the group
      eyebrow, the tool title and the description — leaving the tool surface as
      the page's only content. /rotate-pdf and /pdf-to-word use this when their
@@ -88,16 +86,13 @@ export default function ToolWorkspace({
   const { ready, enabled } = availability
   const withdrawn = ready && !enabled(toolId)
 
-  /* Preserve Rotate PDF's aligned 1280px frame. Navigation changes do not
-     alter the content geometry, availability gate, or dynamic tool mount. */
-  const aligned = topbarVariant === 'aligned'
-
   return (
     <div className={`${styles.shell} ${toolId === 'merge-pdf' ? styles.shellMerge : ''}`}>
       <section className={styles.main}>
-        <ToolNavbar toolId={toolId} aligned={aligned} accountState={account} creditState={credits} availability={availability} />
-        {/* The root layout owns the main landmark; this is the workspace body. */}
-        <div className={`${styles.content} ${toolId === 'merge-pdf' ? styles.contentMerge : ''}`}>
+        <ToolNavbar toolId={toolId} accountState={account} creditState={credits} availability={availability} />
+        {/* The root layout owns the main landmark; this is the workspace body
+            and the header's skip-link target. */}
+        <div id="main-content" tabIndex={-1} className={`${styles.content} ${toolId === 'merge-pdf' ? styles.contentMerge : ''}`}>
           {/* hideHeading: the whole identity row — the layered mark, the
               "Convert" eyebrow, the tool title and the description — is
               skipped, leaving the tool surface as the page's only content.

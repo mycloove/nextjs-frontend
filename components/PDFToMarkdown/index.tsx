@@ -20,12 +20,12 @@
    ═════════════════════════════════════════════════════════════════════════ */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import Link from 'next/link'
 import { getApiErrorMessage, toolRequest } from '@/lib/api/client'
 import 'katex/dist/katex.min.css'
-import AuthNavButton from '@/components/AuthNavButton'
+import SiteHeader from '@/components/site-header/SiteHeader'
 import CreditCost from '@/components/tools/CreditCost'
 import ToolSwitcher from '@/components/tools/ToolSwitcher'
+import { navigationGroupOf } from '@/components/tools/toolNavigation'
 import { useToolAvailability } from '@/lib/usage/useToolAvailability'
 import { useAccountViewer } from '@/lib/account/useAccountViewer'
 import { useCreditBalance } from '@/lib/usage/useCreditBalance'
@@ -33,7 +33,6 @@ import './premium.css'
 import { REVIEW_PILOT_ENABLED, acknowledgeReview, createExtractionReview, matchesReviewSource, reviseExtractionReview, sha256Bytes } from './review/model'
 import './math.css'
 import { Ic } from './icons'
-import { MrMarkdownBrandLogo } from './MrMarkdownBrandLogo'
 import {
   Job, HistoryEntry, Toast, Mode,
   cx, genId, stripName, downloadBlob, sanitizeExportFilename, escapeHtml, timeAgo, humanBytes, conversionSummary, shortcutLabel,
@@ -1230,26 +1229,33 @@ export default function PDFToMarkdown({ publicInfo }: { publicInfo?: ReactNode }
 
   return (
     <div className="pm-root mr-markdown-upload">
-      <header className="pm-studio-topbar" data-tool-navbar="pdf-to-markdown">
-        <div className="pm-studio-topbar-inner">
-          <Link className="pm-studio-brand" href="/" aria-label="mycloove home">
-            <MrMarkdownBrandLogo className="mr-nav-brand-logo" />
-            <span>Mr. Markdown</span>
-            <small>Studio</small>
-          </Link>
-          <nav className="pm-studio-nav" aria-label="Workspace navigation">
-            <a href="#converter">Converter</a>
-            <a href="#options">Options</a>
-            <button type="button" onClick={() => setHelpOpen(true)}>Shortcuts</button>
-          </nav>
-          <div className="pm-studio-account">
-            <ToolSwitcher toolId="pdf-to-markdown" availability={navigationAvailability} />
-            <AuthNavButton chrome="tool" accountState={accountState} creditState={creditState} creditDisplayToolId="pdf-to-markdown" />
+      {/* The entry screen mounts the shared site header; the editor workspace
+          keeps its own working chrome (views.tsx). `.pm-studio-topbar` and
+          `data-tool-navbar` are verified contract hooks. Ctrl/⌘K stays Mr.
+          Markdown's command palette, so the tool index takes no shortcut. */}
+      <SiteHeader
+        frame="tool"
+        className="pm-studio-topbar"
+        toolNavbarId="pdf-to-markdown"
+        skipTo="#pm-entry-main"
+        accountState={accountState}
+        creditState={creditState}
+        creditDisplayToolId="pdf-to-markdown"
+        context={{ group: navigationGroupOf('pdf-to-markdown')?.replace(' And ', ' & ') ?? null, current: 'Mr. Markdown' }}
+        navLabel="Workspace navigation"
+        links={[
+          { href: '#converter', label: 'Converter' },
+          { href: '#options', label: 'Options' },
+          { label: 'Shortcuts', onClick: () => setHelpOpen(true) },
+        ]}
+        extras={(
+          <>
             {creditState.snapshot?.prices['pdf-to-markdown']?.enabled !== false && <div className="pm-conversion-cost"><CreditCost toolId="pdf-to-markdown" creditState={creditState} showActionLabel={false} /></div>}
-          </div>
-        </div>
-      </header>
-      <div className="pm-shell">
+            <ToolSwitcher toolId="pdf-to-markdown" availability={navigationAvailability} />
+          </>
+        )}
+      />
+      <div className="pm-shell" id="pm-entry-main" tabIndex={-1}>
         {newDocumentMode && (
           <section className="pm-studio-hero">
             <div className="pm-studio-hero-copy">

@@ -3,7 +3,7 @@
    is the module's own --rs-* palette (sage + gold, square paper corners); this
    file adds no colour of its own except paper-on-desk shadows from the theme. */
 
-.home { --home-max: 1200px; --home-gutter: clamp(16px, 4vw, 48px); --home-display: "Mr Resume Latin Modern", "Mr Resume Noto Serif Bengali", Georgia, serif; position: relative; min-height: 0; flex: 1 1 auto; overflow-y: auto; color: var(--rs-ink); background: var(--rs-bg); font-size: 15px; line-height: 1.6; scroll-padding-top: 132px; }
+.home { --home-max: 1200px; --home-gutter: clamp(16px, 4vw, 48px); --home-display: "Mr Resume Latin Modern", "Mr Resume Noto Serif Bengali", Georgia, serif; position: relative; min-height: 0; flex: 1 1 auto; overflow-y: auto; color: var(--rs-ink); background: var(--rs-bg); font-size: 15px; line-height: 1.6; scroll-padding-top: 144px; }
 .home[data-language="bn"] { --home-display: "Mr Resume Noto Serif Bengali", "Mr Resume Latin Modern", Georgia, serif; line-height: 1.75; }
 .home :where(h1, h2, h3, p, ul, dl, dd, figure) { margin: 0; }
 .home :where(ul) { padding: 0; list-style: none; }
@@ -21,34 +21,15 @@
 .helper { color: var(--rs-muted); font-size: 13px; line-height: 1.6; }
 .warning { color: var(--rs-danger) !important; }
 
-/* ---- Navbar (chassis) ---- */
-.navbar { position: sticky; z-index: 20; top: 0; border-bottom: 1px solid transparent; background: color-mix(in srgb, var(--rs-bg) 92%, transparent); backdrop-filter: saturate(1.2) blur(10px); transition: border-color 200ms var(--rs-ease); }
-.navbar[data-scrolled] { border-bottom-color: var(--rs-line); }
-.navInner { display: flex; width: min(var(--home-max), 100%); height: 60px; align-items: center; gap: 16px; margin-inline: auto; padding-inline: var(--home-gutter); }
-.crumbs { display: flex; min-width: 0; flex: 1 1 auto; align-items: center; gap: 12px; }
-.brand { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; border-radius: 8px; color: inherit; text-decoration: none; }
-.wordmark { display: flex; }
-.crumbRule { width: 1px; height: 18px; flex: 0 0 1px; background: var(--rs-control-line); opacity: .6; transform: skewX(-18deg); }
-.crumbGroup { color: var(--rs-muted); font-size: 13px; white-space: nowrap; }
-.crumbCurrent { display: inline-flex; min-width: 0; align-items: center; gap: 6px; overflow: hidden; color: var(--rs-ink); font-size: 14px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.crumbCurrent svg { color: var(--rs-accent); }
-.anchors { display: flex; align-items: center; gap: 4px; }
-.anchors a { position: relative; padding: 8px 10px; border-radius: 6px; color: var(--rs-muted); font-size: 14px; text-decoration: none; transition: color 120ms var(--rs-ease), background-color 120ms var(--rs-ease); }
-.anchors a:hover { color: var(--rs-ink); background: var(--rs-soft); }
-.anchors a[aria-current] { color: var(--rs-ink); }
-.anchors a[aria-current]::after { position: absolute; right: 10px; bottom: 2px; left: 10px; height: 2px; background: var(--rs-accent); content: ''; }
-.navControls { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; }
+/* ---- Navbar ----
+   The bar is the shared site header (components/site-header) mounted by
+   ResumeHomeNavbar; only this page's own control, the language switch, is
+   styled here. Sticky offsets below sit under its fixed 72px. */
 .languageSwitch { display: inline-flex; padding: 2px; border: 1px solid var(--rs-line); border-radius: 8px; background: var(--rs-panel); }
 .languageSwitch button { min-width: 44px; min-height: 32px; padding: 0 10px; border: 0; border-radius: 6px; color: var(--rs-muted); background: transparent; font-size: 13px; font-weight: 600; }
 .languageSwitch button[aria-pressed="true"] { color: var(--rs-on-primary); background: var(--rs-primary); }
-.menuButton, .iconButton { display: inline-grid; width: 40px; height: 40px; place-items: center; border: 1px solid var(--rs-line); border-radius: 8px; background: var(--rs-panel); }
-.menuButton { display: none; }
-.iconButton:hover, .menuButton:hover { border-color: var(--rs-control-line); }
-.menuSheet { width: min(360px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: 12px 12px auto auto; padding: 16px; border: 1px solid var(--rs-line); border-radius: 10px; color: var(--rs-ink); background: var(--rs-panel); box-shadow: var(--rs-dropdown-shadow); }
-.menuSheet::backdrop { background: rgb(15 17 14 / .35); }
-.menuHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.menuSheet ul { display: grid; margin-bottom: 16px; }
-.menuSheet a { display: flex; min-height: 48px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--rs-line); color: inherit; font-size: 16px; text-decoration: none; }
+.iconButton { display: inline-grid; width: 40px; height: 40px; place-items: center; border: 1px solid var(--rs-line); border-radius: 8px; background: var(--rs-panel); }
+.iconButton:hover { border-color: var(--rs-control-line); }
 
 /* ---- Hero ---- */
 .main { width: min(var(--home-max), 100%); margin-inline: auto; padding: 0 var(--home-gutter); }
@@ -102,11 +83,11 @@
 .continueItem small.warning { white-space: normal; }
 
 /* ---- Gallery ---- */
-.gallery { margin-top: 64px; scroll-margin-top: 72px; }
+.gallery { margin-top: 64px; scroll-margin-top: 84px; }
 .galleryHead { max-width: 760px; }
 .galleryHead h2, .compare h2 { margin-top: 8px; text-wrap: balance; font-family: var(--home-display); font-size: clamp(28px, 3.4vw, 40px); font-weight: 700; letter-spacing: -.01em; line-height: 1.15; }
 .galleryLead { margin-top: 12px; color: var(--rs-muted); }
-.galleryBar { position: sticky; z-index: 10; top: 60px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; padding: 12px 0; border-bottom: 1px solid var(--rs-line); background: var(--rs-bg); }
+.galleryBar { position: sticky; z-index: 10; top: 72px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; padding: 12px 0; border-bottom: 1px solid var(--rs-line); background: var(--rs-bg); }
 .drawerTabs { display: inline-flex; padding: 3px; border: 1px solid var(--rs-line); border-radius: 8px; background: var(--rs-panel); }
 .drawerTabs button { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: var(--rs-muted); font-weight: 600; transition: color 120ms var(--rs-ease), background-color 120ms var(--rs-ease); }
 .drawerTabs button[aria-selected="true"] { color: var(--rs-on-primary); background: var(--rs-primary); }
@@ -116,7 +97,7 @@
 .search input { width: 100%; min-height: 42px; border: 0; outline: 0; background: transparent; }
 .search:focus-within { outline: 2px solid var(--rs-focus); outline-offset: 2px; }
 .galleryBody { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 32px; margin-top: 24px; }
-.categoryRail { position: sticky; top: 140px; align-self: start; }
+.categoryRail { position: sticky; top: 152px; align-self: start; }
 .categoryRail ul { display: grid; gap: 2px; }
 .categoryRail button { display: flex; width: 100%; min-height: 40px; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; border: 0; border-left: 2px solid transparent; background: transparent; color: var(--rs-muted); font-size: 14px; text-align: left; transition: color 120ms var(--rs-ease), background-color 120ms var(--rs-ease); }
 .categoryRail button:hover:not(:disabled) { color: var(--rs-ink); background: var(--rs-soft); }
@@ -185,7 +166,7 @@
 @keyframes previewIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ---- Compare, import, footer ---- */
-.compare { margin-top: 96px; scroll-margin-top: 72px; }
+.compare { margin-top: 96px; scroll-margin-top: 84px; }
 .tableWrap { margin-top: 24px; overflow-x: auto; border: 1px solid var(--rs-line); background: var(--rs-panel); }
 .compareTable { width: 100%; min-width: 620px; border-collapse: collapse; font-size: 14px; }
 .compareTable :where(th, td) { padding: 14px 16px; border-bottom: 1px solid var(--rs-line); text-align: left; vertical-align: top; }
@@ -193,7 +174,7 @@
 .home[data-language="bn"] .compareTable thead th { letter-spacing: 0; text-transform: none; font-size: 13px; }
 .compareTable tbody th { width: 22%; font-weight: 650; }
 .compareTable tbody tr:last-child :where(th, td) { border-bottom: 0; }
-.importBand { margin-top: 64px; scroll-margin-top: 72px; }
+.importBand { margin-top: 64px; scroll-margin-top: 84px; }
 .importGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
 .importItem, .privacy { display: flex; align-items: flex-start; gap: 12px; padding: 20px; border: 1px solid var(--rs-line); background: var(--rs-panel); text-align: left; }
 .importItem { transition: border-color 120ms var(--rs-ease); }
@@ -209,13 +190,7 @@
 .footerHome { font-weight: 600; }
 
 /* ---- Responsive: 1200 / 900 / 600 / 390 ---- */
-/* Section anchors move into the menu before they would wrap. */
-@media (max-width: 1120px) {
-  .anchors { display: none; }
-  .menuButton { display: inline-grid; }
-}
 @media (max-width: 900px) {
-  .crumbGroup, .crumbGroup + .crumbRule { display: none; }
   .galleryBody { grid-template-columns: 1fr; gap: 16px; }
   .categoryRail { position: static; margin-inline: calc(-1 * var(--home-gutter)); overflow-x: auto; scrollbar-width: none; }
   .categoryRail ul { display: flex; gap: 8px; padding-inline: var(--home-gutter); }
@@ -228,15 +203,13 @@
 }
 @media (max-width: 760px) {
   .drawers { grid-template-columns: 1fr; }
-  .desktopOnly { display: none; }
-  .wordmark { display: none; }
 }
 @media (max-width: 600px) {
   .home { font-size: 15px; }
   .lead { font-size: 16px; }
   .drawerCopy { padding: 16px; }
   .drawerSpecimen { height: 180px; gap: 10px; padding: 16px 16px 0; }
-  .galleryBar { top: 60px; }
+  .galleryBar { top: 72px; }
   .search { flex-basis: 100%; }
   .drawerTabs { width: 100%; }
   .drawerTabs button { flex: 1; justify-content: center; padding: 0 8px; }
@@ -245,11 +218,6 @@
   .previewInfo, .previewPage { padding: 16px; }
   .previewFacts div { grid-template-columns: 1fr; gap: 2px; }
   .selectField select { min-width: 130px; }
-}
-@media (max-width: 400px) {
-  .crumbRule { display: none; }
-  .crumbCurrent { font-size: 13px; }
-  .navControls { gap: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .home *, .home *::before, .home *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }

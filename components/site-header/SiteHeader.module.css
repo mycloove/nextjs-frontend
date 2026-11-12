@@ -1,0 +1,734 @@
+/*
+  Site header — the one chassis every non-editor page mounts.
+
+  Ported from the marketing topbar (formerly app/home.css `.home-topbar`, where
+  every rule was scoped to `.home-page` and so unreachable from tool pages).
+  The design is unchanged: a fixed-height bar whose bottom hairline is a
+  measuring rule, a scroll-rule fill with a carriage head, engraved register
+  dividers, plain engraved labels with a drafting-pin hover, a recessed socket
+  for the current place, and one ink-filled primary action.
+
+  Tokens are the header's own (`--sh-*`), resolved from the Ink & Paper values
+  in both theme blocks, so the bar reads the same on the marketing home, a
+  tool page and an editor's entry screen — whatever palette the page under it
+  uses. Tool identity colours never paint the bar (owner direction D8 keeps
+  them on the tool's own surface).
+
+  Accent discipline: --sh-brand appears only as state — the ruled-edge
+  assembly and the focus outlines.
+*/
+
+.header {
+  /* Ink (dark) is the site default, as in app/theme.css :root. */
+  --sh-canvas: #0e1117;
+  --sh-surface: #161b23;
+  --sh-soft: #1c222c;
+  --sh-surface-blur: rgba(14, 17, 23, 0.84);
+  --sh-ink: #eceef3;
+  --sh-muted: #9aa3b2;
+  /* ~5.2:1 on the canvas. */
+  --sh-faint: #7d8696;
+  --sh-line: #262d39;
+  --sh-line-soft: #1f252f;
+  --sh-brand: #fd7917;
+  --sh-mark-glow: rgba(253, 121, 23, 0.4);
+  --sh-shadow-md: 0 10px 30px hsl(220 40% 2% / 0.4), 0 3px 8px hsl(220 40% 2% / 0.25);
+  --sh-shadow-lg: 0 24px 64px hsl(220 40% 2% / 0.5), 0 8px 20px hsl(220 40% 2% / 0.3);
+  --sh-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --sh-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sh-fast: 140ms;
+  --sh-base: 220ms;
+  --sh-slow: 380ms;
+  --sh-r: 8px;
+  /* Content frame: the marketing column; tool pages pass their own (.frameTool). */
+  --sh-frame: 1200px;
+
+  --nav-progress: 0;
+  /* The tool index takes the bar's neutral material on every page, not the
+     host surface's palette (some hosts set these for their own controls). */
+  --tool-nav-surface: initial;
+  --tool-nav-text: initial;
+  --tool-nav-secondary: initial;
+  --tool-nav-divider: initial;
+  --tool-nav-signal: initial;
+  /*
+    The ruled edge: fine ticks every 24px (4px grid × 6), a deep tick every
+    120px (× 30), drawn as stacked gradients on the bar's own background — zero
+    DOM, zero listeners. Held in a property because the scrolled and ≤640px
+    rules re-layer the fill UNDER the ticks; every rule that paints this bar
+    paints var(--sh-ticks) first. Deep ticks first so they win where the two
+    grids coincide.
+  */
+  --sh-ticks:
+    repeating-linear-gradient(90deg, var(--sh-faint) 0 1px, transparent 1px 120px)
+      0 100% / 100% 7px no-repeat,
+    repeating-linear-gradient(90deg, var(--sh-line) 0 1px, transparent 1px 24px)
+      0 100% / 100% 5px no-repeat;
+
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  flex: 0 0 auto;
+  width: 100%;
+  height: 72px;
+  color: var(--sh-ink);
+  font-family: var(--mc-font-ui, 'Inter'), var(--mc-font-bn, 'Noto Sans Bengali'), system-ui, sans-serif;
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+  background: var(--sh-ticks), var(--sh-surface-blur);
+  border-bottom: 1px solid var(--sh-line-soft);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  transition: background var(--sh-base) var(--sh-ease-out), border-color var(--sh-base) var(--sh-ease-out);
+}
+
+:global(html[data-theme='light']) .header {
+  --sh-canvas: #f4f5f7;
+  --sh-surface: #ffffff;
+  --sh-soft: #eceef2;
+  --sh-surface-blur: rgba(244, 245, 247, 0.82);
+  --sh-ink: #12151c;
+  --sh-muted: #586070;
+  /* ~5.0:1 on the canvas. */
+  --sh-faint: #626a79;
+  --sh-line: #dde0e6;
+  --sh-line-soft: #e7e9ee;
+  --sh-brand: #d9620c;
+  --sh-mark-glow: rgba(253, 121, 23, 0.32);
+  --sh-shadow-md: 0 8px 24px rgba(18, 21, 28, 0.08), 0 2px 6px rgba(18, 21, 28, 0.05);
+  --sh-shadow-lg: 0 22px 60px rgba(18, 21, 28, 0.12), 0 6px 16px rgba(18, 21, 28, 0.06);
+}
+
+/* Tool pages sit under the workspace column (1280px − 2 × 32px padding), so
+   the lockup lines up with the tool's own left edge. They also keep the
+   stacking level tool chrome always had, below tool overlays. */
+.frameTool {
+  --sh-frame: 1216px;
+  z-index: 30;
+}
+
+.header *,
+.header *::before,
+.header *::after {
+  box-sizing: border-box;
+}
+
+/*
+  The carriage head: the rule's reading position, riding the fill's leading
+  edge. left derives from the same --nav-progress the fill consumes (written
+  per frame by the scroll handler), so it needs no state and no transition.
+  Capped at 100% − width so it never overflows at progress 1.
+*/
+.header::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: calc((100% - 2px) * var(--nav-progress));
+  z-index: 2;
+  width: 2px;
+  height: 12px;
+  border-radius: 1px 1px 0 0;
+  background: var(--sh-brand);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sh-canvas) 55%, transparent);
+  pointer-events: none;
+}
+
+/*
+  The signature, spent once: this 1px line IS the page's scroll rule, on the
+  bar's own bottom border, advancing with reading depth. No transition — the
+  value already arrives at frame rate, and a duration would make it lag. It
+  holds at 0 on documents that cannot scroll: an honest idle reading.
+*/
+.header::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  background: var(--sh-brand);
+  transform: scaleX(var(--nav-progress));
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+/* Scrolled firms the surface and the track; nothing resizes. */
+.scrolled {
+  border-bottom-color: var(--sh-line);
+  background: var(--sh-ticks), color-mix(in srgb, var(--sh-surface-blur) 86%, var(--sh-canvas));
+}
+
+/*
+  Skip link: the first focusable element, off-canvas until focused, pinned
+  above the bar. It snaps — becoming visible is a state, not an arrival.
+*/
+.skip {
+  position: fixed;
+  top: 10px;
+  left: 12px;
+  z-index: 60;
+  padding: 9px 14px;
+  border: 1px solid var(--sh-line);
+  border-radius: var(--sh-r);
+  background: var(--sh-surface);
+  box-shadow: var(--sh-shadow-md);
+  color: var(--sh-ink);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(calc(-100% - 16px));
+}
+
+.skip:focus,
+.skip:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--sh-brand) 52%, transparent);
+  outline-offset: 3px;
+  transform: translateY(0);
+}
+
+.shell {
+  width: min(calc(100% - 64px), var(--sh-frame));
+  height: 100%;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+
+/* ── Identity ── */
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.brand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 11px;
+  color: var(--sh-ink);
+  text-decoration: none;
+}
+
+/*
+  The lockup's one hover moment: a single specular sweep across the plate,
+  transform/opacity only. Transparent at both ends, so the overshoot never
+  paints an edge over the divider beside it.
+*/
+.brand::after {
+  content: '';
+  position: absolute;
+  inset: -3px -10px;
+  z-index: 2;
+  background: linear-gradient(100deg, transparent 42%, color-mix(in srgb, var(--sh-canvas) 62%, transparent) 50%, transparent 58%);
+  opacity: 0;
+  transform: translateX(-120%);
+  pointer-events: none;
+  transition: opacity 120ms linear, transform 0ms linear;
+}
+
+.brand:hover::after,
+.brand:focus-visible::after {
+  opacity: 1;
+  transform: translateX(120%);
+  transition: transform var(--sh-slow) var(--sh-ease-out), opacity 120ms linear;
+}
+
+/* The mark owns its shadow (AnimatedBrandLogo's module); this custom property
+   is its intended handle, not a reach into its internals. */
+.brand:hover .logo,
+.brand:focus-visible .logo {
+  --logo-image-shadow: drop-shadow(0 3px 3px rgba(2, 6, 23, 0.24)) drop-shadow(0 0 9px var(--sh-mark-glow));
+}
+
+/* Light surfaces keep the glass mark shadowless, hover included. */
+:global(html[data-theme='light']) .brand:hover .logo,
+:global(html[data-theme='light']) .brand:focus-visible .logo {
+  --logo-image-shadow: none;
+}
+
+.wordmark { display: flex; }
+
+/*
+  Engraved register divider: a 10px hairline, a 4px silence, a deep tick —
+  one gradient in a 1 × 18px box. Used between the identity and the index,
+  between breadcrumb steps, and before the account register.
+*/
+.rule {
+  width: 1px;
+  height: 18px;
+  flex: 0 0 auto;
+  background: linear-gradient(to bottom, var(--sh-line) 0 10px, transparent 10px 14px, var(--sh-faint) 14px 100%);
+}
+
+.crumbGroup {
+  flex: 0 0 auto;
+  color: var(--sh-muted);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.crumbCurrent {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--sh-ink);
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Index ── */
+.nav {
+  display: flex;
+  align-items: center;
+  /* 4px separates the plates so a hovered plate never kisses its neighbour. */
+  gap: 4px;
+}
+
+.nav::before {
+  content: '';
+  width: 1px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-right: 14px;
+  background: linear-gradient(to bottom, var(--sh-line) 0 10px, transparent 10px 14px, var(--sh-faint) 14px 100%);
+}
+
+/*
+  One register of plain engraved labels, tracked slightly open (+0.015em) —
+  calmer and more machined at 13px than the tight SaaS squeeze.
+*/
+.nav :is(a, button) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 13px;
+  border: 0;
+  border-radius: var(--sh-r);
+  background: transparent;
+  color: var(--sh-muted);
+  cursor: pointer;
+  text-decoration: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  white-space: nowrap;
+  transition: color var(--sh-fast) var(--sh-ease-out), background var(--sh-fast) var(--sh-ease-out);
+}
+
+/*
+  The seat pin — "where am I": a 1px stem with a 3px foot that rests just
+  above the ruled edge. Two crisp background rects in one 3 × 15px box.
+*/
+.nav :is(a, button)::after {
+  content: '';
+  position: absolute;
+  top: calc(100% + 1px);
+  left: calc(50% - 1.5px);
+  width: 3px;
+  height: 15px;
+  background:
+    linear-gradient(var(--sh-faint), var(--sh-faint)) 100% 100% / 3px 3px no-repeat,
+    linear-gradient(var(--sh-faint), var(--sh-faint)) 50% 0 / 1px 12px no-repeat;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity var(--sh-fast) var(--sh-ease-out), transform var(--sh-base) var(--sh-ease-out);
+}
+
+/* Hover previews the pin; keyboard focus earns the same preview. */
+.nav :is(a, button):hover:not(.active)::after,
+.nav :is(a, button):focus-visible:not(.active)::after {
+  opacity: 0.55;
+  transform: translateY(0);
+}
+
+/* Seating: the plate arrives, then after a 60ms beat the pin settles on the
+   house spring. Leaving uses the quicker base ease-out. */
+.nav a.active::after {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--sh-fast) var(--sh-ease-out) 60ms, transform var(--sh-base) var(--sh-ease-spring) 60ms;
+}
+
+.nav :is(a, button):hover { color: var(--sh-ink); }
+
+/* Current place: a recessed socket, not an accent underline. */
+.nav a.active {
+  color: var(--sh-ink);
+  background: var(--sh-soft);
+  box-shadow:
+    inset 0 1px 1px color-mix(in srgb, var(--sh-ink) 8%, transparent),
+    inset 0 0 0 1px var(--sh-line);
+}
+
+.nav a.active:hover { background: color-mix(in srgb, var(--sh-soft) 92%, var(--sh-ink)); }
+
+/* ── Actions ── */
+.actions {
+  margin-left: auto;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+/* A page's own controls (credit readout, tool index). */
+.extras {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.utility {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.utility::before {
+  content: '';
+  width: 1px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-right: 6px;
+  background: linear-gradient(to bottom, var(--sh-line) 0 10px, transparent 10px 14px, var(--sh-faint) 14px 100%);
+}
+
+/*
+  The one filled element: solid ink with canvas text — ~16:1 in both themes
+  from one rule — leaving the brand colour free to mean state. It follows the
+  pointer by a capped offset and lights a sheen where the pointer sits
+  (custom properties only; reduced motion and coarse pointers bypass it).
+*/
+.primary {
+  --tb-x: 0px;
+  --tb-y: 0px;
+  --tb-px: 50%;
+  --tb-py: 50%;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 15px;
+  border: 0;
+  border-radius: var(--sh-r);
+  background: var(--sh-ink);
+  color: var(--sh-canvas);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+  transform: translate(var(--tb-x), var(--tb-y));
+  will-change: transform;
+  transition: background var(--sh-fast) var(--sh-ease-out);
+}
+
+.primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(circle at var(--tb-px) var(--tb-py), color-mix(in srgb, var(--sh-canvas) 72%, transparent), transparent 46%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--sh-base) var(--sh-ease-out);
+}
+
+.primary:hover::before { opacity: 1; }
+.primary > * { position: relative; z-index: 1; }
+.primary:hover { background: color-mix(in srgb, var(--sh-ink) 86%, var(--sh-canvas)); }
+.primary:active { transform: translate(var(--tb-x), var(--tb-y)) scale(0.98); }
+
+/*
+  One focus ring for every control in the bar — its own, the page's extras and
+  the account seal. Doubled class on purpose: tool pages ring their controls in
+  their own accent (`.acx-page :is(a, button):focus-visible`, 0-2-1), and the
+  bar must not change colour with the page under it.
+*/
+.header.header :is(a, button):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--sh-brand) 52%, transparent);
+  outline-offset: 3px;
+}
+
+/* Hamburger — ghost, same register as the utility controls. */
+.menuButton {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border: 1px solid transparent;
+  border-radius: var(--sh-r);
+  background: transparent;
+  color: var(--sh-ink);
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background var(--sh-fast) var(--sh-ease-out);
+}
+
+.menuButton:hover { background: var(--sh-soft); }
+
+.menuButton span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform var(--sh-base) var(--sh-ease-out), opacity var(--sh-fast);
+}
+
+.menuOpen span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.menuOpen span:nth-child(2) { opacity: 0; }
+.menuOpen span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+/* ── Mobile sheet ── */
+.sheet {
+  visibility: hidden;
+  position: absolute;
+  top: 100%;
+  right: max(20px, calc((100vw - var(--sh-frame)) / 2));
+  width: min(360px, calc(100% - 32px));
+  padding: 10px;
+  border: 1px solid var(--sh-line);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--sh-surface) 94%, transparent);
+  box-shadow: var(--sh-shadow-lg);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px) scale(0.98);
+  transform-origin: top right;
+  transition: visibility 0s linear var(--sh-base), opacity var(--sh-base) var(--sh-ease-out), transform var(--sh-base) var(--sh-ease-out);
+}
+
+.sheetOpen {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(10px) scale(1);
+  transition-delay: 0s;
+}
+
+.sheet[aria-hidden='true'] * { pointer-events: none; }
+
+.sheetNav { display: grid; gap: 3px; }
+
+.sheetNav :is(a, button) {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 12px 13px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sh-ink);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  transition: color var(--sh-fast), background var(--sh-fast);
+}
+
+.sheetNav :is(a, button) > span { flex: 1 1 auto; }
+.sheetNav :is(a, button):hover,
+.sheetNav a.active { background: var(--sh-soft); }
+
+/* Page controls carried into the sheet on narrow screens. */
+/* Page controls sit on the links' 13px inset so the sheet reads as one column. */
+.sheetExtras {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 8px;
+  padding: 4px 13px;
+}
+
+.sheetOpen .sheetNav :is(a, button) {
+  animation: sh-sheet-link 320ms var(--sh-ease-out) forwards;
+  opacity: 0;
+}
+
+.sheetChevron {
+  flex: 0 0 auto;
+  color: var(--sh-faint);
+  transition: transform var(--sh-base), color var(--sh-fast);
+}
+
+.sheetNav :is(a, button):hover .sheetChevron {
+  color: var(--sh-muted);
+  transform: translateX(3px);
+}
+
+.sheetPrimary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 11px;
+  color: var(--sh-canvas);
+  background: var(--sh-ink);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background var(--sh-fast) var(--sh-ease-out);
+}
+
+.sheetPrimary:hover { background: color-mix(in srgb, var(--sh-ink) 86%, var(--sh-canvas)); }
+
+.sheetNote {
+  margin: 11px 4px 3px;
+  color: var(--sh-faint);
+  font-size: 12px;
+  text-align: center;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes sh-sheet-link {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Responsive ── */
+
+/*
+  Dense: a page name in the lockup AND a page index (editor entry pages). The
+  shelf step yields first, then the index moves into the sheet — earlier than
+  the marketing bar, because the breadcrumb already holds the row's width.
+*/
+@media (max-width: 1280px) {
+  .dense .crumbStep { display: none; }
+}
+
+@media (max-width: 1100px) {
+  .dense .nav { display: none; }
+  .dense .menuButton { display: flex; }
+}
+
+/* The group step yields first: the page's own name matters more than its shelf. */
+@media (max-width: 960px) {
+  .crumbStep { display: none; }
+}
+
+@media (max-width: 900px) {
+  .nav { display: none; }
+  .menuButton { display: flex; }
+  .extrasCollapse { display: none; }
+}
+
+/* With a page name in the lockup, the mark alone carries the brand on phones
+   so the name never has to disappear. */
+@media (max-width: 700px) {
+  .withContext .wordmark { display: none; }
+  .identity { gap: 10px; }
+}
+
+@media (max-width: 640px) {
+  /*
+    Full-width backdrop blur is the most expensive paint in this bar and the
+    largest audience arrives on mid-range Android: below this width the
+    surface is opaque (the blur value was already ~83% canvas, so nothing
+    shifts). The ruler simplifies to fine ticks in a 4px band.
+  */
+  .header,
+  .scrolled {
+    --sh-ticks:
+      repeating-linear-gradient(90deg, var(--sh-line) 0 1px, transparent 1px 24px)
+        0 100% / 100% 4px no-repeat;
+    background: var(--sh-ticks), var(--sh-canvas);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .shell { width: calc(100% - 32px); gap: 10px; }
+  .brand { gap: 9px; }
+
+  /* The primary verb stays on phones as a 40px icon square; its label is
+     clipped, not removed, so it keeps its accessible name. */
+  .primary {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .primaryLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .utility { gap: 2px; }
+  .utility::before { display: none; }
+  .sheet { right: 16px; }
+}
+
+@media (max-width: 440px) {
+  .menuButton { width: 34px; height: 34px; }
+}
+
+@media (max-width: 420px) {
+  .brand { gap: 7px; }
+  .shell { gap: 8px; }
+  .actions { gap: 4px; }
+  .extras { gap: 4px; }
+}
+
+/* Last resort: every control is functional and the wordmark is not, so the
+   identity yields before a control is clipped. */
+@media (max-width: 390px) {
+  .shell { width: calc(100% - 24px); }
+  .brand { min-width: 0; }
+  .crumbCurrent { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header *,
+  .header *::before,
+  .header *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .primary {
+    transform: none !important;
+    will-change: auto;
+  }
+
+  .primary::before,
+  .brand::after { display: none; }
+}

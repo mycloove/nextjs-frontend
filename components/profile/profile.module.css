@@ -447,13 +447,27 @@
   background: var(--bg-item-hover);
 }
 
+/* Stands in for the 44px account seal while identity resolves: the same
+   footprint and a faint ring where the 32px avatar will sit, so the bar never
+   shows an empty box or shifts when the account arrives. */
 .placeholder {
+  position: relative;
   display: inline-block;
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: 10px;
-  background: var(--bg-item);
+  width: 44px;
+  height: 44px;
+  flex: none;
   pointer-events: none;
+}
+
+.placeholder::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--text-secondary) 22%, transparent);
+  border-radius: 999px;
 }
 
 /* ── Floating settings modal ─────────────────────────────────────────────── */

@@ -16,7 +16,7 @@
     "mr-markdown:unit": "npm run test:mr-markdown",
     "test:mr-resume": "node --experimental-strip-types --test --test-reporter=spec features/mr-resume/components/*.test.ts",
     "test:mr-resume:latex": "node --experimental-strip-types --test --test-reporter=spec features/mr-resume/latex/*.test.ts features/mr-resume/latex/server/*.test.ts",
-    "test:tool-kit": "node --experimental-strip-types --test components/tools/kit/*.test.ts components/tools/*.test.ts",
+    "test:tool-kit": "node --experimental-strip-types --test components/tools/kit/*.test.ts components/tools/*.test.ts components/site-header/*.test.ts",
     "test:ai": "node --experimental-strip-types --test lib/ai/*.test.ts",
     "test:credits": "node --experimental-sqlite --experimental-strip-types --test lib/usage/credit-policy.test.ts lib/usage/credit-success.test.ts lib/usage/remaining.test.ts lib/usage/credit-store.test.ts",
     "test:integrations": "node --experimental-strip-types --test lib/integrations/*.test.ts lib/integrations/github/*.test.ts",

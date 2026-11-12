@@ -1,17 +1,14 @@
 'use client'
 
 import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
-import Link from 'next/link'
 import { useDropzone } from 'react-dropzone'
-import AnimatedBrandLogo from '@/components/animated-brand-logo/AnimatedBrandLogo'
-import AuthNavButton from '@/components/AuthNavButton'
 import CreditCost from '@/components/tools/CreditCost'
 import { ActionButton, Dialog, HonestProgress, describeLimits, validateIntake, type IntakeSpec } from '@/components/tools/kit'
 import { useAccountViewer } from '@/lib/account/useAccountViewer'
 import { useCreditBalance } from '@/lib/usage/useCreditBalance'
 import { useToolAvailability } from '@/lib/usage/useToolAvailability'
 import { getTool } from '@/lib/tools/registry'
-import ToolSwitcher from '@/components/tools/ToolSwitcher'
+import ToolNavbar from '@/components/tools/ToolNavbar'
 import { uploadWithProgress, getApiErrorMessage } from '@/lib/upload/uploadWithProgress'
 import { usePasteFiles } from '@/lib/upload/usePasteFiles'
 import { downloadBlob } from '@/lib/download/downloadOutputs'
@@ -513,25 +510,17 @@ export default function SplitPdfTool() {
 
   return (
     <div className="spl-page">
-      <header className="spl-sitebar" data-tool-navbar="split-pdf">
-        <div className="spl-sitebar-inner">
-          <div className="spl-breadcrumb">
-            <Link href="/" className="spl-logo-link" aria-label="mycloove home">
-              <AnimatedBrandLogo />
-            </Link>
-            <span className="spl-site-separator" aria-hidden="true">/</span>
-            <span className="spl-site-brand">mycloove</span>
-            <span className="spl-site-separator" aria-hidden="true">/</span>
-            <b>Split PDF</b>
-          </div>
-          <div className="spl-site-actions">
-            <ToolSwitcher toolId="split-pdf" availability={availability} shortcut />
-            <AuthNavButton chrome="tool" accountState={accountState} creditState={creditState} creditDisplayToolId="split-pdf" />
-          </div>
-        </div>
-      </header>
+      {/* `.spl-sitebar` is a verified contract hook (scripts/verify-tool-navigation.mjs). */}
+      <ToolNavbar
+        toolId="split-pdf"
+        className="spl-sitebar"
+        skipTo="#split-main"
+        accountState={accountState}
+        creditState={creditState}
+        availability={availability}
+      />
 
-      <div className="spl">
+      <div className="spl" id="split-main" tabIndex={-1}>
         {file && (
           <div className="spl-header">
             <div className="spl-header-actions">

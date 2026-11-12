@@ -652,26 +652,25 @@
 .mr-markdown-workspace .mr-account-wrap,
 .mr-markdown-workspace .mr-credit-cost,
 .pm-root .pm-credit-cost,
-.pm-root.mr-markdown-upload .pm-studio-account,
 .pm-root.mr-markdown-upload .pm-conversion-cost {
   --bg-card:var(--pm-bg-surface); --bg-item:var(--pm-bg-inset); --bg-item-hover:var(--pm-bg-hover);
   --bg-badge:var(--pm-bg-hover); --border-card:var(--pm-border-strong); --border-badge:var(--pm-border-strong);
   --text-primary:var(--pm-text-primary); --text-secondary:var(--pm-text-secondary); --text-muted:var(--pm-text-secondary);
   --divider:var(--pm-border-base); --shadow-card:var(--pm-sh-lg);
 }
-.pm-root.mr-markdown-upload .pm-studio-account { display:flex; flex:0 0 auto; align-items:center; gap:8px; min-width:0; margin-left:auto; }
-.pm-root.mr-markdown-upload .pm-studio-nav { margin-left:0; }
 .pm-root.mr-markdown-upload .pm-conversion-cost,
 .mr-markdown-workspace .mr-credit-cost { color:var(--pm-text-secondary); font-size:11px; font-variant-numeric:tabular-nums; }
 .pm-root.mr-markdown-upload .pm-queue-credit-cost { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:12px 16px; }
 .mr-markdown-workspace .mr-export-credit-cost { padding:0 8px 8px; font-size:10px; }
 .pm-root .pm-cmdk-credit-cost { padding:0 16px 8px 40px; font-size:11px; font-variant-numeric:tabular-nums; }
 .mr-markdown-workspace .mr-ai-credit-cost { display:flex; flex-wrap:wrap; gap:8px; padding-top:8px; }
-@media(max-width:700px) {
-  .pm-root.mr-markdown-upload .pm-studio-account { margin-left:auto; }
-  .pm-root.mr-markdown-upload .pm-studio-topbar-inner { gap:12px; }
-  .pm-root.mr-markdown-upload .pm-studio-account > .pm-conversion-cost { max-width:120px; }
-  .pm-root.mr-markdown-upload .pm-studio-brand small { display:none; }
+/* The header's Converter / Options anchors land below the 72px sticky bar
+   instead of underneath it. */
+.pm-root.mr-markdown-upload :is(#converter, #options) { scroll-margin-top:88px; }
+@media(max-width:900px) {
+  /* The bar keeps the tool index and account on narrow screens; the cost is
+     still stated on the converter card (.pm-queue-credit-cost). */
+  .pm-root.mr-markdown-upload .pm-studio-topbar .pm-conversion-cost { display:none; }
 }
 @media(max-width:380px) {
   .mr-markdown-workspace .mr-nav-control-group > :first-child { display:none; }
