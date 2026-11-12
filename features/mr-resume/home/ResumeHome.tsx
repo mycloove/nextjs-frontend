@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { EDITOR_LANGUAGE_KEY } from '../components/editorLanguage'
+import type { TemplateDesign } from '../components/resumeDocument'
 import { REGULAR_DRAFT_KEY, summarizeStoredDraft, type StoredDraftSummary } from '../components/resumeDraft'
 import { defaultGalleryQuery, parseGalleryQuery, serializeGalleryQuery, type GalleryEditor, type GalleryQuery } from '../components/templateCatalog'
 import { LATEX_DATABASE } from '../latex/types'
@@ -53,7 +54,7 @@ function relativeTime(iso: string, language: HomeLanguage) {
   return format.format(Math.round(seconds), 'second')
 }
 
-export default function ResumeHome({ onOpenEditor, onOpenTemplate }: { onOpenEditor: (editor: GalleryEditor) => void; onOpenTemplate: (editor: GalleryEditor, id: string, sample?: boolean) => void }) {
+export default function ResumeHome({ onOpenEditor, onOpenTemplate }: { onOpenEditor: (editor: GalleryEditor) => void; onOpenTemplate: (editor: GalleryEditor, id: string, sample?: boolean, design?: Partial<TemplateDesign>) => void }) {
   const search = useSyncExternalStore(subscribeHomeState, () => window.location.search, () => '')
   const storedLanguage = useSyncExternalStore(subscribeHomeState, () => readStorage(EDITOR_LANGUAGE_KEY), () => null)
   const storedDraft = useSyncExternalStore(subscribeHomeState, () => readStorage(REGULAR_DRAFT_KEY), () => null)

@@ -76,6 +76,11 @@ test('deep-link ids are an allowlist per editor', () => {
   assert.equal(templateHref('regular', 'job-resume'), '/mr-resume/regular-editor?template=job-resume')
   assert.equal(templateHref('regular', 'job-resume', true), '/mr-resume/regular-editor?template=job-resume&sample=1')
   assert.equal(templateHref('latex', 'altacv', true), '/mr-resume/latex?template=altacv')
+  // A design chosen in the preview rides the same link; an untouched preview adds nothing to it.
+  assert.equal(templateHref('regular', 'job-resume', true, { layout: 'sidebar', accent: '#2f4a6d' }), '/mr-resume/regular-editor?template=job-resume&sample=1&layout=sidebar&accent=2f4a6d')
+  assert.equal(templateHref('regular', 'job-resume', false, { accent: '#2f4a6d' }), '/mr-resume/regular-editor?template=job-resume&accent=2f4a6d')
+  assert.equal(templateHref('regular', 'job-resume', false, {}), '/mr-resume/regular-editor?template=job-resume')
+  assert.equal(templateHref('latex', 'altacv', true, { layout: 'sidebar', accent: '#2f4a6d' }), '/mr-resume/latex?template=altacv', 'A LaTeX starter is its own design')
   assert.equal(wantsSample('regular', new URLSearchParams('template=job-resume&sample=1')), true)
   for (const query of ['template=job-resume', 'template=job-resume&sample=0', 'template=job-resume&sample=true', 'template=job-resume&sample=']) assert.equal(wantsSample('regular', new URLSearchParams(query)), false, query)
   assert.equal(wantsSample('latex', new URLSearchParams('template=altacv&sample=1')), false)

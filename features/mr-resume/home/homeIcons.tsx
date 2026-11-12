@@ -1,7 +1,7 @@
 // Home icons: 24px grid, 1.75px stroke, currentColor. Each depicts what the
 // control does to a document (a page, a source brace, a filter funnel), not a
 // generic decoration.
-export type HomeIconName = 'page' | 'source' | 'arrow' | 'search' | 'filter' | 'close' | 'prev' | 'next' | 'check' | 'menu' | 'device' | 'import' | 'copy' | 'grid'
+export type HomeIconName = 'page' | 'source' | 'arrow' | 'search' | 'filter' | 'close' | 'prev' | 'next' | 'check' | 'menu' | 'device' | 'import' | 'copy' | 'grid' | 'minus' | 'plus'
 
 const paths: Record<HomeIconName, string> = {
   page: 'M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 15.5h5M10 8.5h2',
@@ -18,6 +18,8 @@ const paths: Record<HomeIconName, string> = {
   import: 'M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14',
   copy: 'M9 9h10v10H9zM5 15V5h10',
   grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  minus: 'M6 12h12',
+  plus: 'M12 6v12M6 12h12',
 }
 
 export function HomeIcon({ name, className }: { name: HomeIconName; className?: string }) {

@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useId, useRef, useState } from 'react'
+import { designAccents, type TemplateDesign } from './resumeDocument'
+import { getResumeLayout } from './resumeLayouts'
 import { resumeSpecimen } from './resumeSpecimens'
 import { resumeTemplates, templateSectionTitle, type ResumeTemplate } from './resumeTemplates'
 import { bengaliTypefaces, latinTypefaces } from './resumeFonts'
@@ -13,10 +15,10 @@ const previewFontFamilies = new Map<string, string>([...bengaliTypefaces, ...lat
 
 export default function ResumeTemplateLibrary({ request = null, selected, hasBackup, onApply, onRestore, onExportBackup, sectionTitle, catalogTitle, t }: {
   /** A gallery request to preview: opens the same confirm dialog a click would. */
-  request?: { template: ResumeTemplate; sequence: number; sample?: boolean } | null
+  request?: { template: ResumeTemplate; sequence: number; sample?: boolean; design?: Partial<TemplateDesign> } | null
   selected: string | null
   hasBackup: boolean
-  onApply: (template: ResumeTemplate, sample?: boolean) => void
+  onApply: (template: ResumeTemplate, sample?: boolean, design?: Partial<TemplateDesign>) => void
   onRestore: () => void
   onExportBackup: () => void
   sectionTitle: (section: string) => string
@@ -25,8 +27,10 @@ export default function ResumeTemplateLibrary({ request = null, selected, hasBac
 }) {
   const [preview, setPreview] = useState<ResumeTemplate | null>(null)
   const [replaceBackup, setReplaceBackup] = useState(false)
-  // Only a gallery request can ask for the sample text; the list in the editor always offers the outline.
+  // Only a gallery request can ask for the sample text or a design of its own;
+  // the list in the editor always offers the outline in the template's design.
   const [previewSample, setPreviewSample] = useState(false)
+  const [previewDesign, setPreviewDesign] = useState<Partial<TemplateDesign>>({})
   const dialogRef = useRef<HTMLDialogElement>(null)
   const detailsRef = useRef<HTMLDetailsElement>(null)
   const triggerRef = useRef<HTMLButtonElement | null>(null)
@@ -39,10 +43,16 @@ export default function ResumeTemplateLibrary({ request = null, selected, hasBac
     setShownRequest(request.sequence)
     setReplaceBackup(false)
     setPreviewSample(Boolean(request.sample))
+    setPreviewDesign(request.design ?? {})
     setPreview(request.template)
   }
   // The dialog shows exactly the words that Apply will put on the page.
   const specimen = preview && previewSample ? resumeSpecimen(preview.id) : undefined
+  // This dialog shows the words, not the page, so a design chosen in the gallery is named.
+  const chosenDesign = [
+    previewDesign.layout ? `${t('Layout')}: ${t(getResumeLayout(previewDesign.layout).name)}` : '',
+    previewDesign.accent ? `${t('Accent')}: ${t(designAccents.find((item) => item.color === previewDesign.accent)?.name ?? previewDesign.accent)}` : '',
+  ].filter(Boolean).join(' · ')
   // The dialog lives inside the collapsed list; open it so the modal can render.
   useEffect(() => {
     if (!request) return
@@ -67,7 +77,7 @@ export default function ResumeTemplateLibrary({ request = null, selected, hasBac
       <summary><Glyph name="page" /><span>{t('Templates')}</span><small>{resumeTemplates.length}</small></summary>
       <p className={styles.helperText}>{t('Start with a purposeful outline. Preview first; your current draft gets a restore copy.')}</p>
       <div className={styles.templateList} role="group" aria-label={t('Templates')}>
-        {resumeTemplates.map((template) => <button type="button" key={template.id} className={styles.templateChoice} aria-pressed={selected === template.id} aria-haspopup="dialog" onClick={(event) => { triggerRef.current = event.currentTarget; setPreviewSample(false); setPreview(template); setReplaceBackup(false) }}><span><b>{t(template.name)}</b><small>{t(template.detail)}</small></span>{selected === template.id ? <Glyph name="check" /> : <Glyph name="chevron" />}</button>)}
+        {resumeTemplates.map((template) => <button type="button" key={template.id} className={styles.templateChoice} aria-pressed={selected === template.id} aria-haspopup="dialog" onClick={(event) => { triggerRef.current = event.currentTarget; setPreviewSample(false); setPreviewDesign({}); setPreview(template); setReplaceBackup(false) }}><span><b>{t(template.name)}</b><small>{t(template.detail)}</small></span>{selected === template.id ? <Glyph name="check" /> : <Glyph name="chevron" />}</button>)}
       </div>
     </details>
     {hasBackup && <div className={styles.templateRestore}><button type="button" className={styles.guideLink} onClick={onRestore}><Glyph name="undo" />{t('Restore previous draft')}</button><button type="button" className={styles.guideLink} onClick={onExportBackup}>{t('Download restore copy')}</button></div>}
@@ -76,8 +86,9 @@ export default function ResumeTemplateLibrary({ request = null, selected, hasBac
       <p id={`${id}-policy`} className={styles.templatePolicy}>{t(specimen ? 'This is sample text about an invented person, there to show the layout. Replace every line with your own details. Applying creates a restore copy before changing this draft.' : 'Bracketed text is a writing prompt, not a claim about you. Replace it with verified details. Applying creates a restore copy before changing this draft.')}</p>
       <div className={styles.templatePreview} lang={preview.language === 'English' ? 'en' : 'bn'} data-font={preview.font} style={{ fontFamily: previewFontFamilies.get(preview.font) ?? '"Noto Sans Bengali", sans-serif' }}><h3>{specimen?.fullName ?? preview.fullName}</h3>{preview.enabled.map((section) => <div key={section}>{section !== 'profile' && <h4>{templateSectionTitle(preview, section, { english: catalogTitle, bangla: sectionTitle })}</h4>}<p>{specimen?.content[section] ?? preview.content[section]}</p></div>)}</div>
       <p className={styles.helperText}>{t('Recommended typeface')}: {preview.font}. {t(specimen ? 'Sample text, not the final page layout.' : 'Writing prompts, not the final page layout.')}</p>
+      {chosenDesign && <p className={styles.templatePolicy}>{t('Chosen in the gallery')}: {chosenDesign}</p>}
       {hasBackup && <div className={styles.templateBackupWarning}><p>{t('A restore copy already exists. Applying another template replaces it. Download that copy first if you want to keep it.')}</p><button type="button" className={styles.guideLink} onClick={onExportBackup}>{t('Download restore copy')}</button><label className={styles.rememberCorrection}><input type="checkbox" checked={replaceBackup} onChange={(event) => setReplaceBackup(event.target.checked)} /><span>{t('Replace the old restore copy with my current draft')}</span></label></div>}
-      <div className={styles.wordCorrectionActions}><button type="button" className={styles.bijoyKeep} onClick={dismiss}>{t('Keep current draft')}</button><button type="button" className={styles.bijoyConvert} disabled={hasBackup && !replaceBackup} onClick={() => { onApply(preview, Boolean(specimen)); setPreview(null) }}>{t('Apply with restore copy')}</button></div>
+      <div className={styles.wordCorrectionActions}><button type="button" className={styles.bijoyKeep} onClick={dismiss}>{t('Keep current draft')}</button><button type="button" className={styles.bijoyConvert} disabled={hasBackup && !replaceBackup} onClick={() => { onApply(preview, Boolean(specimen), previewDesign); setPreview(null) }}>{t('Apply with restore copy')}</button></div>
     </dialog>}
   </div>
 }

@@ -7,6 +7,7 @@ import { LATEX_MODE_KEY, type LatexImportRequest } from '../latex/types'
 import { latexTemplateCards } from '../latex/latexTemplateCards'
 import ResumeHome from '../home/ResumeHome'
 import { regularTemplateCards } from './regularTemplateCards'
+import { parseTemplateDesign, type TemplateDesign } from './resumeDocument'
 import { resolveTemplateRequest, templateHref, wantsSample, type TemplateRequest } from './templateCatalog'
 import styles from './MrResumeWorkspace.module.css'
 import theme from './MrResumeTheme.module.css'
@@ -68,15 +69,15 @@ export default function MrResumeWorkspace() {
     const resolved = resolveTemplateRequest(mode, value, mode === 'regular' ? regularTemplateCards : latexTemplateCards)
     if (!resolved) return
     router.replace(editorPaths[mode], { scroll: false })
-    setTemplateRequest({ editor: mode, id: resolved.kind === 'template' ? resolved.card.id : String(value), sequence: ++templateSequence.current, sample: wantsSample(mode, params) })
+    setTemplateRequest({ editor: mode, id: resolved.kind === 'template' ? resolved.card.id : String(value), sequence: ++templateSequence.current, sample: wantsSample(mode, params), design: mode === 'regular' ? parseTemplateDesign(params) : {} })
   }, [mode, router])
 
   function templateHandled(sequence: number) {
     setTemplateRequest((current) => current?.sequence === sequence ? null : current)
   }
 
-  function openTemplate(editor: EditorMode, id: string, sample = false) {
-    router.push(templateHref(editor, id, sample), { scroll: false })
+  function openTemplate(editor: EditorMode, id: string, sample = false, design: Partial<TemplateDesign> = {}) {
+    router.push(templateHref(editor, id, sample, design), { scroll: false })
     try { window.localStorage.setItem(LATEX_MODE_KEY, editor) } catch { /* The gallery remains usable without storage. */ }
   }
 

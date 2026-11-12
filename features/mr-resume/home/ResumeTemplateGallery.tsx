@@ -1,6 +1,7 @@
 'use client'
 
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import type { TemplateDesign } from '../components/resumeDocument'
 import { activeFilterCount, cardBadges, categoryCounts, defaultGalleryQuery, filterTemplates, templateCategories, type GalleryEditor, type GalleryQuery, type TemplateCard } from '../components/templateCatalog'
 import { galleryCards, thumbnailFor } from './galleryCards'
 import { homeText, pick, type HomeLanguage } from './homeText'
@@ -12,7 +13,7 @@ type Props = {
   language: HomeLanguage
   query: GalleryQuery
   onQuery: (query: GalleryQuery) => void
-  onUse: (editor: GalleryEditor, id: string, sample?: boolean) => void
+  onUse: (editor: GalleryEditor, id: string, sample?: boolean, design?: Partial<TemplateDesign>) => void
   /** The template the stored Regular draft was started from, if any. */
   regularTemplateId: string | null
   latexFull: boolean
@@ -126,6 +127,6 @@ export default function ResumeTemplateGallery({ language, query, onQuery, onUse,
       </div>
     </div>
 
-    {preview && <ResumeTemplatePreview card={preview.card} origin={preview.origin} list={results} language={language} latexFull={latexFull} onNavigate={(card) => setPreview({ card, origin: null, trigger: preview.trigger })} onUse={(card, sample) => onUse(card.editor, card.id, sample)} onClose={() => { const trigger = preview.trigger; setPreview(null); requestAnimationFrame(() => trigger?.focus({ preventScroll: true })) }} />}
+    {preview && <ResumeTemplatePreview card={preview.card} origin={preview.origin} list={results} language={language} latexFull={latexFull} onNavigate={(card) => setPreview({ card, origin: null, trigger: preview.trigger })} onUse={(card, sample, design) => onUse(card.editor, card.id, sample, design)} onClose={() => { const trigger = preview.trigger; setPreview(null); requestAnimationFrame(() => trigger?.focus({ preventScroll: true })) }} />}
   </section>
 }

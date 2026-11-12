@@ -5,13 +5,16 @@
 
 .home { --home-max: 1200px; --home-gutter: clamp(16px, 4vw, 48px); --home-display: "Mr Resume Latin Modern", "Mr Resume Noto Serif Bengali", Georgia, serif; position: relative; min-height: 0; flex: 1 1 auto; overflow-y: auto; color: var(--rs-ink); background: var(--rs-bg); font-size: 15px; line-height: 1.6; scroll-padding-top: 144px; }
 .home[data-language="bn"] { --home-display: "Mr Resume Noto Serif Bengali", "Mr Resume Latin Modern", Georgia, serif; line-height: 1.75; }
-.home :where(h1, h2, h3, p, ul, dl, dd, figure) { margin: 0; }
-.home :where(ul) { padding: 0; list-style: none; }
+/* The three element resets stop at the preview sheet: the live page on it is
+   the editor's, and has to be set by the editor's rules alone to be the same
+   sheet. :where keeps their specificity at the class it was. */
+.home :where(h1, h2, h3, p, ul, dl, dd, figure):where(:not(.previewSheet *)) { margin: 0; }
+.home :where(ul):where(:not(.previewSheet *)) { padding: 0; list-style: none; }
 .home :where(button, select, input) { font: inherit; color: inherit; }
 .home :where(button) { cursor: pointer; }
 .home :where(button):disabled { cursor: not-allowed; opacity: .5; }
 .home :where(a, button, select, input, summary, [tabindex]):focus-visible { outline: 2px solid var(--rs-focus); outline-offset: 3px; }
-.home svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.home svg:where(:not(.previewSheet *)) { width: 18px; height: 18px; flex: 0 0 auto; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .skip { position: absolute; z-index: 30; top: 8px; left: 8px; padding: 8px 12px; border-radius: 6px; color: var(--rs-on-primary); background: var(--rs-primary); transform: translateY(-160%); transition: transform 120ms var(--rs-ease); }
 .skip:focus { transform: none; }
@@ -104,8 +107,8 @@
 .filters { display: none; margin-bottom: 16px; padding: 16px; border: 1px solid var(--rs-line); background: var(--rs-panel); }
 .filters[data-open] { display: block; }
 .filterGrid { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 16px; }
-.selectField { display: grid; gap: 4px; color: var(--rs-muted); font-size: 12px; font-weight: 600; }
-.selectField select { min-width: 150px; min-height: 40px; padding: 0 10px; border: 1px solid var(--rs-control-line); border-radius: 6px; color: var(--rs-ink); background: var(--rs-panel); font-size: 14px; font-weight: 400; }
+.selectField, .proofField { display: grid; gap: 4px; color: var(--rs-muted); font-size: 12px; font-weight: 600; }
+.selectField select, .proofField select { min-width: 150px; min-height: 40px; padding: 0 10px; border: 1px solid var(--rs-control-line); border-radius: 6px; color: var(--rs-ink); background: var(--rs-panel); font-size: 14px; font-weight: 400; }
 .toggle { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--rs-line); border-radius: 999px; background: var(--rs-bg); font-size: 14px; cursor: pointer; }
 .toggle input { width: 16px; height: 16px; margin: 0; accent-color: var(--rs-accent); }
 .toggle:has(input:checked) { border-color: var(--rs-accent); background: var(--rs-accent-soft); }
@@ -134,19 +137,62 @@
 .empty > div { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .limitNote { margin-top: 16px; color: var(--rs-gold-text); font-size: 13px; }
 
-/* ---- Preview dialog ("proof pull") ---- */
+/* ---- Preview dialog ("proof pull") ----
+   Left, the proof table: a Regular template is set live there, a LaTeX one
+   shows the pictured first page of its real output. Right: what it is, how to
+   try it, and the one way in. Each pane scrolls on its own, so zooming the
+   page never moves the action off the screen. */
 /* margin: auto is restated because the global reset zeroes it, which pins a modal <dialog> to the top-left corner. */
-.preview { width: min(1040px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid var(--rs-line); border-radius: 10px; color: var(--rs-ink); background: var(--rs-panel); box-shadow: var(--rs-dropdown-shadow); }
-.preview[open] { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr); animation: previewIn 200ms var(--rs-ease); }
+.preview { width: min(1180px, calc(100vw - 32px)); height: min(880px, calc(100dvh - 32px)); margin: auto; padding: 0; overflow: hidden; border: 1px solid var(--rs-line); border-radius: 10px; color: var(--rs-ink); background: var(--rs-panel); box-shadow: var(--rs-dropdown-shadow); }
+.preview[open] { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(340px, .85fr); grid-template-rows: minmax(0, 1fr); animation: previewIn 200ms var(--rs-ease); }
 .preview::backdrop { background: rgb(15 17 14 / .45); }
-.previewPage { display: grid; align-content: start; justify-items: center; gap: 8px; padding: 24px; overflow: auto; background: var(--rs-soft); }
-.previewPage img { display: block; width: 100%; max-width: 560px; height: auto; border: 1px solid var(--rs-paper-border); background: var(--rs-paper); box-shadow: var(--rs-paper-shadow); will-change: transform; }
-.previewCaption { color: var(--rs-muted); font-size: 12px; }
-.previewInfo { display: flex; min-width: 0; flex-direction: column; gap: 16px; padding: 24px; overflow: auto; }
+.previewPage { display: grid; min-width: 0; min-height: 0; grid-template-rows: auto minmax(0, 1fr); background: var(--rs-soft); }
+.previewBar { display: flex; min-height: 56px; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 8px 16px 8px 24px; border-bottom: 1px solid var(--rs-line); }
+.previewCaption { color: var(--rs-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.zoom { display: inline-flex; align-items: center; gap: 4px; }
+.zoom .iconButton { width: 36px; height: 36px; }
+.zoomValue { min-width: 48px; font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; }
+.zoomFit { min-height: 36px; margin-left: 4px; padding: 0 12px; border: 1px solid var(--rs-line); border-radius: 8px; background: var(--rs-panel); font-size: 13px; font-weight: 600; }
+.zoomFit:hover { border-color: var(--rs-control-line); }
+.zoomFit[aria-pressed="true"] { border-color: var(--rs-accent); background: var(--rs-accent-soft); }
+/* A stable gutter: "Fit" is measured from this box, and a scrollbar that came and went would change the answer. */
+.previewStage { min-width: 0; padding: 24px; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.previewSheet { position: relative; margin-inline: auto; overflow: clip; background: var(--rs-paper); box-shadow: var(--rs-paper-shadow); }
+.previewSheet[data-ready="false"] { visibility: hidden; }
+.previewPicture { width: 100%; max-width: 560px; border: 1px solid var(--rs-paper-border); }
+.previewPicture img { display: block; width: 100%; height: auto; }
+/* Notes on the sheet use the paper's own tokens: the sheet is white in both themes. */
+.pageEnd { position: absolute; right: 0; left: 0; border-top: 1px dashed var(--rs-paper-control); pointer-events: none; }
+/* The mark sits in the right margin and is centred on the rule, so it covers as little writing as it can. */
+.pageEnd span { position: absolute; top: 0; right: 0; padding: 0 6px; border: 1px solid var(--rs-paper-guide); color: var(--rs-paper-control); background: var(--rs-paper); font-size: 12px; font-variant-numeric: tabular-nums; line-height: 1.5; transform: translateY(-50%); white-space: nowrap; }
+/* The card's picture in flight (ResumeTemplatePreview positions and animates it). */
+.pull { position: fixed; z-index: 2; border: 1px solid var(--rs-paper-border); background: var(--rs-paper); box-shadow: var(--rs-paper-shadow); object-fit: cover; object-position: top; pointer-events: none; transform-origin: top left; will-change: transform; }
+.previewInfo { display: flex; min-width: 0; min-height: 0; flex-direction: column; gap: 16px; padding: 24px 24px 0; overflow: auto; }
 .previewTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .previewNav { display: flex; gap: 6px; }
 .previewInfo h2 { font-family: var(--home-display); font-size: 30px; font-weight: 700; line-height: 1.15; }
 .previewSummary { color: var(--rs-muted); }
+/* Try it: the text, the layout and the accent of the sheet on the left. */
+.proof { display: grid; min-width: 0; gap: 12px; margin: 0; padding: 4px 16px 16px; border: 1px solid var(--rs-line); background: var(--rs-bg); }
+.proof legend { padding: 0 6px; margin-left: -6px; font-size: 13px; font-weight: 650; }
+.proofField > span { display: flex; flex-wrap: wrap; gap: 6px; }
+.proofField b { color: var(--rs-ink); font-weight: 600; }
+.proofField select { width: 100%; }
+.proof .textButton { justify-self: start; font-size: 13px; }
+.segmented { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 2px; border: 1px solid var(--rs-control-line); border-radius: 8px; background: var(--rs-panel); }
+.segmented button { min-height: 36px; padding: 0 8px; border: 0; border-radius: 6px; color: var(--rs-muted); background: transparent; font-size: 14px; font-weight: 600; transition: color 120ms var(--rs-ease), background-color 120ms var(--rs-ease); }
+.segmented button[aria-pressed="true"] { color: var(--rs-on-primary); background: var(--rs-primary); }
+/* Ink on paper: each chip is a scrap of the sheet with the colour laid on it,
+   so a dark ink still stands out on the dark panel. The chosen one covers its
+   scrap and carries a check; its name is written beside the label. */
+.inks { display: flex; flex-wrap: wrap; gap: 8px; }
+.ink { position: relative; display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--rs-paper-border); border-radius: 2px; color: var(--rs-paper); background: var(--rs-paper); cursor: pointer; }
+.ink::before { position: absolute; inset: 0; background: var(--ink); content: ''; transform: scale(.7); transition: transform 120ms var(--rs-ease); }
+.ink input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.ink svg { position: relative; width: 16px; height: 16px; }
+.ink:has(input:checked) { outline: 2px solid var(--rs-accent); outline-offset: 2px; }
+.ink:has(input:checked)::before { transform: none; }
+.ink:has(input:focus-visible) { outline: 2px solid var(--rs-focus); outline-offset: 2px; }
 .previewFacts { display: grid; gap: 10px; }
 .previewFacts div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; padding-top: 10px; border-top: 1px solid var(--rs-line); font-size: 14px; }
 .previewFacts dt { color: var(--rs-muted); }
@@ -155,7 +201,9 @@
 .credit p, .credit ul { margin-top: 8px; }
 .credit ul { padding-left: 18px; list-style: disc; }
 .credit a { color: var(--rs-accent); }
-.previewActions { display: grid; gap: 12px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--rs-line); }
+.applyNote { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--rs-line); }
+/* The way in stays at the foot of the pane however long the facts above it run; the -16px takes back the pane's gap. */
+.previewActions { position: sticky; bottom: 0; display: grid; margin-top: -16px; padding: 12px 0 24px; background: var(--rs-panel); }
 .previewActions .primary { justify-content: space-between; }
 @keyframes previewIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -192,8 +240,7 @@
   .categoryRail button { min-height: 40px; padding: 0 12px; border: 1px solid var(--rs-line); border-radius: 999px; white-space: nowrap; }
   .categoryRail button[aria-current] { border-color: var(--rs-accent); }
   .importGrid { grid-template-columns: 1fr; }
-  .preview[open] { grid-template-columns: 1fr; }
-  .previewPage { max-height: 46dvh; }
+  .preview[open] { grid-template-columns: 1fr; grid-template-rows: minmax(0, 46%) minmax(0, 1fr); }
   .intro { grid-template-columns: 1fr; }
   .hero { max-width: 640px; }
 }
@@ -210,7 +257,12 @@
   .drawerTabs button { flex: 1; justify-content: center; padding: 0 8px; }
   .cardGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 12px; }
   .cardBody > p { display: none; }
-  .previewInfo, .previewPage { padding: 16px; }
+  .previewInfo { padding: 16px 16px 0; }
+  .previewStage { padding: 16px; }
+  .previewBar { min-height: 0; padding: 8px 12px 8px 16px; }
+  .zoomValue { min-width: 40px; }
+  .zoomFit { padding: 0 8px; }
+  .previewActions { padding-bottom: 16px; }
   .previewFacts div { grid-template-columns: 1fr; gap: 2px; }
   .selectField select { min-width: 130px; }
 }

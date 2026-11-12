@@ -3,6 +3,8 @@
 // card can never claim something its template does not do. Badges are DERIVED
 // from structure here — no card carries a hand-written "ATS" or "ready" flag.
 
+import { serializeTemplateDesign, type TemplateDesign } from './resumeDocument.ts'
+
 export type GalleryEditor = 'regular' | 'latex'
 export type Localized = { readonly en: string; readonly bn: string }
 export type TemplateLanguage = 'bn' | 'en' | 'mixed'
@@ -203,8 +205,11 @@ export function activeFilterCount(query: GalleryQuery) {
 // ---------------------------------------------------------------------------
 // Deep links: /mr-resume/regular-editor?template=<id> and /mr-resume/latex?template=<id>
 
-/** `sample`: fill the Regular template with its specimen (resumeSpecimens.ts) instead of bracketed prompts. */
-export type TemplateRequest = { readonly editor: GalleryEditor; readonly id: string; readonly sequence: number; readonly sample: boolean }
+/**
+ * `sample`: fill the Regular template with its specimen (resumeSpecimens.ts) instead of bracketed prompts.
+ * `design`: the layout and accent chosen in the gallery preview; empty means the template's own.
+ */
+export type TemplateRequest = { readonly editor: GalleryEditor; readonly id: string; readonly sequence: number; readonly sample: boolean; readonly design: Partial<TemplateDesign> }
 /** An allowlist per editor: a Regular id never reaches the LaTeX editor, and arbitrary text never reaches either. */
 export function resolveTemplateRequest(editor: GalleryEditor, value: string | null, cards: readonly TemplateCard[]): { kind: 'template'; card: TemplateCard } | { kind: 'unknown' } | null {
   if (value === null || value === '') return null
@@ -217,6 +222,9 @@ export function wantsSample(editor: GalleryEditor, params: URLSearchParams): boo
   return editor === 'regular' && params.get('sample') === '1'
 }
 
-export function templateHref(editor: GalleryEditor, id: string, sample = false) {
-  return `${editor === 'regular' ? '/mr-resume/regular-editor' : '/mr-resume/latex'}?template=${encodeURIComponent(id)}${sample && editor === 'regular' ? '&sample=1' : ''}`
+/** Sample text and a chosen design are Regular-only; on a LaTeX link both are dropped, never forwarded. */
+export function templateHref(editor: GalleryEditor, id: string, sample = false, design: Partial<TemplateDesign> = {}) {
+  if (editor === 'latex') return `/mr-resume/latex?template=${encodeURIComponent(id)}`
+  const chosen = serializeTemplateDesign(design)
+  return `/mr-resume/regular-editor?template=${encodeURIComponent(id)}${sample ? '&sample=1' : ''}${chosen ? `&${chosen}` : ''}`
 }

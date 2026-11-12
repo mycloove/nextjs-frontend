@@ -132,15 +132,27 @@ test('gallery deep links are validated per editor, handed over once and removed 
   assert.match(host, /router\.replace\(editorPaths\[mode\], \{ scroll: false \}\)/u)
   // The sample start is read through the catalog's own rule, never trusted from the raw query.
   assert.match(host, /sample: wantsSample\(mode, params\)/u)
+  // So is a design chosen in the gallery preview, and only the Regular editor ever receives one.
+  assert.match(host, /design: mode === 'regular' \? parseTemplateDesign\(params\) : \{\}/u)
   assert.match(host, /templateRequest=\{templateRequest\?\.editor === 'regular' \? templateRequest : null\}/u)
   assert.match(host, /templateRequest=\{templateRequest\?\.editor === 'latex' \? templateRequest : null\}/u)
   // Regular never replaces an existing draft without the library's confirm dialog,
   // and the dialog is told whether it is the outline or the sample text being offered.
-  assert.match(regular, /if \(!hadStoredDraftRef\.current && saveState === 'fresh'\) \{ applyTemplate\(template, templateRequest\.sample\); return \}/u)
-  assert.match(regular, /setRequestedTemplate\(\{ template, sequence: templateRequest\.sequence, sample: templateRequest\.sample \}\)/u)
+  assert.match(regular, /if \(!hadStoredDraftRef\.current && saveState === 'fresh'\) \{ applyTemplate\(template, templateRequest\.sample, templateRequest\.design\); return \}/u)
+  assert.match(regular, /setRequestedTemplate\(\{ template, sequence: templateRequest\.sequence, sample: templateRequest\.sample, design: templateRequest\.design \}\)/u)
   // Sample text reaches a draft only through that explicit flag: the default is the bracketed outline.
-  assert.match(regular, /function applyTemplate\(template: ResumeTemplate, sample = false\)/u)
+  assert.match(regular, /function applyTemplate\(template: ResumeTemplate, sample = false, design: Partial<TemplateDesign> = \{\}\)/u)
   assert.match(regular, /const specimen = sample \? resumeSpecimen\(template\.id\) : undefined/u)
+  // The preview and Apply build their page from one function and one renderer,
+  // so the sheet a guest looked at is the draft that gets written.
+  assert.match(regular, /applyDraft\(templateDocument\(template, backup, \{ sample: Boolean\(specimen\), design \}\)\)/u)
+  const preview = read('../home/ResumeTemplatePreview.tsx')
+  assert.match(preview, /templateDocument\(template, defaultResumeDraft, \{ sample, design: changed \}\)/u)
+  assert.match(preview, /onUse\(card, card\.editor === 'regular' && sample, changed\)/u)
+  for (const source of [regular, preview]) assert.match(source, /<ResumePage /u)
+  // A page drawn outside the editor carries none of the hooks the editor looks up document-wide.
+  assert.doesNotMatch(preview, /editing=/u)
+  assert.match(read('./ResumePage.tsx'), /data-flip-key=\{editing \? `canvas:\$\{id\}` : undefined\}/u)
   // LaTeX always adds a new project and refuses at the eight-project limit first.
   assert.match(latex, /current\.projects\.length >= LOCAL_LATEX_LIMITS\.projects\) \{ current\.notify\('error'/u)
   assert.doesNotMatch(latex, /applyProject\(createTemplateProject/u)
@@ -194,6 +206,20 @@ test('new host and home markup reference only existing module-scoped style class
   assert.deepEqual(missingIn(read('./ResumeInspectorPanel.tsx'), regularCss), [])
   // The replaced chooser left no styles behind.
   assert.doesNotMatch(css, /\.(?:entry|choice|paperSample|sourceSample|chooseRegular)\b(?!Root)/u)
+})
+
+test('the page is set by its own rules wherever it is drawn', () => {
+  // The gallery preview and the editor must lay out one sheet. The page's styles
+  // were written on two of the editor's element resets, so it carries them...
+  assert.match(regularCss, /\.studio :where\(h1, h2, h3, p\), \.paper :where\(h1, h2, h3, p\) \{ margin: 0; \}/u)
+  assert.match(regularCss, /\.studio svg, \.paper svg \{ width: 16px; height: 16px; flex: 0 0 auto; \}/u)
+  // ...and the home's own element resets stop at the sheet instead of competing with it.
+  const homeCss = read('../home/ResumeHome.module.css')
+  assert.match(homeCss, /\.home :where\(h1, h2, h3, p, ul, dl, dd, figure\):where\(:not\(\.previewSheet \*\)\) \{ margin: 0; \}/u)
+  assert.match(homeCss, /\.home :where\(ul\):where\(:not\(\.previewSheet \*\)\) \{ padding: 0; list-style: none; \}/u)
+  assert.match(homeCss, /\.home svg:where\(:not\(\.previewSheet \*\)\) \{/u)
+  // A page rule may select on the page itself, never on the editor around it.
+  assert.doesNotMatch(regularCss, /\.studio[^{,]*\s\.(?:paper|paperHeader|paperSection|paperBody|sectionText)\b/u)
 })
 
 test('the home keeps the 12px floor, both themes and a reduced-motion path', () => {

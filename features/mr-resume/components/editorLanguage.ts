@@ -183,6 +183,9 @@ const extraBanglaCopy: Record<string, string> = {
   'Template applied with sample text about an invented person. Replace every line with your own details.': 'একজন কাল্পনিক ব্যক্তির নমুনা লেখাসহ টেমপ্লেট প্রয়োগ হয়েছে। প্রতিটি লাইন নিজের তথ্য দিয়ে বদলে নিন।',
   'This is sample text about an invented person, there to show the layout. Replace every line with your own details. Applying creates a restore copy before changing this draft.': 'এটি একজন কাল্পনিক ব্যক্তির নমুনা লেখা, শুধু বিন্যাস দেখানোর জন্য। প্রতিটি লাইন নিজের তথ্য দিয়ে বদলে নিন। প্রয়োগ করলে খসড়া বদলানোর আগে একটি পুনরুদ্ধার কপি তৈরি হবে।',
   'Sample text, not the final page layout.': 'নমুনা লেখা, চূড়ান্ত পাতার বিন্যাস নয়।',
+  'Chosen in the gallery': 'গ্যালারিতে বেছে নেওয়া',
+  // Accent names: the editor's palette and the gallery's deeper inks (resumeDocument.ts).
+  'Forest': 'বন-সবুজ', 'Violet': 'বেগুনি', 'Ocean': 'সমুদ্র-নীল', 'Walnut': 'বাদামি', 'Sage': 'সেজ-সবুজ', 'Navy': 'নেভি নীল', 'Slate': 'স্লেট', 'Cobalt': 'কোবাল্ট নীল',
 }
 
 export function editorText(value: string, language: EditorLanguage): string {
